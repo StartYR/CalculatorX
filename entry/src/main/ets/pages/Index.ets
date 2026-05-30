@@ -64,7 +64,32 @@ struct Index {
     } else if (action === '⌫') {
       this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('deleteBackward')`);
     } else if (action === '=') {
-      this.insertToWeb("=");
+      this.webviewController.runJavaScript(
+        'window.getMathJSON()',
+        (error, result) => {
+          if (error) return;
+
+          let cleanJsonString = '';
+          try {
+            cleanJsonString = JSON.parse(result);
+          } catch (e) {
+            cleanJsonString = result;
+          }
+
+          // 1. 调用 C++ 引擎计算结果
+          let cppResponse: string = testNapi.calculate(cleanJsonString);
+
+          // 2. 🌟 闭环操作：将结果发回给 Webview 显示！
+          if (cppResponse !== "Error") {
+            // 清空当前输入框
+            this.webviewController.runJavaScript(`window.clearMath()`);
+            // 将 C++ 算出的结果插入到输入框中
+            this.insertToWeb(cppResponse);
+          } else {
+            console.error("C++ Calculation Error");
+          }
+        }
+      );
     } else if (action === '⇦') {
       this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveToPreviousChar')`);
     } else if (action === '⇨') {

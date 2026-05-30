@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <script defer src="./mathlive.min.js"></script>
+    <script src="./compute-engine.min.js"></script>
+    <script src="./mathlive.min.js"></script>
     <style>
         body {
             display: flex;
@@ -29,12 +30,10 @@
             outline: none;
         }
 
-        /* 隐藏虚拟键盘图标 */
         math-field::part(virtual-keyboard-toggle) {
             display: none;
         }
 
-        /* 隐藏三条横杠 */
         math-field::part(menu-toggle) {
             display: none;
         }
@@ -47,6 +46,7 @@
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const mf = document.getElementById('math-input');
+
         mf.focus();
 
         window.insertMath = function (latexString) {
@@ -55,13 +55,10 @@
         };
 
         window.clearMath = function () {
-            latexString = latexString.replace(/\{\}/g, '{\\placeholder{}}');
-
-            mf.executeCommand(['insert', latexString]);
+            mf.executeCommand('deleteAll');
             mf.focus();
         };
 
-        // 核心新增：向 MathLive 发送“向后删除”的指令
         window.deleteMath = function () {
             mf.executeCommand('deleteBackward');
             mf.focus();
@@ -69,6 +66,11 @@
 
         window.getFormula = function () {
             return mf.value;
+        };
+
+        window.getMathJSON = function () {
+            const jsonAST = mf.getValue('math-json');
+            return JSON.stringify(jsonAST);
         };
     });
 </script>
