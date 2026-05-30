@@ -1,0 +1,34 @@
+# 编译产物与测试套件
+.ohos/
+.arkui-x/
+build/
+**/build/
+**/build
+>build/
+**/.test
+/.appanalyzer
+
+# 依赖包
+node_modules/
+/node_modules
+**/node_modules/
+oh_modules/
+/oh_modules
+**/oh_modules/
+
+# C++ 编译缓存与 Clang 配置
+.cxx
+.cxx/
+/.clangd
+/.clang-format
+/.clang-tidy
+
+# 本地环境与 IDE 配置
+.hvigor/
+/.hvigor
+.idea/
+/.idea
+*.iml
+local.properties
+/local.properties
+.devco/

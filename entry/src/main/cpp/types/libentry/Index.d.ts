@@ -1,0 +1,1 @@
+export const addFraction: (a: string, b: string) => string;

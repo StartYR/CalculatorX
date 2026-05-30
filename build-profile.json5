@@ -1,0 +1,57 @@
+{
+  "app": {
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "C:\\Users\\yrid\\.ohos\\config\\default_CalculatorPro_9osqF-C_SV-1uvNr-b_ZjYMuUtLpiSrhN9dJrCoycUo=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001AFF16E77F5DC2400B62FC381E6C3D17C63077CAD795281CC75931F1A85A3C0F7CCF713FA23E79",
+          "profile": "C:\\Users\\yrid\\.ohos\\config\\default_CalculatorPro_9osqF-C_SV-1uvNr-b_ZjYMuUtLpiSrhN9dJrCoycUo=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "C:\\Users\\yrid\\.ohos\\config\\default_CalculatorPro_9osqF-C_SV-1uvNr-b_ZjYMuUtLpiSrhN9dJrCoycUo=.p12",
+          "storePassword": "0000001A86CCA5551CF281ED6B97D701553625D17E72B0A04EA8BCBE9F078E3B1865BDD524BBC955300B"
+        }
+      }
+    ],
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "targetSdkVersion": "6.1.1(24)",
+        "compatibleSdkVersion": "6.0.0(20)",
+        "runtimeOS": "HarmonyOS",
+        "buildOption": {
+          "nativeCompiler": "BiSheng",
+          "strictMode": {
+            "caseSensitiveCheck": true,
+            "useNormalizedOHMUrl": true
+          }
+        }
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug",
+      },
+      {
+        "name": "release"
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    }
+  ]
+}
