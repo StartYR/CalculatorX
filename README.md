@@ -5,6 +5,7 @@
 CalculatorPro 是一款高性能专业科学计算器。本项目采用现代化的“前端 UI + Web 渲染 + C++ 计算”三层架构，致力于提供媲美实体科学计算器的交互体验和出版级的数学公式排版。
 
 ![300](docs/image/README/file-20260531143150952.png)
+
 ## 💡 开发环境
 
 DevEco Studio (HarmonyOS)
