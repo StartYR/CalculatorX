@@ -57,6 +57,3 @@ CalculatorPro/
 
 - [ ] 在 C++ 端编写或接入 AST 解析器，啃下 LaTeX 字符串。
 
-## 💡 给 AI 助手的提示 (Prompt Context)
-
-当你看到这份文档时，请明确我的开发环境是 DevEco Studio (HarmonyOS)。我接下来的核心诉求是突破底层架构。请帮我构思如何安全高效地通过 N-API 将 Index.ets 中生成的复杂 LaTeX 字符串传递给 engine.cpp，并讨论 C++ 层解析这些公式的最佳策略。
