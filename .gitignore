@@ -32,3 +32,6 @@ oh_modules/
 local.properties
 /local.properties
 .devco/
+
+# C++ 依赖包
+boost_*.tar.gz
