@@ -5,6 +5,8 @@ import testNapi from 'libentry.so';
 import { TopKeyboard } from '../components/TopKeyboard';
 import { BottomKeyboard } from '../components/BottomKeyboard';
 import { getActionId } from '../utils/CalculatorConfigs';
+import { vibrator } from '@kit.SensorServiceKit';
+import { BusinessError } from '@kit.BasicServicesKit';
 
 @Entry
 @Component
@@ -31,9 +33,12 @@ struct Index {
         src: $rawfile('calculator.html'),
         controller: this.webviewController
       })
+      // 将当前的深浅色状态下发给 Webview
+        .darkMode(WebDarkMode.Auto)
         .width('100%')
         .height('30%')
-        .backgroundColor('#F1F3F5')
+        // 把背景色交给 HTML 内部的 CSS 变量控制
+        .backgroundColor(Color.Transparent)
 
       // 键盘区域
       Column() {
@@ -48,15 +53,23 @@ struct Index {
       }
       .width('100%')
       .height('70%')
-      .backgroundColor('#E2E7ED')
+      .backgroundColor($r('sys.color.comp_background_secondary')) // 键盘背景区换成系统的二级背景色 Token
+      .padding({ bottom: this.navBarHeight })
     }
     .width('100%')
     .height('100%')
-    .padding({ bottom: this.navBarHeight })
-    .backgroundColor('#E2E7ED')
+    .backgroundColor($r('sys.color.background_primary')) // 整个页面的最底层大背景，换成系统的主背景色 Token
   }
 
   handleButtonClick(btn: string | Resource) {
+    vibrator.startVibration({
+      type: 'preset',
+      effectId: 'haptic.effect.sharp', // 触感反馈
+      count: 1
+    }, { usage: 'touch' }).catch((err: BusinessError) => {
+      console.warn(`震动拦截: ${err.message}`);
+    });
+
     let action = getActionId(btn);
 
     if (action === 'AC') {

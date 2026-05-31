@@ -17,14 +17,15 @@ export struct TopKeyboard {
                 Text(topShiftButtons[index] as string)
                   .fontFamily(getFontFamily(topShiftButtons[index]))
                   .fontSize(15)
-                  .fontColor('#ff805300')
+                  // .fontColor($r('sys.color.warning'))
+                  .fontColor('#ffac8100')
                   .textAlign(TextAlign.Center)
                   .width('100%')
               } else {
                 Image(topShiftButtons[index] as Resource)
                   .width(24)
                   .height(24)
-                  .fillColor('#8A94A6')
+                  .fillColor($r('sys.color.icon_secondary'))
                   .objectFit(ImageFit.Contain)
               }
             }
@@ -46,7 +47,7 @@ export struct TopKeyboard {
                 Image(btn)
                   .width(36)
                   .height(36)
-                  .fillColor('#4A5568')
+                  .fillColor($r('sys.color.font_secondary'))
               }
             }
             .type(ButtonType.Normal)
@@ -55,6 +56,25 @@ export struct TopKeyboard {
             .layoutWeight(1)
             .padding({ left: 2, right: 2, top: 0, bottom: 0 })
             .backgroundColor(getBgColor(btn, this.isShift))
+
+            // 物理按键的 3D 静态渲染
+            .shadow(ShadowStyle.OUTER_DEFAULT_SM)
+            .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
+            .borderColor($r('app.color.btn_highlight'))
+
+            // 系统级物理回弹与压暗光效
+            .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
+            .stateStyles({
+              pressed: {
+                .opacity(0.7)
+                .shadow(ShadowStyle.OUTER_DEFAULT_XS)
+              },
+              normal: {
+                .opacity(1.0)
+                .shadow(ShadowStyle.OUTER_DEFAULT_SM)
+              }
+            })
+
             .onClick(() => {
               if (btn === '⇧Shift') {
                 this.isShift = !this.isShift;
@@ -78,6 +98,7 @@ export struct TopKeyboard {
     .rowsGap(4)
     .columnsGap(5)
     .padding({ left: 10, right: 10, top: 12, bottom: 6 })
+    .clip(false)
     .width('100%')
     .height('55%')
   }
