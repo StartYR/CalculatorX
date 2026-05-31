@@ -59,14 +59,27 @@ export function getFontFamily(btn: string | Resource): string {
   return 'Cambria Math';
 }
 
-export function getBgColor(btn: string | Resource, isShift: boolean): string {
+export function getBgColor(btn: string | Resource, isShift: boolean): ResourceColor {
   let action = getActionId(btn);
-  if (action === 'AC' || action === '⌫') return '#FFE5E5';
-  if (action === '=') return '#007DFF';
-  if (['+', '-', '×', '÷', '(', ')'].includes(action)) return '#FFFFFF';
-  if (action === '⇧Shift') return isShift ? '#FF6B00' : '#ff805300';
-  if (['fraction', 'sqrt', 'power', 'abs', 'sum', 'product', 'integral'].includes(action)) return '#F4F5F7';
-  return '#F4F5F7';
+
+  // 1. 危险/清除操作：系统标准错误色 (红色背景)
+  if (action === 'AC' || action === '⌫') return '#ffff7070';
+
+  // 2. 状态切换键：未激活时用系统警告色(橙黄)，激活时用更深的定制橙色凸显状态
+  if (action === '⇧Shift') return isShift ? '#ffac8100' : '#ffdda500';
+
+  // 3. 执行键：系统组件强调色 (蓝色背景)
+  if (action === '=') return $r('sys.color.comp_background_emphasize');
+
+  // 4. 右侧基础运算符：使用三级背景色 (略深的灰色)，作为操作列的视觉区隔
+  if (['+', '-', '×', '÷'].includes(action)) return $r('sys.color.comp_background_tertiary');
+
+  // 5. 核心数字区：使用一级背景色 (最亮/最基础的底色，纯白或纯黑)
+  let isNumberOrCore = (typeof btn === 'string' && btn >= '0' && btn <= '9') || action === '.' || action === 'e' || action === 'π' || action === 'Ans';
+  if (isNumberOrCore) return $r('sys.color.comp_background_primary');
+
+  // 6. 顶部高级函数区：使用二级背景色 (介于数字区和运算符之间的浅灰色)
+  return $r('sys.color.comp_background_secondary');
 }
 
 export function getFontSize(btn: string | Resource): number {
@@ -83,11 +96,21 @@ export function getFontSize(btn: string | Resource): number {
   return 20;
 }
 
-export function getFontColor(btn: string | Resource): string {
-  if (typeof btn !== 'string') return '#4A5568';
-  if (btn === 'AC' || btn === '⌫') return '#FA2A2D';
-  if (btn === '=' || btn === '⇧Shift') return '#FFFFFF';
-  if (['+', '-', '×', '÷', '(', ')'].includes(btn)) return '#007DFF';
-  if (topButtons.includes(btn as string)) return '#4A5568';
-  return '#182431';
+export function getFontColor(btn: string | Resource): ResourceColor {
+  let action = getActionId(btn);
+
+  // 1. 在红色、蓝色、橙色等重色彩背景上，强制使用反色文字 (纯白)，保证绝对清晰
+  if (['AC', '⌫', '=', '⇧Shift'].includes(action)) return $r('sys.color.font_on_primary');
+
+  // 2. SVG 图标：使用主要文字色
+  if (typeof btn !== 'string') return $r('sys.color.font_primary');
+
+  // 3. 右侧运算符：为了让界面更灵动，在灰色背景上使用系统强调色 (蓝色文字)
+  if (['+', '-', '×', '÷'].includes(action)) return $r('sys.color.font_emphasize');
+
+  // 4. 顶部高级功能区：次要文字颜色 (略微弱化，将视觉焦点让给下方数字区)
+  if (topButtons.includes(btn as string)) return $r('sys.color.font_secondary');
+
+  // 5. 核心数字区：主要文字颜色
+  return $r('sys.color.font_primary');
 }

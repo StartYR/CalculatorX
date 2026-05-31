@@ -3,6 +3,10 @@
     {
       "name": "start_window_background",
       "value": "#000000"
+    },
+    {
+      "name": "btn_highlight",
+      "value": "#26FFFFFF"
     }
   ]
 }

@@ -19,7 +19,29 @@ export struct BottomKeyboard {
             .fontSize(getFontSize(btn))
             .fontWeight(FontWeight.Medium)
             .fontColor(getFontColor(btn))
-            .backgroundColor(getBgColor(btn, false)) // 底部不需要 shift 状态影响背景色
+            .backgroundColor(getBgColor(btn, false))
+
+            // 系统级外阴影，让按键整体“浮”在面板上
+            .shadow(ShadowStyle.OUTER_DEFAULT_SM)
+
+            // 模拟物理按键的顶部高光（左上受光面）
+            // 通过给左边和上边加 1px 的半透明白色边框，产生 3D 倒角凸起感
+            .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
+            .borderColor($r('app.color.btn_highlight'))
+
+            // 动态按压效果
+            .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
+            .stateStyles({
+              pressed: {
+                // 按下时不仅降低透明度，还可以把阴影去掉，模拟“按到底了”的物理真实感
+                .opacity(0.7)
+                .shadow(ShadowStyle.OUTER_DEFAULT_XS) // 阴影变小
+              },
+              normal: {
+                .opacity(1.0)
+                .shadow(ShadowStyle.OUTER_DEFAULT_SM) // 阴影恢复
+              }
+            })
             .onClick(() => {
               this.onKeyPress(btn);
             })
@@ -31,6 +53,7 @@ export struct BottomKeyboard {
     .rowsGap(12)
     .columnsGap(8)
     .padding({ left: 10, right: 10, top: 6, bottom: 0 })
+    .clip(false)
     .width('100%')
     .height('45%')
   }
