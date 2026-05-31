@@ -1,50 +1,88 @@
 #include "napi/native_api.h"
 #include "json.hpp"
+#include <symengine/expression.h>
+#include <symengine/functions.h>
+#include <symengine/printers.h> // SymEngine 的 LaTeX 排版打印机
+#include <symengine/constants.h>
 #include <string>
-#include <cmath>
+#include <sstream>
 
 using json = nlohmann::json;
+using SymEngine::Expression;
 
-// 🌟 核心引擎：递归遍历 AST 语法树进行计算
-double evaluateAST(const json& ast) {
-    // 1. 如果节点是纯数字，直接返回
+// 将前端的 MathJSON 转化为 SymEngine 符号树
+Expression parseAST(const json& ast) {
+    // 1. 处理数字
     if (ast.is_number()) {
-        return ast.get<double>();
+        double val = ast.get<double>();
+        if (std::floor(val) == val) {
+            return Expression(static_cast<long>(val));
+        }
+        return Expression(val);
     }
     
-    // 2. 如果节点是数组（即表达式），根据操作符执行计算
+    // 2. 处理变量和内置常数 (Pi, e)
+    if (ast.is_string()) {
+        std::string s = ast.get<std::string>();
+        if (s == "Pi") return Expression(SymEngine::pi);                // 识别圆周率 π
+        if (s == "ExponentialE" || s == "e") return Expression(SymEngine::E); // 识别自然常数 e
+        return Expression(SymEngine::symbol(s));            // 其他当做未知数 x, y
+    }
+    
+    // 3. 处理函数和操作符
     if (ast.is_array() && !ast.empty() && ast[0].is_string()) {
         std::string op = ast[0].get<std::string>();
 
-        // -- 基础四则运算 --
+        // -- 基础运算 --
         if (op == "Add") {
-            double sum = 0;
-            for (size_t i = 1; i < ast.size(); ++i) sum += evaluateAST(ast[i]);
+            Expression sum(0);
+            for (size_t i = 1; i < ast.size(); ++i) sum += parseAST(ast[i]);
             return sum;
         }
         if (op == "Subtract" || op == "Negate") {
-            if (ast.size() == 2) return -evaluateAST(ast[1]); // 处理单目取反，比如 -5
-            return evaluateAST(ast[1]) - evaluateAST(ast[2]);
+            if (ast.size() == 2) return -parseAST(ast[1]);
+            return parseAST(ast[1]) - parseAST(ast[2]);
         }
         if (op == "Multiply") {
-            double product = 1;
-            for (size_t i = 1; i < ast.size(); ++i) product *= evaluateAST(ast[i]);
-            return product;
+            Expression prod(1);
+            for (size_t i = 1; i < ast.size(); ++i) prod *= parseAST(ast[i]);
+            return prod;
         }
-        if (op == "Divide") {
-            return evaluateAST(ast[1]) / evaluateAST(ast[2]);
+        // MathJSON 里普通除法叫 Divide，分数叫 Rational
+        if (op == "Divide" || op == "Rational") {
+            return parseAST(ast[1]) / parseAST(ast[2]);
+        }
+        
+        // -- 根号与绝对值 --
+        if (op == "Sqrt") {
+            return SymEngine::sqrt(parseAST(ast[1]));
+        }
+        if (op == "Root") { // 处理 n 次根号 (比如 ["Root", 8, 3] 就是 8 的 3 次方根)
+            return SymEngine::pow(parseAST(ast[1]), Expression(1) / parseAST(ast[2]));
+        }
+        if (op == "Power") {
+            return SymEngine::pow(parseAST(ast[1]), parseAST(ast[2]));
+        }
+        if (op == "Abs") { // 绝对值
+            return SymEngine::abs(parseAST(ast[1]));
         }
 
-        // -- 高级数学函数 --
-        if (op == "Sqrt") return std::sqrt(evaluateAST(ast[1]));
-        if (op == "Power") return std::pow(evaluateAST(ast[1]), evaluateAST(ast[2]));
-        if (op == "Sin") return std::sin(evaluateAST(ast[1]));
-        if (op == "Cos") return std::cos(evaluateAST(ast[1]));
-        if (op == "Tan") return std::tan(evaluateAST(ast[1]));
+        // -- 三角函数 --
+        if (op == "Sin") return SymEngine::sin(parseAST(ast[1]));
+        if (op == "Cos") return SymEngine::cos(parseAST(ast[1]));
+        if (op == "Tan") return SymEngine::tan(parseAST(ast[1]));
+        
+        // -- 对数与指数 --
+        if (op == "Ln") return SymEngine::log(parseAST(ast[1])); // 自然对数
+        if (op == "Log") { // 有底数的对数 ["Log", x, base]
+            if (ast.size() == 3) {
+                return SymEngine::log(parseAST(ast[1]), parseAST(ast[2]));
+            }
+            return SymEngine::log(parseAST(ast[1]), Expression(10)); // 默认以10为底
+        }
+        return Expression(SymEngine::symbol("Unknown\\_" + op));
     }
-    
-    // 默认返回 0（或者未来在这里抛出无法解析的异常）
-    return 0;
+    return Expression(SymEngine::symbol("Invalid\\_Node"));
 }
 
 // N-API 通信接口
@@ -66,18 +104,16 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
             ast = json::parse(ast.get<std::string>()); 
         }
         
-        // 🔥 调用我们新写的递归计算引擎！
-        double calc_result = evaluateAST(ast);
+        Expression expr = parseAST(ast);
         
-        // 将数字结果转回字符串
-        result_msg = std::to_string(calc_result);
-
-        // 可选：去掉小数点后多余的 0
-        result_msg.erase(result_msg.find_last_not_of('0') + 1, std::string::npos);
-        if (result_msg.back() == '.') result_msg.pop_back();
+        // 🌟 魔法 1：让引擎尝试在代数层面展开多项式
+        expr = Expression(SymEngine::expand(expr.get_basic()));
+        
+        // 🌟 魔法 2：不再输出丑陋的 ASCII，直接导出完美的 LaTeX 公式！
+        result_msg = SymEngine::latex(*expr.get_basic());
 
     } catch (std::exception& e) {
-        result_msg = "Error"; // 如果出错，返回 Error
+        result_msg = "Error";
     }
 
     napi_value result;
