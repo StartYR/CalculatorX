@@ -113,7 +113,7 @@ struct Index {
             cleanJsonString = result;
           }
 
-          let cppResponse: string = testNapi.calculate(cleanJsonString);
+          let cppResponse: string = testNapi.calculate(cleanJsonString, this.isRad);
 
           if (cppResponse !== "Error") {
             this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
