@@ -7,9 +7,13 @@ import { BottomKeyboard } from '../components/BottomKeyboard';
 import { getActionId } from '../utils/CalculatorConfigs';
 import { vibrator } from '@kit.SensorServiceKit';
 import { BusinessError } from '@kit.BasicServicesKit';
-import router from '@ohos.router'; // 引入路由模块
+import router from '@ohos.router';
 
-
+PersistentStorage.persistProp('isRad', false);
+PersistentStorage.persistProp('vibrationIntensity', 50);
+PersistentStorage.persistProp('decimalPrecision', 6);
+PersistentStorage.persistProp('combinationSelectIndex', 1);
+PersistentStorage.persistProp('permutationSelectIndex', 1);
 
 @Entry
 @Component

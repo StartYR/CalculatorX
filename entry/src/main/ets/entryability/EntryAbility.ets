@@ -22,12 +22,7 @@ export default class EntryAbility extends UIAbility {
     // Main window is created, set main page for this ability
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
 
-    // 集中注册所有的持久化状态
-    PersistentStorage.persistProp('isRad', false);
-    PersistentStorage.persistProp('vibrationIntensity', 50);
-    PersistentStorage.persistProp('decimalPrecision', 6);
-    PersistentStorage.persistProp('combinationSelectIndex', 1); // 默认 nCr
-    PersistentStorage.persistProp('permutationSelectIndex', 1); // 默认 nPr
+
 
     windowStage.loadContent('pages/Index', (err) => {
       if (err.code) {
