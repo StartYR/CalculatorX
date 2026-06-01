@@ -7,67 +7,99 @@
     <script src="./compute-engine.min.js"></script>
     <script src="./mathlive.min.js"></script>
     <style>
-        /* 1. 定义色彩变量引擎 */
         :root {
-            /* 浅色模式变量 (保持你原本的设计) */
             --bg-color: #F1F3F5;
             --text-color: #1A1C1E;
+            --result-color: #494949;
         }
 
-        /* 🚀 新增：当系统切换到深色模式时，自动覆盖为深色变量 */
         @media (prefers-color-scheme: dark) {
             :root {
-                /* 深色模式下，背景建议用极深灰或纯黑，文字用纯白 */
                 --bg-color: #000000;
                 --text-color: #FFFFFF;
+                --result-color: #e2e2e2;
             }
         }
 
         body {
             display: flex;
-            align-items: center;
+            flex-direction: column;
+            align-items: flex-end;
             height: 100vh;
             margin: 0;
-            padding: 0 16px;
-            /* 🚀 使用变量，并加上平滑的过渡动画，让切换主题时不那么生硬 */
+            padding: 48px 16px 20px 16px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            overflow-x: auto;
+            -webkit-touch-callout: none;
             background-color: var(--bg-color);
             transition: background-color 0.3s ease;
         }
 
         math-field {
-            font-size: 2.8rem;
-            width: 100%;
+            width: fit-content;
+            max-width: 100%;
+            min-width: 40px;
             background-color: transparent;
             border: none;
-            /* 🚀 字体和占位符颜色全部挂载到变量上 */
             color: var(--text-color);
             --placeholder-color: var(--text-color);
             --placeholder-opacity: 0.35;
             transition: color 0.3s ease;
+
+            /* 强制开启浏览器原生滑动 */
+            touch-action: pan-x pan-y !important;
         }
 
-        math-field:focus-within {
+        #math-input {
+            margin-top: auto;
+            font-size: 2.8rem;
+        }
+
+        #math-input:focus-within {
             outline: none;
         }
 
-        math-field::part(virtual-keyboard-toggle) {
+        #math-input::part(virtual-keyboard-toggle),
+        #math-input::part(menu-toggle) {
             display: none;
         }
 
-        math-field::part(menu-toggle) {
-            display: none;
+        #math-result {
+            font-size: 2.2rem;
+            color: var(--result-color);
+            margin-top: 8px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+            text-align: right;
+        }
+
+        #math-result.show {
+            opacity: 1;
         }
     </style>
 </head>
 
 <body>
 <math-field id="math-input" math-virtual-keyboard-policy="manual"></math-field>
+<math-field id="math-result" read-only></math-field>
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const mf = document.getElementById('math-input');
+        const resField = document.getElementById('math-result');
 
         mf.focus();
+
+        window.showResult = function (latexString) {
+            resField.value = latexString;
+            resField.classList.add('show');
+        };
+
+        mf.addEventListener('input', () => {
+            resField.classList.remove('show');
+        });
 
         window.insertMath = function (latexString) {
             mf.executeCommand(['insert', latexString]);
@@ -76,6 +108,8 @@
 
         window.clearMath = function () {
             mf.executeCommand('deleteAll');
+            resField.classList.remove('show');
+            resField.value = '';
             mf.focus();
         };
 
@@ -92,6 +126,34 @@
             const jsonAST = mf.getValue('math-json');
             return JSON.stringify(jsonAST);
         };
+
+        let isDragging = false;
+        let startX = 0, startY = 0;
+
+        window.addEventListener('pointerdown', (e) => {
+            isDragging = false;
+            startX = e.clientX;
+            startY = e.clientY;
+        }, { capture: true });
+
+        window.addEventListener('pointermove', (e) => {
+            if (!isDragging) {
+                let dx = Math.abs(e.clientX - startX);
+                let dy = Math.abs(e.clientY - startY);
+                if (dx > 5 || dy > 5) {
+                    isDragging = true;
+                }
+            }
+            if (isDragging) {
+                // 滑动屏幕，立刻拦截事件！
+                e.stopPropagation();
+            }
+        }, { capture: true });
+
+        // 禁用长按右键菜单
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
     });
 </script>
 </body>
