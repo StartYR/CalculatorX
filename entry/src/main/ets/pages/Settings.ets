@@ -12,6 +12,7 @@ struct Settings {
   @StorageLink('decimalPrecision') decimalPrecision: number = 6;
   @StorageLink('combinationSelectIndex') combinationSelectIndex: number = 1;
   @StorageLink('permutationSelectIndex') permutationSelectIndex: number = 1;
+  @StorageLink('vibrationCurve') vibrationCurve: number = 0;
 
   build() {
     Column() {
@@ -43,7 +44,7 @@ struct Settings {
       // 主设置列表
       List({ space: 12 }) {
 
-        // 1. 角度单位
+        // 角度单位
         ListItem() {
           Row() {
             Text('角度单位 (Deg / Rad)')
@@ -61,35 +62,64 @@ struct Settings {
           .borderRadius(16)
         }
 
-        // 2. 震动强度 (滑块)
+        // 震动风格，下拉选择
         ListItem() {
-          Column({ space: 8 }) {
-            Row() {
-              Text('触感震动强度')
-                .fontSize(16)
-                .fontColor($r('sys.color.font_primary'))
-              Blank()
-              Text(`${Math.round(this.vibrationIntensity)}%`)
-                .fontSize(14)
-                .fontColor($r('sys.color.font_secondary'))
-            }
-            .width('100%')
-
-            Slider({
-              value: this.vibrationIntensity,
-              min: 0,
-              max: 100,
-              style: SliderStyle.InSet
-            })
-              .width('100%')
-              .onChange((value: number) => {
-                this.vibrationIntensity = value;
+          Row() {
+            Text('震动反馈风格')
+              .fontSize(16)
+              .fontColor($r('sys.color.font_primary'))
+            Blank()
+            Select([
+              { value: '自定义时长' },
+              { value: '原生清脆 (Sharp)' },
+              { value: '原生轻柔 (Soft)' }
+            ])
+              .selected(this.vibrationCurve)
+              .value(this.vibrationCurve === 0 ? '自定义时长' : this.vibrationCurve === 1 ? '原生清脆' : '原生轻柔')
+              .font({ size: 14 })
+              .fontColor($r('sys.color.font_primary'))
+              .onSelect((index: number) => {
+                this.vibrationCurve = index;
               })
           }
           .width('100%')
-          .padding(16)
+          .padding({ left: 16, right: 12, top: 10, bottom: 10 })
           .backgroundColor($r('sys.color.comp_background_primary'))
           .borderRadius(16)
+        }
+
+        // 震动强度 (滑块)
+        if (this.vibrationCurve === 0) {
+          ListItem() {
+            Column({ space: 8 }) {
+              Row() {
+                Text('自定义震动时长')
+                  .fontSize(16)
+                  .fontColor($r('sys.color.font_primary'))
+                Blank()
+                Text(this.vibrationIntensity === 0 ? '关闭' : `${Math.round(this.vibrationIntensity)} ms`)
+                  .fontSize(14)
+                  .fontColor($r('sys.color.font_secondary'))
+              }
+              .width('100%')
+
+              Slider({
+                value: this.vibrationIntensity,
+                min: 0,
+                max: 100,
+                style: SliderStyle.InSet
+              })
+                .width('100%')
+                .onChange((value: number) => {
+                  this.vibrationIntensity = value;
+                })
+            }
+            .width('100%')
+            .padding(16)
+            .backgroundColor($r('sys.color.comp_background_primary'))
+            .borderRadius(16)
+            // 删除了原本的 .opacity() 属性，因为能渲染出来就代表必须 100% 显示
+          }
         }
 
         // 3. 小数精度 (滑块)
@@ -201,6 +231,7 @@ struct Settings {
       .width('100%')
       .padding({ left: 16, right: 16 })
       .layoutWeight(1)
+      .animation({ duration: 300, curve: Curve.FastOutSlowIn })
     }
     .width('100%')
     .height('100%')
