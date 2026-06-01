@@ -9,6 +9,8 @@ import { vibrator } from '@kit.SensorServiceKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import router from '@ohos.router'; // 引入路由模块
 
+
+
 @Entry
 @Component
 struct Index {

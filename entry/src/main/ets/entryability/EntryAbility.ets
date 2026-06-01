@@ -22,6 +22,13 @@ export default class EntryAbility extends UIAbility {
     // Main window is created, set main page for this ability
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
 
+    // 集中注册所有的持久化状态
+    PersistentStorage.persistProp('isRad', false);
+    PersistentStorage.persistProp('vibrationIntensity', 50);
+    PersistentStorage.persistProp('decimalPrecision', 6);
+    PersistentStorage.persistProp('combinationSelectIndex', 1); // 默认 nCr
+    PersistentStorage.persistProp('permutationSelectIndex', 1); // 默认 nPr
+
     windowStage.loadContent('pages/Index', (err) => {
       if (err.code) {
         hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
@@ -29,9 +36,9 @@ export default class EntryAbility extends UIAbility {
       }
       hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
 
-      // 获取主窗口并开启全屏沉浸式布局
+      // 获取主窗口并开启全屏沉浸式布局 (保留你原本的优秀逻辑)
       windowStage.getMainWindow().then(mainWindow => {
-        // 1. 开启全屏布局（内容可以延伸到导航条下方）
+        // 1. 开启全屏布局（内容延伸到导航条下方）
         mainWindow.setWindowLayoutFullScreen(true);
 
         // 2. 获取导航条高度并存入全局变量，供页面组件使用
