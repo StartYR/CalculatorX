@@ -14,7 +14,7 @@ export const icon_fraction: Resource = $rawfile('math-icons/icon_fraction.svg');
 
 // ========== 2. 键盘布局数组 ==========
 export const topButtons: Array<string | Resource> = [
-  '⇧Shift', 'RAD', '⇦', '⇨', 'Ans', 'i',
+  '⇧Shift', 'R/D', '⇦', '⇨', 'Ans', 'i',
   'lim', 'd/dx', icon_sum, icon_product, icon_integral, '∞',
   'x⁻¹', '!', 'nCr', 'nPr', 'ln', 'log',
   icon_abs, icon_sqrt, icon_sqrtx, icon_power2, icon_power, icon_fraction,
@@ -22,7 +22,7 @@ export const topButtons: Array<string | Resource> = [
 ];
 
 export const topShiftButtons: Array<string | Resource> = [
-  '', 'DEG', '', '', '', '',
+  '', '', '', '', '', '',
   '', '', '', '', '', '',
   '', '', '', '', 'eˣ', '10ˣ',
   '', icon_sqrt3, '', '', '', '',
@@ -62,23 +62,14 @@ export function getFontFamily(btn: string | Resource): string {
 export function getBgColor(btn: string | Resource, isShift: boolean): ResourceColor {
   let action = getActionId(btn);
 
-  // 1. 危险/清除操作：系统标准错误色 (红色背景)
-  if (action === 'AC' || action === '⌫') return '#ffff7070';
-
-  // 2. 状态切换键：未激活时用系统警告色(橙黄)，激活时用更深的定制橙色凸显状态
-  if (action === '⇧Shift') return isShift ? '#ffac8100' : '#ffdda500';
-
-  // 3. 执行键：系统组件强调色 (蓝色背景)
+  if (action === 'AC' || action === '⌫') return '#ffff5d3e';
+  if (action === '⇧Shift') return isShift ? '#ffb87200' : '#ff9900';
   if (action === '=') return $r('sys.color.comp_background_emphasize');
-
-  // 4. 右侧基础运算符：使用三级背景色 (略深的灰色)，作为操作列的视觉区隔
   if (['+', '-', '×', '÷'].includes(action)) return $r('sys.color.comp_background_tertiary');
 
-  // 5. 核心数字区：使用一级背景色 (最亮/最基础的底色，纯白或纯黑)
   let isNumberOrCore = (typeof btn === 'string' && btn >= '0' && btn <= '9') || action === '.' || action === 'e' || action === 'π' || action === 'Ans';
   if (isNumberOrCore) return $r('sys.color.comp_background_primary');
 
-  // 6. 顶部高级函数区：使用二级背景色 (介于数字区和运算符之间的浅灰色)
   return $r('sys.color.comp_background_secondary');
 }
 

@@ -11,29 +11,34 @@ export struct TopKeyboard {
       ForEach(topButtons, (btn: string | Resource, index: number) => {
         GridItem() {
           Column() {
-            // Shift 副功能文本区
-            Row() {
-              if (typeof topShiftButtons[index] === 'string') {
-                Text(topShiftButtons[index] as string)
-                  .fontFamily(getFontFamily(topShiftButtons[index]))
-                  .fontSize(15)
-                  // .fontColor($r('sys.color.warning'))
-                  .fontColor('#ffac8100')
-                  .textAlign(TextAlign.Center)
-                  .width('100%')
-              } else {
-                Image(topShiftButtons[index] as Resource)
-                  .width(24)
-                  .height(24)
-                  .fillColor($r('sys.color.icon_secondary'))
-                  .objectFit(ImageFit.Contain)
+            if (index >= 6) {
+              // Shift 副功能文本区
+              Row() {
+                if (typeof topShiftButtons[index] === 'string') {
+                  Text(topShiftButtons[index] as string)
+                    .fontFamily(getFontFamily(topShiftButtons[index]))
+                    .fontSize(15)
+                    .fontColor('#ffac8100')
+                    .textAlign(TextAlign.Center)
+                    .width('100%')
+                } else {
+                  Image(topShiftButtons[index] as Resource)
+                    .width(24)
+                    .height(24)
+                    .fillColor($r('sys.color.icon_secondary'))
+                    .objectFit(ImageFit.Contain)
+                }
               }
+              .width('100%')
+              .height(16)
+              .justifyContent(FlexAlign.Center)
+              .alignItems(VerticalAlign.Center)
+              .margin({ bottom: 1 })
+            } else {
+              Row()
+                .width('100%')
+                .height(6)
             }
-            .width('100%')
-            .height(16)
-            .justifyContent(FlexAlign.Center)
-            .alignItems(VerticalAlign.Center)
-            .margin({ bottom: 1 })
 
             // 主按钮
             Button() {
@@ -93,11 +98,11 @@ export struct TopKeyboard {
         }
       })
     }
-    .rowsTemplate('1fr 1fr 1fr 1fr 1fr')
+    .rowsTemplate('8fr 10fr 10fr 10fr 10fr')
     .columnsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
     .rowsGap(4)
     .columnsGap(5)
-    .padding({ left: 10, right: 10, top: 12, bottom: 6 })
+    .padding({ left: 10, right: 10, top: 6, bottom: 6 })
     .clip(false)
     .width('100%')
     .height('55%')

@@ -105,7 +105,7 @@ struct Index {
       this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveToPreviousChar')`);
     } else if (action === '⇨') {
       this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveToNextChar')`);
-    } else if (action === 'RAD' || action === 'DEG') {
+    } else if (action === 'R/D') {
       // 状态切换按钮，暂不向屏幕输出
       return;
     } else {
