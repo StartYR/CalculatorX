@@ -6,12 +6,12 @@ import router from '@ohos.router';
 struct Settings {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
 
-  // 状态管理：用于接管全局设置的状态机
+  // 自动去读取 EntryAbility 中初始化的本地磁盘数据，并支持双向实时保存
   @StorageLink('isRad') isRad: boolean = false;
-  @State vibrationIntensity: number = 50;
-  @State decimalPrecision: number = 6;
-  @State combinationSelectIndex: number = 1; // 默认 nCr
-  @State permutationSelectIndex: number = 1; // 默认 nPr
+  @StorageLink('vibrationIntensity') vibrationIntensity: number = 50;
+  @StorageLink('decimalPrecision') decimalPrecision: number = 6;
+  @StorageLink('combinationSelectIndex') combinationSelectIndex: number = 1;
+  @StorageLink('permutationSelectIndex') permutationSelectIndex: number = 1;
 
   build() {
     Column() {
