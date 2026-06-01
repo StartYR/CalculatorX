@@ -7,10 +7,12 @@ import { BottomKeyboard } from '../components/BottomKeyboard';
 import { getActionId } from '../utils/CalculatorConfigs';
 import { vibrator } from '@kit.SensorServiceKit';
 import { BusinessError } from '@kit.BasicServicesKit';
+import router from '@ohos.router'; // 引入路由模块
 
 @Entry
 @Component
 struct Index {
+  @StorageProp('isRad') isRad: boolean = false;
   webviewController: web_webview.WebviewController = new web_webview.WebviewController();
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @State isShift: boolean = false;
@@ -27,44 +29,66 @@ struct Index {
   }
 
   build() {
-    Column() {
-      // 公式显示区
-      Web({
-        src: $rawfile('calculator.html'),
-        controller: this.webviewController
-      })
-      // 将当前的深浅色状态下发给 Webview
-        .darkMode(WebDarkMode.Auto)
-        .width('100%')
-        .height('30%')
-        // 把背景色交给 HTML 内部的 CSS 变量控制
-        .backgroundColor(Color.Transparent)
+    // 使用 Stack 作为最外层，使设置按钮能够悬浮于顶层
+    Stack({ alignContent: Alignment.TopStart }) {
 
-      // 键盘区域
+      // 原本的主体布局，保持不变
       Column() {
-        TopKeyboard({
-          isShift: $isShift,
-          onKeyPress: (btn: string | Resource): void => { this.handleButtonClick(btn); }
+        // 公式显示区
+        Web({
+          src: $rawfile('calculator.html'),
+          controller: this.webviewController
         })
+          .darkMode(WebDarkMode.Auto)
+          .width('100%')
+          .height('30%')
+          .backgroundColor(Color.Transparent)
 
-        BottomKeyboard({
-          onKeyPress: (btn: string | Resource): void => { this.handleButtonClick(btn); }
-        })
+        // 键盘区域
+        Column() {
+          TopKeyboard({
+            isShift: $isShift,
+            onKeyPress: (btn: string | Resource): void => { this.handleButtonClick(btn); }
+          })
+
+          BottomKeyboard({
+            onKeyPress: (btn: string | Resource): void => { this.handleButtonClick(btn); }
+          })
+        }
+        .width('100%')
+        .height('70%')
+        .backgroundColor($r('sys.color.comp_background_secondary'))
+        .padding({ bottom: this.navBarHeight })
       }
       .width('100%')
-      .height('70%')
-      .backgroundColor($r('sys.color.comp_background_secondary')) // 键盘背景区换成系统的二级背景色 Token
-      .padding({ bottom: this.navBarHeight })
+      .height('100%')
+
+      // 左上角沉浸式光感设置按钮
+      Button({ type: ButtonType.Circle, stateEffect: true }) {
+        SymbolGlyph($r('sys.symbol.gearshape_fill'))
+          .fontSize(22)
+          .fontColor([$r('sys.color.icon_primary')])
+      }
+      .width(44)
+      .height(44)
+      .margin({ top: 48, left: 16 })
+      .backgroundColor(Color.Transparent)
+      .backgroundBlurStyle(BlurStyle.Thick) // 开启沉浸光感玻璃材质（Thin、Regular、Thick）
+      .onClick(() => {
+        // 点击跳转到设置页
+        router.pushUrl({ url: 'pages/Settings' });
+      })
+
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('sys.color.background_primary')) // 整个页面的最底层大背景，换成系统的主背景色 Token
+    .backgroundColor($r('sys.color.background_primary'))
   }
 
   handleButtonClick(btn: string | Resource) {
     vibrator.startVibration({
       type: 'preset',
-      effectId: 'haptic.effect.sharp', // 触感反馈
+      effectId: 'haptic.effect.sharp',
       count: 1
     }, { usage: 'touch' }).catch((err: BusinessError) => {
       console.warn(`震动拦截: ${err.message}`);
@@ -89,12 +113,9 @@ struct Index {
             cleanJsonString = result;
           }
 
-          // 1. 调用 C++ 引擎计算结果
           let cppResponse: string = testNapi.calculate(cleanJsonString);
 
-          // 2. 将结果发回给 Webview 的下方结果区显示！
           if (cppResponse !== "Error") {
-            // 使用 JSON.stringify 保证 LaTeX 字符串（包含斜杠等特殊字符）安全传入 JS
             this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
           } else {
             console.error("C++ Calculation Error");
@@ -106,7 +127,6 @@ struct Index {
     } else if (action === '⇨') {
       this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveToNextChar')`);
     } else if (action === 'R/D') {
-      // 状态切换按钮，暂不向屏幕输出
       return;
     } else {
       let latexChar = action;
