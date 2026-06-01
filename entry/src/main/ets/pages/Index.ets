@@ -8,6 +8,7 @@ import { getActionId } from '../utils/CalculatorConfigs';
 import { vibrator } from '@kit.SensorServiceKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import router from '@ohos.router';
+PersistentStorage.persistProp('vibrationCurve', 0);
 
 PersistentStorage.persistProp('isRad', false);
 PersistentStorage.persistProp('vibrationIntensity', 50);
@@ -21,6 +22,9 @@ struct Index {
   @StorageProp('isRad') isRad: boolean = false;
   webviewController: web_webview.WebviewController = new web_webview.WebviewController();
   @StorageProp('navBarHeight') navBarHeight: number = 0;
+  @StorageProp('vibrationCurve') vibrationCurve: number = 0;
+  @StorageProp('vibrationIntensity') vibrationIntensity: number = 20;
+
   @State isShift: boolean = false;
 
   aboutToAppear() {
@@ -92,13 +96,35 @@ struct Index {
   }
 
   handleButtonClick(btn: string | Resource) {
-    vibrator.startVibration({
-      type: 'preset',
-      effectId: 'haptic.effect.sharp',
-      count: 1
-    }, { usage: 'touch' }).catch((err: BusinessError) => {
-      console.warn(`震动拦截: ${err.message}`);
-    });
+    // vibrator.startVibration({
+    //   type: 'preset',
+    //   effectId: 'haptic.effect.sharp',
+    //   count: 1
+    // }, { usage: 'touch' }).catch((err: BusinessError) => {
+    //   console.warn(`震动拦截: ${err.message}`);
+    // });
+
+    if (this.vibrationIntensity > 0) {
+      if (this.vibrationCurve === 0) {
+        // 模式 0：自定义时长 (直接使用滑块的毫秒数)
+        vibrator.startVibration({
+          type: 'time',
+          duration: this.vibrationIntensity
+        }, { usage: 'touch' }).catch((err: BusinessError) => {
+          console.warn(`震动拦截: ${err.message}`);
+        });
+      } else {
+        // 模式 1 或 2：调用鸿蒙原生曲线 (此时滑块仅作为是否大于0的总开关)
+        let effectId = this.vibrationCurve === 1 ? 'haptic.effect.sharp' : 'haptic.effect.soft';
+        vibrator.startVibration({
+          type: 'preset',
+          effectId: effectId,
+          count: 1
+        }, { usage: 'touch' }).catch((err: BusinessError) => {
+          console.warn(`震动拦截: ${err.message}`);
+        });
+      }
+    }
 
     let action = getActionId(btn);
 
