@@ -76,7 +76,7 @@ struct Index {
       .width('100%')
       .height('100%')
 
-      // 左上角沉浸式光感设置按钮
+      // 左上角设置按钮
       Button({ type: ButtonType.Circle, stateEffect: true }) {
         SymbolGlyph($r('sys.symbol.gearshape_fill'))
           .fontSize(22)
@@ -86,9 +86,8 @@ struct Index {
       .height(44)
       .margin({ top: 48, left: 16 })
       .backgroundColor(Color.Transparent)
-      .backgroundBlurStyle(BlurStyle.Thick) // 开启沉浸光感玻璃材质（Thin、Regular、Thick）
+      .backgroundBlurStyle(BlurStyle.BACKGROUND_THICK)
       .onClick(() => {
-        // 点击跳转到设置页
         router.pushUrl({ url: 'pages/Settings' });
       })
 
