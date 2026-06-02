@@ -4,8 +4,11 @@
 #include <symengine/functions.h>
 #include <symengine/printers.h>
 #include <symengine/constants.h>
+#include <symengine/eval_double.h>
 #include <string>
 #include <sstream>
+#include <iomanip>
+#include <cmath>
 
 using json = nlohmann::json;
 using SymEngine::Expression;
@@ -52,7 +55,6 @@ Expression parseAST(const json& ast, bool isRad) {
 
         // 拦截三角函数与角度制转换
         if (op == "Sin" || op == "Cos" || op == "Tan") {
-            // 防御性检查：确保 ast 数组至少有 2 个元素
             if (ast.size() < 2) return Expression(SymEngine::symbol("Error"));
             Expression arg = parseAST(ast[1], isRad);
             if (!isRad) {
@@ -74,10 +76,10 @@ Expression parseAST(const json& ast, bool isRad) {
     return Expression(SymEngine::symbol("Invalid\\_Node"));
 }
 
-// N-API 通信接口 (带有极限防崩溃机制)
+// N-API 通信接口 (带有极限防崩溃机制与精度控制)
 static napi_value Calculate(napi_env env, napi_callback_info info) {
-    size_t argc = 2;
-    napi_value args[2];
+    size_t argc = 3;
+    napi_value args[3] = {nullptr};
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
 
     // 防御：检查第一个参数是否真的传了，且必须是 String 类型
@@ -88,18 +90,27 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         return err;
     }
 
-    // 防御：安全提取字符串
+    // 防御：安全提取 JSON 字符串
     size_t str_len;
     napi_get_value_string_utf8(env, args[0], nullptr, 0, &str_len);
     std::string json_str(str_len, '\0');
     napi_get_value_string_utf8(env, args[0], &json_str[0], str_len + 1, &str_len);
 
-    // 防御：安全提取布尔值 (如果不传或者传错，默认当做 false 处理)
+    // 防御：安全提取布尔值 (角度/弧度，默认 false)
     bool isRad = false;
     if (argc >= 2) {
         napi_valuetype valuetype1;
         if (napi_typeof(env, args[1], &valuetype1) == napi_ok && valuetype1 == napi_boolean) {
             napi_get_value_bool(env, args[1], &isRad);
+        }
+    }
+
+    // 防御：安全提取精度参数 (默认 13 档，即自动化简)
+    int32_t precision = 13; 
+    if (argc >= 3) {
+        napi_valuetype valuetype2;
+        if (napi_typeof(env, args[2], &valuetype2) == napi_ok && valuetype2 == napi_number) {
+            napi_get_value_int32(env, args[2], &precision);
         }
     }
 
@@ -112,12 +123,34 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         
         Expression expr = parseAST(ast, isRad);
         expr = Expression(SymEngine::expand(expr.get_basic()));
-        result_msg = SymEngine::latex(*expr.get_basic());
+
+        // ==================== 核心精度控制逻辑 ====================
+        if (precision == 13) {
+            // 第 13 档：自动化简，输出精确的 LaTeX 符号
+            result_msg = SymEngine::latex(*expr.get_basic());
+        } else {
+            // 0~12 档：浮点数格式化
+            try {
+                // 尝试将代数式转化为 double 浮点数
+                double float_val = SymEngine::eval_double(*expr.get_basic());
+                
+                // 使用 C++ 标准库设置输出精度（定点数模式）
+                std::ostringstream oss;
+                oss << std::fixed << std::setprecision(precision) << float_val;
+                result_msg = oss.str();
+            } catch (...) {
+                // 退回机制：如果表达式无法转为纯浮点数（例如代数方程里有未赋值的变量 x）
+                // 放弃浮点化，退回到精确符号输出
+                result_msg = SymEngine::latex(*expr.get_basic());
+            }
+        }
+        // ==========================================================
+
     } catch (...) {
-        // 捕获所有 C++ 异常，绝不让崩溃溢出到应用层
+        // 捕获所有 C++ 异常，绝不让崩溃溢出到 ArkTS 应用层
         result_msg = "Error";
     }
-
+    
     napi_value result;
     napi_create_string_utf8(env, result_msg.c_str(), NAPI_AUTO_LENGTH, &result);
     return result;

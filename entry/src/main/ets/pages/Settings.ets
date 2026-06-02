@@ -1,6 +1,5 @@
 // entry/src/main/ets/pages/Settings.ets
 import router from '@ohos.router';
-// 导入 HDS 导航所需模块
 import {
   HdsNavigation,
   HdsNavigationTitleMode,
@@ -16,45 +15,36 @@ struct Settings {
 
   @StorageLink('isRad') isRad: boolean = false;
   @StorageLink('hapticFeedback') hapticFeedback: boolean = true;
-  @StorageLink('vibrationIntensity') vibrationIntensity: number = 2; // 1-5 档
+  @StorageLink('vibrationIntensity') vibrationIntensity: number = 2;
   @StorageLink('vibrationCurve') vibrationCurve: number = 0;
   @StorageLink('decimalPrecision') decimalPrecision: number = 6;
   @StorageLink('combinationSelectIndex') combinationSelectIndex: number = 1;
   @StorageLink('permutationSelectIndex') permutationSelectIndex: number = 1;
-  @StorageLink('colorModeIndex') colorModeIndex: number = 2; // 0:浅色, 1:深色, 2:系统
+  @StorageLink('colorModeIndex') colorModeIndex: number = 2;
 
-  // 滚动控制器，用于绑定导航栏的滚动效果
   private scrollerForScroll: Scroller = new Scroller();
+  private menus: HdsNavigationMenuContentOptions = { value: [] };
 
-  // 导航栏菜单配置（如果需要右侧菜单按钮可以在这里添加）
-  private menus: HdsNavigationMenuContentOptions = {
-    value: [] // 设置为空数组表示不需要右侧菜单按钮
-  };
-
-  // 统一的分组标题 Builder
   @Builder GroupHeader(title: string) {
     Text(title)
       .fontSize(14)
       .fontColor($r('sys.color.font_secondary'))
       .width('100%')
-      .padding({ left: 16, top: 16, bottom: 6 })
+      // 👈 优化 1：稍微收紧标题与下方卡片的间距
+      .padding({ left: 16, top: 12, bottom: 4 })
   }
 
-  // 统一的分割线 Builder
   @Builder ItemDivider() {
     Divider()
-      .strokeWidth(0.5)
+      .strokeWidth(1.5)
       .color($r('sys.color.comp_background_tertiary'))
       .margin({ left: 48, right: 16 })
   }
 
   build() {
-    // 使用 HdsNavigation 包裹整个页面
     HdsNavigation() {
-      // 滚动内容区域
       Scroll(this.scrollerForScroll) {
         Column() {
-          // 透明占位项：为沉浸式导航栏留出空间
           Row().width('100%').height(108)
 
           // ====================== 科学计算设置 ==========================
@@ -85,12 +75,14 @@ struct Settings {
                   })
               }
               .width('100%')
-              .padding({ left: 16, right: 12, top: 10, bottom: 10 })
+              // 👈 优化 2：统一将上下 padding 压缩为 8，左右保持 16
+              .padding({ left: 16, right: 12, top: 8, bottom: 8 })
 
               this.ItemDivider()
 
               // 2. 小数精度
-              Column({ space: 8 }) {
+              // 👈 优化 3：将 Column 内部元素的间距由 8 缩小为 4
+              Column({ space: 4 }) {
                 Row() {
                   SymbolGlyph($r('sys.symbol.ruler'))
                     .fontSize(20)
@@ -100,7 +92,7 @@ struct Settings {
                     .fontSize(16)
                     .fontColor($r('sys.color.font_primary'))
                   Blank()
-                  Text(this.decimalPrecision === 0 ? '自动化简' : `${this.decimalPrecision} 位`)
+                  Text(this.decimalPrecision === 13 ? '自动化简' : `${this.decimalPrecision} 位`)
                     .fontSize(14)
                     .fontColor($r('sys.color.font_secondary'))
                 }
@@ -109,7 +101,7 @@ struct Settings {
                 Slider({
                   value: this.decimalPrecision,
                   min: 0,
-                  max: 12,
+                  max: 13,
                   step: 1,
                   style: SliderStyle.InSet
                 })
@@ -119,7 +111,8 @@ struct Settings {
                   })
               }
               .width('100%')
-              .padding(16)
+              // 👈 优化 4：缩小滑块容器的整体边距
+              .padding({ left: 16, right: 16, top: 10, bottom: 6 })
             }
             .backgroundColor($r('sys.color.comp_background_primary'))
             .borderRadius(16)
@@ -155,7 +148,7 @@ struct Settings {
                   })
               }
               .width('100%')
-              .padding({ left: 16, right: 12, top: 10, bottom: 10 })
+              .padding({ left: 16, right: 12, top: 8, bottom: 8 })
 
               this.ItemDivider()
 
@@ -183,7 +176,7 @@ struct Settings {
                   })
               }
               .width('100%')
-              .padding({ left: 16, right: 12, top: 10, bottom: 10 })
+              .padding({ left: 16, right: 12, top: 8, bottom: 8 })
             }
             .backgroundColor($r('sys.color.comp_background_primary'))
             .borderRadius(16)
@@ -219,11 +212,11 @@ struct Settings {
                   })
               }
               .width('100%')
-              .padding({ left: 16, right: 12, top: 10, bottom: 10 })
+              .padding({ left: 16, right: 12, top: 8, bottom: 8 })
 
               this.ItemDivider()
 
-              // 触感反馈 (主开关)
+              // 触感反馈
               Row() {
                 SymbolGlyph($r('sys.symbol.waveform_left_speaker_waveform_right'))
                   .fontSize(20)
@@ -239,7 +232,8 @@ struct Settings {
                   })
               }
               .width('100%')
-              .padding(16)
+              // 👈 优化 5：之前用的是 .padding(16)，极大地拉高了高度，现在只保留左右的16
+              .padding({ left: 16, right: 16, top: 10, bottom: 10 })
 
               if (this.hapticFeedback) {
                 this.ItemDivider()
@@ -268,13 +262,13 @@ struct Settings {
                     })
                 }
                 .width('100%')
-                .padding({ left: 16, right: 12, top: 10, bottom: 10 })
+                .padding({ left: 16, right: 12, top: 8, bottom: 8 })
 
-                // 振动强度 (1~5 档)
+                // 振动强度
                 if (this.vibrationCurve === 0) {
                   this.ItemDivider()
 
-                  Column({ space: 8 }) {
+                  Column({ space: 4 }) {
                     Row() {
                       SymbolGlyph($r('sys.symbol.rectangle_portrait_wave_2'))
                         .fontSize(20)
@@ -303,7 +297,7 @@ struct Settings {
                       })
                   }
                   .width('100%')
-                  .padding(16)
+                  .padding({ left: 16, right: 16, top: 10, bottom: 6 })
                 }
               }
             }
@@ -331,7 +325,7 @@ struct Settings {
                   .fontColor([$r('sys.color.icon_tertiary')])
               }
               .width('100%')
-              .padding(16)
+              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
               .onClick(() => {
                 console.info('点击了关于菜单');
               })
@@ -349,34 +343,30 @@ struct Settings {
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.Spring)
     }
-    // HdsNavigation 导航栏配置
     .mode(NavigationMode.Stack)
     .titleBar({
       content: {
         title: {
-          mainTitle: '设置',  // 页面标题
+          mainTitle: '设置',
         },
-        menu: this.menus,  // 右侧菜单（为空表示不显示）
+        menu: this.menus,
       },
       style: {
-        // 滚动效果：渐变模糊
         scrollEffectOpts: {
           enableScrollEffect: true,
           scrollEffectType: ScrollEffectType.GRADIENT_BLUR,
         },
-        // 沉浸光感效果配置（系统自适应版本）
         systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,   // 自适应材质类型
-          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE  // 自适应材质等级
+          materialType: hdsMaterial.MaterialType.ADAPTIVE,
+          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
         },
       },
       avoidLayoutSafeArea: true,
       enableComponentSafeArea: false
     })
-    .bindToScrollable([this.scrollerForScroll]) // 绑定滚动容器，实现导航栏与列表的联动效果
-    .hideBackButton(false) // 隐藏返回按钮
-    .titleMode(HdsNavigationTitleMode.MINI) // 标题栏模式
-    // 忽略安全区域，让内容延伸到顶部（沉浸效果）
+    .bindToScrollable([this.scrollerForScroll])
+    .hideBackButton(false)
+    .titleMode(HdsNavigationTitleMode.MINI)
     .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
     .backgroundColor($r('sys.color.background_secondary'))
   }

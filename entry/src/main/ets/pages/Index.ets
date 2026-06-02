@@ -12,7 +12,8 @@ PersistentStorage.persistProp('vibrationCurve', 0);
 
 PersistentStorage.persistProp('isRad', false);
 PersistentStorage.persistProp('vibrationIntensity', 50);
-PersistentStorage.persistProp('decimalPrecision', 6);
+PersistentStorage.persistProp('decimalPrecision', 13);
+
 PersistentStorage.persistProp('combinationSelectIndex', 1);
 PersistentStorage.persistProp('permutationSelectIndex', 1);
 PersistentStorage.persistProp('hapticFeedback', true);
@@ -27,6 +28,7 @@ struct Index {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @StorageProp('vibrationIntensity') vibrationIntensity: number = 20;
+  @StorageProp('decimalPrecision') decimalPrecision: number = 13;
 
   @State isShift: boolean = false;
 
@@ -147,7 +149,7 @@ struct Index {
             cleanJsonString = result;
           }
 
-          let cppResponse: string = testNapi.calculate(cleanJsonString, this.isRad);
+          let cppResponse: string = testNapi.calculate(cleanJsonString, this.isRad, this.decimalPrecision);
 
           if (cppResponse !== "Error") {
             this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
