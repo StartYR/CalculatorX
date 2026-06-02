@@ -364,7 +364,7 @@ struct Settings {
           enableScrollEffect: true,
           scrollEffectType: ScrollEffectType.GRADIENT_BLUR,
         },
-        // ⭐ 核心：沉浸光感效果配置（系统自适应版本 - 推荐）
+        // 沉浸光感效果配置（系统自适应版本）
         systemMaterialEffect: {
           materialType: hdsMaterial.MaterialType.ADAPTIVE,   // 自适应材质类型
           materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE  // 自适应材质等级
