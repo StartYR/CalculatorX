@@ -1,5 +1,6 @@
 // entry/src/main/ets/pages/DocViewer.ets
 import router from '@ohos.router';
+import webview from '@ohos.web.webview';
 import {
   HdsNavigation,
   HdsNavigationTitleMode,
@@ -12,64 +13,47 @@ import {
 struct DocViewer {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
 
-  // 用于接收路由参数的状态变量
-  @State pageTitle: string = '文档';
-  @State pageContent: string = '内容加载中...';
+  @State pageTitle: string = '加载中...';
+  @State pageUrl: string = 'https://calcx.startyi.com'; // 默认底座域名
 
-  private scrollerForScroll: Scroller = new Scroller();
+  // 👈 实例化 WebView 控制器
+  controller: webview.WebviewController = new webview.WebviewController();
 
-  // 页面即将显示时，解析路由传过来的参数
   aboutToAppear() {
     const params = router.getParams() as Record<string, string>;
     if (params) {
       if (params.title) {
         this.pageTitle = params.title;
       }
-      if (params.content) {
-        this.pageContent = params.content;
+      if (params.url) { // 接收 URL
+        this.pageUrl = params.url;
       }
     }
   }
 
   build() {
     HdsNavigation() {
-      Scroll(this.scrollerForScroll) {
-        Column() {
-          // 顶部透明占位，避让沉浸式标题栏
-          Row().width('100%').height(108)
+      Column() {
+        // 顶部透明占位，避让沉浸式标题栏
+        Row().width('100%').height(64)
 
-          // ====================== 文档正文展示区 ==========================
-          Column() {
-            Text(this.pageContent)
-              .fontSize(16)
-              .fontColor($r('sys.color.font_primary'))
-              .lineHeight(28) // 稍微放宽行距，提升长文本阅读体验
-              .letterSpacing(0.5)
-              .width('100%')
-          }
+        // ====================== 网页加载区 ==========================
+        Web({ src: this.pageUrl, controller: this.controller })
           .width('100%')
-          // 阅读区的内边距要比普通列表大一些，让眼睛更舒服
-          .padding({ left: 24, right: 24, top: 16, bottom: 48 + this.navBarHeight })
-        }
-        .width('100%')
+          .layoutWeight(1) // 占满剩余所有空间
+          .padding({ bottom: this.navBarHeight })
+          // 开启深色模式自适应（网页需要写 prefers-color-scheme 支持）
+          .darkMode(WebDarkMode.Auto)
       }
       .width('100%')
       .height('100%')
-      .scrollable(ScrollDirection.Vertical)
-      .scrollBar(BarState.Off)
-      .edgeEffect(EdgeEffect.Spring)
     }
     .mode(NavigationMode.Stack)
     .titleBar({
       content: {
-        // 👇 动态绑定接收到的标题
         title: { mainTitle: this.pageTitle },
       },
       style: {
-        scrollEffectOpts: {
-          enableScrollEffect: true,
-          scrollEffectType: ScrollEffectType.GRADIENT_BLUR,
-        },
         systemMaterialEffect: {
           materialType: hdsMaterial.MaterialType.ADAPTIVE,
           materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
@@ -78,11 +62,9 @@ struct DocViewer {
       avoidLayoutSafeArea: true,
       enableComponentSafeArea: false
     })
-    .bindToScrollable([this.scrollerForScroll])
     .hideBackButton(false)
-    .titleMode(HdsNavigationTitleMode.FREE) // 依然支持原生大标题折叠
+    .titleMode(HdsNavigationTitleMode.MINI)
     .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
-    // 文档阅读界面通常使用纯净的 primary 底色
     .backgroundColor($r('sys.color.background_primary'))
   }
 }
