@@ -311,6 +311,73 @@ struct Settings {
             this.GroupHeader('关于')
 
             Column() {
+
+              // 使用帮助
+              Row() {
+                SymbolGlyph($r('sys.symbol.checkmark_lightbulb_max'))
+                  .fontSize(20)
+                  .fontColor([$r('sys.color.icon_secondary')])
+                  .margin({ right: 12 })
+                Text('使用帮助')
+                  .fontSize(16)
+                  .fontColor($r('sys.color.font_primary'))
+                Blank()
+                SymbolGlyph($r('sys.symbol.chevron_right'))
+                  .fontSize(20)
+                  .fontColor([$r('sys.color.icon_tertiary')])
+              }
+              .width('100%')
+              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+              .onClick(() => {
+                console.info('点击：使用帮助');
+              })
+
+              this.ItemDivider()
+
+              // 隐私声明
+              Row() {
+                SymbolGlyph($r('sys.symbol.private_browsing_mode'))
+                  .fontSize(20)
+                  .fontColor([$r('sys.color.icon_secondary')])
+                  .margin({ right: 12 })
+                Text('隐私声明')
+                  .fontSize(16)
+                  .fontColor($r('sys.color.font_primary'))
+                Blank()
+                SymbolGlyph($r('sys.symbol.chevron_right'))
+                  .fontSize(20)
+                  .fontColor([$r('sys.color.icon_tertiary')])
+              }
+              .width('100%')
+              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+              .onClick(() => {
+                console.info('点击：隐私声明');
+              })
+
+              this.ItemDivider()
+
+              // 用户协议
+              Row() {
+                SymbolGlyph($r('sys.symbol.doc_plaintext'))
+                  .fontSize(20)
+                  .fontColor([$r('sys.color.icon_secondary')])
+                  .margin({ right: 12 })
+                Text('用户协议')
+                  .fontSize(16)
+                  .fontColor($r('sys.color.font_primary'))
+                Blank()
+                SymbolGlyph($r('sys.symbol.chevron_right'))
+                  .fontSize(20)
+                  .fontColor([$r('sys.color.icon_tertiary')])
+              }
+              .width('100%')
+              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+              .onClick(() => {
+                console.info('点击：用户协议');
+              })
+
+              this.ItemDivider()
+              // 关于 CalcPro
               Row() {
                 SymbolGlyph($r('sys.symbol.info_circle'))
                   .fontSize(20)
@@ -327,8 +394,12 @@ struct Settings {
               .width('100%')
               .padding({ left: 16, right: 16, top: 12, bottom: 12 })
               .onClick(() => {
-                console.info('点击了关于菜单');
+                console.info('点击：关于');
+                // router.pushUrl({ url: 'pages/About' }); 预留跳转
               })
+
+
+
             }
             .backgroundColor($r('sys.color.comp_background_primary'))
             .borderRadius(16)
