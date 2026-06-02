@@ -48,9 +48,9 @@ struct Settings {
         Column() {
           Row().width('100%').height(108)
 
-          // ====================== 科学计算设置 ==========================
+          // ====================== 计算设置 ==========================
           Column() {
-            this.GroupHeader('科学计算设置')
+            this.GroupHeader('计算设置')
 
             Column() {
               // 1. 角度单位
@@ -80,7 +80,7 @@ struct Settings {
 
               this.ItemDivider()
 
-              // 2. 答案输出模式 (新增)
+              // 2. 答案输出模式
               Row() {
                 SymbolGlyph($r('sys.symbol.doc_plaintext'))
                   .fontSize(20)
@@ -268,7 +268,16 @@ struct Settings {
                   })
               }
               .width('100%')
-              .padding({ left: 16, right: 16, top: 10, bottom: 10 })
+              .padding({ left: 16, right: 16, top: 10, bottom: 5 })
+
+              // 小字说明
+              Text('确保在系统设置中开启“系统触感反馈”。')
+                .fontSize(12)
+                .fontColor($r('sys.color.font_tertiary')) // 三级字体颜色
+                .lineHeight(5)
+                .width('100%')
+                .padding({ left: 48, right: 8, top: 0, bottom: 14 })
+
 
               if (this.hapticFeedback) {
                 this.ItemDivider()
@@ -362,14 +371,14 @@ struct Settings {
                   .fontColor([$r('sys.color.icon_tertiary')])
               }
               .width('100%')
-              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
               .onClick(() => {
                 console.info('点击：使用帮助');
                 router.pushUrl({
                   url: 'pages/DocViewer',
                   params: {
                     title: '使用帮助',
-                    content: '欢迎使用 CalculatorPro！\n\n【科学计算】\n支持切换角度制(Deg)与弧度制(Rad)，您可以在设置中调整小数保留精度。\n\n【排版显示】\n支持动态渲染排列(nPr)与组合(nCr)的多种 LaTeX 格式。\n\n【触感反馈】\n我们为您提供了多档位的马达震动调节，请确保系统设置中的触感反馈已开启。'
+                    url: 'https://calcx.startyi.com/help'
                   }
                 });
               })
@@ -391,14 +400,14 @@ struct Settings {
                   .fontColor([$r('sys.color.icon_tertiary')])
               }
               .width('100%')
-              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
               .onClick(() => {
                 console.info('点击：隐私声明');
                 router.pushUrl({
                   url: 'pages/DocViewer',
                   params: {
                     title: '隐私声明',
-                    content: '本应用极其重视您的隐私。\n\n1. 数据收集\nCalculatorPro 作为一款本地科学计算工具，绝不会在后台私自收集、上传您的任何计算记录或个人标识信息。\n\n2. 权限说明\n本应用无需请求网络、相册、通讯录等敏感权限即可完整运行。所有持久化设置项（如精度、震动档位）均安全存储于设备本地沙盒中。'
+                    url: 'https://calcx.startyi.com/privacy'
                   }
                 });
               })
@@ -420,20 +429,21 @@ struct Settings {
                   .fontColor([$r('sys.color.icon_tertiary')])
               }
               .width('100%')
-              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
               .onClick(() => {
                 console.info('点击：用户协议');
                 router.pushUrl({
                   url: 'pages/DocViewer',
                   params: {
                     title: '用户协议',
-                    content: '1. 接受条款\n通过使用本软件，即表示您同意接受本协议的所有条款。\n\n2. 软件使用\n您仅可将本软件用于合法的计算与学术用途。开发者对因使用本软件产生的计算偏差或附带损失不承担直接法律责任。\n\n3. 知识产权\n本软件的代码架构及界面设计均受版权保护，未经授权不得进行反向工程或商业分发。'
+                    url: 'https://calcx.startyi.com/agreement'
                   }
                 });
               })
 
               this.ItemDivider()
-              // 关于 CalcPro
+
+              // 关于此应用
               Row() {
                 SymbolGlyph($r('sys.symbol.info_circle'))
                   .fontSize(20)
@@ -448,7 +458,7 @@ struct Settings {
                   .fontColor([$r('sys.color.icon_tertiary')])
               }
               .width('100%')
-              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
               .onClick(() => {
                 console.info('点击：关于此应用');
                 router.pushUrl({ url: 'pages/About' });
