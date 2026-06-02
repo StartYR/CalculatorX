@@ -15,6 +15,9 @@ PersistentStorage.persistProp('vibrationIntensity', 50);
 PersistentStorage.persistProp('decimalPrecision', 6);
 PersistentStorage.persistProp('combinationSelectIndex', 1);
 PersistentStorage.persistProp('permutationSelectIndex', 1);
+PersistentStorage.persistProp('hapticFeedback', true);
+PersistentStorage.persistProp('vibrationIntensity', 2);
+PersistentStorage.persistProp('colorModeIndex', 2);
 
 @Entry
 @Component
