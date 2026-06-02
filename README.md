@@ -1,5 +1,7 @@
 # CalculatorPro 🚀
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
 ## 📝 项目简介
 
 CalculatorPro 是一款高性能专业科学计算器。本项目采用现代化的“前端 UI + Web 渲染 + C++ 计算”三层架构，致力于提供媲美实体科学计算器的交互体验和出版级的数学公式排版。
@@ -72,3 +74,11 @@ CalculatorPro/
    - [ ] 提供主题颜色、页面布局的自定义选项。
 - [ ] **历史记录功能**：实现计算过程（输入 LaTeX 与结果 LaTeX）的持久化存储与列表展示，并支持一键回填至当前计算器屏幕。
 - [ ] **进阶数学能力解锁** ：针对目前已跑通的 SymEngine，进一步放开高级指令（如 `Solve` 解方程、`Derivative` 求导、`Integral` 积分）的解析映射。
+
+## 📄 许可证
+
+本项目基于 **GNU General Public License v3.0 (GPL-3.0)** 开源协议。
+
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
+详细信息请查看 [LICENSE](./LICENSE) 文件。
