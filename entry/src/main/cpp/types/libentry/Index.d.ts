@@ -1,2 +1,2 @@
 // entry/src/main/cpp/types/libentry/index.d.ts
-export const calculate: (str: string, isRad: boolean) => string;
+export const calculate: (equation: string, isRad: boolean, precision: number) => string;
