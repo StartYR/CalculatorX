@@ -105,28 +105,6 @@ struct About {
 
               this.ItemDivider()
 
-              // 联系开发者
-              Row() {
-                SymbolGlyph($r('sys.symbol.envelope'))
-                  .fontSize(20)
-                  .fontColor([$r('sys.color.icon_secondary')])
-                  .margin({ right: 12 })
-                Text('联系开发者')
-                  .fontSize(16)
-                  .fontColor($r('sys.color.font_primary'))
-                Blank()
-                SymbolGlyph($r('sys.symbol.chevron_right'))
-                  .fontSize(20)
-                  .fontColor([$r('sys.color.icon_tertiary')])
-              }
-              .width('100%')
-              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
-              .onClick(() => {
-                console.info('点击：联系开发者');
-              })
-
-              this.ItemDivider()
-
               // 开源地址
               Row() {
                 SymbolGlyph($r('sys.symbol.share'))
@@ -145,6 +123,28 @@ struct About {
               .padding({ left: 16, right: 16, top: 14, bottom: 14 })
               .onClick(() => {
                 console.info('点击：开源地址');
+              })
+
+              this.ItemDivider()
+
+              // 联系开发者
+              Row() {
+                SymbolGlyph($r('sys.symbol.envelope'))
+                  .fontSize(20)
+                  .fontColor([$r('sys.color.icon_secondary')])
+                  .margin({ right: 12 })
+                Text('联系开发者')
+                  .fontSize(16)
+                  .fontColor($r('sys.color.font_primary'))
+                Blank()
+                SymbolGlyph($r('sys.symbol.chevron_right'))
+                  .fontSize(20)
+                  .fontColor([$r('sys.color.icon_tertiary')])
+              }
+              .width('100%')
+              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+              .onClick(() => {
+                console.info('点击：联系开发者');
               })
             }
             .backgroundColor($r('sys.color.comp_background_primary'))
