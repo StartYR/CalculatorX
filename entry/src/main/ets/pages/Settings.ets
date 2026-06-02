@@ -364,7 +364,7 @@ struct Settings {
           enableScrollEffect: true,
           scrollEffectType: ScrollEffectType.GRADIENT_BLUR,
         },
-        // 沉浸光感效果配置（系统自适应版本）
+        // ⭐ 核心：沉浸光感效果配置（系统自适应版本 - 推荐）
         systemMaterialEffect: {
           materialType: hdsMaterial.MaterialType.ADAPTIVE,   // 自适应材质类型
           materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE  // 自适应材质等级
@@ -375,7 +375,7 @@ struct Settings {
     })
     .bindToScrollable([this.scrollerForScroll]) // 绑定滚动容器，实现导航栏与列表的联动效果
     .hideBackButton(false) // 隐藏返回按钮
-    .titleMode(HdsNavigationTitleMode.MINI)
+    .titleMode(HdsNavigationTitleMode.MINI) // 标题栏模式
     // 忽略安全区域，让内容延伸到顶部（沉浸效果）
     .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
     .backgroundColor($r('sys.color.background_secondary'))
