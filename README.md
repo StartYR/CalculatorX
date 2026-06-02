@@ -23,7 +23,7 @@ DevEco Studio (HarmonyOS)
    * 采用 `Web` 组件挂载本地沙箱内的 HTML 文件。
    * 核心渲染器使用全本地部署的 [MathLive](https://mathlive.io/) 库（`mathlive.min.js`），支持完全离线运行。
    * 支持通过 ArkTS 的 `runJavaScript` 进行跨端 DOM 操作与光标控制。
-3. **⚙️ 计算引擎层 (C++ & N-API)
+3. **⚙️ 计算引擎层 (C++ & N-API)**
    * 底层通过 `CMakeLists.txt` 配置，使用 C++ 进行硬核的高级数学计算。
    * 计划实现对 LaTeX 字符串的 AST（抽象语法树）解析，并将计算结果通过 N-API 回传给 ArkTS 层。
 
