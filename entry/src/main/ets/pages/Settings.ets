@@ -21,6 +21,7 @@ struct Settings {
   @StorageLink('combinationSelectIndex') combinationSelectIndex: number = 1;
   @StorageLink('permutationSelectIndex') permutationSelectIndex: number = 1;
   @StorageLink('colorModeIndex') colorModeIndex: number = 2;
+  @StorageLink('answerOutputMode') answerOutputMode: number = 0;
 
   private scrollerForScroll: Scroller = new Scroller();
   private menus: HdsNavigationMenuContentOptions = { value: [] };
@@ -75,49 +76,84 @@ struct Settings {
                   })
               }
               .width('100%')
-              // 👈 优化 2：统一将上下 padding 压缩为 8，左右保持 16
               .padding({ left: 16, right: 12, top: 8, bottom: 8 })
 
               this.ItemDivider()
 
-              // 2. 小数精度
-              // 👈 优化 3：将 Column 内部元素的间距由 8 缩小为 4
-              Column({ space: 4 }) {
-                Row() {
-                  SymbolGlyph($r('sys.symbol.ruler'))
-                    .fontSize(20)
-                    .fontColor([$r('sys.color.icon_secondary')])
-                    .margin({ right: 12 })
-                  Text('小数精度')
-                    .fontSize(16)
-                    .fontColor($r('sys.color.font_primary'))
-                  Blank()
-                  Text(this.decimalPrecision === 13 ? '自动化简' : `${this.decimalPrecision} 位`)
-                    .fontSize(14)
-                    .fontColor($r('sys.color.font_secondary'))
-                }
-                .width('100%')
-
-                Slider({
-                  value: this.decimalPrecision,
-                  min: 0,
-                  max: 13,
-                  step: 1,
-                  style: SliderStyle.InSet
-                })
-                  .width('100%')
-                  .onChange((value: number) => {
-                    this.decimalPrecision = value;
+              // 2. 答案输出模式 (新增)
+              Row() {
+                SymbolGlyph($r('sys.symbol.doc_plaintext'))
+                  .fontSize(20)
+                  .fontColor([$r('sys.color.icon_secondary')])
+                  .margin({ right: 12 })
+                Text('答案输出')
+                  .fontSize(16)
+                  .fontColor($r('sys.color.font_primary'))
+                Blank()
+                Select([
+                  { value: '自动模式' },
+                  { value: '小数模式' }
+                ])
+                  .selected(this.answerOutputMode)
+                  .value(this.answerOutputMode === 0 ? '自动模式' : '小数模式')
+                  .font({ size: 14 })
+                  .fontColor($r('sys.color.font_primary'))
+                  .onSelect((index: number) => {
+                    this.answerOutputMode = index;
                   })
               }
               .width('100%')
-              // 👈 优化 4：缩小滑块容器的整体边距
-              .padding({ left: 16, right: 16, top: 10, bottom: 6 })
+              .padding({ left: 16, right: 12, top: 8, bottom: 8 })
+
+              // 3. 小数精度 (仅在“小数模式”下渲染显示)
+              if (this.answerOutputMode === 1) {
+                this.ItemDivider()
+
+                Column({ space: 4 }) {
+                  Row() {
+                    SymbolGlyph($r('sys.symbol.ruler'))
+                      .fontSize(20)
+                      .fontColor([$r('sys.color.icon_secondary')])
+                      .margin({ right: 12 })
+                    Text('小数精度')
+                      .fontSize(16)
+                      .fontColor($r('sys.color.font_primary'))
+                    Blank()
+                    Text(this.decimalPrecision === 16 ? '自动' : `${this.decimalPrecision} 位`)
+                      .fontSize(14)
+                      .fontColor($r('sys.color.font_secondary'))
+                  }
+                  .width('100%')
+
+                  // 小字说明
+                  Text('为保证精度，建议计算大数时调整至 12 位以下。')
+                    .fontSize(12)
+                    .fontColor($r('sys.color.font_tertiary')) // 三级字体颜色
+                    .lineHeight(10)
+                    .width('100%')
+                    .padding({ left: 32, right: 8, top: 2, bottom: 0 })
+
+                  Slider({
+                    value: this.decimalPrecision,
+                    min: 0,
+                    max: 16,
+                    step: 1,
+                    style: SliderStyle.InSet
+                  })
+                    .width('100%')
+                    .onChange((value: number) => {
+                      this.decimalPrecision = value;
+                    })
+                }
+                .width('100%')
+                .padding({ left: 16, right: 16, top: 10, bottom: 6 })
+              }
             }
             .backgroundColor($r('sys.color.comp_background_primary'))
             .borderRadius(16)
           }
           .padding({ left: 16, right: 16, bottom: 12 })
+
 
           // ====================== 按键显示 ==========================
           Column() {
@@ -232,7 +268,6 @@ struct Settings {
                   })
               }
               .width('100%')
-              // 👈 优化 5：之前用的是 .padding(16)，极大地拉高了高度，现在只保留左右的16
               .padding({ left: 16, right: 16, top: 10, bottom: 10 })
 
               if (this.hapticFeedback) {
@@ -249,7 +284,7 @@ struct Settings {
                     .fontColor($r('sys.color.font_primary'))
                   Blank()
                   Select([
-                    { value: '自定义时长' },
+                    { value: '自定义' },
                     { value: '原生清脆 (Sharp)' },
                     { value: '原生轻柔 (Soft)' }
                   ])

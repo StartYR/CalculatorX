@@ -125,22 +125,35 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         expr = Expression(SymEngine::expand(expr.get_basic()));
 
         // ==================== 核心精度控制逻辑 ====================
-        if (precision == 13) {
-            // 第 13 档：自动化简，输出精确的 LaTeX 符号
+        if (precision == -1) {
+            // -1 档：自动模式，直接输出精确的 LaTeX 符号 (例如 \frac{1}{2})
             result_msg = SymEngine::latex(*expr.get_basic());
         } else {
-            // 0~12 档：浮点数格式化
+            // 小数模式
             try {
                 // 尝试将代数式转化为 double 浮点数
                 double float_val = SymEngine::eval_double(*expr.get_basic());
                 
-                // 使用 C++ 标准库设置输出精度（定点数模式）
                 std::ostringstream oss;
-                oss << std::fixed << std::setprecision(precision) << float_val;
-                result_msg = oss.str();
+                if (precision == -2) {
+                    // -2 档：小数精度“自动”
+                    // 策略：使用极高精度输出，然后暴力抹除字符串末尾多余的 '0' 和可能遗留的 '.'
+                    oss << std::fixed << std::setprecision(12) << float_val;
+                    std::string str = oss.str();
+                    
+                    // 核心去零算法
+                    str.erase(str.find_last_not_of('0') + 1, std::string::npos);
+                    if (!str.empty() && str.back() == '.') {
+                        str.pop_back();
+                    }
+                    result_msg = str;
+                } else {
+                    // 0~12 档：强制固定小数位数，位数不够标准库会自动补 0
+                    oss << std::fixed << std::setprecision(precision) << float_val;
+                    result_msg = oss.str();
+                }
             } catch (...) {
-                // 退回机制：如果表达式无法转为纯浮点数（例如代数方程里有未赋值的变量 x）
-                // 放弃浮点化，退回到精确符号输出
+                // 退回机制：如果包含未知变量无法转为浮点数，退回到符号输出
                 result_msg = SymEngine::latex(*expr.get_basic());
             }
         }

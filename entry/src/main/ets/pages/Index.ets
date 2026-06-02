@@ -12,8 +12,8 @@ PersistentStorage.persistProp('vibrationCurve', 0);
 
 PersistentStorage.persistProp('isRad', false);
 PersistentStorage.persistProp('vibrationIntensity', 50);
-PersistentStorage.persistProp('decimalPrecision', 13);
-
+PersistentStorage.persistProp('decimalPrecision', 16);
+PersistentStorage.persistProp('answerOutputMode', 0);
 PersistentStorage.persistProp('combinationSelectIndex', 1);
 PersistentStorage.persistProp('permutationSelectIndex', 1);
 PersistentStorage.persistProp('hapticFeedback', true);
@@ -23,6 +23,7 @@ PersistentStorage.persistProp('colorModeIndex', 2);
 @Entry
 @Component
 struct Index {
+  @StorageProp('answerOutputMode') answerOutputMode: number = 0;
   @StorageProp('isRad') isRad: boolean = false;
   webviewController: web_webview.WebviewController = new web_webview.WebviewController();
   @StorageProp('navBarHeight') navBarHeight: number = 0;
@@ -149,7 +150,18 @@ struct Index {
             cleanJsonString = result;
           }
 
-          let cppResponse: string = testNapi.calculate(cleanJsonString, this.isRad, this.decimalPrecision);
+          // ===== 将前端双状态映射为 C++ 单一控制码 =====
+          let cppPrecisionMode = -1;
+          if (this.answerOutputMode === 0) {
+            cppPrecisionMode = -1; // -1 代表：自动模式（符号精确化简输出，如分数/根号）
+          } else {
+            if (this.decimalPrecision === 16) {
+              cppPrecisionMode = -2; // -2 代表：小数模式 + 自动位数（动态抹除末尾的0）
+            } else {
+              cppPrecisionMode = this.decimalPrecision; // 0~12 代表：小数模式 + 强制固定补0
+            }
+          }
+          let cppResponse: string = testNapi.calculate(cleanJsonString, this.isRad, cppPrecisionMode);
 
           if (cppResponse !== "Error") {
             this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
