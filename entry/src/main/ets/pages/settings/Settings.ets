@@ -1,4 +1,5 @@
 // entry/src/main/ets/pages/Settings.ets
+import { preferences } from '@kit.ArkData';
 import router from '@ohos.router';
 import { RoutePath } from '../../utils/CalculatorConfigs';
 import {
@@ -8,6 +9,10 @@ import {
   ScrollEffectType,
   hdsMaterial
 } from '@kit.UIDesignKit';
+import { ConfigurationConstant, common } from '@kit.AbilityKit';
+
+
+
 
 @Entry
 @Component
@@ -244,7 +249,27 @@ struct Settings {
                   .font({ size: 14 })
                   .fontColor($r('sys.color.font_primary'))
                   .onSelect((index: number) => {
+                    // 1. 改变 UI 状态
                     this.colorModeIndex = index;
+
+                    let context = getContext(this) as common.UIAbilityContext;
+
+                    // 2. 【官方规范】获取同名首选项实例
+                    let options: preferences.Options = { name: 'CalcX_Preferences' };
+                    let prefs = preferences.getPreferencesSync(context, options);
+
+                    // 3. 【官方规范】写入内存并强制落盘 (flush 极其重要！)
+                    prefs.putSync('colorModeIndex', index);
+                    prefs.flush();
+
+                    // 4. 立即动态切换当前应用颜色
+                    let targetColorMode = ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET;
+                    if (index === 0) {
+                      targetColorMode = ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT;
+                    } else if (index === 1) {
+                      targetColorMode = ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
+                    }
+                    context.getApplicationContext().setColorMode(targetColorMode);
                   })
               }
               .width('100%')

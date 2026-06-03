@@ -9,6 +9,7 @@ import { vibrator } from '@kit.SensorServiceKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { RoutePath } from '../utils/CalculatorConfigs';
 import router from '@ohos.router';
+
 PersistentStorage.persistProp('vibrationCurve', 0);
 
 PersistentStorage.persistProp('isRad', false);
@@ -19,7 +20,7 @@ PersistentStorage.persistProp('combinationSelectIndex', 1);
 PersistentStorage.persistProp('permutationSelectIndex', 1);
 PersistentStorage.persistProp('hapticFeedback', true);
 PersistentStorage.persistProp('vibrationIntensity', 2);
-PersistentStorage.persistProp('colorModeIndex', 2);
+// PersistentStorage.persistProp('colorModeIndex', 2);
 
 @Entry
 @Component
