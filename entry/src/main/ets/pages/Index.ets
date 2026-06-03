@@ -7,6 +7,7 @@ import { BottomKeyboard } from '../components/BottomKeyboard';
 import { getActionId } from '../utils/CalculatorConfigs';
 import { vibrator } from '@kit.SensorServiceKit';
 import { BusinessError } from '@kit.BasicServicesKit';
+import { RoutePath } from '../utils/CalculatorConfigs';
 import router from '@ohos.router';
 PersistentStorage.persistProp('vibrationCurve', 0);
 
@@ -91,7 +92,7 @@ struct Index {
       .backgroundColor(Color.Transparent)
       .backgroundBlurStyle(BlurStyle.BACKGROUND_THICK)
       .onClick(() => {
-        router.pushUrl({ url: 'pages/Settings' });
+        router.pushUrl({ url: RoutePath.SETTINGS });
       })
 
     }

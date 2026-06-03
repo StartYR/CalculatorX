@@ -1,5 +1,6 @@
 // entry/src/main/ets/pages/Settings.ets
 import router from '@ohos.router';
+import { RoutePath } from '../../utils/CalculatorConfigs';
 import {
   HdsNavigation,
   HdsNavigationTitleMode,
@@ -374,7 +375,7 @@ struct Settings {
               .onClick(() => {
                 console.info('点击：使用帮助');
                 router.pushUrl({
-                  url: 'pages/DocViewer',
+                  url: RoutePath.DOC_VIEWER,
                   params: {
                     title: '使用帮助',
                     url: 'https://calcx.startyi.com/help'
@@ -403,7 +404,7 @@ struct Settings {
               .onClick(() => {
                 console.info('点击：隐私政策');
                 router.pushUrl({
-                  url: 'pages/DocViewer',
+                  url: RoutePath.DOC_VIEWER,
                   params: {
                     title: '隐私政策',
                     url: 'https://calcx.startyi.com/privacy'
@@ -432,7 +433,7 @@ struct Settings {
               .onClick(() => {
                 console.info('点击：用户协议');
                 router.pushUrl({
-                  url: 'pages/DocViewer',
+                  url: RoutePath.DOC_VIEWER,
                   params: {
                     title: '用户协议',
                     url: 'https://calcx.startyi.com/agreement'
@@ -460,7 +461,7 @@ struct Settings {
               .padding({ left: 16, right: 16, top: 14, bottom: 14 })
               .onClick(() => {
                 console.info('点击：关于此应用');
-                router.pushUrl({ url: 'pages/About' });
+                router.pushUrl({ url: RoutePath.ABOUT });
               })
             }
             .backgroundColor($r('sys.color.comp_background_primary'))

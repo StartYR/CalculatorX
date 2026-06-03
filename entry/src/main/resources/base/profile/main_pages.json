@@ -1,8 +1,8 @@
 {
   "src": [
     "pages/Index",
-    "pages/Settings",
-	"pages/About",
-    "pages/DocViewer"
+    "pages/DocViewer",
+    "pages/settings/Settings",
+	"pages/settings/About"
   ]
 }
