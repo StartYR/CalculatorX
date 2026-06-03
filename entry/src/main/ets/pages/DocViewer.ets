@@ -12,39 +12,35 @@ import {
 @Component
 struct DocViewer {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
-
   @State pageTitle: string = '加载中...';
-  @State pageUrl: string = 'https://calcx.startyi.com'; // 默认底座域名
+  @State pageUrl: string = 'https://calcx.startyi.com';
 
-  // 👈 实例化 WebView 控制器
+  private scrollerForContent: Scroller = new Scroller(); // 创建滚动控制器
+
   controller: webview.WebviewController = new webview.WebviewController();
 
   aboutToAppear() {
     const params = router.getParams() as Record<string, string>;
     if (params) {
-      if (params.title) {
-        this.pageTitle = params.title;
-      }
-      if (params.url) { // 接收 URL
-        this.pageUrl = params.url;
-      }
+      // if (params.title) this.pageTitle = params.title;
+      if (params.title) this.pageTitle = '';
+      if (params.url) this.pageUrl = params.url;
     }
   }
 
   build() {
     HdsNavigation() {
-      Column() {
-        // 顶部透明占位，避让沉浸式标题栏
-        Row().width('100%').height(64)
-
-        // ====================== 网页加载区 ==========================
+      // 使用Scroll包裹Web内容，让标题栏感知滚动
+      Scroll(this.scrollerForContent) {
         Web({ src: this.pageUrl, controller: this.controller })
           .width('100%')
-          .layoutWeight(1) // 占满剩余所有空间
+          .height('100%')
           .padding({ bottom: this.navBarHeight })
-          // 开启深色模式自适应（网页需要写 prefers-color-scheme 支持）
           .darkMode(WebDarkMode.Auto)
       }
+      .scrollable(ScrollDirection.Vertical)
+      .scrollBar(BarState.Off)
+      .edgeEffect(EdgeEffect.Spring)
       .width('100%')
       .height('100%')
     }
@@ -54,6 +50,10 @@ struct DocViewer {
         title: { mainTitle: this.pageTitle },
       },
       style: {
+        scrollEffectOpts: {
+          enableScrollEffect: true,
+          scrollEffectType: ScrollEffectType.GRADIENT_BLUR,
+        },
         systemMaterialEffect: {
           materialType: hdsMaterial.MaterialType.ADAPTIVE,
           materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
@@ -64,6 +64,7 @@ struct DocViewer {
     })
     .hideBackButton(false)
     .titleMode(HdsNavigationTitleMode.MINI)
+    .bindToScrollable([this.scrollerForContent]) // 绑定滚动组件
     .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
     .backgroundColor($r('sys.color.background_primary'))
   }

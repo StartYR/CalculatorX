@@ -12,7 +12,6 @@ import {
 @Component
 struct Settings {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
-
   @StorageLink('isRad') isRad: boolean = false;
   @StorageLink('hapticFeedback') hapticFeedback: boolean = true;
   @StorageLink('vibrationIntensity') vibrationIntensity: number = 2;
@@ -31,7 +30,7 @@ struct Settings {
       .fontSize(14)
       .fontColor($r('sys.color.font_secondary'))
       .width('100%')
-      // 👈 优化 1：稍微收紧标题与下方卡片的间距
+      // 收紧标题与下方卡片的间距
       .padding({ left: 16, top: 12, bottom: 4 })
   }
 
@@ -46,7 +45,7 @@ struct Settings {
     HdsNavigation() {
       Scroll(this.scrollerForScroll) {
         Column() {
-          Row().width('100%').height(108)
+          Row().width('100%').height(96)
 
           // ====================== 计算设置 ==========================
           Column() {
@@ -385,13 +384,13 @@ struct Settings {
 
               this.ItemDivider()
 
-              // 隐私声明
+              // 隐私政策
               Row() {
                 SymbolGlyph($r('sys.symbol.private_browsing_mode'))
                   .fontSize(20)
                   .fontColor([$r('sys.color.icon_secondary')])
                   .margin({ right: 12 })
-                Text('隐私声明')
+                Text('隐私政策')
                   .fontSize(16)
                   .fontColor($r('sys.color.font_primary'))
                 Blank()
@@ -402,11 +401,11 @@ struct Settings {
               .width('100%')
               .padding({ left: 16, right: 16, top: 14, bottom: 14 })
               .onClick(() => {
-                console.info('点击：隐私声明');
+                console.info('点击：隐私政策');
                 router.pushUrl({
                   url: 'pages/DocViewer',
                   params: {
-                    title: '隐私声明',
+                    title: '隐私政策',
                     url: 'https://calcx.startyi.com/privacy'
                   }
                 });

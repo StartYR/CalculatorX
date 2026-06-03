@@ -101,6 +101,9 @@ struct About {
               .padding({ left: 16, right: 16, top: 14, bottom: 14 })
               .onClick(() => {
                 console.info('点击：官方主页');
+                router.pushUrl({
+                  url: 'https://calcx.startyi.com/privacy',
+                });
               })
 
               this.ItemDivider()
@@ -195,7 +198,7 @@ struct About {
     })
     .bindToScrollable([this.scrollerForScroll])
     .hideBackButton(false)
-    .titleMode(HdsNavigationTitleMode.FREE) // 采用 FREE 模式，允许大标题向下滚动时缩小
+    .titleMode(HdsNavigationTitleMode.MINI) // 采用 FREE 模式，允许大标题向下滚动时缩小
     .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
     .backgroundColor($r('sys.color.background_secondary'))
   }
