@@ -52,6 +52,14 @@ export function getActionId(btn: string | Resource): string {
   return '';
 }
 
+// 全局路径
+export class RoutePath {
+  static readonly INDEX = 'pages/Index';
+  static readonly SETTINGS = 'pages/settings/Settings';
+  static readonly ABOUT = 'pages/settings/About';
+  static readonly DOC_VIEWER = 'pages/DocViewer';
+}
+
 export function getFontFamily(btn: string | Resource): string {
   if (typeof btn !== 'string') return 'HarmonyOS Sans';
   if (['AC', '⌫', '='].includes(btn)) return 'HarmonyOS Sans';
