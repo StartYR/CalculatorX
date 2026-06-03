@@ -5,13 +5,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "C:\\Users\\yrid\\.ohos\\config\\default_CalculatorPro_9osqF-C_SV-1uvNr-b_ZjYMuUtLpiSrhN9dJrCoycUo=.cer",
+          "certpath": "C:\\Users\\yrid\\.ohos\\config\\default_CalculatorX_RUdoBXcuCHCBucvjdDRMmG18Q01spdBpqCcWsc-pCBs=.cer",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001AFF16E77F5DC2400B62FC381E6C3D17C63077CAD795281CC75931F1A85A3C0F7CCF713FA23E79",
-          "profile": "C:\\Users\\yrid\\.ohos\\config\\default_CalculatorPro_9osqF-C_SV-1uvNr-b_ZjYMuUtLpiSrhN9dJrCoycUo=.p7b",
+          "keyPassword": "0000001BB877C414833891013DA354619F32E6FC9640E3E4CF8EFE3BF495EB12120B357A1C4936C863504B",
+          "profile": "C:\\Users\\yrid\\.ohos\\config\\default_CalculatorX_RUdoBXcuCHCBucvjdDRMmG18Q01spdBpqCcWsc-pCBs=.p7b",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "C:\\Users\\yrid\\.ohos\\config\\default_CalculatorPro_9osqF-C_SV-1uvNr-b_ZjYMuUtLpiSrhN9dJrCoycUo=.p12",
-          "storePassword": "0000001A86CCA5551CF281ED6B97D701553625D17E72B0A04EA8BCBE9F078E3B1865BDD524BBC955300B"
+          "storeFile": "C:\\Users\\yrid\\.ohos\\config\\default_CalculatorX_RUdoBXcuCHCBucvjdDRMmG18Q01spdBpqCcWsc-pCBs=.p12",
+          "storePassword": "0000001B0E0247C66E434EB31F06F45538503019A88E11CA31863D0CEB76E80A03B1E81A27DBE236C5B8E5"
         }
       }
     ],

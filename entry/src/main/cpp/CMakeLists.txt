@@ -13,7 +13,7 @@ include_directories(${NATIVERENDER_ROOT_PATH}
 
 include(FetchContent)
 
-# ================= 🌟 1. 引入 Boost (本地离线版) =================
+# ================= 引入 Boost (本地离线版) =================
 FetchContent_Declare(
     boost
     URL ${CMAKE_CURRENT_SOURCE_DIR}/boost_1_82_0.tar.gz
@@ -30,7 +30,7 @@ set(Boost_INCLUDE_DIR ${boost_SOURCE_DIR} CACHE PATH "Boost include" FORCE)
 
 include_directories(${boost_SOURCE_DIR})
 
-# ================= 🌟 2. 引入 SymEngine (CAS 核心) =================
+# ================= 引入 SymEngine (CAS 核心) =================
 FetchContent_Declare(
     symengine
     GIT_REPOSITORY https://github.com/symengine/symengine.git
@@ -50,7 +50,7 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build as static library" FORCE)
 
 FetchContent_MakeAvailable(symengine)
 
-# ================= 强制把 SymEngine 的头文件路径喂给 IDE 编辑器 =================
+# ================= 强制把 SymEngine 的头文件路径给 IDE 编辑器 =================
 include_directories(
     ${symengine_SOURCE_DIR}       # 源码头文件路径
     ${symengine_BINARY_DIR}       # 动态生成的配置头文件路径

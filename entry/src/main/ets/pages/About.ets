@@ -35,7 +35,7 @@ struct About {
               .borderRadius(18) // 圆角弧度
               .shadow({ radius: 16, color: 'rgba(0, 0, 0, 0.08)', offsetY: 6 }) // 保留一层悬浮阴影
 
-            Text('CalculatorPro')
+            Text('CalculatorX')
               .fontSize(28)
               .fontWeight(FontWeight.Bold)
               .fontColor($r('sys.color.font_primary'))
