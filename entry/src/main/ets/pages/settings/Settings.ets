@@ -1,8 +1,7 @@
 // entry/src/main/ets/pages/Settings.ets
 import { preferences } from '@kit.ArkData';
-import { PreferenceConfigs } from '../../utils/CalculatorConfigs';
+import { PreferenceConfigs, CombinationOptions, PermutationOptions, RoutePath, MathStyleOption } from '../../utils/CalculatorConfigs';
 import router from '@ohos.router';
-import { RoutePath } from '../../utils/CalculatorConfigs';
 import {
   HdsNavigation,
   HdsNavigationTitleMode,
@@ -12,28 +11,152 @@ import {
 } from '@kit.UIDesignKit';
 import { ConfigurationConstant, common } from '@kit.AbilityKit';
 
+// ==================== 底部半模态面板内容：数学公式样式选择 ====================
+@Component
+struct MathStyleSheet {
+  @Prop styleType: string = 'comb'; // 'comb' 或 'perm'
+  onClose?: () => void; // 用于接收关闭面板的回到函数
+
+  @StorageProp(PreferenceConfigs.KEY_COMBINATION_SELECT) currentComb: number = 0;
+  @StorageProp(PreferenceConfigs.KEY_PERMUTATION_SELECT) currentPerm: number = 0;
+
+  build() {
+    Column() {
+      // 面板的独立标题
+      Text(this.styleType === 'comb' ? '组合显示样式' : '排列显示样式')
+        .fontSize(20)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('sys.color.font_primary'))
+        .width('100%')
+        .padding({ left: 24, top: 24, bottom: 4 })
+
+      // 小字说明
+      Text('选择你习惯的公式显示规范，设置后键盘与屏幕的显示将保持一致。')
+        .fontSize(13)
+        .fontColor($r('sys.color.font_tertiary'))
+        .width('100%')
+        .padding({ left: 24, right: 24, bottom: 16 })
+
+      // 渲染选项列表
+      Column() {
+        ForEach(this.styleType === 'comb' ? CombinationOptions : PermutationOptions, (item: MathStyleOption, index: number) => {
+          Row() {
+            Column() {
+              Text(item.name)
+                .fontSize(16)
+                .fontColor($r('sys.color.font_primary'))
+              Text(item.description) // 小字说明
+                .fontSize(12)
+                .fontColor($r('sys.color.font_tertiary'))
+                .margin({ top: 4 })
+                .maxLines(2)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+            }
+            .alignItems(HorizontalAlign.Start)
+            .layoutWeight(1)
+
+            Image(item.icon)
+              .width(100)
+              .height(48)
+              .objectFit(ImageFit.Contain)
+              .fillColor($r('sys.color.font_primary'))
+              .margin({ right: 16 })
+
+            if ((this.styleType === 'comb' && this.currentComb === item.id) ||
+              (this.styleType === 'perm' && this.currentPerm === item.id)) {
+              SymbolGlyph($r('sys.symbol.checkmark'))
+                .fontSize(20)
+                .fontColor([$r('sys.color.brand')])
+            } else {
+              Blank().width(20)
+            }
+          }
+          .width('100%')
+          .padding({ left: 16, right: 16, top: 16, bottom: 16 })
+          .onClick(() => {
+            // 1. 保存落盘
+            let context = getContext(this) as common.UIAbilityContext;
+            let prefs = preferences.getPreferencesSync(context, { name: PreferenceConfigs.STORE_NAME });
+
+            if (this.styleType === 'comb') {
+              prefs.putSync(PreferenceConfigs.KEY_COMBINATION_SELECT, item.id);
+            } else {
+              prefs.putSync(PreferenceConfigs.KEY_PERMUTATION_SELECT, item.id);
+            }
+            prefs.flush();
+
+            // 2. 更新内存
+            if (this.styleType === 'comb') {
+              AppStorage.setOrCreate(PreferenceConfigs.KEY_COMBINATION_SELECT, item.id);
+            } else {
+              AppStorage.setOrCreate(PreferenceConfigs.KEY_PERMUTATION_SELECT, item.id);
+            }
+
+            // 3. 触发回调，收起底部面板！
+            if (this.onClose) {
+              this.onClose();
+            }
+          })
+
+          if (index < 4) {
+            Divider().color($r('sys.color.comp_divider')).margin({ left: 16, right: 16 })
+          }
+        })
+      }
+      .backgroundColor($r('sys.color.comp_background_primary'))
+      .borderRadius(16)
+      .margin({ left: 16, right: 16, bottom: 24 })
+    }
+    .width('100%')
+    .backgroundColor($r('sys.color.background_secondary'))
+  }
+}
+
+// ==================== 主设置页面 ====================
 @Entry
 @Component
-struct Settings {
+export struct Settings {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageLink('isRad') isRad: boolean = false;
   @StorageLink('hapticFeedback') hapticFeedback: boolean = true;
   @StorageLink('vibrationCurve') vibrationCurve: number = 0;
   @StorageLink('decimalPrecision') decimalPrecision: number = 6;
-  @StorageLink('combinationSelectIndex') combinationSelectIndex: number = 1;
-  @StorageLink('permutationSelectIndex') permutationSelectIndex: number = 1;
   @StorageLink('colorModeIndex') colorModeIndex: number = 2;
   @StorageLink('answerOutputMode') answerOutputMode: number = 0;
 
+  @StorageProp(PreferenceConfigs.KEY_COMBINATION_SELECT) combSelect: number = 1;
+  @StorageProp(PreferenceConfigs.KEY_PERMUTATION_SELECT) permSelect: number = 1;
+
   private scrollerForScroll: Scroller = new Scroller();
   private menus: HdsNavigationMenuContentOptions = { value: [] };
+
+  @State isShowMathSheet: boolean = false;
+  @State currentSheetType: string = 'comb';
+  // @Provide('pageInfos') pageInfos: NavPathStack = new NavPathStack();
+
+  @Builder MathSheetBuilder() {
+    MathStyleSheet({
+      styleType: this.currentSheetType,
+      onClose: () => {
+        // 当子组件触发 onClose 时，将 isShowMathSheet 设为 false，面板就会丝滑降下
+        this.isShowMathSheet = false;
+      }
+    })
+  }
+
+  // 🌟 核心修复：路由地图必须放在主页面里！
+  // @Builder pageMap(name: string, param: Object) {
+  //   if (name === 'MathStylePage') {
+  //     // param 传入 'comb' 表示组合，传入 'perm' 表示排列
+  //     MathStylePage({ styleType: param as string })
+  //   }
+  // }
 
   @Builder GroupHeader(title: string) {
     Text(title)
       .fontSize(14)
       .fontColor($r('sys.color.font_secondary'))
       .width('100%')
-      // 收紧标题与下方卡片的间距
       .padding({ left: 16, top: 12, bottom: 4 })
   }
 
@@ -43,6 +166,7 @@ struct Settings {
       .color($r('sys.color.comp_background_tertiary'))
       .margin({ left: 48, right: 16 })
   }
+
 
   build() {
     HdsNavigation() {
@@ -187,25 +311,28 @@ struct Settings {
                   .fontSize(20)
                   .fontColor([$r('sys.color.icon_secondary')])
                   .margin({ right: 12 })
-                Text('组合计数样式')
+                Text('组合显示样式')
                   .fontSize(16)
                   .fontColor($r('sys.color.font_primary'))
-                Blank()
-                Select([
-                  { value: '大括号 ⎛n⎞' },
-                  { value: '标准 nCr' },
-                  { value: '大C C(n,r)' }
-                ])
-                  .selected(this.combinationSelectIndex)
-                  .value(this.combinationSelectIndex === 0 ? '大括号' : this.combinationSelectIndex === 1 ? 'nCr' : '大C')
-                  .font({ size: 14 })
-                  .fontColor($r('sys.color.font_primary'))
-                  .onSelect((index: number) => {
-                    this.combinationSelectIndex = index;
-                  })
+                  .layoutWeight(1) // 撑开中间，让右侧文字和箭头靠右
+
+                // 动态显示当前选中的样式名称
+                Text(this.combSelect === 0 ? '中国教材' : this.combSelect === 1 ? '国际学术' : this.combSelect === 2 ? '现代计算器' : this.combSelect === 3 ? '早期计算器' : '平铺风格')
+                  .fontSize(14)
+                  .fontColor($r('sys.color.font_secondary'))
+                  .margin({ right: 4 })
+
+                SymbolGlyph($r('sys.symbol.chevron_right'))
+                  .fontSize(16)
+                  .fontColor([$r('sys.color.icon_tertiary')])
               }
               .width('100%')
-              .padding({ left: 16, right: 12, top: 8, bottom: 8 })
+              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+              .onClick(() => {
+                // 拉起面板
+                this.currentSheetType = 'comb';
+                this.isShowMathSheet = true;
+              })
 
               this.ItemDivider()
 
@@ -215,25 +342,28 @@ struct Settings {
                   .fontSize(20)
                   .fontColor([$r('sys.color.icon_secondary')])
                   .margin({ right: 12 })
-                Text('排列计数样式')
+                Text('排列显示样式')
                   .fontSize(16)
                   .fontColor($r('sys.color.font_primary'))
-                Blank()
-                Select([
-                  { value: '大P P(n,r)' },
-                  { value: '标准 nPr' },
-                  { value: '大A A(n,r)' }
-                ])
-                  .selected(this.permutationSelectIndex)
-                  .value(this.permutationSelectIndex === 0 ? '大P' : this.permutationSelectIndex === 1 ? 'nPr' : '大A')
-                  .font({ size: 14 })
-                  .fontColor($r('sys.color.font_primary'))
-                  .onSelect((index: number) => {
-                    this.permutationSelectIndex = index;
-                  })
+                  .layoutWeight(1)
+
+                // 动态显示当前选中的样式名称
+                Text(this.permSelect === 0 ? '中国教材' : this.permSelect === 1 ? '国际学术' : this.permSelect === 2 ? '现代计算器' : this.permSelect === 3 ? '早期计算器' : '平铺风格')
+                  .fontSize(14)
+                  .fontColor($r('sys.color.font_secondary'))
+                  .margin({ right: 4 })
+
+                SymbolGlyph($r('sys.symbol.chevron_right'))
+                  .fontSize(16)
+                  .fontColor([$r('sys.color.icon_tertiary')])
               }
               .width('100%')
-              .padding({ left: 16, right: 12, top: 8, bottom: 8 })
+              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+              .onClick(() => {
+                // 拉起面板
+                this.currentSheetType = 'perm';
+                this.isShowMathSheet = true;
+              })
             }
             .backgroundColor($r('sys.color.comp_background_primary'))
             .borderRadius(16)
@@ -499,6 +629,7 @@ struct Settings {
       .edgeEffect(EdgeEffect.Spring)
     }
     .mode(NavigationMode.Stack)
+    // .navDestination(this.pageMap)
     .titleBar({
       content: {
         title: {
@@ -518,6 +649,12 @@ struct Settings {
       },
       avoidLayoutSafeArea: true,
       enableComponentSafeArea: false
+    })
+    .bindSheet($$this.isShowMathSheet, this.MathSheetBuilder(), {
+      height: SheetSize.FIT_CONTENT, // 优雅所在：面板高度自适应内容，不占用全屏
+      dragBar: true,                 // 顶部显示可拖拽的灰色小横条
+      backgroundColor: $r('sys.color.background_secondary'), // 统一底色
+      showClose: false               // 隐藏右上角默认关闭按钮，保持 UI 极简
     })
     .bindToScrollable([this.scrollerForScroll])
     .hideBackButton(false)
