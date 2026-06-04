@@ -14,7 +14,8 @@
       },
       {
         "name": "ohos.permission.VIBRATE"
-      }
+      },
+
     ],
     "deliveryWithInstall": true,
     "installationFree": false,

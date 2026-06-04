@@ -2,120 +2,209 @@
 #include "json.hpp"
 #include <symengine/expression.h>
 #include <symengine/functions.h>
-#include <symengine/printers.h> // SymEngine 的 LaTeX 排版打印机
+#include <symengine/printers.h>
 #include <symengine/constants.h>
+#include <symengine/eval_double.h>
 #include <string>
 #include <sstream>
+#include <iomanip>
+#include <cmath>
 
 using json = nlohmann::json;
 using SymEngine::Expression;
 
-// 将前端的 MathJSON 转化为 SymEngine 符号树
-Expression parseAST(const json& ast) {
-    // 1. 处理数字
+// AST 树递归解析
+Expression parseAST(const json& ast, bool isRad) {
     if (ast.is_number()) {
         double val = ast.get<double>();
-        if (std::floor(val) == val) {
-            return Expression(static_cast<long>(val));
-        }
+        if (std::floor(val) == val) return Expression(static_cast<long>(val));
         return Expression(val);
     }
     
-    // 2. 处理变量和内置常数 (Pi, e)
     if (ast.is_string()) {
         std::string s = ast.get<std::string>();
-        if (s == "Pi") return Expression(SymEngine::pi);                // 识别圆周率 π
-        if (s == "ExponentialE" || s == "e") return Expression(SymEngine::E); // 识别自然常数 e
-        return Expression(SymEngine::symbol(s));            // 其他当做未知数 x, y
+        if (s == "Pi") return Expression(SymEngine::pi);
+        if (s == "ExponentialE" || s == "e") return Expression(SymEngine::E);
+        return Expression(SymEngine::symbol(s));
     }
     
-    // 3. 处理函数和操作符
     if (ast.is_array() && !ast.empty() && ast[0].is_string()) {
         std::string op = ast[0].get<std::string>();
 
-        // -- 基础运算 --
         if (op == "Add") {
             Expression sum(0);
-            for (size_t i = 1; i < ast.size(); ++i) sum += parseAST(ast[i]);
+            for (size_t i = 1; i < ast.size(); ++i) sum += parseAST(ast[i], isRad);
             return sum;
         }
         if (op == "Subtract" || op == "Negate") {
-            if (ast.size() == 2) return -parseAST(ast[1]);
-            return parseAST(ast[1]) - parseAST(ast[2]);
+            if (ast.size() == 2) return -parseAST(ast[1], isRad);
+            return parseAST(ast[1], isRad) - parseAST(ast[2], isRad);
         }
         if (op == "Multiply") {
             Expression prod(1);
-            for (size_t i = 1; i < ast.size(); ++i) prod *= parseAST(ast[i]);
+            for (size_t i = 1; i < ast.size(); ++i) prod *= parseAST(ast[i], isRad);
             return prod;
         }
-        // MathJSON 里普通除法叫 Divide，分数叫 Rational
         if (op == "Divide" || op == "Rational") {
-            return parseAST(ast[1]) / parseAST(ast[2]);
+            return parseAST(ast[1], isRad) / parseAST(ast[2], isRad);
         }
+        if (op == "Sqrt") return SymEngine::sqrt(parseAST(ast[1], isRad));
+        if (op == "Root") return SymEngine::pow(parseAST(ast[1], isRad), Expression(1) / parseAST(ast[2], isRad));
+        if (op == "Power") return SymEngine::pow(parseAST(ast[1], isRad), parseAST(ast[2], isRad));
+        if (op == "Abs") return SymEngine::abs(parseAST(ast[1], isRad));
         
-        // -- 根号与绝对值 --
-        if (op == "Sqrt") {
-            return SymEngine::sqrt(parseAST(ast[1]));
-        }
-        if (op == "Root") { // 处理 n 次根号 (比如 ["Root", 8, 3] 就是 8 的 3 次方根)
-            return SymEngine::pow(parseAST(ast[1]), Expression(1) / parseAST(ast[2]));
-        }
-        if (op == "Power") {
-            return SymEngine::pow(parseAST(ast[1]), parseAST(ast[2]));
-        }
-        if (op == "Abs") { // 绝对值
-            return SymEngine::abs(parseAST(ast[1]));
+        // 阶乘
+        if (op == "Factorial") {
+            if (ast.size() == 2) {
+                Expression arg = parseAST(ast[1], isRad);
+                // 利用伽马函数实现阶乘：x! = Gamma(x + 1)
+                return Expression(SymEngine::gamma((arg + Expression(1)).get_basic()));
+            }
+            return Expression(SymEngine::symbol("Error"));
         }
 
-        // -- 三角函数 --
-        if (op == "Sin") return SymEngine::sin(parseAST(ast[1]));
-        if (op == "Cos") return SymEngine::cos(parseAST(ast[1]));
-        if (op == "Tan") return SymEngine::tan(parseAST(ast[1]));
-        
-        // -- 对数与指数 --
-        if (op == "Ln") return SymEngine::log(parseAST(ast[1])); // 自然对数
-        if (op == "Log") { // 有底数的对数 ["Log", x, base]
+        // 组合 (nCr)
+        if (op == "nCr") {
             if (ast.size() == 3) {
-                return SymEngine::log(parseAST(ast[1]), parseAST(ast[2]));
+                Expression n = parseAST(ast[1], isRad);
+                Expression r = parseAST(ast[2], isRad);
+                
+                // C(n,r) = Gamma(n+1) / (Gamma(r+1) * Gamma(n-r+1))
+                Expression num(SymEngine::gamma((n + Expression(1)).get_basic()));
+                Expression den1(SymEngine::gamma((r + Expression(1)).get_basic()));
+                Expression den2(SymEngine::gamma((n - r + Expression(1)).get_basic()));
+                
+                return num / (den1 * den2);
             }
-            return SymEngine::log(parseAST(ast[1]), Expression(10)); // 默认以10为底
+            return Expression(SymEngine::symbol("Error"));
+        }
+
+        // 排列 (nPr)
+        if (op == "nPr") {
+            if (ast.size() == 3) {
+                Expression n = parseAST(ast[1], isRad);
+                Expression r = parseAST(ast[2], isRad);
+                
+                // P(n,r) = Gamma(n+1) / Gamma(n-r+1)
+                Expression num(SymEngine::gamma((n + Expression(1)).get_basic()));
+                Expression den(SymEngine::gamma((n - r + Expression(1)).get_basic()));
+                
+                return num / den;
+            }
+            return Expression(SymEngine::symbol("Error"));
+        }
+        
+        // 三角函数与角度制转换
+        if (op == "Sin" || op == "Cos" || op == "Tan") {
+            if (ast.size() < 2) return Expression(SymEngine::symbol("Error"));
+            Expression arg = parseAST(ast[1], isRad);
+            if (!isRad) {
+                // 角度制：x * (pi / 180)
+                arg = arg * Expression(SymEngine::pi) / Expression(180);
+            }
+            if (op == "Sin") return SymEngine::sin(arg);
+            if (op == "Cos") return SymEngine::cos(arg);
+            if (op == "Tan") return SymEngine::tan(arg);
+        }
+        
+        if (op == "Ln") return SymEngine::log(parseAST(ast[1], isRad));
+        if (op == "Log") {
+            if (ast.size() == 3) return SymEngine::log(parseAST(ast[1], isRad), parseAST(ast[2], isRad));
+            return SymEngine::log(parseAST(ast[1], isRad), Expression(10));
         }
         return Expression(SymEngine::symbol("Unknown\\_" + op));
     }
     return Expression(SymEngine::symbol("Invalid\\_Node"));
 }
 
-// N-API 通信接口
+// N-API 通信接口 (带有极限防崩溃机制与精度控制)
 static napi_value Calculate(napi_env env, napi_callback_info info) {
-    size_t argc = 1;
-    napi_value args[1];
+    size_t argc = 3;
+    napi_value args[3] = {nullptr};
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
 
+    // 防御：检查第一个参数是否真的传了，且必须是 String 类型
+    napi_valuetype valuetype0;
+    if (argc < 1 || napi_typeof(env, args[0], &valuetype0) != napi_ok || valuetype0 != napi_string) {
+        napi_value err;
+        napi_create_string_utf8(env, "Error", NAPI_AUTO_LENGTH, &err);
+        return err;
+    }
+
+    // 防御：安全提取 JSON 字符串
     size_t str_len;
     napi_get_value_string_utf8(env, args[0], nullptr, 0, &str_len);
     std::string json_str(str_len, '\0');
     napi_get_value_string_utf8(env, args[0], &json_str[0], str_len + 1, &str_len);
 
-    std::string result_msg;
+    // 防御：安全提取布尔值 (角度/弧度，默认 false)
+    bool isRad = false;
+    if (argc >= 2) {
+        napi_valuetype valuetype1;
+        if (napi_typeof(env, args[1], &valuetype1) == napi_ok && valuetype1 == napi_boolean) {
+            napi_get_value_bool(env, args[1], &isRad);
+        }
+    }
 
+    // 防御：安全提取精度参数 (默认 13 档，即自动化简)
+    int32_t precision = 13; 
+    if (argc >= 3) {
+        napi_valuetype valuetype2;
+        if (napi_typeof(env, args[2], &valuetype2) == napi_ok && valuetype2 == napi_number) {
+            napi_get_value_int32(env, args[2], &precision);
+        }
+    }
+
+    std::string result_msg;
     try {
         json ast = json::parse(json_str);
         if (ast.is_string()) {
             ast = json::parse(ast.get<std::string>()); 
         }
         
-        Expression expr = parseAST(ast);
-        
-        // 🌟 魔法 1：让引擎尝试在代数层面展开多项式
+        Expression expr = parseAST(ast, isRad);
         expr = Expression(SymEngine::expand(expr.get_basic()));
-        
-        // 🌟 魔法 2：不再输出丑陋的 ASCII，直接导出完美的 LaTeX 公式！
-        result_msg = SymEngine::latex(*expr.get_basic());
 
-    } catch (std::exception& e) {
+        // ==================== 精度控制逻辑 ====================
+        if (precision == -1) {
+            // -1 档：自动模式，直接输出精确的 LaTeX 符号 (例如 \frac{1}{2})
+            result_msg = SymEngine::latex(*expr.get_basic());
+        } else {
+            // 小数模式
+            try {
+                // 尝试将代数式转化为 double 浮点数
+                double float_val = SymEngine::eval_double(*expr.get_basic());
+                
+                std::ostringstream oss;
+                if (precision == -2) {
+                    // -2 档：小数精度“自动”
+                    // 策略：使用极高精度输出，然后暴力抹除字符串末尾多余的 '0' 和可能遗留的 '.'
+                    oss << std::fixed << std::setprecision(12) << float_val;
+                    std::string str = oss.str();
+                    
+                    // 核心去零算法
+                    str.erase(str.find_last_not_of('0') + 1, std::string::npos);
+                    if (!str.empty() && str.back() == '.') {
+                        str.pop_back();
+                    }
+                    result_msg = str;
+                } else {
+                    // 0~12 档：强制固定小数位数，位数不够标准库会自动补 0
+                    oss << std::fixed << std::setprecision(precision) << float_val;
+                    result_msg = oss.str();
+                }
+            } catch (...) {
+                // 退回机制：如果包含未知变量无法转为浮点数，退回到符号输出
+                result_msg = SymEngine::latex(*expr.get_basic());
+            }
+        }
+        // ==========================================================
+
+    } catch (...) {
+        // 捕获其余所有的 C++ 异常，不让崩溃溢出到 ArkTS 应用层
         result_msg = "Error";
     }
-
+    
     napi_value result;
     napi_create_string_utf8(env, result_msg.c_str(), NAPI_AUTO_LENGTH, &result);
     return result;

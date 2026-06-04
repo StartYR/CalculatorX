@@ -1,9 +1,12 @@
 // entry/src/main/ets/components/TopKeyboard.ets
 import { topButtons, topShiftButtons, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
+import { PreferenceConfigs, CombinationOptions, PermutationOptions } from '../utils/CalculatorConfigs';
 
 @Component
 export struct TopKeyboard {
   @Link isShift: boolean;
+  @StorageProp(PreferenceConfigs.KEY_COMBINATION_SELECT) combSelect: number = 1;
+  @StorageProp(PreferenceConfigs.KEY_PERMUTATION_SELECT) permSelect: number = 1;
   onKeyPress: (btn: string | Resource) => void = () => {};
 
   build() {
@@ -42,13 +45,32 @@ export struct TopKeyboard {
 
             // 主按钮
             Button() {
-              if (typeof btn === 'string') {
+              if (btn === 'nCr') {
+                // 如果是组合键，使用全局配置里的 SVG 图标
+                Image(CombinationOptions[this.combSelect].icon)
+                  .width('100%')
+                  .height(36)
+                  .objectFit(ImageFit.Contain)
+                  .fillColor($r('sys.color.font_secondary'))
+
+              } else if (btn === 'nPr') {
+                // 如果是排列键，使用全局配置里的 SVG 图标
+                Image(PermutationOptions[this.permSelect].icon)
+                  .width('100%')
+                  .height(36)
+                  .objectFit(ImageFit.Contain)
+                  .fillColor($r('sys.color.font_secondary'))
+
+              } else if (typeof btn === 'string') {
+                // 普通字符串按键，渲染 Text
                 Text(btn)
                   .fontFamily(getFontFamily(btn))
                   .fontSize(getFontSize(btn))
                   .fontWeight(FontWeight.Medium)
                   .fontColor(getFontColor(btn))
+
               } else {
+                // Image 按键
                 Image(btn)
                   .width(36)
                   .height(36)
