@@ -11,6 +11,10 @@ export const icon_sqrtx: Resource = $rawfile('math-icons/icon_sqrtx.svg');
 export const icon_power2: Resource = $rawfile('math-icons/icon_power2.svg');
 export const icon_power: Resource = $rawfile('math-icons/icon_power.svg');
 export const icon_fraction: Resource = $rawfile('math-icons/icon_fraction.svg');
+export const icon_power3: Resource = $rawfile('math-icons/icon_power3.svg');
+export const icon_exp: Resource = $rawfile('math-icons/icon_exp.svg');
+export const icon_power_1: Resource = $rawfile('math-icons/icon_power_1.svg');
+export const icon_e_power: Resource = $rawfile('math-icons/icon_e_power.svg');
 
 export class MathIcons {
   // 组合 (Combination)
@@ -59,25 +63,25 @@ export const PermutationOptions: MathStyleOption[] = [
 
 export const topShiftButtons: Array<string | Resource> = [
   '', '', '', '', '', '',
-  '', '', 'GCD', 'LCM', '', '',
-  '', '', '', '', 'eˣ', '10ˣ',
-  'mod', icon_sqrt3, '%', 'x³', ',', 'x⁻¹',
+  '', '', '', 'GCD', 'LCM', 'd/dx',
+  '', '', '', '', icon_e_power, '',
+  'mod', icon_sqrt3, '%', icon_power3, ',', icon_power_1,
   'sin⁻¹', 'cos⁻¹', 'tan⁻¹', 'x', 'y', 'z',
 ];
 
 export const topButtons: Array<string | Resource> = [
   '⇧Shift', 'R/D', '⇦', '⇨', 'S⇄D', 'i',
-  'lim', 'd/dx', icon_sum, icon_product, icon_integral, '∞',
-  '° \' \"', '!', 'nCr', 'nPr', 'ln', 'log',
+  'lim', '∞', '° \' \"', icon_sum, icon_product, icon_integral,
+  '!', 'nCr', 'nPr', 'e', 'ln', 'log',
   icon_abs, icon_sqrt, icon_sqrtx, icon_power2, icon_power, icon_fraction,
   'sin', 'cos', 'tan', 'π', '(', ')',
 ];
 
-export const bottomButtons: string[] = [
+export const bottomButtons: Array<string | Resource> = [
   '7', '8', '9', '⌫', 'AC',
   '4', '5', '6', '×', '÷',
   '1', '2', '3', '+', '−',
-  '.', '0', 'e', 'Ans', '=',
+  '.', '0', icon_exp, 'Ans', '=',
 ];
 
 // ========== 3. 样式映射函数 ==========
@@ -93,6 +97,9 @@ export function getActionId(btn: string | Resource): string {
   if (btn === icon_sum) return 'sum';
   if (btn === icon_product) return 'product';
   if (btn === icon_integral) return 'integral';
+  if (btn === icon_exp) return 'icon_exp';
+  if (btn === icon_power_1) return 'power_1';
+  if (btn === icon_e_power) return 'e_power';
   return '';
 }
 
@@ -119,17 +126,17 @@ export function getBgColor(btn: string | Resource, isShift: boolean): ResourceCo
   if (action === '=') return $r('sys.color.comp_background_emphasize');
   if (['+', '−', '×', '÷'].includes(action)) return $r('sys.color.comp_background_tertiary');
 
-  let isNumberOrCore = (typeof btn === 'string' && btn >= '0' && btn <= '9') || action === '.' || action === 'e' || action === 'Ans'|| action === '⇦'|| action === '⇨';
-  if (isNumberOrCore) return $r('sys.color.comp_background_primary');
+  let isNumberOrCore = (typeof btn === 'string' && btn >= '0' && btn <= '9') || action === '.' || action === 'Ans'|| action === '⇦'|| action === '⇨';
+  if (isNumberOrCore || action === 'icon_exp') return $r('sys.color.comp_background_primary');
 
   return $r('sys.color.comp_background_secondary');
 }
 
 export function getFontSize(btn: string | Resource): number {
   if (typeof btn !== 'string') return 14;
-  if (btn >= '0' && btn <= '9') return 24;
-  if (btn === 'Ans') return 24;
-  if (btn === '+' || btn === '×' || btn === '÷' || btn === '=' || btn === '−' || btn === 'e' || btn === '.') return 28;
+  if ((btn >= '0' && btn <= '9') || btn === 'Ans') return 24;
+  if (btn === 'e') return 22;
+  if (btn === '+' || btn === '×' || btn === '÷' || btn === '=' || btn === '−' || btn === '.') return 28;
   if (['d/dx', 'lim'].includes(btn)) return 20;
   if (['sin', 'cos', 'tan', 'log', 'ln'].includes(btn)) return 20;
   if (btn === 'AC' || btn === '⌫') return 20;
