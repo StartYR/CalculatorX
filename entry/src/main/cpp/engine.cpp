@@ -19,7 +19,7 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
         double val = ast.get<double>();
         if (std::floor(val) == val) return Expression(static_cast<long>(val));
         
-        // 🌟 只有当上下文明确要求精确时（比如在分数、三角函数里），才把小数转分数！
+        // 只有当上下文明确要求精确时（比如在分数、三角函数里），才把小数转分数！
         if (preferExact) {
             std::string s = ast.dump(); 
             size_t dot = s.find('.');
