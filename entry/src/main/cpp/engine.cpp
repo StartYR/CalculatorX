@@ -14,10 +14,32 @@ using json = nlohmann::json;
 using SymEngine::Expression;
 
 // AST 树递归解析
-Expression parseAST(const json& ast, bool isRad) {
+Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
     if (ast.is_number()) {
         double val = ast.get<double>();
         if (std::floor(val) == val) return Expression(static_cast<long>(val));
+        
+        // 🌟 只有当上下文明确要求精确时（比如在分数、三角函数里），才把小数转分数！
+        if (preferExact) {
+            std::string s = ast.dump(); 
+            size_t dot = s.find('.');
+            if (dot != std::string::npos && s.find('e') == std::string::npos && s.find('E') == std::string::npos) {
+                int decimals = s.length() - dot - 1;
+                if (decimals > 0 && decimals <= 9) { 
+                    long long num = 0, den = 1;
+                    bool isNeg = (s[0] == '-');
+                    size_t start = isNeg ? 1 : 0;
+                    for (size_t i = start; i < s.length(); ++i) {
+                        if (s[i] == '.') continue;
+                        num = num * 10 + (s[i] - '0');
+                    }
+                    for (int i = 0; i < decimals; ++i) den *= 10;
+                    if (isNeg) num = -num;
+                    return Expression(num) / Expression(den);
+                }
+            }
+        }
+        // 普通情况（如 1.2 * 1），老老实实做浮点数
         return Expression(val);
     }
     
@@ -31,102 +53,90 @@ Expression parseAST(const json& ast, bool isRad) {
     if (ast.is_array() && !ast.empty() && ast[0].is_string()) {
         std::string op = ast[0].get<std::string>();
 
+        // ==================== 不将小数转换为分数 ====================
         if (op == "Add") {
             Expression sum(0);
-            for (size_t i = 1; i < ast.size(); ++i) sum += parseAST(ast[i], isRad);
+            for (size_t i = 1; i < ast.size(); ++i) sum += parseAST(ast[i], isRad, preferExact);
             return sum;
         }
         if (op == "Subtract" || op == "Negate") {
-            if (ast.size() == 2) return -parseAST(ast[1], isRad);
-            return parseAST(ast[1], isRad) - parseAST(ast[2], isRad);
+            if (ast.size() == 2) return -parseAST(ast[1], isRad, preferExact);
+            return parseAST(ast[1], isRad, preferExact) - parseAST(ast[2], isRad, preferExact);
         }
         if (op == "Multiply") {
             Expression prod(1);
-            for (size_t i = 1; i < ast.size(); ++i) prod *= parseAST(ast[i], isRad);
+            for (size_t i = 1; i < ast.size(); ++i) prod *= parseAST(ast[i], isRad, preferExact);
             return prod;
         }
+        // 🌟 核心修复：让 Divide（包括 ÷ 和分数线）顺其自然！
+        // 整数除以整数(12/36)是精确分数，包含小数(1.2/3.6)就是浮点数！
         if (op == "Divide" || op == "Rational") {
-            return parseAST(ast[1], isRad) / parseAST(ast[2], isRad);
-        }
-        if (op == "Sqrt") return SymEngine::sqrt(parseAST(ast[1], isRad));
-        if (op == "Root") return SymEngine::pow(parseAST(ast[1], isRad), Expression(1) / parseAST(ast[2], isRad));
-        if (op == "Power") return SymEngine::pow(parseAST(ast[1], isRad), parseAST(ast[2], isRad));
-        if (op == "Abs") return SymEngine::abs(parseAST(ast[1], isRad));
-        
-        // 阶乘
-        if (op == "Factorial") {
-            if (ast.size() == 2) {
-                Expression arg = parseAST(ast[1], isRad);
-                // 利用伽马函数实现阶乘：x! = Gamma(x + 1)
-                return Expression(SymEngine::gamma((arg + Expression(1)).get_basic()));
-            }
-            return Expression(SymEngine::symbol("Error"));
+            return parseAST(ast[1], isRad, preferExact) / parseAST(ast[2], isRad, preferExact);
         }
 
-        // 组合 (nCr)
+        // ==================== 强制精确：为了消除圆周率等无理数误差，强制将小数转换为分数 ====================
+        if (op == "Sqrt") return SymEngine::sqrt(parseAST(ast[1], isRad, true));
+        if (op == "Root") return SymEngine::pow(parseAST(ast[1], isRad, true), Expression(1) / parseAST(ast[2], isRad, true));
+        if (op == "Power") return SymEngine::pow(parseAST(ast[1], isRad, true), parseAST(ast[2], isRad, true));
+        if (op == "Abs") return SymEngine::abs(parseAST(ast[1], isRad, true));
+        
+        if (op == "Factorial") {
+            if (ast.size() == 2) return Expression(SymEngine::gamma((parseAST(ast[1], isRad, true) + Expression(1)).get_basic()));
+            return Expression(SymEngine::symbol("Error"));
+        }
+        
         if (op == "nCr") {
             if (ast.size() == 3) {
-                Expression n = parseAST(ast[1], isRad);
-                Expression r = parseAST(ast[2], isRad);
-                
-                // C(n,r) = Gamma(n+1) / (Gamma(r+1) * Gamma(n-r+1))
+                Expression n = parseAST(ast[1], isRad, true);
+                Expression r = parseAST(ast[2], isRad, true);
                 Expression num(SymEngine::gamma((n + Expression(1)).get_basic()));
                 Expression den1(SymEngine::gamma((r + Expression(1)).get_basic()));
                 Expression den2(SymEngine::gamma((n - r + Expression(1)).get_basic()));
-                
                 return num / (den1 * den2);
             }
             return Expression(SymEngine::symbol("Error"));
         }
 
-        // 排列 (nPr)
         if (op == "nPr") {
             if (ast.size() == 3) {
-                Expression n = parseAST(ast[1], isRad);
-                Expression r = parseAST(ast[2], isRad);
-                
-                // P(n,r) = Gamma(n+1) / Gamma(n-r+1)
+                Expression n = parseAST(ast[1], isRad, true);
+                Expression r = parseAST(ast[2], isRad, true);
                 Expression num(SymEngine::gamma((n + Expression(1)).get_basic()));
                 Expression den(SymEngine::gamma((n - r + Expression(1)).get_basic()));
-                
                 return num / den;
             }
             return Expression(SymEngine::symbol("Error"));
         }
-        
-        // 三角函数
+
         if (op == "Sin" || op == "Cos" || op == "Tan") {
             if (ast.size() < 2) return Expression(SymEngine::symbol("Error"));
-            Expression arg = parseAST(ast[1], isRad);
-            if (!isRad) {
-                // 角度制：x * (pi / 180)
-                arg = arg * Expression(SymEngine::pi) / Expression(180);
-            }
+            Expression arg = parseAST(ast[1], isRad, true); 
+            if (!isRad) arg = arg * Expression(SymEngine::pi) / Expression(180);
+            
             if (op == "Sin") return SymEngine::sin(arg);
             if (op == "Cos") return SymEngine::cos(arg);
             if (op == "Tan") return SymEngine::tan(arg);
         }
+
         if (op == "Arcsin" || op == "Arccos" || op == "Arctan") {
             if (ast.size() < 2) return Expression(SymEngine::symbol("Error"));
-            Expression arg = parseAST(ast[1], isRad);
+            Expression arg = parseAST(ast[1], isRad, true); 
             Expression res;
             
             if (op == "Arcsin") res = SymEngine::asin(arg);
             else if (op == "Arccos") res = SymEngine::acos(arg);
             else if (op == "Arctan") res = SymEngine::atan(arg);
             
-            if (!isRad) {
-                // 角度 = 弧度 * (180 / pi)
-                res = res * Expression(180) / Expression(SymEngine::pi);
-            }
+            if (!isRad) res = res * Expression(180) / Expression(SymEngine::pi);
             return res;
         }
         
-        if (op == "Ln") return SymEngine::log(parseAST(ast[1], isRad));
+        if (op == "Ln") return SymEngine::log(parseAST(ast[1], isRad, true));
         if (op == "Log") {
-            if (ast.size() == 3) return SymEngine::log(parseAST(ast[1], isRad), parseAST(ast[2], isRad));
-            return SymEngine::log(parseAST(ast[1], isRad), Expression(10));
+            if (ast.size() == 3) return SymEngine::log(parseAST(ast[1], isRad, true), parseAST(ast[2], isRad, true));
+            return SymEngine::log(parseAST(ast[1], isRad, true), Expression(10));
         }
+        
         return Expression(SymEngine::symbol("Unknown\\_" + op));
     }
     return Expression(SymEngine::symbol("Invalid\\_Node"));
