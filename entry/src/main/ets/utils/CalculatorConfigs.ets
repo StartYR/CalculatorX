@@ -39,8 +39,8 @@ export interface MathStyleOption {
 
 // 组合的 5 种样式配置
 export const CombinationOptions: MathStyleOption[] = [
-  { id: 1, name: '国际学术规范', description: '二项式系数，微积分及国际学术论文通用', icon: MathIcons.COMB_BINOM,  latexTemplate: '\\binom{n}{r}' },
-  { id: 0, name: 'C - 角标写法', description: '随前苏联的数学体系传入中国，国内中学教材通用标准', icon: MathIcons.COMB_SUBSUP, latexTemplate: '\\mathrm{C}_{n}^{r}' },
+  { id: 0, name: '国际学术规范', description: '二项式系数，微积分及国际学术论文通用', icon: MathIcons.COMB_BINOM,  latexTemplate: '\\binom{n}{r}' },
+  { id: 1, name: 'C - 角标写法', description: '随前苏联的数学体系传入中国，国内中学教材通用标准', icon: MathIcons.COMB_SUBSUP, latexTemplate: '\\mathrm{C}_{n}^{r}' },
   { id: 2, name: '现代计算器风格 (左上标)', description: 'Casio 等主流实体科学计算器显示风格', icon: MathIcons.COMB_CALC,   latexTemplate: '{}^{n}\\mathrm{C}_{r}' },
   { id: 3, name: '早期计算器风格 (左下标)', description: 'TI 及部分早期科学计算器显示风格', icon: MathIcons.COMB_CALC2,  latexTemplate: '{}_{n}\\mathrm{C}_{r}' },
   { id: 4, name: '平铺函数风格', description: '计算机编程、离散数学及纯文本环境规范', icon: MathIcons.COMB_INLINE, latexTemplate: '\\mathrm{C}(n, r)' }
@@ -159,7 +159,6 @@ export function getFontColor(btn: string | Resource): ResourceColor {
 
 export class PreferenceConfigs {
   static readonly STORE_NAME = 'CalcX_Preferences';
-
   static readonly KEY_COLOR_MODE = 'colorModeIndex';
   static readonly KEY_VIBRATION_CURVE = 'vibrationCurve';
   static readonly KEY_IS_RAD = 'isRad';
