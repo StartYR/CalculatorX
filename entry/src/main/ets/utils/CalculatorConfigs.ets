@@ -12,6 +12,49 @@ export const icon_power2: Resource = $rawfile('math-icons/icon_power2.svg');
 export const icon_power: Resource = $rawfile('math-icons/icon_power.svg');
 export const icon_fraction: Resource = $rawfile('math-icons/icon_fraction.svg');
 
+export class MathIcons {
+  // 组合 (Combination)
+  static readonly COMB_SUBSUP = $rawfile('math-icons/comb/icon_comb_subsup.svg'); // 中国教材 C_n^r
+  static readonly COMB_BINOM = $rawfile('math-icons/comb/icon_comb_binom.svg'); // 国际学术 \binom{n}{r}
+  static readonly COMB_CALC = $rawfile('math-icons/comb/icon_comb_calc.svg'); // 左上标 ^nC_r
+  static readonly COMB_CALC2 = $rawfile('math-icons/comb/icon_comb_calc2.svg'); // 左下标 _nC_r
+  static readonly COMB_INLINE = $rawfile('math-icons/comb/icon_comb_inline.svg'); // 平铺 C(n,r)
+
+  // 排列 (Permutation)
+  static readonly PERM_A = $rawfile('math-icons/perm/icon_perm_a.svg'); // 中国教材 A_n^r
+  static readonly PERM_P = $rawfile('math-icons/perm/icon_perm_p.svg'); // 国际学术 P_n^r
+  static readonly PERM_CALC = $rawfile('math-icons/perm/icon_perm_calc.svg'); // 左上标 ^nP_r
+  static readonly PERM_CALC2 = $rawfile('math-icons/perm/icon_perm_calc2.svg'); // 左下标 _nP_r
+  static readonly PERM_INLINE = $rawfile('math-icons/perm/icon_perm_inline.svg'); // 平铺 P(n,r)
+}
+
+// 定义选项的数据结构
+export interface MathStyleOption {
+  id: number;           // 对应存入 Preferences 的 index
+  name: string;         // 列表里显示的文字名称
+  icon: Resource;       // 对应的 SVG 预览图
+  latexTemplate: string;// 对应的 LaTeX 源码（为以后的底层翻译器做准备）
+  description: string;  // 描述
+}
+
+// 组合的 5 种样式配置
+export const CombinationOptions: MathStyleOption[] = [
+  { id: 0, name: '中国教材规范', description: '中国大陆中学教材、部分大学教材通用标准', icon: MathIcons.COMB_SUBSUP, latexTemplate: '\\mathrm{C}_{n}^{r}' },
+  { id: 1, name: '国际学术规范', description: '二项式系数，微积分及国际学术论文通用', icon: MathIcons.COMB_BINOM,  latexTemplate: '\\binom{n}{r}' },
+  { id: 2, name: '现代计算器风格 (左上标)', description: 'Casio 等主流实体科学计算器显示风格', icon: MathIcons.COMB_CALC,   latexTemplate: '{}^{n}\\mathrm{C}_{r}' },
+  { id: 3, name: '早期计算器风格 (左下标)', description: 'TI 及部分早期科学计算器显示风格', icon: MathIcons.COMB_CALC2,  latexTemplate: '{}_{n}\\mathrm{C}_{r}' },
+  { id: 4, name: '平铺函数风格', description: '计算机编程、离散数学及纯文本环境规范', icon: MathIcons.COMB_INLINE, latexTemplate: '\\mathrm{C}(n, r)' }
+];
+
+// 排列的 5 种样式配置
+export const PermutationOptions: MathStyleOption[] = [
+  { id: 0, name: '中国教材规范 (A)', description: '源自法语 Arrangement，中国中学教材通用', icon: MathIcons.PERM_A,      latexTemplate: '\\mathrm{A}_{n}^{r}' },
+  { id: 1, name: '国际学术规范 (P)', description: '源自英语 Permutation，国际学术论文通用', icon: MathIcons.PERM_P,      latexTemplate: '\\mathrm{P}_{n}^{r}' },
+  { id: 2, name: '现代计算器风格 (左上标)', description: 'Casio 等主流实体科学计算器按键风格', icon: MathIcons.PERM_CALC,   latexTemplate: '{}^{n}\\mathrm{P}_{r}' },
+  { id: 3, name: '早期计算器风格 (左下标)', description: 'TI 及部分早期科学计算器显示风格', icon: MathIcons.PERM_CALC2,  latexTemplate: '{}_{n}\\mathrm{P}_{r}' },
+  { id: 4, name: '平铺函数风格', description: '计算机编程、离散数学及纯文本环境规范', icon: MathIcons.PERM_INLINE, latexTemplate: '\\mathrm{P}(n, r)' }
+];
+
 // ========== 2. 键盘布局数组 ==========
 export const topButtons: Array<string | Resource> = [
   '⇧Shift', 'R/D', '⇦', '⇨', 'Ans', 'i',
@@ -120,7 +163,6 @@ export class PreferenceConfigs {
   static readonly KEY_COLOR_MODE = 'colorModeIndex';
   static readonly KEY_VIBRATION_CURVE = 'vibrationCurve';
   static readonly KEY_IS_RAD = 'isRad';
-  // static readonly KEY_VIBRATION_INTENSITY = 'vibrationIntensity';
   static readonly KEY_DECIMAL_PRECISION = 'decimalPrecision';
   static readonly KEY_ANSWER_OUTPUT_MODE = 'answerOutputMode';
   static readonly KEY_COMBINATION_SELECT = 'combinationSelectIndex';
