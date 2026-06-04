@@ -1,5 +1,6 @@
 // entry/src/main/ets/pages/Settings.ets
 import { preferences } from '@kit.ArkData';
+import { PreferenceConfigs } from '../../utils/CalculatorConfigs';
 import router from '@ohos.router';
 import { RoutePath } from '../../utils/CalculatorConfigs';
 import {
@@ -11,16 +12,12 @@ import {
 } from '@kit.UIDesignKit';
 import { ConfigurationConstant, common } from '@kit.AbilityKit';
 
-
-
-
 @Entry
 @Component
 struct Settings {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageLink('isRad') isRad: boolean = false;
   @StorageLink('hapticFeedback') hapticFeedback: boolean = true;
-  @StorageLink('vibrationIntensity') vibrationIntensity: number = 2;
   @StorageLink('vibrationCurve') vibrationCurve: number = 0;
   @StorageLink('decimalPrecision') decimalPrecision: number = 6;
   @StorageLink('combinationSelectIndex') combinationSelectIndex: number = 1;
@@ -77,7 +74,13 @@ struct Settings {
                   .font({ size: 14 })
                   .fontColor($r('sys.color.font_primary'))
                   .onSelect((index: number) => {
+                    // 改变 UI 状态
                     this.isRad = (index === 1);
+                    // 保存
+                    let context = getContext(this) as common.UIAbilityContext;
+                    let prefs = preferences.getPreferencesSync(context, { name: PreferenceConfigs.STORE_NAME });
+                    prefs.putSync(PreferenceConfigs.KEY_IS_RAD, this.isRad);
+                    prefs.flush();
                   })
               }
               .width('100%')
@@ -104,7 +107,13 @@ struct Settings {
                   .font({ size: 14 })
                   .fontColor($r('sys.color.font_primary'))
                   .onSelect((index: number) => {
+                    // 改变 UI 状态
                     this.answerOutputMode = index;
+                    // 保存
+                    let context = getContext(this) as common.UIAbilityContext;
+                    let prefs = preferences.getPreferencesSync(context, { name: PreferenceConfigs.STORE_NAME });
+                    prefs.putSync(PreferenceConfigs.KEY_ANSWER_OUTPUT_MODE, index);
+                    prefs.flush();
                   })
               }
               .width('100%')
@@ -147,7 +156,14 @@ struct Settings {
                   })
                     .width('100%')
                     .onChange((value: number) => {
+                      // 改变 UI 状态
                       this.decimalPrecision = value;
+
+                      // 保存
+                      let context = getContext(this) as common.UIAbilityContext;
+                      let prefs = preferences.getPreferencesSync(context, { name: PreferenceConfigs.STORE_NAME });
+                      prefs.putSync(PreferenceConfigs.KEY_DECIMAL_PRECISION, value);
+                      prefs.flush();
                     })
                 }
                 .width('100%')
@@ -160,9 +176,9 @@ struct Settings {
           .padding({ left: 16, right: 16, bottom: 12 })
 
 
-          // ====================== 按键显示 ==========================
+          // ====================== 按键样式 ==========================
           Column() {
-            this.GroupHeader('按键显示')
+            this.GroupHeader('按键样式')
 
             Column() {
               // 3. 组合计数样式
@@ -249,20 +265,20 @@ struct Settings {
                   .font({ size: 14 })
                   .fontColor($r('sys.color.font_primary'))
                   .onSelect((index: number) => {
-                    // 1. 改变 UI 状态
-                    this.colorModeIndex = index;
 
+                    // 改变 UI 状态
+                    this.colorModeIndex = index;
                     let context = getContext(this) as common.UIAbilityContext;
 
-                    // 2. 【官方规范】获取同名首选项实例
+                    // 获取同名首选项实例
                     let options: preferences.Options = { name: 'CalcX_Preferences' };
                     let prefs = preferences.getPreferencesSync(context, options);
 
-                    // 3. 【官方规范】写入内存并强制落盘 (flush 极其重要！)
+                    // 保存
                     prefs.putSync('colorModeIndex', index);
                     prefs.flush();
 
-                    // 4. 立即动态切换当前应用颜色
+                    // 切换当前颜色
                     let targetColorMode = ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET;
                     if (index === 0) {
                       targetColorMode = ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT;
@@ -289,7 +305,14 @@ struct Settings {
                 Blank()
                 Toggle({ type: ToggleType.Switch, isOn: this.hapticFeedback })
                   .onChange((isOn: boolean) => {
+                    // 改变 UI 状态
                     this.hapticFeedback = isOn;
+
+                    // 保存
+                    let context = getContext(this) as common.UIAbilityContext;
+                    let prefs = preferences.getPreferencesSync(context, { name: PreferenceConfigs.STORE_NAME });
+                    prefs.putSync(PreferenceConfigs.KEY_HAPTIC_FEEDBACK, isOn);
+                    prefs.flush();
                   })
               }
               .width('100%')
@@ -309,7 +332,7 @@ struct Settings {
 
                 // 振动风格
                 Row() {
-                  SymbolGlyph($r('sys.symbol.slider_horizontal_2'))
+                  SymbolGlyph($r('sys.symbol.rectangle_portrait_wave_2'))
                     .fontSize(20)
                     .fontColor([$r('sys.color.icon_secondary')])
                     .margin({ right: 12 })
@@ -318,56 +341,29 @@ struct Settings {
                     .fontColor($r('sys.color.font_primary'))
                   Blank()
                   Select([
-                    { value: '自定义' },
+                    { value: '自动 (差异化)' },
                     { value: '原生清脆 (Sharp)' },
-                    { value: '原生轻柔 (Soft)' }
+                    { value: '原生轻柔 (Soft)' },
+                    { value: '原生厚重 (Hard)' }
                   ])
                     .selected(this.vibrationCurve)
-                    .value(this.vibrationCurve === 0 ? '自定义' : this.vibrationCurve === 1 ? '清脆' : '轻柔')
+                    .value(this.vibrationCurve === 0 ? '自动' :
+                      this.vibrationCurve === 1 ? '清脆' :
+                      this.vibrationCurve === 2 ? '轻柔' : '厚重')
                     .font({ size: 14 })
                     .fontColor($r('sys.color.font_primary'))
                     .onSelect((index: number) => {
+                      // 改变 UI 状态
                       this.vibrationCurve = index;
+                      // 保存
+                      let context = getContext(this) as common.UIAbilityContext;
+                      let prefs = preferences.getPreferencesSync(context, { name: PreferenceConfigs.STORE_NAME });
+                      prefs.putSync(PreferenceConfigs.KEY_VIBRATION_CURVE, index);
+                      prefs.flush();
                     })
                 }
                 .width('100%')
                 .padding({ left: 16, right: 12, top: 8, bottom: 8 })
-
-                // 振动强度
-                if (this.vibrationCurve === 0) {
-                  this.ItemDivider()
-
-                  Column({ space: 4 }) {
-                    Row() {
-                      SymbolGlyph($r('sys.symbol.rectangle_portrait_wave_2'))
-                        .fontSize(20)
-                        .fontColor([$r('sys.color.icon_secondary')])
-                        .margin({ right: 12 })
-                      Text('振动强度')
-                        .fontSize(16)
-                        .fontColor($r('sys.color.font_primary'))
-                      Blank()
-                      Text(`${Math.round(this.vibrationIntensity)}`)
-                        .fontSize(14)
-                        .fontColor($r('sys.color.font_secondary'))
-                    }
-                    .width('100%')
-
-                    Slider({
-                      value: this.vibrationIntensity,
-                      min: 1,
-                      max: 5,
-                      step: 1,
-                      style: SliderStyle.InSet
-                    })
-                      .width('100%')
-                      .onChange((value: number) => {
-                        this.vibrationIntensity = value;
-                      })
-                  }
-                  .width('100%')
-                  .padding({ left: 16, right: 16, top: 10, bottom: 6 })
-                }
               }
             }
             .backgroundColor($r('sys.color.comp_background_primary'))

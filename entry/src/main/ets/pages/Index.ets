@@ -10,28 +10,16 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { RoutePath } from '../utils/CalculatorConfigs';
 import router from '@ohos.router';
 
-PersistentStorage.persistProp('vibrationCurve', 0);
-
-PersistentStorage.persistProp('isRad', false);
-PersistentStorage.persistProp('vibrationIntensity', 50);
-PersistentStorage.persistProp('decimalPrecision', 16);
-PersistentStorage.persistProp('answerOutputMode', 0);
-PersistentStorage.persistProp('combinationSelectIndex', 1);
-PersistentStorage.persistProp('permutationSelectIndex', 1);
-PersistentStorage.persistProp('hapticFeedback', true);
-PersistentStorage.persistProp('vibrationIntensity', 2);
-// PersistentStorage.persistProp('colorModeIndex', 2);
-
 @Entry
 @Component
 struct Index {
   @StorageProp('answerOutputMode') answerOutputMode: number = 0;
   @StorageProp('isRad') isRad: boolean = false;
-  webviewController: web_webview.WebviewController = new web_webview.WebviewController();
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
-  @StorageProp('vibrationIntensity') vibrationIntensity: number = 20;
   @StorageProp('decimalPrecision') decimalPrecision: number = 13;
+  @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
+  webviewController: web_webview.WebviewController = new web_webview.WebviewController();
 
   @State isShift: boolean = false;
 
@@ -103,37 +91,46 @@ struct Index {
   }
 
   handleButtonClick(btn: string | Resource) {
-    // vibrator.startVibration({
-    //   type: 'preset',
-    //   effectId: 'haptic.effect.sharp',
-    //   count: 1
-    // }, { usage: 'touch' }).catch((err: BusinessError) => {
-    //   console.warn(`震动拦截: ${err.message}`);
-    // });
-
-    if (this.vibrationIntensity > 0) {
-      if (this.vibrationCurve === 0) {
-        // 模式 0：自定义时长 (直接使用滑块的毫秒数)
-        vibrator.startVibration({
-          type: 'time',
-          duration: this.vibrationIntensity
-        }, { usage: 'touch' }).catch((err: BusinessError) => {
-          console.warn(`震动拦截: ${err.message}`);
-        });
-      } else {
-        // 模式 1 或 2：调用鸿蒙原生曲线 (此时滑块仅作为是否大于0的总开关)
-        let effectId = this.vibrationCurve === 1 ? 'haptic.effect.sharp' : 'haptic.effect.soft';
-        vibrator.startVibration({
-          type: 'preset',
-          effectId: effectId,
-          count: 1
-        }, { usage: 'touch' }).catch((err: BusinessError) => {
-          console.warn(`震动拦截: ${err.message}`);
-        });
-      }
-    }
-
+    // 提前解析按键类型，供计算和震动引擎共同使用
     let action = getActionId(btn);
+
+    // 1. 判断“触感反馈”总开关是否打开
+    if (this.hapticFeedback) {
+      let effectId = 'haptic.effect.sharp'; // 声明默认效果
+
+      if (this.vibrationCurve === 0) {
+        // 自动模式（基于按键类型的差异化震动）
+        if (action === '=' || action === 'AC' || action === '⌫') {
+          // 高权重操作：厚重
+          effectId = 'haptic.effect.hard';
+        } else if (['+', '-', '×', '÷'].includes(action as string)) {
+          // 运算符操作：清脆
+          effectId = 'haptic.effect.sharp';
+        } else {
+          // 普通数字与函数：轻柔
+          effectId = 'haptic.effect.soft';
+        }
+
+      } else {
+        // 全局统一震感（用户选择）
+        if (this.vibrationCurve === 1) {
+          effectId = 'haptic.effect.sharp';
+        } else if (this.vibrationCurve === 2) {
+          effectId = 'haptic.effect.soft';
+        } else if (this.vibrationCurve === 3) {
+          effectId = 'haptic.effect.hard';
+        }
+      }
+
+      // 触发系统原生震动
+      vibrator.startVibration({
+        type: 'preset',
+        effectId: effectId,
+        count: 1
+      }, { usage: 'touch' }).catch((err: BusinessError) => {
+        console.warn(`震动拦截: ${err.message}`);
+      });
+    }
 
     if (action === 'AC') {
       this.webviewController.runJavaScript('clearMath()');

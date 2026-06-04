@@ -113,3 +113,17 @@ export function getFontColor(btn: string | Resource): ResourceColor {
   // 5. 核心数字区：主要文字颜色
   return $r('sys.color.font_primary');
 }
+
+export class PreferenceConfigs {
+  static readonly STORE_NAME = 'CalcX_Preferences';
+
+  static readonly KEY_COLOR_MODE = 'colorModeIndex';
+  static readonly KEY_VIBRATION_CURVE = 'vibrationCurve';
+  static readonly KEY_IS_RAD = 'isRad';
+  // static readonly KEY_VIBRATION_INTENSITY = 'vibrationIntensity';
+  static readonly KEY_DECIMAL_PRECISION = 'decimalPrecision';
+  static readonly KEY_ANSWER_OUTPUT_MODE = 'answerOutputMode';
+  static readonly KEY_COMBINATION_SELECT = 'combinationSelectIndex';
+  static readonly KEY_PERMUTATION_SELECT = 'permutationSelectIndex';
+  static readonly KEY_HAPTIC_FEEDBACK = 'hapticFeedback';
+}
