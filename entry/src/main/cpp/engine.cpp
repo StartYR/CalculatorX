@@ -94,7 +94,7 @@ Expression parseAST(const json& ast, bool isRad) {
             return Expression(SymEngine::symbol("Error"));
         }
         
-        // 三角函数与角度制转换
+        // 三角函数
         if (op == "Sin" || op == "Cos" || op == "Tan") {
             if (ast.size() < 2) return Expression(SymEngine::symbol("Error"));
             Expression arg = parseAST(ast[1], isRad);
@@ -105,6 +105,21 @@ Expression parseAST(const json& ast, bool isRad) {
             if (op == "Sin") return SymEngine::sin(arg);
             if (op == "Cos") return SymEngine::cos(arg);
             if (op == "Tan") return SymEngine::tan(arg);
+        }
+        if (op == "Arcsin" || op == "Arccos" || op == "Arctan") {
+            if (ast.size() < 2) return Expression(SymEngine::symbol("Error"));
+            Expression arg = parseAST(ast[1], isRad);
+            Expression res;
+            
+            if (op == "Arcsin") res = SymEngine::asin(arg);
+            else if (op == "Arccos") res = SymEngine::acos(arg);
+            else if (op == "Arctan") res = SymEngine::atan(arg);
+            
+            if (!isRad) {
+                // 角度 = 弧度 * (180 / pi)
+                res = res * Expression(180) / Expression(SymEngine::pi);
+            }
+            return res;
         }
         
         if (op == "Ln") return SymEngine::log(parseAST(ast[1], isRad));

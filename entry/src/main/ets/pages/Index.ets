@@ -268,8 +268,8 @@ struct Index {
         case '!':        latexChar = "!"; break;
         case 'nCr':
           let combTemplates = [
-            "\\mathrm{C}_{\\placeholder{}}^{\\placeholder{}}",           // 0: C角标 Cₙᵏ C_n^r
-            "\\binom{\\placeholder{}}{\\placeholder{}}",                 // 1: 国际规范 \binom{n}{r}
+            "\\binom{\\placeholder{}}{\\placeholder{}}",                 // 0: 国际规范 \binom{n}{r}
+            "\\mathrm{C}_{\\placeholder{}}^{\\placeholder{}}",           // 1: C角标 Cₙᵏ C_n^r
             "{}^{\\placeholder{}}\\mathrm{C}_{\\placeholder{}}",         // 2: 左上标 ⁿCᵣ ^nC_r
             "{}_{\\placeholder{}}\\mathrm{C}_{\\placeholder{}}",         // 3: 左下标 ₙCᵣ _nC_r
             "\\mathrm{C}\\left(\\placeholder{}, \\placeholder{}\\right)" // 4: 平铺 C(n,r)
