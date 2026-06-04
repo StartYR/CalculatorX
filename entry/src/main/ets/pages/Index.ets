@@ -268,22 +268,22 @@ struct Index {
         case '!':        latexChar = "!"; break;
         case 'nCr':
           let combTemplates = [
-            "\\mathrm{C}_{\\placeholder{}}^{\\placeholder{}}",           // 0: 中国教材
-            "\\binom{\\placeholder{}}{\\placeholder{}}",                 // 1: 国际学术
-            "{}^{\\placeholder{}}\\mathrm{C}_{\\placeholder{}}",         // 2: 现代计算器 (左上标)
-            "{}_{\\placeholder{}}\\mathrm{C}_{\\placeholder{}}",         // 3: 早期计算器 (左下标)
-            "\\mathrm{C}\\left(\\placeholder{}, \\placeholder{}\\right)" // 4: 平铺函数
+            "\\mathrm{C}_{\\placeholder{}}^{\\placeholder{}}",           // 0: C角标 Cₙᵏ C_n^r
+            "\\binom{\\placeholder{}}{\\placeholder{}}",                 // 1: 国际规范 \binom{n}{r}
+            "{}^{\\placeholder{}}\\mathrm{C}_{\\placeholder{}}",         // 2: 左上标 ⁿCᵣ ^nC_r
+            "{}_{\\placeholder{}}\\mathrm{C}_{\\placeholder{}}",         // 3: 左下标 ₙCᵣ _nC_r
+            "\\mathrm{C}\\left(\\placeholder{}, \\placeholder{}\\right)" // 4: 平铺 C(n,r)
           ];
           latexChar = combTemplates[this.combSelect];
           break;
 
         case 'nPr':
           let permTemplates = [
-            "\\mathrm{A}_{\\placeholder{}}^{\\placeholder{}}",           // 0: 中国教材 (A)
-            "\\mathrm{P}_{\\placeholder{}}^{\\placeholder{}}",           // 1: 国际学术 (P)
-            "{}^{\\placeholder{}}\\mathrm{P}_{\\placeholder{}}",         // 2: 现代计算器 (左上标)
-            "{}_{\\placeholder{}}\\mathrm{P}_{\\placeholder{}}",         // 3: 早期计算器 (左下标)
-            "\\mathrm{P}\\left(\\placeholder{}, \\placeholder{}\\right)" // 4: 平铺函数
+            "\\mathrm{A}_{\\placeholder{}}^{\\placeholder{}}",           // 0: A角标 Aₙᵏ A_n^r
+            "\\mathrm{P}_{\\placeholder{}}^{\\placeholder{}}",           // 1: P角标 Pₙʳ P_n^r
+            "{}^{\\placeholder{}}\\mathrm{P}_{\\placeholder{}}",         // 2: 左上标 ⁿPᵣ ^nP_r
+            "{}_{\\placeholder{}}\\mathrm{P}_{\\placeholder{}}",         // 3: 左下标 ₙPᵣ _nP_r
+            "\\mathrm{P}\\left(\\placeholder{}, \\placeholder{}\\right)" // 4: 平铺 P(n,r)
           ];
           latexChar = permTemplates[this.permSelect];
           break;
