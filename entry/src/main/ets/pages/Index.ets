@@ -9,6 +9,7 @@ import { vibrator } from '@kit.SensorServiceKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { RoutePath } from '../utils/CalculatorConfigs';
 import router from '@ohos.router';
+import { PreferenceConfigs } from '../utils/CalculatorConfigs';
 
 @Entry
 @Component
@@ -19,6 +20,8 @@ struct Index {
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @StorageProp('decimalPrecision') decimalPrecision: number = 13;
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
+  @StorageProp(PreferenceConfigs.KEY_COMBINATION_SELECT) combSelect: number = 1;
+  @StorageProp(PreferenceConfigs.KEY_PERMUTATION_SELECT) permSelect: number = 1;
   webviewController: web_webview.WebviewController = new web_webview.WebviewController();
 
   @State isShift: boolean = false;
@@ -196,8 +199,27 @@ struct Index {
         case '[':        latexChar = "\\left[ \\placeholder{} \\right]"; break;
         case ']':        latexChar = "\\right]"; break;
         case '!':        latexChar = "!"; break;
-        case 'nCr':      latexChar = "\\binom{\\placeholder{}}{\\placeholder{}}"; break;
-        case 'nPr':      latexChar = "{}^{\\placeholder{}}\\text{P}_{\\placeholder{}}"; break;
+        case 'nCr':
+          let combTemplates = [
+            "\\mathrm{C}_{\\placeholder{}}^{\\placeholder{}}",           // 0: 中国教材
+            "\\binom{\\placeholder{}}{\\placeholder{}}",                 // 1: 国际学术
+            "{}^{\\placeholder{}}\\mathrm{C}_{\\placeholder{}}",         // 2: 现代计算器 (左上标)
+            "{}_{\\placeholder{}}\\mathrm{C}_{\\placeholder{}}",         // 3: 早期计算器 (左下标)
+            "\\mathrm{C}\\left(\\placeholder{}, \\placeholder{}\\right)" // 4: 平铺函数
+          ];
+          latexChar = combTemplates[this.combSelect];
+          break;
+
+        case 'nPr':
+          let permTemplates = [
+            "\\mathrm{A}_{\\placeholder{}}^{\\placeholder{}}",           // 0: 中国教材 (A)
+            "\\mathrm{P}_{\\placeholder{}}^{\\placeholder{}}",           // 1: 国际学术 (P)
+            "{}^{\\placeholder{}}\\mathrm{P}_{\\placeholder{}}",         // 2: 现代计算器 (左上标)
+            "{}_{\\placeholder{}}\\mathrm{P}_{\\placeholder{}}",         // 3: 早期计算器 (左下标)
+            "\\mathrm{P}\\left(\\placeholder{}, \\placeholder{}\\right)" // 4: 平铺函数
+          ];
+          latexChar = permTemplates[this.permSelect];
+          break;
         case 'eˣ':       latexChar = "e^{\\placeholder{}}"; break;
         case '10ˣ':      latexChar = "10^{\\placeholder{}}"; break;
         case 'ln':       latexChar = "\\ln\\left(\\placeholder{}\\right)"; break;
