@@ -148,7 +148,7 @@ struct Index {
           // 1. 去除首尾引号并处理转义，还原最纯净的 LaTeX
           let rawLatex = rawLatexResult.replace(/^"|"$/g, '').replace(/\\\\/g, '\\');
 
-          // 🌟 2. 为满足 ArkTS 严格语法检查，定义带类型的正则替换器
+          // 2.定义带类型的正则替换器
           let repC = (m: string, n1: string | undefined, n2: string | undefined, r1: string | undefined, r2: string | undefined): string => {
             return `\\operatorname{nCr}\\left(${n1 || n2},${r1 || r2}\\right)`;
           };
@@ -162,7 +162,6 @@ struct Index {
             return `\\operatorname{nPr}\\left(${n},${r}\\right)`;
           };
 
-          // 🌟 3. 终极正则：全面兼容 MathLive 省略大括号的“自作主张”
           let cleanedLatex = rawLatex
           // --- 组合 (C) 的 5 种样式防御 ---
             .replace(/\\mathrm\{C\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))\^(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repC)
@@ -178,10 +177,10 @@ struct Index {
             .replace(/\{\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))\\mathrm\{P\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repP)
             .replace(/\\mathrm\{P\}\\left\((.+?),\s*(.+?)\\right\)/g, repFlatP);
 
-          // 🌟 4. 终极装甲：给反斜杠和引号加上双重转义，防止破坏 JS 边界
+          // 给反斜杠和引号加上双重转义，防止破坏 JS 边界
           let safeLatex = cleanedLatex.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, "\\n");
 
-          // 🌟 5. 内存静默转换 JSON（完美幽灵挂载版）
+          // 内存静默转换 JSON
           let injectJs = `
         (function() {
           try {
@@ -215,7 +214,7 @@ struct Index {
               cleanJsonString = jsonResult;
             }
 
-            console.info(`【清洗后传给C++的极简JSON】: ${typeof cleanJsonString === 'string' ? cleanJsonString : JSON.stringify(cleanJsonString)}`);
+            console.info(`【清洗后传给C++的JSON】: ${typeof cleanJsonString === 'string' ? cleanJsonString : JSON.stringify(cleanJsonString)}`);
 
             // ===== 将前端双状态映射为 C++ 单一控制码 =====
             let cppPrecisionMode = -1;
