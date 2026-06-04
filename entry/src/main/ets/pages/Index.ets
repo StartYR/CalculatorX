@@ -25,6 +25,9 @@ struct Index {
   webviewController: web_webview.WebviewController = new web_webview.WebviewController();
 
   @State isShift: boolean = false;
+  @State lastAnsLatex: string = "0";      // 供 Ans 调用的上一次结果
+  @State lastValidJson: string = "";      // 供 S⇄D 重新计算的纯净 AST
+  @State isTempDecimal: boolean = false;  // 当前 S⇄D 面板的显示状态
 
   aboutToAppear() {
     font.registerFont({
@@ -139,6 +142,27 @@ struct Index {
       this.webviewController.runJavaScript('clearMath()');
     } else if (action === '⌫') {
       this.webviewController.runJavaScript('deleteMath()');
+    } else if (action === 'S⇄D') {
+      // S⇄D 一键无缝切换逻辑
+      if (!this.lastValidJson) return; // 还没计算过，按了白按
+
+      this.isTempDecimal = !this.isTempDecimal; // 状态翻转
+
+      // 强制接管精度控制码
+      let cppPrecisionMode = -1;
+      if (this.isTempDecimal) {
+        // 切换到小数：使用用户设置的小数精度，或者默认 -2
+        cppPrecisionMode = this.decimalPrecision === 16 ? -2 : this.decimalPrecision;
+      } else {
+        // 切换回标准：强制使用 -1
+        cppPrecisionMode = -1;
+      }
+
+      // 拿着上一次的 JSON，直接让 C++ 重新跑一遍
+      let cppResponse: string = testNapi.calculate(this.lastValidJson, this.isRad, cppPrecisionMode);
+      if (cppResponse !== "Error") {
+        this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
+      }
     } else if (action === '=') {
       this.webviewController.runJavaScript(
         'window.getFormula()',
@@ -214,6 +238,9 @@ struct Index {
               cleanJsonString = jsonResult;
             }
 
+            let jsonStrToSave = typeof cleanJsonString === 'string' ? cleanJsonString : JSON.stringify(cleanJsonString);
+            this.lastValidJson = jsonStrToSave;
+
             console.info(`【清洗后传给C++的JSON】: ${typeof cleanJsonString === 'string' ? cleanJsonString : JSON.stringify(cleanJsonString)}`);
 
             // ===== 将前端双状态映射为 C++ 单一控制码 =====
@@ -231,6 +258,10 @@ struct Index {
             let cppResponse: string = testNapi.calculate(typeof cleanJsonString === 'string' ? cleanJsonString : JSON.stringify(cleanJsonString), this.isRad, cppPrecisionMode);
 
             if (cppResponse !== "Error") {
+              // 把成功的计算结果存入 Ans
+              this.lastAnsLatex = cppResponse;
+              // 每次按等于号，重置 S⇄D 的临时状态
+              this.isTempDecimal = (cppPrecisionMode !== -1);
               this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
             } else {
               console.error("C++ Calculation Error");
@@ -253,7 +284,13 @@ struct Index {
         case 'π':       latexChar = "\\pi "; break;
         case '∞':       latexChar = "\\infty "; break;
         case 'i':       latexChar = "i"; break;
-        case 'Ans':     latexChar = "\\text{Ans}"; break;
+        case 'Ans':
+          if (this.lastAnsLatex === "0") {
+            latexChar = "0"; // 初始状态
+          } else {
+            latexChar = "\\left(" + this.lastAnsLatex + "\\right)";
+          }
+          break;
         case ',':       latexChar = ","; break;
         case 'fraction': latexChar = "\\frac{\\placeholder{}}{\\placeholder{}}"; break;
         case 'sqrt':     latexChar = "\\sqrt{\\placeholder{}}"; break;

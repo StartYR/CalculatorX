@@ -56,27 +56,28 @@ export const PermutationOptions: MathStyleOption[] = [
 ];
 
 // ========== 2. 键盘布局数组 ==========
-export const topButtons: Array<string | Resource> = [
-  '⇧Shift', 'R/D', '⇦', '⇨', 'Ans', 'i',
-  'lim', 'd/dx', icon_sum, icon_product, icon_integral, '∞',
-  'x⁻¹', '!', 'nCr', 'nPr', 'ln', 'log',
-  icon_abs, icon_sqrt, icon_sqrtx, icon_power2, icon_power, icon_fraction,
-  'sin', 'cos', 'tan', ',', '(', ')',
-];
 
 export const topShiftButtons: Array<string | Resource> = [
   '', '', '', '', '', '',
-  '', '', '', '', '', '',
+  '', '', 'GCD', 'LCM', '', '',
   '', '', '', '', 'eˣ', '10ˣ',
-  '', icon_sqrt3, '', '', '', '',
-  'sin⁻¹', 'cos⁻¹', 'tan⁻¹', '', '[', ']',
+  'mod', icon_sqrt3, '%', 'x³', ',', 'x⁻¹',
+  'sin⁻¹', 'cos⁻¹', 'tan⁻¹', 'x', 'y', 'z',
+];
+
+export const topButtons: Array<string | Resource> = [
+  '⇧Shift', 'R/D', '⇦', '⇨', 'S⇄D', 'i',
+  'lim', 'd/dx', icon_sum, icon_product, icon_integral, '∞',
+  '° \' \"', '!', 'nCr', 'nPr', 'ln', 'log',
+  icon_abs, icon_sqrt, icon_sqrtx, icon_power2, icon_power, icon_fraction,
+  'sin', 'cos', 'tan', 'π', '(', ')',
 ];
 
 export const bottomButtons: string[] = [
   '7', '8', '9', '⌫', 'AC',
   '4', '5', '6', '×', '÷',
   '1', '2', '3', '+', '−',
-  '.', '0', 'e', 'π', '=',
+  '.', '0', 'e', 'Ans', '=',
 ];
 
 // ========== 3. 样式映射函数 ==========
@@ -118,7 +119,7 @@ export function getBgColor(btn: string | Resource, isShift: boolean): ResourceCo
   if (action === '=') return $r('sys.color.comp_background_emphasize');
   if (['+', '−', '×', '÷'].includes(action)) return $r('sys.color.comp_background_tertiary');
 
-  let isNumberOrCore = (typeof btn === 'string' && btn >= '0' && btn <= '9') || action === '.' || action === 'e' || action === 'π' || action === 'Ans';
+  let isNumberOrCore = (typeof btn === 'string' && btn >= '0' && btn <= '9') || action === '.' || action === 'e' || action === 'Ans'|| action === '⇦'|| action === '⇨';
   if (isNumberOrCore) return $r('sys.color.comp_background_primary');
 
   return $r('sys.color.comp_background_secondary');
@@ -127,9 +128,9 @@ export function getBgColor(btn: string | Resource, isShift: boolean): ResourceCo
 export function getFontSize(btn: string | Resource): number {
   if (typeof btn !== 'string') return 14;
   if (btn >= '0' && btn <= '9') return 24;
-  if (btn === '−') return 28;
-  if (btn === '+' || btn === '×' || btn === '÷' || btn === '=' || btn === 'π' || btn === 'e' || btn === '.') return 28;
-  if (['sin⁻¹', 'cos⁻¹', 'tan⁻¹', 'd/dx', 'lim'].includes(btn)) return 20;
+  if (btn === 'Ans') return 24;
+  if (btn === '+' || btn === '×' || btn === '÷' || btn === '=' || btn === '−' || btn === 'e' || btn === '.') return 28;
+  if (['d/dx', 'lim'].includes(btn)) return 20;
   if (['sin', 'cos', 'tan', 'log', 'ln'].includes(btn)) return 20;
   if (btn === 'AC' || btn === '⌫') return 20;
   if (btn === '⇦'|| btn === '⇨') return 30;
