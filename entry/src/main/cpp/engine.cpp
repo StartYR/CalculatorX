@@ -13,7 +13,7 @@
 using json = nlohmann::json;
 using SymEngine::Expression;
 
-// AST 树递归解析 (增加 isRad 传递)
+// AST 树递归解析
 Expression parseAST(const json& ast, bool isRad) {
     if (ast.is_number()) {
         double val = ast.get<double>();
@@ -53,7 +53,38 @@ Expression parseAST(const json& ast, bool isRad) {
         if (op == "Power") return SymEngine::pow(parseAST(ast[1], isRad), parseAST(ast[2], isRad));
         if (op == "Abs") return SymEngine::abs(parseAST(ast[1], isRad));
 
-        // 拦截三角函数与角度制转换
+        // 组合 (nCr)
+        if (op == "nCr") {
+            if (ast.size() == 3) {
+                Expression n = parseAST(ast[1], isRad);
+                Expression r = parseAST(ast[2], isRad);
+                
+                // C(n,r) = Gamma(n+1) / (Gamma(r+1) * Gamma(n-r+1))
+                Expression num(SymEngine::gamma((n + Expression(1)).get_basic()));
+                Expression den1(SymEngine::gamma((r + Expression(1)).get_basic()));
+                Expression den2(SymEngine::gamma((n - r + Expression(1)).get_basic()));
+                
+                return num / (den1 * den2);
+            }
+            return Expression(SymEngine::symbol("Error"));
+        }
+
+        // 排列 (nPr)
+        if (op == "nPr") {
+            if (ast.size() == 3) {
+                Expression n = parseAST(ast[1], isRad);
+                Expression r = parseAST(ast[2], isRad);
+                
+                // P(n,r) = Gamma(n+1) / Gamma(n-r+1)
+                Expression num(SymEngine::gamma((n + Expression(1)).get_basic()));
+                Expression den(SymEngine::gamma((n - r + Expression(1)).get_basic()));
+                
+                return num / den;
+            }
+            return Expression(SymEngine::symbol("Error"));
+        }
+        
+        // 三角函数与角度制转换
         if (op == "Sin" || op == "Cos" || op == "Tan") {
             if (ast.size() < 2) return Expression(SymEngine::symbol("Error"));
             Expression arg = parseAST(ast[1], isRad);
@@ -124,7 +155,7 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         Expression expr = parseAST(ast, isRad);
         expr = Expression(SymEngine::expand(expr.get_basic()));
 
-        // ==================== 核心精度控制逻辑 ====================
+        // ==================== 精度控制逻辑 ====================
         if (precision == -1) {
             // -1 档：自动模式，直接输出精确的 LaTeX 符号 (例如 \frac{1}{2})
             result_msg = SymEngine::latex(*expr.get_basic());
@@ -160,7 +191,7 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         // ==========================================================
 
     } catch (...) {
-        // 捕获所有 C++ 异常，绝不让崩溃溢出到 ArkTS 应用层
+        // 捕获其余所有的 C++ 异常，不让崩溃溢出到 ArkTS 应用层
         result_msg = "Error";
     }
     
