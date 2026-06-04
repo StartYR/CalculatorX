@@ -249,6 +249,7 @@ struct Index {
       switch (action) {
         case '×':       latexChar = "\\times "; break;
         case '÷':       latexChar = "\\div "; break;
+        case '−':      latexChar = "-"; break;
         case 'π':       latexChar = "\\pi "; break;
         case '∞':       latexChar = "\\infty "; break;
         case 'i':       latexChar = "i"; break;

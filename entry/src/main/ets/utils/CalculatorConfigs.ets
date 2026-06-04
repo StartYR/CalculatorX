@@ -75,7 +75,7 @@ export const topShiftButtons: Array<string | Resource> = [
 export const bottomButtons: string[] = [
   '7', '8', '9', '⌫', 'AC',
   '4', '5', '6', '×', '÷',
-  '1', '2', '3', '+', '-',
+  '1', '2', '3', '+', '−',
   '.', '0', 'e', 'π', '=',
 ];
 
@@ -116,7 +116,7 @@ export function getBgColor(btn: string | Resource, isShift: boolean): ResourceCo
   if (action === 'AC' || action === '⌫') return '#ffff5d3e';
   if (action === '⇧Shift') return isShift ? '#ffb87200' : '#ff9900';
   if (action === '=') return $r('sys.color.comp_background_emphasize');
-  if (['+', '-', '×', '÷'].includes(action)) return $r('sys.color.comp_background_tertiary');
+  if (['+', '−', '×', '÷'].includes(action)) return $r('sys.color.comp_background_tertiary');
 
   let isNumberOrCore = (typeof btn === 'string' && btn >= '0' && btn <= '9') || action === '.' || action === 'e' || action === 'π' || action === 'Ans';
   if (isNumberOrCore) return $r('sys.color.comp_background_primary');
@@ -127,11 +127,10 @@ export function getBgColor(btn: string | Resource, isShift: boolean): ResourceCo
 export function getFontSize(btn: string | Resource): number {
   if (typeof btn !== 'string') return 14;
   if (btn >= '0' && btn <= '9') return 24;
-  if (btn === '+' || btn === '-' || btn === '×' || btn === '÷' || btn === '=' || btn === 'π' || btn === 'e' || btn === '.') return 28;
+  if (btn === '−') return 28;
+  if (btn === '+' || btn === '×' || btn === '÷' || btn === '=' || btn === 'π' || btn === 'e' || btn === '.') return 28;
   if (['sin⁻¹', 'cos⁻¹', 'tan⁻¹', 'd/dx', 'lim'].includes(btn)) return 20;
   if (['sin', 'cos', 'tan', 'log', 'ln'].includes(btn)) return 20;
-  if (['∫', '∑', '∏', '∞'].includes(btn)) return 22;
-  if (['eˣ', '10ˣ'].includes(btn)) return 18;
   if (btn === 'AC' || btn === '⌫') return 20;
   if (btn === '⇦'|| btn === '⇨') return 30;
   if (btn === '⇧Shift') return 16;
@@ -148,7 +147,7 @@ export function getFontColor(btn: string | Resource): ResourceColor {
   if (typeof btn !== 'string') return $r('sys.color.font_primary');
 
   // 3. 右侧运算符：为了让界面更灵动，在灰色背景上使用系统强调色 (蓝色文字)
-  if (['+', '-', '×', '÷'].includes(action)) return $r('sys.color.font_emphasize');
+  if (['+', '−', '×', '÷'].includes(action)) return $r('sys.color.font_emphasize');
 
   // 4. 顶部高级功能区：次要文字颜色 (略微弱化，将视觉焦点让给下方数字区)
   if (topButtons.includes(btn as string)) return $r('sys.color.font_secondary');
