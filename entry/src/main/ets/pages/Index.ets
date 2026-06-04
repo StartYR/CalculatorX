@@ -104,13 +104,13 @@ struct Index {
       if (this.vibrationCurve === 0) {
         // 自动模式（基于按键类型的差异化震动）
         if (action === '=' || action === 'AC' || action === '⌫') {
-          // 高权重操作：厚重
+          // 高权重操作：hard
           effectId = 'haptic.effect.hard';
         } else if (['+', '-', '×', '÷'].includes(action as string)) {
-          // 运算符操作：清脆
+          // 运算符操作：sharp
           effectId = 'haptic.effect.sharp';
         } else {
-          // 普通数字与函数：轻柔
+          // 普通数字与函数：soft
           effectId = 'haptic.effect.soft';
         }
 
@@ -141,35 +141,102 @@ struct Index {
       this.webviewController.runJavaScript('deleteMath()');
     } else if (action === '=') {
       this.webviewController.runJavaScript(
-        'window.getMathJSON()',
-        (error, result) => {
+        'window.getFormula()',
+        (error, rawLatexResult) => {
           if (error) return;
 
-          let cleanJsonString = '';
+          // 1. 去除首尾引号并处理转义，还原最纯净的 LaTeX
+          let rawLatex = rawLatexResult.replace(/^"|"$/g, '').replace(/\\\\/g, '\\');
+
+          // 🌟 2. 为满足 ArkTS 严格语法检查，定义带类型的正则替换器
+          let repC = (m: string, n1: string | undefined, n2: string | undefined, r1: string | undefined, r2: string | undefined): string => {
+            return `\\operatorname{nCr}\\left(${n1 || n2},${r1 || r2}\\right)`;
+          };
+          let repP = (m: string, n1: string | undefined, n2: string | undefined, r1: string | undefined, r2: string | undefined): string => {
+            return `\\operatorname{nPr}\\left(${n1 || n2},${r1 || r2}\\right)`;
+          };
+          let repFlatC = (m: string, n: string, r: string): string => {
+            return `\\operatorname{nCr}\\left(${n},${r}\\right)`;
+          };
+          let repFlatP = (m: string, n: string, r: string): string => {
+            return `\\operatorname{nPr}\\left(${n},${r}\\right)`;
+          };
+
+          // 🌟 3. 终极正则：全面兼容 MathLive 省略大括号的“自作主张”
+          let cleanedLatex = rawLatex
+          // --- 组合 (C) 的 5 种样式防御 ---
+            .replace(/\\mathrm\{C\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))\^(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repC)
+            .replace(/\\binom(?:\{(.+?)\}|([a-zA-Z0-9.]))(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repC)
+            .replace(/\{\}\^(?:\{(.+?)\}|([a-zA-Z0-9.]))\\mathrm\{C\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repC)
+            .replace(/\{\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))\\mathrm\{C\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repC)
+            .replace(/\\mathrm\{C\}\\left\((.+?),\s*(.+?)\\right\)/g, repFlatC)
+
+            // --- 排列 (P/A) 的 5 种样式防御 ---
+            .replace(/\\mathrm\{A\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))\^(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repP)
+            .replace(/\\mathrm\{P\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))\^(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repP)
+            .replace(/\{\}\^(?:\{(.+?)\}|([a-zA-Z0-9.]))\\mathrm\{P\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repP)
+            .replace(/\{\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))\\mathrm\{P\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repP)
+            .replace(/\\mathrm\{P\}\\left\((.+?),\s*(.+?)\\right\)/g, repFlatP);
+
+          // 🌟 4. 终极装甲：给反斜杠和引号加上双重转义，防止破坏 JS 边界
+          let safeLatex = cleanedLatex.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, "\\n");
+
+          // 🌟 5. 内存静默转换 JSON（完美幽灵挂载版）
+          let injectJs = `
+        (function() {
           try {
-            cleanJsonString = JSON.parse(result);
+            let tempMf = document.createElement('math-field');
+            tempMf.style.position = 'absolute';
+            tempMf.style.visibility = 'hidden';
+            tempMf.style.pointerEvents = 'none';
+            document.body.appendChild(tempMf);
+
+            tempMf.value = '${safeLatex}';
+            let jsonAst = tempMf.getValue('math-json');
+            document.body.removeChild(tempMf);
+
+            return JSON.stringify(jsonAst);
           } catch (e) {
-            cleanJsonString = result;
+            return JSON.stringify(["Error", "JS_Parse_Crash: " + e.toString()]);
           }
+        })();
+      `;
 
-          // ===== 将前端双状态映射为 C++ 单一控制码 =====
-          let cppPrecisionMode = -1;
-          if (this.answerOutputMode === 0) {
-            cppPrecisionMode = -1; // -1 代表：自动模式（符号精确化简输出，如分数/根号）
-          } else {
-            if (this.decimalPrecision === 16) {
-              cppPrecisionMode = -2; // -2 代表：小数模式 + 自动位数（动态抹除末尾的0）
-            } else {
-              cppPrecisionMode = this.decimalPrecision; // 0~12 代表：小数模式 + 强制固定补0
+          this.webviewController.runJavaScript(injectJs, (err, jsonResult) => {
+            if (err) return;
+
+            let cleanJsonString = '';
+            try {
+              cleanJsonString = JSON.parse(jsonResult);
+              if (typeof cleanJsonString === 'string') {
+                cleanJsonString = JSON.parse(cleanJsonString);
+              }
+            } catch (e) {
+              cleanJsonString = jsonResult;
             }
-          }
-          let cppResponse: string = testNapi.calculate(cleanJsonString, this.isRad, cppPrecisionMode);
 
-          if (cppResponse !== "Error") {
-            this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
-          } else {
-            console.error("C++ Calculation Error");
-          }
+            console.info(`【清洗后传给C++的极简JSON】: ${typeof cleanJsonString === 'string' ? cleanJsonString : JSON.stringify(cleanJsonString)}`);
+
+            // ===== 将前端双状态映射为 C++ 单一控制码 =====
+            let cppPrecisionMode = -1;
+            if (this.answerOutputMode === 0) {
+              cppPrecisionMode = -1;
+            } else {
+              if (this.decimalPrecision === 16) {
+                cppPrecisionMode = -2;
+              } else {
+                cppPrecisionMode = this.decimalPrecision;
+              }
+            }
+
+            let cppResponse: string = testNapi.calculate(typeof cleanJsonString === 'string' ? cleanJsonString : JSON.stringify(cleanJsonString), this.isRad, cppPrecisionMode);
+
+            if (cppResponse !== "Error") {
+              this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
+            } else {
+              console.error("C++ Calculation Error");
+            }
+          });
         }
       );
     } else if (action === '⇦') {
