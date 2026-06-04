@@ -317,7 +317,7 @@ export struct Settings {
                   .layoutWeight(1) // 撑开中间，让右侧文字和箭头靠右
 
                 // 动态显示当前选中的样式名称
-                Text(this.combSelect === 0 ? '中国教材' : this.combSelect === 1 ? '国际学术' : this.combSelect === 2 ? '现代计算器' : this.combSelect === 3 ? '早期计算器' : '平铺风格')
+                Text(this.combSelect === 0 ? '角标式 Cₙᵏ' : this.combSelect === 1 ? '国际学术' : this.combSelect === 2 ? '现代计算器 ⁿCᵣ' : this.combSelect === 3 ? '早期计算器 ₙCᵣ' : '平铺风格 C(n, r)')
                   .fontSize(14)
                   .fontColor($r('sys.color.font_secondary'))
                   .margin({ right: 4 })
@@ -348,7 +348,7 @@ export struct Settings {
                   .layoutWeight(1)
 
                 // 动态显示当前选中的样式名称
-                Text(this.permSelect === 0 ? '中国教材' : this.permSelect === 1 ? '国际学术' : this.permSelect === 2 ? '现代计算器' : this.permSelect === 3 ? '早期计算器' : '平铺风格')
+                Text(this.permSelect === 0 ? '角标式 Aₙʳ' : this.permSelect === 1 ? '角标式 Pₙʳ' : this.permSelect === 2 ? '现代计算器 ⁿPᵣ' : this.permSelect === 3 ? '早期计算器 ₙPᵣ' : '平铺风格 P(n, r)')
                   .fontSize(14)
                   .fontColor($r('sys.color.font_secondary'))
                   .margin({ right: 4 })
