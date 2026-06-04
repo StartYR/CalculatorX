@@ -52,6 +52,16 @@ Expression parseAST(const json& ast, bool isRad) {
         if (op == "Root") return SymEngine::pow(parseAST(ast[1], isRad), Expression(1) / parseAST(ast[2], isRad));
         if (op == "Power") return SymEngine::pow(parseAST(ast[1], isRad), parseAST(ast[2], isRad));
         if (op == "Abs") return SymEngine::abs(parseAST(ast[1], isRad));
+        
+        // 阶乘
+        if (op == "Factorial") {
+            if (ast.size() == 2) {
+                Expression arg = parseAST(ast[1], isRad);
+                // 利用伽马函数实现阶乘：x! = Gamma(x + 1)
+                return Expression(SymEngine::gamma((arg + Expression(1)).get_basic()));
+            }
+            return Expression(SymEngine::symbol("Error"));
+        }
 
         // 组合 (nCr)
         if (op == "nCr") {
