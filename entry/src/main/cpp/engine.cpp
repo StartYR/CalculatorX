@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <cmath>
 #include <numeric>
+#include "MathValidator.h"
 
 using json = nlohmann::json;
 using SymEngine::Expression;
