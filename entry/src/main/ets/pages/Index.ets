@@ -143,22 +143,23 @@ struct Index {
     } else if (action === '⌫') {
       this.webviewController.runJavaScript('deleteMath()');
     } else if (action === 'S⇄D') {
-      // S⇄D 一键无缝切换逻辑
-      if (!this.lastValidJson) return; // 还没计算过，按了白按
+      if (!this.lastValidJson) return;
 
-      this.isTempDecimal = !this.isTempDecimal; // 状态翻转
-
-      // 强制接管精度控制码
       let cppPrecisionMode = -1;
-      if (this.isTempDecimal) {
-        // 切换到小数：使用用户设置的小数精度，或者默认 -2
-        cppPrecisionMode = this.decimalPrecision === 16 ? -2 : this.decimalPrecision;
+
+      // 拦截 Shift 状态
+      if (this.isShift) {
+        // 带分数
+        cppPrecisionMode = -4;
+        // 消费掉 Shift 状态，恢复正常键盘
+        this.isShift = false;
       } else {
-        // 切换回标准：强制使用 -1
-        cppPrecisionMode = -1;
+        // 假分数
+        this.isTempDecimal = !this.isTempDecimal;
+        cppPrecisionMode = this.isTempDecimal ? (this.decimalPrecision === 16 ? -2 : this.decimalPrecision) : -3;
       }
 
-      // 拿着上一次的 JSON，直接让 C++ 重新跑一遍
+      // 发送给 C++
       let cppResponse: string = testNapi.calculate(this.lastValidJson, this.isRad, cppPrecisionMode);
       if (cppResponse !== "Error") {
         this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
@@ -260,8 +261,13 @@ struct Index {
             if (cppResponse !== "Error") {
               // 把成功的计算结果存入 Ans
               this.lastAnsLatex = cppResponse;
-              // 每次按等于号，重置 S⇄D 的临时状态
-              this.isTempDecimal = (cppPrecisionMode !== -1);
+
+              // 如果是自动模式(-1)，则通过判断结果里有没有小数点来判断是否为小数
+              if (cppPrecisionMode === -1) {
+                this.isTempDecimal = cppResponse.includes('.');
+              } else {
+                this.isTempDecimal = true;
+              }
               this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
             } else {
               console.error("C++ Calculation Error");
@@ -278,12 +284,46 @@ struct Index {
     } else {
       let latexChar = action;
       switch (action) {
-        case '×':       latexChar = "\\times "; break;
-        case '÷':       latexChar = "\\div "; break;
-        case '−':      latexChar = "-"; break;
-        case 'π':       latexChar = "\\pi "; break;
-        case '∞':       latexChar = "\\infty "; break;
-        case 'i':       latexChar = "i"; break;
+        case '×':        latexChar = "\\times "; break;
+        case '÷':        latexChar = "\\div "; break;
+        case '−':        latexChar = "-"; break;
+        case 'π':        latexChar = "\\pi "; break;
+        case '∞':        latexChar = "\\infty "; break;
+        case 'i':        latexChar = "i"; break;
+        case 'comma':    latexChar = ","; break;
+        case 'fraction': latexChar = "\\frac{\\placeholder{}}{\\placeholder{}}"; break;
+        case 'sqrt':     latexChar = "\\sqrt{\\placeholder{}}"; break;
+        case 'sqrt3':    latexChar = "\\sqrt[3]{\\placeholder{}}"; break;
+        case 'sqrtx':    latexChar = "\\sqrt[\\placeholder{}]{\\placeholder{}}"; break;
+        case 'power2':   latexChar = "^2"; break;
+        case 'power3':   latexChar = "^3"; break;
+        case 'power':    latexChar = "^{\\placeholder{}}"; break;
+        case 'inverse':  latexChar = '^{-1}'; break;
+        case 'e_power':  latexChar = 'e^{\\placeholder{}}'; break;
+        case 'icon_exp': latexChar = '\\times 10^{\\placeholder{}}'; break;
+        case 'abs':      latexChar = "\\left| \\placeholder{} \\right|"; break;
+        case 'fact':     latexChar = "!"; break;
+        case 'eˣ':       latexChar = "e^{\\placeholder{}}"; break;
+        case '10ˣ':      latexChar = "10^{\\placeholder{}}"; break;
+        case 'ln':       latexChar = "\\ln\\left(\\placeholder{}\\right)"; break;
+        case 'lg':       latexChar = '\\lg\\left(\\placeholder{}\\right)'; break;
+        case 'log':      latexChar = "\\log_{\\placeholder{}}\\left(\\placeholder{}\\right)"; break;
+        case 'sin':      latexChar = "\\sin\\left(\\placeholder{}\\right)"; break;
+        case 'cos':      latexChar = "\\cos\\left(\\placeholder{}\\right)"; break;
+        case 'tan':      latexChar = "\\tan\\left(\\placeholder{}\\right)"; break;
+        case 'sin⁻¹':    latexChar = "\\arcsin\\left(\\placeholder{}\\right)"; break;
+        case 'cos⁻¹':    latexChar = "\\arccos\\left(\\placeholder{}\\right)"; break;
+        case 'tan⁻¹':    latexChar = "\\arctan\\left(\\placeholder{}\\right)"; break;
+        case 'integral': latexChar = "\\int_{\\placeholder{}}^{\\placeholder{}}"; break;
+        case 'sum':      latexChar = "\\sum_{\\placeholder{}}^{\\placeholder{}}"; break;
+        case 'product':  latexChar = "\\prod_{\\placeholder{}}^{\\placeholder{}}"; break;
+        case 'd/dx':     latexChar = "\\frac{d}{dx}"; break;
+        case 'lim':      latexChar = "\\lim_{x \\to \\placeholder{}}"; break;
+        case '%':        latexChar = '\\%'; break;
+        case 'mod':      latexChar = '\\bmod '; break;
+        case 'GCD':      latexChar = '\\gcd\\left(\\placeholder{}, \\placeholder{}\\right)'; break;
+        case 'LCM':      latexChar = '\\operatorname{lcm}\\left(\\placeholder{}, \\placeholder{}\\right)'; break;
+
         case 'Ans':
           if (this.lastAnsLatex === "0") {
             latexChar = "0"; // 初始状态
@@ -291,18 +331,7 @@ struct Index {
             latexChar = "\\left(" + this.lastAnsLatex + "\\right)";
           }
           break;
-        case ',':       latexChar = ","; break;
-        case 'fraction': latexChar = "\\frac{\\placeholder{}}{\\placeholder{}}"; break;
-        case 'sqrt':     latexChar = "\\sqrt{\\placeholder{}}"; break;
-        case 'sqrt3':    latexChar = "\\sqrt[3]{\\placeholder{}}"; break;
-        case 'sqrtx':    latexChar = "\\sqrt[\\placeholder{}]{\\placeholder{}}"; break;
-        case 'power2':   latexChar = "^2"; break;
-        case 'power':    latexChar = "^{\\placeholder{}}"; break;
-        case 'x⁻¹':      latexChar = "^{-1}"; break;
-        case 'abs':      latexChar = "\\left| \\placeholder{} \\right|"; break;
-        case '[':        latexChar = "\\left[ \\placeholder{} \\right]"; break;
-        case ']':        latexChar = "\\right]"; break;
-        case '!':        latexChar = "!"; break;
+
         case 'nCr':
           let combTemplates = [
             "\\binom{\\placeholder{}}{\\placeholder{}}",                 // 0: 国际规范 \binom{n}{r}
@@ -324,21 +353,6 @@ struct Index {
           ];
           latexChar = permTemplates[this.permSelect];
           break;
-        case 'eˣ':       latexChar = "e^{\\placeholder{}}"; break;
-        case '10ˣ':      latexChar = "10^{\\placeholder{}}"; break;
-        case 'ln':       latexChar = "\\ln\\left(\\placeholder{}\\right)"; break;
-        case 'log':      latexChar = "\\log_{\\placeholder{}}\\left(\\placeholder{}\\right)"; break;
-        case 'sin':      latexChar = "\\sin\\left(\\placeholder{}\\right)"; break;
-        case 'cos':      latexChar = "\\cos\\left(\\placeholder{}\\right)"; break;
-        case 'tan':      latexChar = "\\tan\\left(\\placeholder{}\\right)"; break;
-        case 'sin⁻¹':    latexChar = "\\arcsin\\left(\\placeholder{}\\right)"; break;
-        case 'cos⁻¹':    latexChar = "\\arccos\\left(\\placeholder{}\\right)"; break;
-        case 'tan⁻¹':    latexChar = "\\arctan\\left(\\placeholder{}\\right)"; break;
-        case 'integral': latexChar = "\\int_{\\placeholder{}}^{\\placeholder{}}"; break;
-        case 'sum':      latexChar = "\\sum_{\\placeholder{}}^{\\placeholder{}}"; break;
-        case 'product':  latexChar = "\\prod_{\\placeholder{}}^{\\placeholder{}}"; break;
-        case 'd/dx':     latexChar = "\\frac{d}{dx}"; break;
-        case 'lim':      latexChar = "\\lim_{x \\to \\placeholder{}}"; break;
       }
       this.insertToWeb(latexChar);
     }

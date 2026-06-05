@@ -13,8 +13,10 @@ export const icon_power: Resource = $rawfile('math-icons/icon_power.svg');
 export const icon_fraction: Resource = $rawfile('math-icons/icon_fraction.svg');
 export const icon_power3: Resource = $rawfile('math-icons/icon_power3.svg');
 export const icon_exp: Resource = $rawfile('math-icons/icon_exp.svg');
-export const icon_power_1: Resource = $rawfile('math-icons/icon_power_1.svg');
+export const icon_inverse: Resource = $rawfile('math-icons/icon_inverse.svg');
 export const icon_e_power: Resource = $rawfile('math-icons/icon_e_power.svg');
+export const icon_comma: Resource = $rawfile('math-icons/icon_comma.svg');
+export const icon_fact: Resource = $rawfile('math-icons/icon_fact.svg');
 
 export class MathIcons {
   // 组合 (Combination)
@@ -64,15 +66,15 @@ export const PermutationOptions: MathStyleOption[] = [
 export const topShiftButtons: Array<string | Resource> = [
   '', '', '', '', '', '',
   '', '', '', 'GCD', 'LCM', 'd/dx',
-  '', '', '', '', icon_e_power, '',
-  'mod', icon_sqrt3, '%', icon_power3, ',', icon_power_1,
+  '', '', '', 'CONST', icon_e_power, 'lg',
+  'mod', icon_sqrt3, '%', icon_power3, icon_comma, icon_inverse,
   'sin⁻¹', 'cos⁻¹', 'tan⁻¹', 'x', 'y', 'z',
 ];
 
 export const topButtons: Array<string | Resource> = [
   '⇧Shift', 'R/D', '⇦', '⇨', 'S⇄D', 'i',
   'lim', '∞', '° \' \"', icon_sum, icon_product, icon_integral,
-  '!', 'nCr', 'nPr', 'e', 'ln', 'log',
+  icon_fact, 'nCr', 'nPr', 'e', 'ln', 'log',
   icon_abs, icon_sqrt, icon_sqrtx, icon_power2, icon_power, icon_fraction,
   'sin', 'cos', 'tan', 'π', '(', ')',
 ];
@@ -92,14 +94,17 @@ export function getActionId(btn: string | Resource): string {
   if (btn === icon_sqrt3) return 'sqrt3';
   if (btn === icon_sqrtx) return 'sqrtx';
   if (btn === icon_power2) return 'power2';
+  if (btn === icon_power3) return 'power3';
   if (btn === icon_power) return 'power';
   if (btn === icon_abs) return 'abs';
   if (btn === icon_sum) return 'sum';
   if (btn === icon_product) return 'product';
   if (btn === icon_integral) return 'integral';
   if (btn === icon_exp) return 'icon_exp';
-  if (btn === icon_power_1) return 'power_1';
+  if (btn === icon_inverse) return 'inverse';
   if (btn === icon_e_power) return 'e_power';
+  if (btn === icon_comma) return 'comma';
+  if (btn === icon_fact) return 'fact';
   return '';
 }
 
@@ -114,7 +119,7 @@ export class RoutePath {
 export function getFontFamily(btn: string | Resource): string {
   if (typeof btn !== 'string') return 'HarmonyOS Sans';
   if (['AC', '⌫', '='].includes(btn)) return 'HarmonyOS Sans';
-  if (['y', 'z', 'i', 'e', 'π', 'ln', 'log'].includes(btn)) return 'Cambria Italic';
+  if (['x', 'y', 'z', 'i', 'e', 'π',].includes(btn)) return 'Cambria Italic';
   return 'Cambria Math';
 }
 
