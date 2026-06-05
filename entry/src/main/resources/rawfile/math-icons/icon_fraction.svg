@@ -21,9 +21,9 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="pt"
-     inkscape:zoom="38.882718"
-     inkscape:cx="12.383393"
-     inkscape:cy="15.006667"
+     inkscape:zoom="45.254834"
+     inkscape:cx="6.3971067"
+     inkscape:cy="14.440446"
      inkscape:window-width="2560"
      inkscape:window-height="1369"
      inkscape:window-x="-8"
@@ -36,23 +36,64 @@
        id="glyph0-1"
        d="M 5.671875 -5 C 5.671875 -5.21875 5.640625 -5.265625 5.40625 -5.265625 L 0.8125 -5.265625 C 0.578125 -5.265625 0.546875 -5.21875 0.546875 -5 L 0.546875 -0.265625 C 0.546875 -0.03125 0.578125 0 0.828125 0 L 5.390625 0 C 5.640625 0 5.671875 -0.046875 5.671875 -0.28125 Z M 0.890625 -4.921875 L 5.328125 -4.921875 L 5.328125 -0.34375 L 0.890625 -0.34375 Z M 0.890625 -4.921875" />
   </defs>
-  <g
-     fill="#000000"
-     id="g1">
-    <path
-       id="use1"
-       d="m 11.848875,5.1709995 c 0,-0.21875 -0.03125,-0.265625 -0.265625,-0.265625 H 6.9895 c -0.234375,0 -0.265625,0.046875 -0.265625,0.265625 v 4.734375 c 0,0.2343755 0.03125,0.2656255 0.28125,0.2656255 h 4.5625 c 0.25,0 0.28125,-0.04687 0.28125,-0.2812505 z m -4.78125,0.078125 h 4.4375 v 4.578125 h -4.4375 z m 0,0" />
-  </g>
   <path
-     style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000;stop-opacity:1;opacity:1"
-     d="m -1.5,-0.19921875 v 0.3984375 h 9.2246094 v -0.3984375 z"
-     id="path1"
-     transform="matrix(1,0,0,-1,6.177,11.35)" />
-  <g
-     fill="#000000"
-     id="g2">
-    <path
-       id="use2"
-       d="m 11.848875,12.528999 c 0,-0.21875 -0.03125,-0.265625 -0.265625,-0.265625 H 6.9895 c -0.234375,0 -0.265625,0.04687 -0.265625,0.265625 v 4.734375 c 0,0.234375 0.03125,0.265625 0.28125,0.265625 h 4.5625 c 0.25,0 0.28125,-0.04687 0.28125,-0.28125 z m -4.78125,0.07813 h 4.4375 v 4.578125 h -4.4375 z m 0,0" />
-  </g>
+     style="baseline-shift:baseline;display:inline;overflow:visible;opacity:1;vector-effect:none;stroke-width:1.22714;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+     d="m 4.677,11.80725 v -0.6 h 9.224609 v 0.6 z"
+     id="path1" />
+  <rect
+     style="fill:#000000;stroke-width:0.367116"
+     id="rect1"
+     width="0.60000002"
+     height="4.0679998"
+     x="6.7251306"
+     y="5.7870002" />
+  <rect
+     style="fill:#000000;stroke-width:0.865489"
+     id="rect2"
+     width="5.1208448"
+     height="0.60000002"
+     x="6.7249999"
+     y="5.1872501" />
+  <rect
+     style="fill:#000000;stroke-width:1.06229"
+     id="rect3"
+     width="0.60000002"
+     height="4.0679998"
+     x="11.246"
+     y="5.7870002" />
+  <rect
+     style="fill:#000000;stroke-width:1.34993"
+     id="rect4"
+     width="5.1209998"
+     height="0.60000002"
+     x="6.7249999"
+     y="9.8532495" />
+  <rect
+     style="fill:#000000;stroke-width:0.367116"
+     id="rect1-4"
+     width="0.60000002"
+     height="4.0679998"
+     x="6.7251306"
+     y="13.16075" />
+  <rect
+     style="fill:#000000;stroke-width:0.865489"
+     id="rect2-8"
+     width="5.1208448"
+     height="0.60000002"
+     x="6.7249999"
+     y="12.561" />
+  <rect
+     style="fill:#000000;stroke-width:1.06229"
+     id="rect3-8"
+     width="0.60000002"
+     height="4.0679998"
+     x="11.246001"
+     y="13.16075" />
+  <rect
+     style="fill:#000000;stroke-width:1.34993"
+     id="rect4-2"
+     width="5.1209998"
+     height="0.60000002"
+     x="6.7249999"
+     y="17.226999" />
 </svg>

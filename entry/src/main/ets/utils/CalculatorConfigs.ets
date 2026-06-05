@@ -11,6 +11,12 @@ export const icon_sqrtx: Resource = $rawfile('math-icons/icon_sqrtx.svg');
 export const icon_power2: Resource = $rawfile('math-icons/icon_power2.svg');
 export const icon_power: Resource = $rawfile('math-icons/icon_power.svg');
 export const icon_fraction: Resource = $rawfile('math-icons/icon_fraction.svg');
+export const icon_power3: Resource = $rawfile('math-icons/icon_power3.svg');
+export const icon_exp: Resource = $rawfile('math-icons/icon_exp.svg');
+export const icon_inverse: Resource = $rawfile('math-icons/icon_inverse.svg');
+export const icon_e_power: Resource = $rawfile('math-icons/icon_e_power.svg');
+export const icon_comma: Resource = $rawfile('math-icons/icon_comma.svg');
+export const icon_fact: Resource = $rawfile('math-icons/icon_fact.svg');
 
 export class MathIcons {
   // 组合 (Combination)
@@ -39,8 +45,8 @@ export interface MathStyleOption {
 
 // 组合的 5 种样式配置
 export const CombinationOptions: MathStyleOption[] = [
-  { id: 1, name: '国际学术规范', description: '二项式系数，微积分及国际学术论文通用', icon: MathIcons.COMB_BINOM,  latexTemplate: '\\binom{n}{r}' },
-  { id: 0, name: 'C - 角标写法', description: '随前苏联的数学体系传入中国，国内中学教材通用标准', icon: MathIcons.COMB_SUBSUP, latexTemplate: '\\mathrm{C}_{n}^{r}' },
+  { id: 0, name: '国际学术规范', description: '二项式系数，微积分及国际学术论文通用', icon: MathIcons.COMB_BINOM,  latexTemplate: '\\binom{n}{r}' },
+  { id: 1, name: 'C - 角标写法', description: '随前苏联的数学体系传入中国，国内中学教材通用标准', icon: MathIcons.COMB_SUBSUP, latexTemplate: '\\mathrm{C}_{n}^{r}' },
   { id: 2, name: '现代计算器风格 (左上标)', description: 'Casio 等主流实体科学计算器显示风格', icon: MathIcons.COMB_CALC,   latexTemplate: '{}^{n}\\mathrm{C}_{r}' },
   { id: 3, name: '早期计算器风格 (左下标)', description: 'TI 及部分早期科学计算器显示风格', icon: MathIcons.COMB_CALC2,  latexTemplate: '{}_{n}\\mathrm{C}_{r}' },
   { id: 4, name: '平铺函数风格', description: '计算机编程、离散数学及纯文本环境规范', icon: MathIcons.COMB_INLINE, latexTemplate: '\\mathrm{C}(n, r)' }
@@ -56,27 +62,28 @@ export const PermutationOptions: MathStyleOption[] = [
 ];
 
 // ========== 2. 键盘布局数组 ==========
-export const topButtons: Array<string | Resource> = [
-  '⇧Shift', 'R/D', '⇦', '⇨', 'Ans', 'i',
-  'lim', 'd/dx', icon_sum, icon_product, icon_integral, '∞',
-  'x⁻¹', '!', 'nCr', 'nPr', 'ln', 'log',
-  icon_abs, icon_sqrt, icon_sqrtx, icon_power2, icon_power, icon_fraction,
-  'sin', 'cos', 'tan', ',', '(', ')',
-];
 
 export const topShiftButtons: Array<string | Resource> = [
   '', '', '', '', '', '',
-  '', '', '', '', '', '',
-  '', '', '', '', 'eˣ', '10ˣ',
-  '', icon_sqrt3, '', '', '', '',
-  'sin⁻¹', 'cos⁻¹', 'tan⁻¹', '', '[', ']',
+  '', '', '', 'GCD', 'LCM', 'd/dx',
+  '', '', '', 'CONST', icon_e_power, 'lg',
+  'mod', icon_sqrt3, '%', icon_power3, icon_comma, icon_inverse,
+  'sin⁻¹', 'cos⁻¹', 'tan⁻¹', 'x', 'y', 'z',
 ];
 
-export const bottomButtons: string[] = [
+export const topButtons: Array<string | Resource> = [
+  '⇧Shift', 'R/D', '⇦', '⇨', 'S⇄D', 'i',
+  'lim', '∞', '° \' \"', icon_sum, icon_product, icon_integral,
+  icon_fact, 'nCr', 'nPr', 'e', 'ln', 'log',
+  icon_abs, icon_sqrt, icon_sqrtx, icon_power2, icon_power, icon_fraction,
+  'sin', 'cos', 'tan', 'π', '(', ')',
+];
+
+export const bottomButtons: Array<string | Resource> = [
   '7', '8', '9', '⌫', 'AC',
   '4', '5', '6', '×', '÷',
-  '1', '2', '3', '+', '-',
-  '.', '0', 'e', 'π', '=',
+  '1', '2', '3', '+', '−',
+  '.', '0', icon_exp, 'Ans', '=',
 ];
 
 // ========== 3. 样式映射函数 ==========
@@ -87,11 +94,17 @@ export function getActionId(btn: string | Resource): string {
   if (btn === icon_sqrt3) return 'sqrt3';
   if (btn === icon_sqrtx) return 'sqrtx';
   if (btn === icon_power2) return 'power2';
+  if (btn === icon_power3) return 'power3';
   if (btn === icon_power) return 'power';
   if (btn === icon_abs) return 'abs';
   if (btn === icon_sum) return 'sum';
   if (btn === icon_product) return 'product';
   if (btn === icon_integral) return 'integral';
+  if (btn === icon_exp) return 'icon_exp';
+  if (btn === icon_inverse) return 'inverse';
+  if (btn === icon_e_power) return 'e_power';
+  if (btn === icon_comma) return 'comma';
+  if (btn === icon_fact) return 'fact';
   return '';
 }
 
@@ -106,7 +119,7 @@ export class RoutePath {
 export function getFontFamily(btn: string | Resource): string {
   if (typeof btn !== 'string') return 'HarmonyOS Sans';
   if (['AC', '⌫', '='].includes(btn)) return 'HarmonyOS Sans';
-  if (['y', 'z', 'i', 'e', 'π', 'ln', 'log'].includes(btn)) return 'Cambria Italic';
+  if (['x', 'y', 'z', 'i', 'e', 'π',].includes(btn)) return 'Cambria Italic';
   return 'Cambria Math';
 }
 
@@ -116,22 +129,21 @@ export function getBgColor(btn: string | Resource, isShift: boolean): ResourceCo
   if (action === 'AC' || action === '⌫') return '#ffff5d3e';
   if (action === '⇧Shift') return isShift ? '#ffb87200' : '#ff9900';
   if (action === '=') return $r('sys.color.comp_background_emphasize');
-  if (['+', '-', '×', '÷'].includes(action)) return $r('sys.color.comp_background_tertiary');
+  if (['+', '−', '×', '÷'].includes(action)) return $r('sys.color.comp_background_tertiary');
 
-  let isNumberOrCore = (typeof btn === 'string' && btn >= '0' && btn <= '9') || action === '.' || action === 'e' || action === 'π' || action === 'Ans';
-  if (isNumberOrCore) return $r('sys.color.comp_background_primary');
+  let isNumberOrCore = (typeof btn === 'string' && btn >= '0' && btn <= '9') || action === '.' || action === 'Ans'|| action === '⇦'|| action === '⇨';
+  if (isNumberOrCore || action === 'icon_exp') return $r('sys.color.comp_background_primary');
 
   return $r('sys.color.comp_background_secondary');
 }
 
 export function getFontSize(btn: string | Resource): number {
   if (typeof btn !== 'string') return 14;
-  if (btn >= '0' && btn <= '9') return 24;
-  if (btn === '+' || btn === '-' || btn === '×' || btn === '÷' || btn === '=' || btn === 'π' || btn === 'e' || btn === '.') return 28;
-  if (['sin⁻¹', 'cos⁻¹', 'tan⁻¹', 'd/dx', 'lim'].includes(btn)) return 20;
+  if ((btn >= '0' && btn <= '9') || btn === 'Ans') return 24;
+  if (btn === 'e') return 22;
+  if (btn === '+' || btn === '×' || btn === '÷' || btn === '=' || btn === '−' || btn === '.') return 28;
+  if (['d/dx', 'lim'].includes(btn)) return 20;
   if (['sin', 'cos', 'tan', 'log', 'ln'].includes(btn)) return 20;
-  if (['∫', '∑', '∏', '∞'].includes(btn)) return 22;
-  if (['eˣ', '10ˣ'].includes(btn)) return 18;
   if (btn === 'AC' || btn === '⌫') return 20;
   if (btn === '⇦'|| btn === '⇨') return 30;
   if (btn === '⇧Shift') return 16;
@@ -148,7 +160,7 @@ export function getFontColor(btn: string | Resource): ResourceColor {
   if (typeof btn !== 'string') return $r('sys.color.font_primary');
 
   // 3. 右侧运算符：为了让界面更灵动，在灰色背景上使用系统强调色 (蓝色文字)
-  if (['+', '-', '×', '÷'].includes(action)) return $r('sys.color.font_emphasize');
+  if (['+', '−', '×', '÷'].includes(action)) return $r('sys.color.font_emphasize');
 
   // 4. 顶部高级功能区：次要文字颜色 (略微弱化，将视觉焦点让给下方数字区)
   if (topButtons.includes(btn as string)) return $r('sys.color.font_secondary');
@@ -159,7 +171,6 @@ export function getFontColor(btn: string | Resource): ResourceColor {
 
 export class PreferenceConfigs {
   static readonly STORE_NAME = 'CalcX_Preferences';
-
   static readonly KEY_COLOR_MODE = 'colorModeIndex';
   static readonly KEY_VIBRATION_CURVE = 'vibrationCurve';
   static readonly KEY_IS_RAD = 'isRad';
