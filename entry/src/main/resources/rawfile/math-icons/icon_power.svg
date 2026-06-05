@@ -23,66 +23,45 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="pt"
-     inkscape:zoom="41.291219"
-     inkscape:cx="15.996137"
-     inkscape:cy="14.131334"
+     inkscape:zoom="45.254834"
+     inkscape:cx="12.164446"
+     inkscape:cy="13.755437"
      inkscape:window-width="2560"
      inkscape:window-height="1369"
      inkscape:window-x="-8"
      inkscape:window-y="-8"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg9" />
-  <g
-     fill="none"
-     stroke="#000000"
-     stroke-width=".398"
-     stroke-miterlimit="10"
-     transform="translate(1.0, 1.5)"
-     id="g9">
-    <path
-       style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke:none;enable-background:accumulate;stop-color:#000000;stop-opacity:1;opacity:1"
-       d="M -0.00195313,-0.19921875 V 0.19726562 H 6.7753906 v -0.39648437 z"
-       id="path1"
-       transform="matrix(1,0,0,-1,4.981,7.64)" />
-    <path
-       style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke:none;enable-background:accumulate;stop-color:#000000;stop-opacity:1;opacity:1"
-       d="M -0.19921875,0.00195313 V 5.9785156 H 0.19726562 V 0.00195313 Z"
-       id="path2"
-       transform="matrix(1,0,0,-1,5.181,13.817)" />
-    <path
-       style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke:none;enable-background:accumulate;stop-color:#000000;stop-opacity:1;opacity:1"
-       d="M -0.19726562,0.00195313 V 5.9785156 h 0.3984375 V 0.00195313 Z"
-       id="path3"
-       transform="matrix(1,0,0,-1,11.557,13.817)" />
-    <path
-       style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke:none;enable-background:accumulate;stop-color:#000000;stop-opacity:1;opacity:1"
-       d="m -0.00195313,-0.19921875 v 0.3984375 H 6.7753906 v -0.3984375 z"
-       id="path4"
-       transform="matrix(1,0,0,-1,4.981,14.016)" />
-    <g
-       transform="translate(4.5, 0) scale(0.65)"
-       stroke-width=".612"
-       id="g8">
-      <path
-         style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke:none;enable-background:accumulate;stop-color:#000000;stop-opacity:1;opacity:1"
-         d="M 0.00195313,-0.3046875 V 0.30664063 H 6.7773437 V -0.3046875 Z"
-         id="path5"
-         transform="matrix(1,0,0,-1,11.756,5.181)" />
-      <path
-         style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke:none;enable-background:accumulate;stop-color:#000000;stop-opacity:1;opacity:1"
-         d="M -0.30859375,-0.00195313 V 5.9785156 H 0.3046875 v -5.98046873 z"
-         id="path6"
-         transform="matrix(1,0,0,-1,12.065,11.358)" />
-      <path
-         style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke:none;enable-background:accumulate;stop-color:#000000;stop-opacity:1;opacity:1"
-         d="M -0.3046875,-0.00195313 V 5.9785156 h 0.61132813 v -5.98046873 z"
-         id="path7"
-         transform="matrix(1,0,0,-1,18.225,11.358)" />
-      <path
-         style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke:none;enable-background:accumulate;stop-color:#000000;stop-opacity:1;opacity:1"
-         d="M 0.00195313,-0.30859375 V 0.3046875 H 6.7773437 v -0.61328125 z"
-         id="path8"
-         transform="matrix(1,0,0,-1,11.756,11.557)" />
-    </g>
-  </g>
+  <path
+     style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke:none;stroke-width:0.515253;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000"
+     d="M 5.6807363,9.5402836 V 8.9088523 h 7.1323787 v 0.6314313 z"
+     id="path1" />
+  <path
+     style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke:none;stroke-width:0.506552;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000"
+     d="M 5.6836138,15.619 V 9.54 h 0.6314313 v 6.079 z"
+     id="path2" />
+  <path
+     style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke:none;stroke-width:0.505308;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000"
+     d="M 12.18022,15.619 V 9.54 h 0.631431 v 6.079 z"
+     id="path3" />
+  <path
+     style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke:none;stroke-width:0.513976;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000"
+     d="m 5.6807363,16.248237 v -0.631431 h 7.1320167 v 0.631431 z"
+     id="path4" />
+  <path
+     style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke:none;stroke-width:0.514424;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000"
+     d="M 13.836261,4.8939748 V 4.2625436 h 4.634709 v 0.6314312 z"
+     id="path5" />
+  <path
+     style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke:none;stroke-width:0.49062;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000"
+     d="M 13.835202,8.627 V 4.894 h 0.631432 v 3.733 z"
+     id="path6" />
+  <path
+     style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke:none;stroke-width:0.491404;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000"
+     d="M 17.83883,8.627 V 4.894 h 0.631431 v 3.733 z"
+     id="path7" />
+  <path
+     style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke:none;stroke-width:0.513604;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000"
+     d="M 13.836261,9.2568169 V 8.6253857 h 4.634709 v 0.6314312 z"
+     id="path8" />
 </svg>

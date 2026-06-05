@@ -28,7 +28,8 @@ export struct TopKeyboard {
                   Image(topShiftButtons[index] as Resource)
                     .width(24)
                     .height(24)
-                    .fillColor($r('sys.color.icon_secondary'))
+                    .fillColor('#ffac8100')
+                    // .fillColor($r('sys.color.icon_secondary'))
                     .objectFit(ImageFit.Contain)
                 }
               }

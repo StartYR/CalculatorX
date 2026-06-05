@@ -25,6 +25,9 @@ struct Index {
   webviewController: web_webview.WebviewController = new web_webview.WebviewController();
 
   @State isShift: boolean = false;
+  @State lastAnsLatex: string = "0";      // 供 Ans 调用的上一次结果
+  @State lastValidJson: string = "";      // 供 S⇄D 重新计算的纯净 AST
+  @State isTempDecimal: boolean = false;  // 当前 S⇄D 面板的显示状态
 
   aboutToAppear() {
     font.registerFont({
@@ -139,6 +142,28 @@ struct Index {
       this.webviewController.runJavaScript('clearMath()');
     } else if (action === '⌫') {
       this.webviewController.runJavaScript('deleteMath()');
+    } else if (action === 'S⇄D') {
+      if (!this.lastValidJson) return;
+
+      let cppPrecisionMode = -1;
+
+      // 拦截 Shift 状态
+      if (this.isShift) {
+        // 带分数
+        cppPrecisionMode = -4;
+        // 消费掉 Shift 状态，恢复正常键盘
+        this.isShift = false;
+      } else {
+        // 假分数
+        this.isTempDecimal = !this.isTempDecimal;
+        cppPrecisionMode = this.isTempDecimal ? (this.decimalPrecision === 16 ? -2 : this.decimalPrecision) : -3;
+      }
+
+      // 发送给 C++
+      let cppResponse: string = testNapi.calculate(this.lastValidJson, this.isRad, cppPrecisionMode);
+      if (cppResponse !== "Error") {
+        this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
+      }
     } else if (action === '=') {
       this.webviewController.runJavaScript(
         'window.getFormula()',
@@ -148,7 +173,7 @@ struct Index {
           // 1. 去除首尾引号并处理转义，还原最纯净的 LaTeX
           let rawLatex = rawLatexResult.replace(/^"|"$/g, '').replace(/\\\\/g, '\\');
 
-          // 🌟 2. 为满足 ArkTS 严格语法检查，定义带类型的正则替换器
+          // 2.定义带类型的正则替换器
           let repC = (m: string, n1: string | undefined, n2: string | undefined, r1: string | undefined, r2: string | undefined): string => {
             return `\\operatorname{nCr}\\left(${n1 || n2},${r1 || r2}\\right)`;
           };
@@ -162,7 +187,6 @@ struct Index {
             return `\\operatorname{nPr}\\left(${n},${r}\\right)`;
           };
 
-          // 🌟 3. 终极正则：全面兼容 MathLive 省略大括号的“自作主张”
           let cleanedLatex = rawLatex
           // --- 组合 (C) 的 5 种样式防御 ---
             .replace(/\\mathrm\{C\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))\^(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repC)
@@ -178,10 +202,10 @@ struct Index {
             .replace(/\{\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))\\mathrm\{P\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repP)
             .replace(/\\mathrm\{P\}\\left\((.+?),\s*(.+?)\\right\)/g, repFlatP);
 
-          // 🌟 4. 终极装甲：给反斜杠和引号加上双重转义，防止破坏 JS 边界
+          // 给反斜杠和引号加上双重转义，防止破坏 JS 边界
           let safeLatex = cleanedLatex.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, "\\n");
 
-          // 🌟 5. 内存静默转换 JSON（完美幽灵挂载版）
+          // 内存静默转换 JSON
           let injectJs = `
         (function() {
           try {
@@ -215,7 +239,10 @@ struct Index {
               cleanJsonString = jsonResult;
             }
 
-            console.info(`【清洗后传给C++的极简JSON】: ${typeof cleanJsonString === 'string' ? cleanJsonString : JSON.stringify(cleanJsonString)}`);
+            let jsonStrToSave = typeof cleanJsonString === 'string' ? cleanJsonString : JSON.stringify(cleanJsonString);
+            this.lastValidJson = jsonStrToSave;
+
+            console.info(`【清洗后传给C++的JSON】: ${typeof cleanJsonString === 'string' ? cleanJsonString : JSON.stringify(cleanJsonString)}`);
 
             // ===== 将前端双状态映射为 C++ 单一控制码 =====
             let cppPrecisionMode = -1;
@@ -232,6 +259,15 @@ struct Index {
             let cppResponse: string = testNapi.calculate(typeof cleanJsonString === 'string' ? cleanJsonString : JSON.stringify(cleanJsonString), this.isRad, cppPrecisionMode);
 
             if (cppResponse !== "Error") {
+              // 把成功的计算结果存入 Ans
+              this.lastAnsLatex = cppResponse;
+
+              // 如果是自动模式(-1)，则通过判断结果里有没有小数点来判断是否为小数
+              if (cppPrecisionMode === -1) {
+                this.isTempDecimal = cppResponse.includes('.');
+              } else {
+                this.isTempDecimal = true;
+              }
               this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
             } else {
               console.error("C++ Calculation Error");
@@ -248,28 +284,58 @@ struct Index {
     } else {
       let latexChar = action;
       switch (action) {
-        case '×':       latexChar = "\\times "; break;
-        case '÷':       latexChar = "\\div "; break;
-        case 'π':       latexChar = "\\pi "; break;
-        case '∞':       latexChar = "\\infty "; break;
-        case 'i':       latexChar = "i"; break;
-        case 'Ans':     latexChar = "\\text{Ans}"; break;
-        case ',':       latexChar = ","; break;
+        case '×':        latexChar = "\\times "; break;
+        case '÷':        latexChar = "\\div "; break;
+        case '−':        latexChar = "-"; break;
+        case 'π':        latexChar = "\\pi "; break;
+        case '∞':        latexChar = "\\infty "; break;
+        case 'i':        latexChar = "i"; break;
+        case 'comma':    latexChar = ","; break;
         case 'fraction': latexChar = "\\frac{\\placeholder{}}{\\placeholder{}}"; break;
         case 'sqrt':     latexChar = "\\sqrt{\\placeholder{}}"; break;
         case 'sqrt3':    latexChar = "\\sqrt[3]{\\placeholder{}}"; break;
         case 'sqrtx':    latexChar = "\\sqrt[\\placeholder{}]{\\placeholder{}}"; break;
         case 'power2':   latexChar = "^2"; break;
+        case 'power3':   latexChar = "^3"; break;
         case 'power':    latexChar = "^{\\placeholder{}}"; break;
-        case 'x⁻¹':      latexChar = "^{-1}"; break;
+        case 'inverse':  latexChar = '^{-1}'; break;
+        case 'e_power':  latexChar = 'e^{\\placeholder{}}'; break;
+        case 'icon_exp': latexChar = '\\times 10^{\\placeholder{}}'; break;
         case 'abs':      latexChar = "\\left| \\placeholder{} \\right|"; break;
-        case '[':        latexChar = "\\left[ \\placeholder{} \\right]"; break;
-        case ']':        latexChar = "\\right]"; break;
-        case '!':        latexChar = "!"; break;
+        case 'fact':     latexChar = "!"; break;
+        case 'eˣ':       latexChar = "e^{\\placeholder{}}"; break;
+        case '10ˣ':      latexChar = "10^{\\placeholder{}}"; break;
+        case 'ln':       latexChar = "\\ln\\left(\\placeholder{}\\right)"; break;
+        case 'lg':       latexChar = '\\lg\\left(\\placeholder{}\\right)'; break;
+        case 'log':      latexChar = "\\log_{\\placeholder{}}\\left(\\placeholder{}\\right)"; break;
+        case 'sin':      latexChar = "\\sin\\left(\\placeholder{}\\right)"; break;
+        case 'cos':      latexChar = "\\cos\\left(\\placeholder{}\\right)"; break;
+        case 'tan':      latexChar = "\\tan\\left(\\placeholder{}\\right)"; break;
+        case 'sin⁻¹':    latexChar = "\\arcsin\\left(\\placeholder{}\\right)"; break;
+        case 'cos⁻¹':    latexChar = "\\arccos\\left(\\placeholder{}\\right)"; break;
+        case 'tan⁻¹':    latexChar = "\\arctan\\left(\\placeholder{}\\right)"; break;
+        case 'integral': latexChar = "\\int_{\\placeholder{}}^{\\placeholder{}}"; break;
+        case 'sum':      latexChar = "\\sum_{\\placeholder{}}^{\\placeholder{}}"; break;
+        case 'product':  latexChar = "\\prod_{\\placeholder{}}^{\\placeholder{}}"; break;
+        case 'd/dx':     latexChar = "\\frac{d}{dx}"; break;
+        case 'lim':      latexChar = "\\lim_{x \\to \\placeholder{}}"; break;
+        case '%':        latexChar = '\\%'; break;
+        case 'mod':      latexChar = '\\bmod '; break;
+        case 'GCD':      latexChar = '\\gcd\\left(\\placeholder{}, \\placeholder{}\\right)'; break;
+        case 'LCM':      latexChar = '\\operatorname{lcm}\\left(\\placeholder{}, \\placeholder{}\\right)'; break;
+
+        case 'Ans':
+          if (this.lastAnsLatex === "0") {
+            latexChar = "0"; // 初始状态
+          } else {
+            latexChar = "\\left(" + this.lastAnsLatex + "\\right)";
+          }
+          break;
+
         case 'nCr':
           let combTemplates = [
-            "\\mathrm{C}_{\\placeholder{}}^{\\placeholder{}}",           // 0: C角标 Cₙᵏ C_n^r
-            "\\binom{\\placeholder{}}{\\placeholder{}}",                 // 1: 国际规范 \binom{n}{r}
+            "\\binom{\\placeholder{}}{\\placeholder{}}",                 // 0: 国际规范 \binom{n}{r}
+            "\\mathrm{C}_{\\placeholder{}}^{\\placeholder{}}",           // 1: C角标 Cₙᵏ C_n^r
             "{}^{\\placeholder{}}\\mathrm{C}_{\\placeholder{}}",         // 2: 左上标 ⁿCᵣ ^nC_r
             "{}_{\\placeholder{}}\\mathrm{C}_{\\placeholder{}}",         // 3: 左下标 ₙCᵣ _nC_r
             "\\mathrm{C}\\left(\\placeholder{}, \\placeholder{}\\right)" // 4: 平铺 C(n,r)
@@ -287,21 +353,6 @@ struct Index {
           ];
           latexChar = permTemplates[this.permSelect];
           break;
-        case 'eˣ':       latexChar = "e^{\\placeholder{}}"; break;
-        case '10ˣ':      latexChar = "10^{\\placeholder{}}"; break;
-        case 'ln':       latexChar = "\\ln\\left(\\placeholder{}\\right)"; break;
-        case 'log':      latexChar = "\\log_{\\placeholder{}}\\left(\\placeholder{}\\right)"; break;
-        case 'sin':      latexChar = "\\sin\\left(\\placeholder{}\\right)"; break;
-        case 'cos':      latexChar = "\\cos\\left(\\placeholder{}\\right)"; break;
-        case 'tan':      latexChar = "\\tan\\left(\\placeholder{}\\right)"; break;
-        case 'sin⁻¹':    latexChar = "\\arcsin\\left(\\placeholder{}\\right)"; break;
-        case 'cos⁻¹':    latexChar = "\\arccos\\left(\\placeholder{}\\right)"; break;
-        case 'tan⁻¹':    latexChar = "\\arctan\\left(\\placeholder{}\\right)"; break;
-        case 'integral': latexChar = "\\int_{\\placeholder{}}^{\\placeholder{}}"; break;
-        case 'sum':      latexChar = "\\sum_{\\placeholder{}}^{\\placeholder{}}"; break;
-        case 'product':  latexChar = "\\prod_{\\placeholder{}}^{\\placeholder{}}"; break;
-        case 'd/dx':     latexChar = "\\frac{d}{dx}"; break;
-        case 'lim':      latexChar = "\\lim_{x \\to \\placeholder{}}"; break;
       }
       this.insertToWeb(latexChar);
     }
