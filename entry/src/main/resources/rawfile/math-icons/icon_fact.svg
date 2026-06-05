@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="19.505pt"
+   height="20.268pt"
+   viewBox="0 0 19.505 20.268"
+   version="1.1"
+   id="svg5"
+   sodipodi:docname="icon_fact.svg"
+   inkscape:version="1.4.2 (f4327f4, 2025-05-13)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs5" />
+  <sodipodi:namedview
+     id="namedview5"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="pt"
+     inkscape:zoom="43.183837"
+     inkscape:cx="9.2974601"
+     inkscape:cy="15.202447"
+     inkscape:window-width="2560"
+     inkscape:window-height="1369"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg5" />
+  <path
+     style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke:none;stroke-width:0.488403;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000"
+     d="m 4.4805312,6.8099825 v -0.6 h 6.7773438 v 0.6 z"
+     id="path1" />
+  <path
+     style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke:none;stroke-width:0.537294;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000"
+     d="M 4.4793593,14.043 V 6.81 h 0.6 v 7.233 z"
+     id="path2" />
+  <path
+     style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke:none;stroke-width:0.537293;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000"
+     d="M 10.657,14.043 V 6.81 h 0.6 v 7.233 z"
+     id="path3" />
+  <path
+     style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#000000;stroke:none;stroke-width:0.489604;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000"
+     d="m 4.4805312,14.642658 v -0.6 h 6.7773438 v 0.6 z"
+     id="path4" />
+  <path
+     fill="#000000"
+     stroke="none"
+     d="m 14.786781,11.687549 0.375,-4.5468743 c 0,-0.328125 -0.265625,-0.515625 -0.515625,-0.515625 -0.265625,0 -0.53125,0.1875 -0.53125,0.515625 l 0.390625,4.5312493 c 0,0.15625 0.01563,0.234375 0.140625,0.234375 0.09375,0 0.125,-0.04687 0.140625,-0.21875 z m 0.375,1.546875 c 0,-0.28125 -0.234375,-0.53125 -0.515625,-0.53125 -0.296875,0 -0.53125,0.25 -0.53125,0.53125 0,0.296875 0.234375,0.53125 0.53125,0.53125 0.28125,0 0.515625,-0.234375 0.515625,-0.53125 z m 0,0"
+     id="path5" />
+</svg>
