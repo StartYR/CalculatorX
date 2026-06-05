@@ -50,9 +50,9 @@ CalculatorX/
 ├── entry/src/main/  
 │   ├── ets/                               # ArkTS 前端逻辑与视图层  
 │   │   ├── pages/  
-│   │   │   ├── settings/                  # 设置与关于相关页面
-│   │   │   │   ├── Settings.ets           # 设置主页：管理角度制、模式、精度及触感反馈
-│   │   │   │   └── About.ets              # 关于页：品牌展示区，高质感图标悬浮与底部版权声明
+│   │   │   ├── settings/                  # 设置
+│   │   │   │   ├── Settings.ets           # 设置主页
+│   │   │   │   └── About.ets              # 关于页
 │   │   │   ├── Index.ets                  # 主页面：处理按键逻辑、调用 Webview/C++，参数状态映射
 │   │   │   └── DocViewer.ets              # 文档展示页：系统级 WebView，负责加载云端协议网页
 │   │   │
@@ -61,11 +61,13 @@ CalculatorX/
 │   │   │   └── BottomKeyboard.ets         # 自定义组件：下方基础数字与四则运算键盘
 │   │   │
 │   │   └── utils/  
-│   │       └── CalculatorConfigs.ets      # 配置文件：新增 RoutePath 集中管理全局路由，及按键/排版映射逻辑
+│   │       └── CalculatorConfigs.ets      # 配置文件
 │   │  
 │   ├── cpp/                               # C++ 计算机代数系统 (CAS) 引擎层
 │   │   ├── CMakeLists.txt                 # 构建脚本：配置 N-API，链接 SymEngine 及 Boost
 │   │   ├── engine.cpp                     # 核心引擎：新增 eval_double 浮点运算、动态补零/去零及极限精度退回
+│   │   ├── ASTValidator.h                 # 输入校验：检查输入是否存在语法错误
+│   │   ├── ExceptionHandler.h             # 异常处理：检查运行时是否出现错误
 │   │   ├── boost_1_82_0.tar.gz            # 离线依赖：纯头文件的高性能大数库 (供 SymEngine 使用)
 │   │   └── include/  
 │   │       └── json.hpp                   # 核心依赖：nlohmann/json，解析 MathJSON 字符串
