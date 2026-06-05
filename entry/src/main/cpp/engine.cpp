@@ -9,6 +9,7 @@
 #include <sstream>
 #include <iomanip>
 #include <cmath>
+#include <numeric>
 
 using json = nlohmann::json;
 using SymEngine::Expression;
@@ -19,7 +20,7 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
         double val = ast.get<double>();
         if (std::floor(val) == val) return Expression(static_cast<long>(val));
         
-        // 只有当上下文明确要求精确时（比如在分数、三角函数里），才把小数转分数！
+        // 只有当上下文明确要求精确时（比如在分数、三角函数里），才把小数转分数
         if (preferExact) {
             std::string s = ast.dump(); 
             size_t dot = s.find('.');
@@ -39,7 +40,7 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
                 }
             }
         }
-        // 普通情况（如 1.2 * 1），老老实实做浮点数
+        // 普通情况（如 1.2 * 1），浮点数
         return Expression(val);
     }
     
@@ -68,8 +69,6 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
             for (size_t i = 1; i < ast.size(); ++i) prod *= parseAST(ast[i], isRad, preferExact);
             return prod;
         }
-        // 🌟 核心修复：让 Divide（包括 ÷ 和分数线）顺其自然！
-        // 整数除以整数(12/36)是精确分数，包含小数(1.2/3.6)就是浮点数！
         if (op == "Divide" || op == "Rational") {
             return parseAST(ast[1], isRad, preferExact) / parseAST(ast[2], isRad, preferExact);
         }
@@ -79,6 +78,46 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
         if (op == "Root") return SymEngine::pow(parseAST(ast[1], isRad, true), Expression(1) / parseAST(ast[2], isRad, true));
         if (op == "Power") return SymEngine::pow(parseAST(ast[1], isRad, true), parseAST(ast[2], isRad, true));
         if (op == "Abs") return SymEngine::abs(parseAST(ast[1], isRad, true));
+        
+        // 最大公约数 (GCD) 与 最小公倍数 (LCM)
+        if (op == "GCD" || op == "LCM" || op == "Lcm" || op == "lcm") {
+            if (ast.size() == 3) {
+                // 为了绝对安全地避开 SymEngine 严苛的类型检查，我们在 AST 树层面直接提取数字
+                if (ast[1].is_number() && ast[2].is_number()) {
+                    long long a = static_cast<long long>(std::abs(ast[1].get<double>()));
+                    long long b = static_cast<long long>(std::abs(ast[2].get<double>()));
+                    if (op == "GCD") return Expression(std::gcd(a, b));
+                    else return Expression(std::lcm(a, b));
+                } else {
+                    return Expression(SymEngine::symbol("Error\\_Int\\_Only")); // 提示只能算整数
+                }
+            }
+            return Expression(SymEngine::symbol("Error"));
+        }
+
+        // 取模 (mod) 
+        if (op == "Mod" || op == "Modulo") {
+            if (ast.size() == 3) {
+                Expression a = parseAST(ast[1], isRad, true);
+                Expression b = parseAST(ast[2], isRad, true);
+                // a mod b = a - b * floor(a / b)
+                return a - b * SymEngine::floor(a / b);
+            }
+            return Expression(SymEngine::symbol("Error"));
+        }
+
+        // 常用对数 (lg)
+        if (op == "Log10" || op == "Lg") {
+            // 利用换底公式：lg(x) = ln(x) / ln(10)
+            Expression num(SymEngine::log(parseAST(ast[1], isRad, true).get_basic()));
+            Expression den(SymEngine::log(Expression(10).get_basic()));
+            return num / den;
+        }
+
+        // 百分号 (%)
+        if (op == "Percent") {
+             return parseAST(ast[1], isRad, true) / Expression(100);
+        }
         
         if (op == "Factorial") {
             if (ast.size() == 2) return Expression(SymEngine::gamma((parseAST(ast[1], isRad, true) + Expression(1)).get_basic()));
@@ -186,14 +225,55 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         if (ast.is_string()) {
             ast = json::parse(ast.get<std::string>()); 
         }
-        
-        Expression expr = parseAST(ast, isRad);
-        expr = Expression(SymEngine::expand(expr.get_basic()));
 
         // ==================== 精度控制逻辑 ====================
-        if (precision == -1) {
-            // -1 档：自动模式，直接输出精确的 LaTeX 符号 (例如 \frac{1}{2})
+        bool isGlobalExact = (precision == -3 || precision == -4);
+        Expression expr = parseAST(ast, isRad, isGlobalExact);
+        
+        expr = Expression(SymEngine::expand(expr.get_basic()));
+
+        // ==================== 精度控制与输出逻辑 ====================
+        if (precision == -1 || precision == -3) {
             result_msg = SymEngine::latex(*expr.get_basic());
+            
+        } else if (precision == -4) {
+            // 带分数拆解逻辑
+            std::string s = expr.get_basic()->__str__();
+            
+            // 确保这是个纯粹的分数 (不包含 x, pi, 根号等)
+            bool is_simple_frac = true;
+            for (char c : s) {
+                if (!isdigit(c) && c != '/' && c != '-') { is_simple_frac = false; break; }
+            }
+            
+            size_t slash = s.find('/');
+            if (is_simple_frac && slash != std::string::npos) {
+                try {
+                    // 将字符串提取为安全的长整型进行除法运算
+                    long long num = std::stoll(s.substr(0, slash));
+                    long long den = std::stoll(s.substr(slash + 1));
+                    
+                    long long integer_part = num / den;           // 提取整数部分
+                    long long remainder = std::abs(num % den);    // 提取余数部分绝对值
+                    
+                    if (integer_part != 0 && remainder != 0) {
+                        // 组装带分数 LaTeX (比如: -2\frac{3}{5})
+                        std::string sign = (num < 0) ? "-" : "";
+                        result_msg = sign + std::to_string(std::abs(integer_part)) + "\\frac{" + std::to_string(remainder) + "}{" + std::to_string(den) + "}";
+                    } else if (remainder == 0) {
+                        result_msg = std::to_string(integer_part);
+                    } else {
+                        // 如果本来就是真分数，按原样输出
+                        if (num < 0) result_msg = "-\\frac{" + std::to_string(std::abs(num)) + "}{" + std::to_string(den) + "}";
+                        else result_msg = "\\frac{" + std::to_string(num) + "}{" + std::to_string(den) + "}";
+                    }
+                } catch (...) { // 遇到超大数字溢出时，安全兜底退回假分数
+                    result_msg = SymEngine::latex(*expr.get_basic());
+                }
+            } else { // 如果不是纯数字分数（比如含有 pi），原样输出
+                result_msg = SymEngine::latex(*expr.get_basic());
+            }
+            
         } else {
             // 小数模式
             try {
