@@ -66,8 +66,6 @@ CalculatorX/
 │   ├── cpp/                               # C++ 计算机代数系统 (CAS) 引擎层
 │   │   ├── CMakeLists.txt                 # 构建脚本：配置 N-API，链接 SymEngine 及 Boost
 │   │   ├── engine.cpp                     # 核心引擎：新增 eval_double 浮点运算、动态补零/去零及极限精度退回
-│   │   ├── ASTValidator.h                 # 输入校验：检查输入是否存在语法错误
-│   │   ├── ExceptionHandler.h             # 异常处理：检查运行时是否出现错误
 │   │   ├── boost_1_82_0.tar.gz            # 离线依赖：纯头文件的高性能大数库 (供 SymEngine 使用)
 │   │   └── include/  
 │   │       └── json.hpp                   # 核心依赖：nlohmann/json，解析 MathJSON 字符串
