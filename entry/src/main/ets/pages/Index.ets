@@ -271,6 +271,7 @@ struct Index {
               this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
             } else {
               console.error("C++ Calculation Error");
+              this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
             }
           });
         }
