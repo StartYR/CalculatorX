@@ -10,7 +10,6 @@
 #include <iomanip>
 #include <cmath>
 #include <numeric>
-#include "MathValidator.h"
 
 using json = nlohmann::json;
 using SymEngine::Expression;
@@ -226,14 +225,13 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         if (ast.is_string()) {
             ast = json::parse(ast.get<std::string>()); 
         }
-
-        // ==================== 精度控制逻辑 ====================
+        
+        // 精度控制逻辑 
         bool isGlobalExact = (precision == -3 || precision == -4);
         Expression expr = parseAST(ast, isRad, isGlobalExact);
         
         expr = Expression(SymEngine::expand(expr.get_basic()));
 
-        // ==================== 精度控制与输出逻辑 ====================
         if (precision == -1 || precision == -3) {
             result_msg = SymEngine::latex(*expr.get_basic());
             
