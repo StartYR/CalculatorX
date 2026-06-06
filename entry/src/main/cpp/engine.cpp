@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <cmath>
 #include <numeric>
+#include "ErrorHandler.h"
 
 using json = nlohmann::json;
 using SymEngine::Expression;
@@ -48,6 +49,9 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
         std::string s = ast.get<std::string>();
         if (s == "Pi") return Expression(SymEngine::pi);
         if (s == "ExponentialE" || s == "e") return Expression(SymEngine::E);
+        if (s == "NaN") {
+            throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Frontend folded to NaN");
+        }
         return Expression(SymEngine::symbol(s));
     }
     
@@ -106,24 +110,28 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
             return Expression(SymEngine::symbol("Error"));
         }
 
-        // 常用对数 (lg)
-        if (op == "Log10" || op == "Lg") {
-            // 利用换底公式：lg(x) = ln(x) / ln(10)
-            Expression num(SymEngine::log(parseAST(ast[1], isRad, true).get_basic()));
-            Expression den(SymEngine::log(Expression(10).get_basic()));
-            return num / den;
-        }
-
         // 百分号 (%)
         if (op == "Percent") {
              return parseAST(ast[1], isRad, true) / Expression(100);
         }
         
+        // 阶乘
         if (op == "Factorial") {
-            if (ast.size() == 2) return Expression(SymEngine::gamma((parseAST(ast[1], isRad, true) + Expression(1)).get_basic()));
-            return Expression(SymEngine::symbol("Error"));
+            if (ast.size() == 2) {
+                Expression arg = parseAST(ast[1], isRad, true);
+                
+                if (SymEngine::eval_double(arg) > 10000) {
+                    throw CalcException(CalcErrorCode::OVERFLOW_ERROR, "溢出");
+                }
+                
+                // 正常执行 Gamma 函数（天然支持 0.5! 等小数阶乘）
+                return Expression(SymEngine::gamma((arg + Expression(1)).get_basic()));
+            }
+            // 替换原本的 Expression(SymEngine::symbol("Error"))
+            throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid Factorial node length.");
         }
         
+        // 组合
         if (op == "nCr") {
             if (ast.size() == 3) {
                 Expression n = parseAST(ast[1], isRad, true);
@@ -136,6 +144,7 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
             return Expression(SymEngine::symbol("Error"));
         }
 
+        // 排列
         if (op == "nPr") {
             if (ast.size() == 3) {
                 Expression n = parseAST(ast[1], isRad, true);
@@ -147,6 +156,7 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
             return Expression(SymEngine::symbol("Error"));
         }
 
+        // 三角函数
         if (op == "Sin" || op == "Cos" || op == "Tan") {
             if (ast.size() < 2) return Expression(SymEngine::symbol("Error"));
             Expression arg = parseAST(ast[1], isRad, true); 
@@ -157,6 +167,7 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
             if (op == "Tan") return SymEngine::tan(arg);
         }
 
+        // 反三角函数
         if (op == "Arcsin" || op == "Arccos" || op == "Arctan") {
             if (ast.size() < 2) return Expression(SymEngine::symbol("Error"));
             Expression arg = parseAST(ast[1], isRad, true); 
@@ -170,10 +181,17 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
             return res;
         }
         
+        // 对数
         if (op == "Ln") return SymEngine::log(parseAST(ast[1], isRad, true));
         if (op == "Log") {
             if (ast.size() == 3) return SymEngine::log(parseAST(ast[1], isRad, true), parseAST(ast[2], isRad, true));
             return SymEngine::log(parseAST(ast[1], isRad, true), Expression(10));
+        }
+        if (op == "Log10" || op == "Lg") {
+            // 利用换底公式：lg(x) = ln(x) / ln(10)
+            Expression num(SymEngine::log(parseAST(ast[1], isRad, true).get_basic()));
+            Expression den(SymEngine::log(Expression(10).get_basic()));
+            return num / den;
         }
         
         return Expression(SymEngine::symbol("Unknown\\_" + op));
@@ -304,9 +322,15 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         }
         // =========================================================
 
+    } catch (const CalcException& e) {
+        // 【新增】捕获我们自定义的计算异常，并转换为标准前缀回传给 ArkTS
+        result_msg = e.getFrontEndMessage();
+    } catch (const std::exception& e) {
+        // 标准库异常
+        result_msg = "Error:Domain"; 
     } catch (...) {
-        // 捕获其余所有的 C++ 异常，不让崩溃溢出到 ArkTS 应用层
-        result_msg = "Error";
+        // 终极防线兜底，防止应用在 HarmonyOS 层直接闪退 (Crash)
+        result_msg = "Error:Unknown";
     }
     
     napi_value result;
