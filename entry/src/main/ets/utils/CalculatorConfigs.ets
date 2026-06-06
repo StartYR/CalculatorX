@@ -153,7 +153,7 @@ export function getFontSize(btn: string | Resource): number {
 export function getFontColor(btn: string | Resource): ResourceColor {
   let action = getActionId(btn);
 
-  // 1. 在红色、蓝色、橙色等重色彩背景上，强制使用反色文字 (纯白)，保证绝对清晰
+  // 1. 使用反色文字
   if (['AC', '⌫', '=', '⇧Shift'].includes(action)) return $r('sys.color.font_on_primary');
 
   // 2. SVG 图标：使用主要文字色
