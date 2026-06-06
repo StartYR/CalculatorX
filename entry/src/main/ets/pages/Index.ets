@@ -161,9 +161,10 @@ struct Index {
 
       // 发送给 C++
       let cppResponse: string = testNapi.calculate(this.lastValidJson, this.isRad, cppPrecisionMode);
-      if (cppResponse !== "Error") {
-        this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
+      if (cppResponse.includes("Error")) {
+        console.error("C++ 转换错误: "+ cppResponse);
       }
+      this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
     } else if (action === '=') {
       this.webviewController.runJavaScript(
         'window.getFormula()',
@@ -258,7 +259,10 @@ struct Index {
 
             let cppResponse: string = testNapi.calculate(typeof cleanJsonString === 'string' ? cleanJsonString : JSON.stringify(cleanJsonString), this.isRad, cppPrecisionMode);
 
-            if (cppResponse !== "Error") {
+            if (cppResponse.includes("Error")) {
+              console.error("C++ 计算错误: " + cppResponse);
+              this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
+            } else {
               // 把成功的计算结果存入 Ans
               this.lastAnsLatex = cppResponse;
 
@@ -269,10 +273,8 @@ struct Index {
                 this.isTempDecimal = true;
               }
               this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
-            } else {
-              console.error("C++ Calculation Error");
-              this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
             }
+
           });
         }
       );
