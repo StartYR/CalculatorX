@@ -65,7 +65,9 @@ CalculatorX/
 │   │  
 │   ├── cpp/                               # C++ 计算机代数系统 (CAS) 引擎层
 │   │   ├── CMakeLists.txt                 # 构建脚本：配置 N-API，链接 SymEngine 及 Boost
-│   │   ├── engine.cpp                     # 核心引擎：新增 eval_double 浮点运算、动态补零/去零及极限精度退回
+│   │   ├── engine.cpp                     # 核心引擎： AST 树解析、精度控制与 N-API 通信中枢
+│   │   ├── ErrorHandler.h/cpp             # 核心模块：自定义异常状态机，精准拦截除零、溢出、定义域等业务错误
+│   │   ├── FastMath.h/cpp                 # 核心模块：极速数学降维模块，实现在 O(1) 时间内计算超大数（最大支持10^9000000000000000000）
 │   │   ├── boost_1_82_0.tar.gz            # 离线依赖：纯头文件的高性能大数库 (供 SymEngine 使用)
 │   │   └── include/  
 │   │       └── json.hpp                   # 核心依赖：nlohmann/json，解析 MathJSON 字符串
@@ -82,15 +84,15 @@ CalculatorX/
 │   │   └── rawfile/                       # 本地 Web 沙箱渲染与降维层  
 │   │       ├── calculator.html            # MathLive 容器：负责 LaTeX 公式的高清渲染及 MathJSON 降维导出
 │   │       ├── mathlive.min.js            # 核心依赖：离线 Web 数学排版与解析库  
-│   │       ├── fonts/                     # 字体资源：专属数学字体
-│   │       └── math-icons/                # 图标资源：定制的积分、求和、根号等 SVG 图标
+│   │       ├── fonts/                     # 字体资源
+│   │       └── math-icons/                # 图标资源：积分、求和、根号等 SVG 图标
 │   │
 │   └── module.json5                       # 模块配置：声明了 ohos.permission.INTERNET 与 VIBRATE 权限
 │
 └── 外部云端部署 (calcx.startyi.com)         # 独立托管页面，由 App 内的 DocViewer.ets 拉取展示
     ├── /help/index.html                   # 使用帮助
     ├── /privacy/index.html                # 隐私声明 
-    └── /agreement/index.html              # 用户协议 
+    └── /agreement/index.html              # 用户协议
 ```    
 ## 🚀 当前开发进度
 
@@ -108,7 +110,8 @@ CalculatorX/
 - [x] **全局系统设置（添加“设置”功能）**：
     - [x] 增加 **角度制 (Deg) / 弧度制 (Rad)** 状态机，并在 C++ 计算引擎中实现对应的三角函数传参逻辑转换。
     - [x] 实现主题颜色、页面布局的自定义选项。
-- [ ] **完善错误判断机制**：完善各种错误的审查，并输出相对应的错误提示，避免程序因各种错误崩溃。（进行中）
+- [x] **异常捕获与精细化状态机**：构建了专属的 ErrorHandler 模块，实现多种状态的错误拦截。
+- [x] **超大数计算**：建立解耦的 FastMath 模块，针对 $10^{10^{19}}$ 级别的宇宙级指数、超大组合数与阶乘，利用对数公式与斯特林近似 (Stirling's approximation) 提取量级，实现在 O(1) 的时间复杂度下计算超大数（最大支持10^9000000000000000000）
 - [ ] **历史记录功能**：实现计算过程（输入 LaTeX 与结果 LaTeX）的持久化存储与列表展示，并支持一键回填至当前计算器屏幕。
 - [ ] **自动计算**：不按等于号，直接输出结果
 - [ ] **进阶数学能力解锁** ：进一步放开高级指令（如 `Solve` 解方程、`Derivative` 求导、`Integral` 积分）的解析映射。
