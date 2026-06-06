@@ -55,6 +55,59 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
         return Expression(SymEngine::symbol(s));
     }
     
+    // ================================================================
+    // 处理 MathJSON 的高精度数字对象结构
+    // ================================================================
+    if (ast.is_object() && ast.contains("num")) {
+        std::string s = ast["num"].get<std::string>();
+//        
+//        if (s == "NaN") throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Frontend folded to NaN");
+//        if (s == "Infinity" || s == "+Infinity") return Expression(SymEngine::oo);
+//        if (s == "-Infinity") return Expression(SymEngine::minus_oo);
+//        if (s == "ComplexInfinity") throw CalcException(CalcErrorCode::DIV_BY_ZERO, "Complex Infinity intercepted");
+        
+
+        try {
+            size_t ePos = s.find('e');
+            if (ePos == std::string::npos) ePos = s.find('E');
+
+            if (ePos != std::string::npos) {
+                std::string baseStr = s.substr(0, ePos);
+                std::string expStr = s.substr(ePos + 1);
+                long long expVal = std::stoll(expStr);
+
+                // 如果指数绝对值大于 10000，连 Boost 都不给了，直接拼合返回！
+                if (std::abs(expVal) > 10000) {
+                    throw FastResultException(baseStr + "\\times 10^{" + expStr + "}");
+                }
+
+                // 【核心重构】：彻底抛弃 double，将小数转化为纯大整数计算
+                size_t dotPos = baseStr.find('.');
+                if (dotPos != std::string::npos) {
+                    int decimals = baseStr.length() - dotPos - 1;
+                    baseStr.erase(dotPos, 1); // 移除小数点，例如 "1.23" 变成 "123"
+                    long long baseVal = std::stoll(baseStr);
+                    expVal -= decimals;       // 补偿减去相应的指数
+                    return Expression(baseVal) * SymEngine::pow(Expression(10), Expression(expVal));
+                } else {
+                    long long baseVal = std::stoll(baseStr);
+                    return Expression(baseVal) * SymEngine::pow(Expression(10), Expression(expVal));
+                }
+            }
+
+            if (s.find('.') == std::string::npos) {
+                try { return Expression(static_cast<long long>(std::stoll(s))); } 
+                catch (...) { return Expression(std::stod(s)); }
+            }
+            return Expression(std::stod(s));
+            
+        } catch (const std::out_of_range&) {
+            throw CalcException(CalcErrorCode::OVERFLOW_ERROR, "Astronomical explosion intercepted");
+        } catch (...) {
+            throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid num object format");
+        }
+    }
+    
     if (ast.is_array() && !ast.empty() && ast[0].is_string()) {
         std::string op = ast[0].get<std::string>();
 
@@ -80,9 +133,50 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
         // ==================== 强制精确：为了消除圆周率等无理数误差，强制将小数转换为分数 ====================
         if (op == "Sqrt") return SymEngine::sqrt(parseAST(ast[1], isRad, true));
         if (op == "Root") return SymEngine::pow(parseAST(ast[1], isRad, true), Expression(1) / parseAST(ast[2], isRad, true));
-        if (op == "Power") return SymEngine::pow(parseAST(ast[1], isRad, true), parseAST(ast[2], isRad, true));
         if (op == "Abs") return SymEngine::abs(parseAST(ast[1], isRad, true));
-        
+        if (op == "Power") {
+            Expression base = parseAST(ast[1], isRad, true);
+            Expression exp = parseAST(ast[2], isRad, true);
+            
+            // 【瞬间秒杀】：利用对数评估指数运算量级
+            try {
+                if (SymEngine::is_a<SymEngine::Integer>(*base.get_basic()) && 
+                    SymEngine::is_a<SymEngine::Integer>(*exp.get_basic())) {
+                    
+                    double b = SymEngine::eval_double(base);
+                    double e = SymEngine::eval_double(exp);
+                    
+                    if (b > 0) {
+                        double magnitude = e * std::log10(b);
+                        
+                        // 防止超过 64位整数物理极限 (2^63 - 1)
+                        if (std::isinf(magnitude) || std::abs(magnitude) > 9e18) {
+                            throw CalcException(CalcErrorCode::OVERFLOW_ERROR, "Exceeds 64-bit integer limits");
+                        }
+                        
+                        // 如果结果超过 10^10000，触发直通车抛出结果
+                        if (std::abs(magnitude) > 10000) {
+                            long long B = static_cast<long long>(std::floor(magnitude));
+                            double A = std::pow(10.0, magnitude - B);
+                            
+                            std::ostringstream oss;
+                            oss << std::fixed << std::setprecision(5) << A;
+                            std::string A_str = oss.str();
+                            A_str.erase(A_str.find_last_not_of('0') + 1, std::string::npos);
+                            if (A_str.back() == '.') A_str.pop_back();
+                            
+                            throw FastResultException(A_str + "\\times 10^{" + std::to_string(B) + "}");
+                        }
+                    }
+                }
+            } catch (const FastResultException& e) {
+                throw; // 直通车必须继续往外抛出
+            } catch (const CalcException& e) {
+                throw; // 【必须增加】：让宇宙级溢出的拦截网穿透出去！
+            } catch (...) {} // 忽略普通的求值错误，交给原引擎
+            
+            return SymEngine::pow(base, exp);
+        }
         // 最大公约数 (GCD) 与 最小公倍数 (LCM)
         if (op == "GCD" || op == "LCM" || op == "Lcm" || op == "lcm") {
             if (ast.size() == 3) {
@@ -119,15 +213,45 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
         if (op == "Factorial") {
             if (ast.size() == 2) {
                 Expression arg = parseAST(ast[1], isRad, true);
-                
-                if (SymEngine::eval_double(arg) > 10000) {
-                    throw CalcException(CalcErrorCode::OVERFLOW_ERROR, "溢出");
-                }
-                
-                // 正常执行 Gamma 函数（天然支持 0.5! 等小数阶乘）
+                try {
+                    double val = SymEngine::eval_double(arg);
+                    if (val < 0 && std::floor(val) == val) {
+                        throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Factorial of negative integer intercepted.");
+                    }
+                    
+                    // 【瞬间秒杀】：如果计算大于 5000 的阶乘，利用斯特林近似直接给出科学计数法
+                    if (val > 5000 && std::floor(val) == val) {
+                        // 使用原生的 C++ double 来表示 pi 和 e
+                        double pi_val = std::acos(-1.0);
+                        double e_val = std::exp(1.0);
+                        
+                        // log10(n!) ≈ 0.5 * log10(2 * π * n) + n * log10(n / e)
+                        double magnitude = 0.5 * std::log10(2 * pi_val * val) + val * std::log10(val / e_val);
+                        
+                        // 防止宇宙级阶乘撑爆 64 位整数
+                        if (std::isinf(magnitude) || std::abs(magnitude) > 9e18) {
+                            throw CalcException(CalcErrorCode::OVERFLOW_ERROR, "Exceeds 64-bit integer limits");
+                        }
+                        
+                        long long B = static_cast<long long>(std::floor(magnitude));
+                        double A = std::pow(10.0, magnitude - B);
+                        
+                        std::ostringstream oss;
+                        oss << std::fixed << std::setprecision(5) << A;
+                        std::string A_str = oss.str();
+                        A_str.erase(A_str.find_last_not_of('0') + 1, std::string::npos);
+                        if (A_str.back() == '.') A_str.pop_back();
+                        
+                        throw FastResultException(A_str + "\\times 10^{" + std::to_string(B) + "}");
+                    }
+                } catch (const FastResultException&) {
+                    throw; // 直通车必须继续往外抛出
+                } catch (const CalcException&) {
+                    throw; // 【必须增加】：让阶乘的溢出拦截也穿透出去！
+                } catch (...) {}
+
                 return Expression(SymEngine::gamma((arg + Expression(1)).get_basic()));
             }
-            // 替换原本的 Expression(SymEngine::symbol("Error"))
             throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid Factorial node length.");
         }
         
@@ -199,6 +323,26 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
     return Expression(SymEngine::symbol("Invalid\\_Node"));
 }
 
+// 将超长整数折叠为 LaTeX 科学计数法
+std::string formatLargeIntegerToScientific(const std::string& intStr) {
+    bool isNeg = (intStr[0] == '-');
+    size_t firstDigitPos = isNeg ? 1 : 0;
+    std::string firstDigit = intStr.substr(firstDigitPos, 1);
+    
+    // 截取前 5 位作为小数部分，并去掉末尾多余的 0
+    std::string restDigits = intStr.substr(firstDigitPos + 1, 5); 
+    restDigits.erase(restDigits.find_last_not_of('0') + 1, std::string::npos);
+    
+    long long realExp = intStr.length() - firstDigitPos - 1;
+    std::string sign = isNeg ? "-" : "";
+    
+    if (restDigits.empty()) {
+        return sign + firstDigit + "\\times 10^{" + std::to_string(realExp) + "}";
+    } else {
+        return sign + firstDigit + "." + restDigits + "\\times 10^{" + std::to_string(realExp) + "}";
+    }
+}
+
 // N-API 通信接口 (带有极限防崩溃机制与精度控制)
 static napi_value Calculate(napi_env env, napi_callback_info info) {
     size_t argc = 3;
@@ -251,7 +395,17 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         expr = Expression(SymEngine::expand(expr.get_basic()));
 
         if (precision == -1 || precision == -3) {
-            result_msg = SymEngine::latex(*expr.get_basic());
+            // 【新增】：检查是否为整数，且长度是否超过 15 位
+            if (SymEngine::is_a<SymEngine::Integer>(*expr.get_basic())) {
+                std::string rawStr = expr.get_basic()->__str__();
+                if (rawStr.length() > 15) {
+                    result_msg = formatLargeIntegerToScientific(rawStr);
+                } else {
+                    result_msg = SymEngine::latex(*expr.get_basic());
+                }
+            } else {
+                result_msg = SymEngine::latex(*expr.get_basic());
+            }
             
         } else if (precision == -4) {
             // 带分数拆解逻辑
@@ -294,44 +448,51 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         } else {
             // 小数模式
             try {
-                // 尝试将代数式转化为 double 浮点数
+                // 如果是超大数字，eval_double 会抛出异常，触发 catch 降级
                 double float_val = SymEngine::eval_double(*expr.get_basic());
                 
                 std::ostringstream oss;
                 if (precision == -2) {
-                    // -2 档：小数精度“自动”
-                    // 策略：使用极高精度输出，然后暴力抹除字符串末尾多余的 '0' 和可能遗留的 '.'
                     oss << std::fixed << std::setprecision(12) << float_val;
                     std::string str = oss.str();
-                    
-                    // 核心去零算法
                     str.erase(str.find_last_not_of('0') + 1, std::string::npos);
-                    if (!str.empty() && str.back() == '.') {
-                        str.pop_back();
-                    }
+                    if (!str.empty() && str.back() == '.') str.pop_back();
                     result_msg = str;
                 } else {
-                    // 0~12 档：强制固定小数位数，位数不够标准库会自动补 0
                     oss << std::fixed << std::setprecision(precision) << float_val;
                     result_msg = oss.str();
                 }
             } catch (...) {
-                // 退回机制：如果包含未知变量无法转为浮点数，退回到符号输出
-                result_msg = SymEngine::latex(*expr.get_basic());
+                // 【修改兜底机制】：退回符号输出前，先检查是不是超大整数
+                if (SymEngine::is_a<SymEngine::Integer>(*expr.get_basic())) {
+                    std::string rawStr = expr.get_basic()->__str__();
+                    if (rawStr.length() > 15) {
+                        result_msg = formatLargeIntegerToScientific(rawStr);
+                    } else {
+                        result_msg = SymEngine::latex(*expr.get_basic());
+                    }
+                } else {
+                    result_msg = SymEngine::latex(*expr.get_basic());
+                }
             }
         }
         // =========================================================
 
+    // ================== 替换从这里开始 ==================
+    } catch (const FastResultException& e) {
+        // 【第一优先级】：一定要加在这里！接住我们的直通车结果
+        result_msg = e.what();
     } catch (const CalcException& e) {
-        // 【新增】捕获我们自定义的计算异常，并转换为标准前缀回传给 ArkTS
+        // 【第二优先级】：捕获除以0、溢出等业务逻辑错误
         result_msg = e.getFrontEndMessage();
     } catch (const std::exception& e) {
-        // 标准库异常
+        // 【第三优先级】：底层库的错误兜底
         result_msg = "Error:Domain"; 
     } catch (...) {
         // 终极防线兜底，防止应用在 HarmonyOS 层直接闪退 (Crash)
         result_msg = "Error:Unknown";
     }
+    // ================== 替换到这里结束 ==================
     
     napi_value result;
     napi_create_string_utf8(env, result_msg.c_str(), NAPI_AUTO_LENGTH, &result);
