@@ -302,7 +302,7 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
                 result_msg = SymEngine::latex(*expr.get_basic());
             }
         }
-        // ==========================================================
+        // =========================================================
 
     } catch (...) {
         // 捕获其余所有的 C++ 异常，不让崩溃溢出到 ArkTS 应用层
