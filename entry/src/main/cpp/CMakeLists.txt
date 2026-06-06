@@ -59,7 +59,7 @@ include_directories(
     ${symengine_BINARY_DIR}/symengine/utilities/teuchos  # Teuchos_config.h 的生成目录
 )
 
-add_library(entry SHARED engine.cpp ErrorHandler.cpp)
+add_library(entry SHARED engine.cpp ErrorHandler.cpp FastMath.cpp)
 
 # 将 N-API 和 symengine 静态链接到 entry 库中
 target_link_libraries(entry PUBLIC libace_napi.z.so symengine)

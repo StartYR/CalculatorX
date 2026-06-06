@@ -11,6 +11,7 @@
 #include <cmath>
 #include <numeric>
 #include "ErrorHandler.h"
+#include "FastMath.h"
 
 using json = nlohmann::json;
 using SymEngine::Expression;
@@ -219,36 +220,15 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
                         throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Factorial of negative integer intercepted.");
                     }
                     
-                    // 【瞬间秒杀】：如果计算大于 5000 的阶乘，利用斯特林近似直接给出科学计数法
+                    // 获取量级、防御并抛出结果
                     if (val > 5000 && std::floor(val) == val) {
-                        // 使用原生的 C++ double 来表示 pi 和 e
-                        double pi_val = std::acos(-1.0);
-                        double e_val = std::exp(1.0);
-                        
-                        // log10(n!) ≈ 0.5 * log10(2 * π * n) + n * log10(n / e)
-                        double magnitude = 0.5 * std::log10(2 * pi_val * val) + val * std::log10(val / e_val);
-                        
-                        // 防止宇宙级阶乘撑爆 64 位整数
-                        if (std::isinf(magnitude) || std::abs(magnitude) > 9e18) {
-                            throw CalcException(CalcErrorCode::OVERFLOW_ERROR, "Exceeds 64-bit integer limits");
-                        }
-                        
-                        long long B = static_cast<long long>(std::floor(magnitude));
-                        double A = std::pow(10.0, magnitude - B);
-                        
-                        std::ostringstream oss;
-                        oss << std::fixed << std::setprecision(5) << A;
-                        std::string A_str = oss.str();
-                        A_str.erase(A_str.find_last_not_of('0') + 1, std::string::npos);
-                        if (A_str.back() == '.') A_str.pop_back();
-                        
-                        throw FastResultException(A_str + "\\times 10^{" + std::to_string(B) + "}");
+                        double magnitude = FastMath::getFactorialMagnitude(val);
+                        FastMath::checkOverflow(magnitude);
+                        throw FastResultException(FastMath::formatScientific(magnitude));
                     }
-                } catch (const FastResultException&) {
-                    throw; // 直通车必须继续往外抛出
-                } catch (const CalcException&) {
-                    throw; // 【必须增加】：让阶乘的溢出拦截也穿透出去！
-                } catch (...) {}
+                } catch (const FastResultException&) { throw; }
+                  catch (const CalcException&) { throw; }
+                  catch (...) {}
 
                 return Expression(SymEngine::gamma((arg + Expression(1)).get_basic()));
             }
@@ -260,6 +240,29 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
             if (ast.size() == 3) {
                 Expression n = parseAST(ast[1], isRad, true);
                 Expression r = parseAST(ast[2], isRad, true);
+                
+                try {
+                    double n_val = SymEngine::eval_double(n);
+                    double r_val = SymEngine::eval_double(r);
+                    
+                    // 组合定义域检查
+                    if (n_val < 0 || r_val < 0 || r_val > n_val || std::floor(n_val) != n_val || std::floor(r_val) != r_val) {
+                        throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Invalid nCr arguments");
+                    }
+
+                    // 极速计算：log(n!) - log(r!) - log((n-r)!)
+                    if (n_val > 5000) {
+                        double mag = FastMath::getFactorialMagnitude(n_val) - FastMath::getFactorialMagnitude(r_val) - FastMath::getFactorialMagnitude(n_val - r_val);
+                        FastMath::checkOverflow(mag);
+                        
+                        if (mag > 15.0) {
+                            throw FastResultException(FastMath::formatScientific(mag));
+                        }
+                    }
+                } catch (const FastResultException&) { throw; }
+                  catch (const CalcException&) { throw; }
+                  catch (...) {}
+
                 Expression num(SymEngine::gamma((n + Expression(1)).get_basic()));
                 Expression den1(SymEngine::gamma((r + Expression(1)).get_basic()));
                 Expression den2(SymEngine::gamma((n - r + Expression(1)).get_basic()));
@@ -268,11 +271,35 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
             return Expression(SymEngine::symbol("Error"));
         }
 
-        // 排列
+       // 排列
         if (op == "nPr") {
             if (ast.size() == 3) {
                 Expression n = parseAST(ast[1], isRad, true);
                 Expression r = parseAST(ast[2], isRad, true);
+                
+                try {
+                    double n_val = SymEngine::eval_double(n);
+                    double r_val = SymEngine::eval_double(r);
+                    
+                    // 排列定义域检查
+                    if (n_val < 0 || r_val < 0 || r_val > n_val || std::floor(n_val) != n_val || std::floor(r_val) != r_val) {
+                        throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Invalid nPr arguments");
+                    }
+
+                    // 【极速计算】：log(n!) - log((n-r)!)
+                    if (n_val > 5000) {
+                        double mag = FastMath::getFactorialMagnitude(n_val) - FastMath::getFactorialMagnitude(n_val - r_val);
+                        FastMath::checkOverflow(mag);
+                        
+                        // 只有当排列结果大于 10^15 时才以科学计数法拦截，否则让引擎算出精确值
+                        if (mag > 15.0) {
+                            throw FastResultException(FastMath::formatScientific(mag));
+                        }
+                    }
+                } catch (const FastResultException&) { throw; }
+                  catch (const CalcException&) { throw; }
+                  catch (...) {}
+
                 Expression num(SymEngine::gamma((n + Expression(1)).get_basic()));
                 Expression den(SymEngine::gamma((n - r + Expression(1)).get_basic()));
                 return num / den;
@@ -477,8 +504,7 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
             }
         }
         // =========================================================
-
-    // ================== 替换从这里开始 ==================
+        
     } catch (const FastResultException& e) {
         // 【第一优先级】：一定要加在这里！接住我们的直通车结果
         result_msg = e.what();
@@ -492,7 +518,6 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         // 终极防线兜底，防止应用在 HarmonyOS 层直接闪退 (Crash)
         result_msg = "Error:Unknown";
     }
-    // ================== 替换到这里结束 ==================
     
     napi_value result;
     napi_create_string_utf8(env, result_msg.c_str(), NAPI_AUTO_LENGTH, &result);
