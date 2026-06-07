@@ -66,7 +66,7 @@ CalculatorX/
 │   ├── cpp/                               # C++ 计算机代数系统 (CAS) 引擎层
 │   │   ├── CMakeLists.txt                 # 构建脚本：配置 N-API，链接 SymEngine 及 Boost
 │   │   ├── engine.cpp                     # 核心引擎： AST 树解析、精度控制与 N-API 通信中枢
-│   │   ├── ErrorHandler.h/cpp             # 核心模块：自定义异常状态机，精准拦截除零、溢出、定义域等业务错误
+│   │   ├── ErrorHandler.h                 # 核心模块：自定义异常状态机，精准拦截除零、溢出、定义域等业务错误
 │   │   ├── FastMath.h/cpp                 # 核心模块：极速数学降维模块，实现在 O(1) 时间内计算超大数（最大支持10^9000000000000000000）
 │   │   ├── boost_1_82_0.tar.gz            # 离线依赖：纯头文件的高性能大数库 (供 SymEngine 使用)
 │   │   └── include/  
