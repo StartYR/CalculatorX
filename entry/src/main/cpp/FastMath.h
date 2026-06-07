@@ -2,17 +2,21 @@
 #ifndef FAST_MATH_H
 #define FAST_MATH_H
 
+#include <symengine/expression.h>
 #include <string>
 
 namespace FastMath {
-    // 检查是否超出 64 位整数物理极限 (9e18)，超出则抛出溢出异常
+    // 检查是否超出 64 位整数物理极限 (9e18)
     void checkOverflow(double magnitude);
 
-    // 获取阶乘的对数量级 log10(n!) (利用斯特林近似公式)
+    // 获取阶乘的对数量级
     double getFactorialMagnitude(double n);
 
-    // 将量级格式化为 LaTeX 的科学计数法 A \times 10^B
-    std::string formatScientific(double magnitude);
+    // 根据计算量级，生成包含幽灵变量 MAGICBASETEN 的代数节点 (带 10 位安全四舍五入防线)
+    SymEngine::Expression buildBigScientificNode(double magnitude);
+
+    // 组装幽灵节点 (用于前端绝对精确的数据，避免从 magnitude 绕远路带来的精度损耗)
+    SymEngine::Expression buildBigScientificNode(double exact_base, long long exact_exp);
 }
 
 #endif // FAST_MATH_H
