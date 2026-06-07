@@ -26,10 +26,3 @@ public:
 };
 
 #endif // ERROR_HANDLER_H
-
-// 专用于 O(1) 瞬间计算天文数字的直通车异常
-class FastResultException : public std::runtime_error {
-public:
-    explicit FastResultException(const std::string& latex) 
-        : std::runtime_error(latex) {}
-};
