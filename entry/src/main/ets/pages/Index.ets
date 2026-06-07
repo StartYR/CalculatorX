@@ -327,6 +327,8 @@ struct Index {
         case 'GCD':      latexChar = '\\gcd\\left(\\placeholder{}, \\placeholder{}\\right)'; break;
         case 'LCM':      latexChar = '\\operatorname{lcm}\\left(\\placeholder{}, \\placeholder{}\\right)'; break;
 
+        case '° \' \"':  this.webviewController.runJavaScript('insertDMS()'); return;
+
         case 'Ans':
           if (this.lastAnsLatex === "0") {
             latexChar = "0"; // 初始状态

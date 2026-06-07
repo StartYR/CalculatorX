@@ -134,6 +134,37 @@
             const jsonAST = mf.getValue('math-json');
             return JSON.stringify(jsonAST);
         };
+
+        // 度分秒逻辑
+        window.insertDMS = function () {
+            const currentLatex = mf.value;
+
+            // 查找最后一个出现的度、分、秒符号的索引
+            const lastDegree = currentLatex.lastIndexOf('^{\\circ}');
+            const lastMinute = currentLatex.lastIndexOf('^{\\prime}');
+
+            // MathLive 内部对连续单引号的渲染可能有两种空格格式，做个兼容
+            const lastSecond1 = currentLatex.lastIndexOf('^{\\prime\\prime}');
+            const lastSecond2 = currentLatex.lastIndexOf('^{\\prime \\prime}');
+            const lastSecond = Math.max(lastSecond1, lastSecond2);
+
+            const maxIndex = Math.max(lastDegree, lastMinute, lastSecond);
+
+            let toInsert = '^{\\circ}'; // 默认状态：插入度 (°)
+
+            if (maxIndex !== -1) {
+                if (maxIndex === lastDegree) {
+                    toInsert = '^{\\prime}';        // 紧跟在度后面：插入分 (')
+                } else if (maxIndex === lastMinute) {
+                    toInsert = '^{\\prime\\prime}'; // 紧跟在分后面：插入秒 (")
+                } else if (maxIndex === lastSecond) {
+                    toInsert = '^{\\circ}';         // 紧跟在秒后面：开启下一个循环，插入度 (°)
+                }
+            }
+
+            mf.executeCommand(['insert', toInsert]);
+            mf.focus();
+        };
     });
 </script>
 </body>
