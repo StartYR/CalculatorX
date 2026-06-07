@@ -88,6 +88,15 @@
         const mf = document.getElementById('math-input');
         const resField = document.getElementById('math-result');
 
+        // 清空 MathLive 内置菜单项
+        mf.menuItems = [];
+
+        // 拦截浏览器原生的长按/右键菜单事件
+        mf.addEventListener('contextmenu', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+
         mf.focus();
 
         window.showResult = function (latexString) {
@@ -124,8 +133,6 @@
             const jsonAST = mf.getValue('math-json');
             return JSON.stringify(jsonAST);
         };
-
-
     });
 </script>
 </body>
