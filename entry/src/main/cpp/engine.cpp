@@ -156,7 +156,14 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
                         }
                     }
                 }
-            } catch (const CalcException& e) { throw; } catch (...) {} 
+            } catch (const CalcException& e) { 
+                throw; // 原封不动抛出我们的溢出异常
+            } catch (const std::exception& e) {
+                // 【核心修复】：接住 10^495 撑爆 eval_double 时的绝望惨叫，将其翻译为超时或算力越界
+                throw CalcException(CalcErrorCode::TIMEOUT_ERROR, "Calculation payload exceeded engine limits");
+            } catch (...) {
+                throw CalcException(CalcErrorCode::TIMEOUT_ERROR, "Unknown catastrophic evaluation error");
+            }
             
             return SymEngine::pow(base, exp);
         }
@@ -199,7 +206,9 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
                         FastMath::checkOverflow(magnitude);
                         return FastMath::buildBigScientificNode(magnitude);
                     }
-                } catch (const CalcException&) { throw; } catch (...) {}
+                } catch (const CalcException&) { throw; } 
+                  catch (const std::exception&) { throw CalcException(CalcErrorCode::TIMEOUT_ERROR); }
+                  catch (...) { throw CalcException(CalcErrorCode::TIMEOUT_ERROR); }
                 return Expression(SymEngine::gamma((arg + Expression(1)).get_basic()));
             }
             throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid Factorial length.");
@@ -221,7 +230,9 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
                         FastMath::checkOverflow(mag);
                         if (mag > 15.0) return FastMath::buildBigScientificNode(mag);
                     }
-                } catch (const CalcException&) { throw; } catch (...) {}
+                } catch (const CalcException&) { throw; } 
+                  catch (const std::exception&) { throw CalcException(CalcErrorCode::TIMEOUT_ERROR); }
+                  catch (...) { throw CalcException(CalcErrorCode::TIMEOUT_ERROR); }
 
                 Expression num(SymEngine::gamma((n + Expression(1)).get_basic()));
                 Expression den1(SymEngine::gamma((r + Expression(1)).get_basic()));
@@ -246,7 +257,9 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
                         FastMath::checkOverflow(mag);
                         if (mag > 15.0) return FastMath::buildBigScientificNode(mag);
                     }
-                } catch (const CalcException&) { throw; } catch (...) {}
+                } catch (const CalcException&) { throw; } 
+                  catch (const std::exception&) { throw CalcException(CalcErrorCode::TIMEOUT_ERROR); }
+                  catch (...) { throw CalcException(CalcErrorCode::TIMEOUT_ERROR); }
 
                 Expression num(SymEngine::gamma((n + Expression(1)).get_basic()));
                 Expression den(SymEngine::gamma((n - r + Expression(1)).get_basic()));
@@ -292,12 +305,10 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
     return Expression(SymEngine::symbol("Invalid\\_Node"));
 }
 
-// 【全面升级】：带有智能四舍五入与连环进位的大整数科学计数法转换器
 std::string formatLargeIntegerToScientific(const std::string& intStr) {
     bool isNeg = (intStr[0] == '-');
     size_t firstDigitPos = isNeg ? 1 : 0;
     
-    // 处理个位数防越界
     if (intStr.length() - firstDigitPos <= 1) {
         return (isNeg ? "-" : "") + intStr.substr(firstDigitPos) + "\\times 10^{0}";
     }
@@ -305,14 +316,11 @@ std::string formatLargeIntegerToScientific(const std::string& intStr) {
     std::string sign = isNeg ? "-" : "";
     std::string firstDigit = intStr.substr(firstDigitPos, 1);
     
-    // 上限设定为 10 位小数
     size_t max_frac = 10;
     std::string restDigits = intStr.substr(firstDigitPos + 1, max_frac);
     long long realExp = intStr.length() - firstDigitPos - 1;
     
-    // 字符串四舍五入逻辑
     if (firstDigitPos + 1 + restDigits.length() < intStr.length()) {
-        // 如果第 11 位数字 >= 5，则需要进位
         if (intStr[firstDigitPos + 1 + restDigits.length()] >= '5') {
             int carry = 1;
             for (int i = restDigits.length() - 1; i >= 0; --i) {
@@ -326,12 +334,11 @@ std::string formatLargeIntegerToScientific(const std::string& intStr) {
                     break;
                 }
             }
-            // 如果连环进位冲到了最高位（比如 9999... 变成了 1000...）
             if (carry > 0) {
                 int fd = firstDigit[0] - '0' + carry;
                 if (fd > 9) {
                     firstDigit = "1";
-                    realExp++; // 指数也必须跟着膨胀 1 位
+                    realExp++; 
                 } else {
                     firstDigit[0] = fd + '0';
                 }
@@ -451,7 +458,6 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
                     
                     if (std::abs(float_val) >= 1e15 || (std::abs(float_val) > 0 && std::abs(float_val) < 1e-5)) {
                         std::ostringstream oss;
-                        // 【核心改动 3】：将浮点数兜底科学排版的精度提升到 10 位！
                         oss << std::scientific << std::setprecision(10) << float_val;
                         std::string s = oss.str();
                         size_t ePos = s.find('e');
@@ -492,7 +498,9 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
     } catch (const CalcException& e) {
         result_msg = e.getFrontEndMessage();
     } catch (const std::exception& e) {
-        result_msg = "Error:Domain"; 
+        // 【终极异常翻译】：接住任何 SymEngine 在底层挣扎时抛出的系统级错误
+        // 例如：内存分配失败(OOM)、死循环被打破、极其夸张的多项式展开失败等，统一转化为"超时/算力超界"
+        result_msg = "Error:Timeout"; 
     } catch (...) {
         result_msg = "Error:Unknown";
     }
