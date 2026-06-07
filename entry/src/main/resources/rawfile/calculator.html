@@ -47,8 +47,6 @@
             --placeholder-opacity: 0.35;
             transition: color 0.3s ease;
 
-            /* 强制开启浏览器原生滑动 */
-            touch-action: pan-x pan-y !important;
         }
 
         #math-input {
@@ -127,33 +125,7 @@
             return JSON.stringify(jsonAST);
         };
 
-        let isDragging = false;
-        let startX = 0, startY = 0;
 
-        window.addEventListener('pointerdown', (e) => {
-            isDragging = false;
-            startX = e.clientX;
-            startY = e.clientY;
-        }, { capture: true });
-
-        window.addEventListener('pointermove', (e) => {
-            if (!isDragging) {
-                let dx = Math.abs(e.clientX - startX);
-                let dy = Math.abs(e.clientY - startY);
-                if (dx > 5 || dy > 5) {
-                    isDragging = true;
-                }
-            }
-            if (isDragging) {
-                // 滑动屏幕，立刻拦截事件！
-                e.stopPropagation();
-            }
-        }, { capture: true });
-
-        // 禁用长按右键菜单
-        document.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-        });
     });
 </script>
 </body>
