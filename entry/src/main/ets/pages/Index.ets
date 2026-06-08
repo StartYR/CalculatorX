@@ -60,11 +60,13 @@ struct Index {
         Column() {
           TopKeyboard({
             isShift: $isShift,
-            onKeyPress: (btn: string | Resource): void => { this.handleButtonClick(btn); }
+            onKeyPress: (btn: string | Resource): void => { this.handleButtonClick(btn); },
+            onMenuSelect: (actionCode: string): void => { this.handleButtonLongPress(actionCode); }
           })
 
           BottomKeyboard({
-            onKeyPress: (btn: string | Resource): void => { this.handleButtonClick(btn); }
+            onKeyPress: (btn: string | Resource): void => { this.handleButtonClick(btn); },
+            onMenuSelect: (actionCode: string): void => { this.handleButtonLongPress(actionCode); }
           })
         }
         .width('100%')
@@ -379,8 +381,44 @@ struct Index {
     }
   }
 
+  // 长按菜单指令分发
+  handleButtonLongPress(actionCode: string) {
+    if (!this.lastValidJson) return;
+
+    let cppPrecisionMode = -1;
+
+    switch (actionCode) {
+      case 'LONG_SD_DEC':   // 强制度分秒转回小数
+        this.isTempDecimal = true;
+        cppPrecisionMode = (this.decimalPrecision === 16 ? -2 : this.decimalPrecision);
+        break;
+      case 'LONG_SD_FRAC':  // 强制假分数
+        this.isTempDecimal = false;
+        cppPrecisionMode = -3;
+        break;
+      case 'LONG_SD_MIXED': // 强制带分数
+        this.isTempDecimal = false;
+        cppPrecisionMode = -4;
+        break;
+      case 'LONG_SD_DMS':   // 💡 核心：强制逆向度分秒格式化渲染！
+        cppPrecisionMode = -5; // 将全新的控制码发送给 C++
+        break;
+      default:
+        return;
+    }
+
+    // 调用 C++ 引擎重新渲染形态
+    let cppResponse: string = testNapi.calculate(this.lastValidJson, this.isRad, cppPrecisionMode);
+    if (cppResponse.includes("Error")) {
+      console.error("C++ 转换错误: " + cppResponse);
+    }
+    // 让前端屏幕显示最新渲染出来的形态
+    this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
+  }
+
   insertToWeb(str: string) {
     let safeString = JSON.stringify(str);
     this.webviewController.runJavaScript(`insertMath(${safeString})`);
   }
 }
+
