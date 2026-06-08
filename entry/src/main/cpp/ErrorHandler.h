@@ -11,7 +11,8 @@ enum class CalcErrorCode {
     DOMAIN_ERROR,    // 定义域错误 (如负数开偶次根号，负数阶乘)
     OVERFLOW_ERROR,  // 数值溢出 (超出 64 位物理极限)
     SYNTAX_ERROR,    // 语法/解析错误
-    TIMEOUT_ERROR    // 【新增】：计算超时或算力超载 (底层引擎拒绝运算)
+    TIMEOUT_ERROR,   // 计算超时或算力超载 (底层引擎拒绝运算)
+    DMS_FORMAT_ERROR // 度分秒格式错误
 };
 
 // 自定义计算业务异常类
@@ -34,7 +35,8 @@ public:
             case CalcErrorCode::DOMAIN_ERROR: return "Error:Domain";
             case CalcErrorCode::OVERFLOW_ERROR: return "Error:Overflow";
             case CalcErrorCode::SYNTAX_ERROR: return "Error:Syntax";
-            case CalcErrorCode::TIMEOUT_ERROR: return "Error:Timeout"; // 【新增】映射到前端
+            case CalcErrorCode::TIMEOUT_ERROR: return "Error:Timeout"; 
+            case CalcErrorCode::DMS_FORMAT_ERROR: return "Error:DMSFormat";
             default: return "Error:Unknown";
         }
     }

@@ -159,7 +159,7 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
             } catch (const CalcException& e) { 
                 throw; // 原封不动抛出我们的溢出异常
             } catch (const std::exception& e) {
-                // 【核心修复】：接住 10^495 撑爆 eval_double 时的绝望惨叫，将其翻译为超时或算力越界
+                // 将 eval_double 翻译为超时或算力越界
                 throw CalcException(CalcErrorCode::TIMEOUT_ERROR, "Calculation payload exceeded engine limits");
             } catch (...) {
                 throw CalcException(CalcErrorCode::TIMEOUT_ERROR, "Unknown catastrophic evaluation error");
@@ -191,6 +191,31 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
 
         if (op == "Percent") {
              return parseAST(ast[1], isRad, true) / Expression(100);
+        }
+        
+        // 度分秒
+        if (op == "dms" || op == "Dms") {
+            if (ast.size() == 4) {
+                Expression d = parseAST(ast[1], isRad, true);
+                Expression m = parseAST(ast[2], isRad, true);
+                Expression s = parseAST(ast[3], isRad, true);
+                
+                try {
+                    // 核心公式：度 + 分/60 + 秒/3600
+                    Expression total_deg = d + m / Expression(60) + s / Expression(3600);
+                    
+                    if (isRad) {
+                        // 如果当前是弧度制，将度数转换为弧度再参与后续计算
+                        return total_deg * Expression(SymEngine::pi) / Expression(180);
+                    } else {
+                        // 如果当前是角度制，它本身代表的就是度数，直接返回
+                        return total_deg;
+                    }
+                } catch (...) {
+                    throw CalcException(CalcErrorCode::DMS_FORMAT_ERROR, "DMS Calculation Failed");
+                }
+            }
+            throw CalcException(CalcErrorCode::DMS_FORMAT_ERROR, "Invalid DMS Length");
         }
         
         if (op == "Factorial") {
