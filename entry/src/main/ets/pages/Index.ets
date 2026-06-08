@@ -188,6 +188,12 @@ struct Index {
             return `\\operatorname{nPr}\\left(${n},${r}\\right)`;
           };
 
+          // --- 度分秒 (DMS) 的正则替换器 ---
+          let repDMS3 = (m: string, d: string, mnt: string, s: string): string => { return `\\operatorname{dms}\\left(${d},${mnt},${s}\\right)`; };
+          let repDMS2 = (m: string, d: string, mnt: string): string => { return `\\operatorname{dms}\\left(${d},${mnt},0\\right)`; };
+          let repDMS_DS = (m: string, d: string, s: string): string => { return `\\operatorname{dms}\\left(${d},0,${s}\\right)`; };
+          let repDMS1 = (m: string, d: string): string => { return `\\operatorname{dms}\\left(${d},0,0\\right)`; };
+
           let cleanedLatex = rawLatex
           // --- 组合 (C) 的 5 种样式防御 ---
             .replace(/\\mathrm\{C\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))\^(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repC)
@@ -201,7 +207,17 @@ struct Index {
             .replace(/\\mathrm\{P\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))\^(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repP)
             .replace(/\{\}\^(?:\{(.+?)\}|([a-zA-Z0-9.]))\\mathrm\{P\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repP)
             .replace(/\{\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))\\mathrm\{P\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repP)
-            .replace(/\\mathrm\{P\}\\left\((.+?),\s*(.+?)\\right\)/g, repFlatP);
+            .replace(/\\mathrm\{P\}\\left\((.+?),\s*(.+?)\\right\)/g, repFlatP)
+
+            // --- 度分秒拦截 ---
+            // 匹配完整的 12°34'56"
+            .replace(/([0-9.]+)\^\{\\circ\}\s*([0-9.]+)\^\{\\prime\}\s*([0-9.]+)\^\{\\prime\s*\\prime\}/g, repDMS3)
+            // 匹配缺秒的 12°34' (负向先行断言防止误杀)
+            .replace(/([0-9.]+)\^\{\\circ\}\s*([0-9.]+)\^\{\\prime\}(?!\s*\\prime)/g, repDMS2)
+            // 匹配缺分的 12°56"
+            .replace(/([0-9.]+)\^\{\\circ\}\s*([0-9.]+)\^\{\\prime\s*\\prime\}/g, repDMS_DS)
+            // 匹配只有度的 12°
+            .replace(/([0-9.]+)\^\{\\circ\}/g, repDMS1);
 
           // 给反斜杠和引号加上双重转义，防止破坏 JS 边界
           let safeLatex = cleanedLatex.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, "\\n");

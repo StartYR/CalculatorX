@@ -110,7 +110,53 @@
         });
 
         window.insertMath = function (latexString) {
+            const currentLatex = mf.value;
+            // 正则判断当前公式最后是不是以“秒”结尾（兼容 MathLive 的空格排版）
+            const isEndsWithSecond = /\^\{\\prime\s*\\prime\}\s*$/.test(currentLatex);
+
+            // 【拦截逻辑】：如果前方是秒，并且当前传入的是纯数字 (0-9)
+            if (isEndsWithSecond && /^[0-9]$/.test(latexString)) {
+                return; // 直接返回，吞噬按键
+            }
+
             mf.executeCommand(['insert', latexString]);
+            mf.focus();
+        };
+
+        // 度分秒专属的智能插入与拦截
+        window.insertDMS = function () {
+            const currentLatex = mf.value;
+
+            // 【拦截逻辑】：如果前方紧挨着已经是“秒”了，直接禁止再次输入度分秒
+            const isEndsWithSecond = /\^\{\\prime\s*\\prime\}\s*$/.test(currentLatex);
+            if (isEndsWithSecond) {
+                return; // 直接返回，吞噬按键
+            }
+
+            // 查找最后一个出现的度、分、秒符号的索引
+            const lastDegree = currentLatex.lastIndexOf('^{\\circ}');
+            const lastMinute = currentLatex.lastIndexOf('^{\\prime}');
+            const lastSecond1 = currentLatex.lastIndexOf('^{\\prime\\prime}');
+            const lastSecond2 = currentLatex.lastIndexOf('^{\\prime \\prime}');
+            const lastSecond = Math.max(lastSecond1, lastSecond2);
+
+            const maxIndex = Math.max(lastDegree, lastMinute, lastSecond);
+
+            let toInsert = '^{\\circ}'; // 默认状态：插入度 (°)
+
+            if (maxIndex !== -1) {
+                if (maxIndex === lastDegree) {
+                    toInsert = '^{\\prime}';        // 紧挨着度：插入分 (')
+                } else if (maxIndex === lastMinute) {
+                    toInsert = '^{\\prime\\prime}'; // 紧挨着分：插入秒 (")
+                } else if (maxIndex === lastSecond) {
+                    // 因为上方已经拦截了紧挨着秒的情况，走到这里说明光标不在秒后面
+                    // 比如 12°34'56" + 1，此时按下 DMS，开启新一轮的循环
+                    toInsert = '^{\\circ}';
+                }
+            }
+
+            mf.executeCommand(['insert', toInsert]);
             mf.focus();
         };
 
