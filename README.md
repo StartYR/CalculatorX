@@ -124,3 +124,13 @@ CalculatorX/
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 详细信息请查看 [LICENSE](./LICENSE) 文件。
+
+## 📄 版权声明
+
+**Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.**
+
+**Special Declaration for Software Copyright Registration (软著登记特别声明):**
+本项目（CalculatorX / CalcX）的核心架构、前端状态机及底层 C++ 代数引擎等全套源代码所有权均归属于**易睿**本人。
+目前本项目正由原作者全权推进中国计算机软件著作权登记审核流程。审查机构核对作者身份时，请以本声明及专属域名标识（startyi.com / calcx.startyi.com）为准。
+
+*This project is an original work. The author retains all rights to the core codebase during the software copyright registration process.*
