@@ -328,8 +328,7 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
             }
         }
 
-        // === 微积分：定积分 (Numerical Integration) ===
-        // === 7. 微积分：积分 (Integration) 双轨制引擎 ===
+        // === 微积分：积分 (Integration) 双轨制引擎 ===
         if (op == "Integrate") {
             if (ast.size() == 3) {
                 
@@ -397,7 +396,10 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                                 double weight = (i == 0 || i == N) ? 1.0 : ((i % 2 == 1) ? 4.0 : 2.0);
                                 sum += weight * y_i;
                             }
-                            return Expression(sum * h / 3.0);
+                            double raw_result = sum * h / 3.0;
+                            // 四舍五入保留 10 位小数
+                            double snapped_result = std::round(raw_result * 1e10) / 1e10;
+                            return Expression(snapped_result);
                         } catch (...) {
                             throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Integration bounds invalid or body unresolvable");
                         }
