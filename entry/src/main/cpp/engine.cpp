@@ -262,6 +262,122 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
             return num / den;
         }
         
+        // === 作用域与迭代：求和 (Sum) 与求积 (Product) ===
+        if (op == "Sum" || op == "Product") {
+            // 确保具有足够的参数，且边界是一个 Tuple
+            if (ast.size() == 3 && ast[2].is_array() && ast[2].size() >= 4 && ast[2][0] == "Tuple") {
+                
+                // 1. 提取迭代变量名 (通常是 "x", "n", "i" 等)
+                std::string var_name = "x";
+                if (ast[2][1].is_string()) var_name = ast[2][1].get<std::string>();
+                
+                // 2. 解析上下限，并求出具体的整数值
+                Expression lower_expr = parseAST(ast[2][2], isRad, true, hasDMS);
+                Expression upper_expr = parseAST(ast[2][3], isRad, true, hasDMS);
+                
+                long long start = 0, end = 0;
+                try {
+                    start = static_cast<long long>(std::floor(SymEngine::eval_double(lower_expr)));
+                    end = static_cast<long long>(std::floor(SymEngine::eval_double(upper_expr)));
+                } catch (...) {
+                    throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Limits must be calculable numbers");
+                }
+                
+                // 如果下限大于上限，数学上求和为 0，求积为 1
+                if (end < start) return (op == "Sum") ? Expression(0) : Expression(1);
+                
+                // 3. 防止恶意大循环导致死机
+                if (end - start > 10000) {
+                    throw CalcException(CalcErrorCode::TIMEOUT_ERROR, "Iteration limit exceeded");
+                }
+                
+                // 4. 解析主体表达式 (此时它内部带有一个未赋值的符号 var_name)
+                Expression body = parseAST(ast[1], isRad, true, hasDMS);
+                
+                // 5. 初始化累加/累乘器
+                Expression total = (op == "Sum") ? Expression(0) : Expression(1);
+                SymEngine::RCP<const SymEngine::Symbol> sym_var = SymEngine::symbol(var_name);
+                
+                // 6. C++ 极速循环代入
+                for (long long i = start; i <= end; ++i) {
+                    // 创建代入字典：让表达式中的变量 (如 x) 替换为当前的数字 i
+                    SymEngine::map_basic_basic subs_map;
+                    subs_map[sym_var] = Expression(i).get_basic();
+                    
+                    // 进行替换并计算当前项
+                    Expression evaluated_term(body.get_basic()->subs(subs_map));
+                    
+                    // 累加或累乘
+                    if (op == "Sum") total += evaluated_term;
+                    else total *= evaluated_term;
+                }
+                
+                return total;
+            }
+            throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid Sum/Product format");
+        }
+        
+        // === 微积分：求导 (Derivative) ===
+        // 这里直接调用 SymEngine 硬核的符号求导能力！
+        if (op == "diff" || op == "Diff") {
+            if (ast.size() == 2) {
+                bool dummy = false;
+                Expression body = parseAST(ast[1], isRad, true, dummy);
+                // 默认对 x 进行完美符号求导
+                return Expression(body.get_basic()->diff(SymEngine::symbol("x")));
+            }
+        }
+
+        // === 微积分：定积分 (Numerical Integration) ===
+        if (op == "Integrate") {
+            if (ast.size() == 3 && ast[2].is_array() && ast[2][0] == "Tuple") {
+                // 1. 获取微分元 (通常是 x)
+                std::string var_name = "x";
+                if (ast[2].size() > 1 && ast[2][1].is_string()) var_name = ast[2][1].get<std::string>();
+
+                // 2. 解析主体和积分界限
+                bool dummy = false;
+                Expression body = parseAST(ast[1], isRad, true, dummy);
+                Expression lower_expr = parseAST(ast[2][2], isRad, true, dummy);
+                Expression upper_expr = parseAST(ast[2][3], isRad, true, dummy);
+
+                auto sym_var = SymEngine::symbol(var_name);
+
+                try {
+                    // 求出上下限的具体数值
+                    double a = SymEngine::eval_double(lower_expr);
+                    double b = SymEngine::eval_double(upper_expr);
+
+                    // 3. 采用辛普森 1/3 算法 (Simpson's 1/3 Rule) 进行极速高精度数值积分
+                    // （卡西欧等专业实体计算器底层同样采用此算法来对抗无法求出原函数的顽固积分）
+                    int N = 1000; // 迭代 1000 次，保证精度且在手机端仅需几毫秒
+                    double h = (b - a) / N;
+                    double sum = 0.0;
+
+                    for (int i = 0; i <= N; ++i) {
+                        double x_i = a + i * h;
+                        
+                        // 动态代入变量 (将表达式中的 x 替换为当前循环的具体数字 x_i)
+                        SymEngine::map_basic_basic subs_map;
+                        subs_map[sym_var] = Expression(x_i).get_basic();
+                        
+                        // 计算当前坐标下的 Y 值
+                        double y_i = SymEngine::eval_double(Expression(body.get_basic()->subs(subs_map)));
+
+                        // 权重分配：首尾为1，奇数为4，偶数为2
+                        double weight = (i == 0 || i == N) ? 1.0 : ((i % 2 == 1) ? 4.0 : 2.0);
+                        sum += weight * y_i;
+                    }
+                    
+                    return Expression(sum * h / 3.0);
+                    
+                } catch (...) {
+                    throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Integration failed or bounds invalid");
+                }
+            }
+            throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid Integral format");
+        }
+        
         return Expression(SymEngine::symbol("Unknown\\_" + op));
     }
     return Expression(SymEngine::symbol("Invalid\\_Node"));

@@ -65,7 +65,7 @@ export const PermutationOptions: MathStyleOption[] = [
 
 export const topShiftButtons: Array<string | Resource> = [
   '', '', '', '', '', '',
-  '', '', '', 'GCD', 'LCM', 'd/dx',
+  '', '', 'd/dx', '', 'GCD', 'LCM',
   '', '', '', 'CONST', icon_e_power, 'lg',
   'mod', icon_sqrt3, '%', icon_power3, icon_comma, icon_inverse,
   'sin⁻¹', 'cos⁻¹', 'tan⁻¹', 'x', 'y', 'z',
@@ -73,7 +73,7 @@ export const topShiftButtons: Array<string | Resource> = [
 
 export const topButtons: Array<string | Resource> = [
   '⇧Shift', 'R/D', '⇦', '⇨', 'S⇄D', 'i',
-  'lim', '∞', '° \' \"', icon_sum, icon_product, icon_integral,
+  '° \' \"', '∞', 'lim', icon_integral, icon_sum, icon_product,
   icon_fact, 'nCr', 'nPr', 'e', 'ln', 'log',
   icon_abs, icon_sqrt, icon_sqrtx, icon_power2, icon_power, icon_fraction,
   'sin', 'cos', 'tan', 'π', '(', ')',
@@ -189,11 +189,12 @@ export interface CustomMenuItem {
 
 export const keyContextMenuRegistry: Record<string, CustomMenuItem[]> = {
   'S⇄D': [
-    { value: '标准小数', actionCode: 'LONG_SD_DEC' },
-    { value: '假分数 (分式)', actionCode: 'LONG_SD_FRAC' },
+    { value: '小数', actionCode: 'LONG_SD_DEC' },
+    { value: '分数', actionCode: 'LONG_SD_FRAC' },
     { value: '带分数', actionCode: 'LONG_SD_MIXED' },
-    { value: '度分秒 (DMS)', actionCode: 'LONG_SD_DMS' }
+    { value: '度分秒', actionCode: 'LONG_SD_DMS' }
   ],
+
   // 🔮 以后其他按键（例如 Ans、sin、log）需要长按时，直接在这里追加一行即可！
   // 'Ans': [{ value: '清除历史记录', actionCode: 'CLEAR_HISTORY' }]
 };

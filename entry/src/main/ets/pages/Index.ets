@@ -211,6 +211,9 @@ struct Index {
             .replace(/\{\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))\\mathrm\{P\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repP)
             .replace(/\\mathrm\{P\}\\left\((.+?),\s*(.+?)\\right\)/g, repFlatP)
 
+            // 微积分求导
+            .replace(/\\frac\{d\}\{dx\}/g, '\\operatorname{diff}')
+
             // --- 度分秒拦截 ---
             // 匹配完整的 12°34'56"
             .replace(/([0-9.]+)\^\{\\circ\}\s*([0-9.]+)\^\{\\prime\}\s*([0-9.]+)\^\{\\prime\s*\\prime\}/g, repDMS3)
@@ -335,10 +338,10 @@ struct Index {
         case 'sin⁻¹':    latexChar = "\\arcsin\\left(\\placeholder{}\\right)"; break;
         case 'cos⁻¹':    latexChar = "\\arccos\\left(\\placeholder{}\\right)"; break;
         case 'tan⁻¹':    latexChar = "\\arctan\\left(\\placeholder{}\\right)"; break;
-        case 'integral': latexChar = "\\int_{\\placeholder{}}^{\\placeholder{}}"; break;
-        case 'sum':      latexChar = "\\sum_{\\placeholder{}}^{\\placeholder{}}"; break;
-        case 'product':  latexChar = "\\prod_{\\placeholder{}}^{\\placeholder{}}"; break;
-        case 'd/dx':     latexChar = "\\frac{d}{dx}"; break;
+        case 'integral': latexChar = "\\int_{\\placeholder{}}^{\\placeholder{}}\\left(\\placeholder{}\\right)d\\placeholder{}"; break;
+        case 'sum':      latexChar = "\\sum_{x=\\placeholder{}}^{\\placeholder{}}\\left(\\placeholder{}\\right)"; break;
+        case 'product':  latexChar = "\\prod_{x=\\placeholder{}}^{\\placeholder{}}\\left(\\placeholder{}\\right)"; break;
+        case 'd/dx':     latexChar = "\\frac{d}{dx}\\left(\\placeholder{}\\right)"; break;
         case 'lim':      latexChar = "\\lim_{x \\to \\placeholder{}}"; break;
         case '%':        latexChar = '\\%'; break;
         case 'mod':      latexChar = '\\bmod '; break;
@@ -400,7 +403,7 @@ struct Index {
         this.isTempDecimal = false;
         cppPrecisionMode = -4;
         break;
-      case 'LONG_SD_DMS':   // 💡 核心：强制逆向度分秒格式化渲染！
+      case 'LONG_SD_DMS':   // 强制逆向度分秒格式化渲染！
         cppPrecisionMode = -5; // 将全新的控制码发送给 C++
         break;
       default:
