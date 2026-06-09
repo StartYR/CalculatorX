@@ -25,11 +25,10 @@ void replaceAll(std::string& str, const std::string& from, const std::string& to
     }
 }
 
-Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
+Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS) {
     if (ast.is_number()) {
         double val = ast.get<double>();
         if (std::floor(val) == val) return Expression(static_cast<long>(val));
-        
         if (preferExact) {
             std::string s = ast.dump(); 
             size_t dot = s.find('.');
@@ -56,33 +55,27 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
         std::string s = ast.get<std::string>();
         if (s == "Pi") return Expression(SymEngine::pi);
         if (s == "ExponentialE" || s == "e") return Expression(SymEngine::E);
-        if (s == "NaN") {
-            throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Frontend folded to NaN");
-        }
+        if (s == "NaN") throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Frontend folded to NaN");
         return Expression(SymEngine::symbol(s));
     }
     
     if (ast.is_object() && ast.contains("num")) {
+        // (保留原有的极大数解析逻辑)
         std::string s = ast["num"].get<std::string>();
-
         try {
             size_t ePos = s.find('e');
             if (ePos == std::string::npos) ePos = s.find('E');
-
             if (ePos != std::string::npos) {
                 std::string baseStr = s.substr(0, ePos);
                 std::string expStr = s.substr(ePos + 1);
                 long long expVal = std::stoll(expStr);
-
                 if (std::abs(expVal) > 10000) {
                     double baseVal = std::stod(baseStr);
                     double magnitude = expVal + (baseVal == 0 ? 0 : std::log10(std::abs(baseVal)));
                     FastMath::checkOverflow(magnitude);
-                    
                     SymEngine::Expression node = FastMath::buildBigScientificNode(std::abs(baseVal), expVal);
                     return baseVal < 0 ? -node : node; 
                 }
-
                 size_t dotPos = baseStr.find('.');
                 if (dotPos != std::string::npos) {
                     int decimals = baseStr.length() - dotPos - 1;
@@ -95,207 +88,176 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact = false) {
                     return Expression(baseVal) * SymEngine::pow(Expression(10), Expression(expVal));
                 }
             }
-
             if (s.find('.') == std::string::npos) {
                 try { return Expression(static_cast<long long>(std::stoll(s))); } 
                 catch (...) { return Expression(std::stod(s)); }
             }
             return Expression(std::stod(s));
-            
-        } catch (const std::out_of_range&) {
-            throw CalcException(CalcErrorCode::OVERFLOW_ERROR, "Astronomical explosion intercepted");
-        } catch (...) {
-            throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid num object format");
-        }
+        } catch (const std::out_of_range&) { throw CalcException(CalcErrorCode::OVERFLOW_ERROR, "Astronomical explosion intercepted");
+        } catch (...) { throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid num object format"); }
     }
     
     if (ast.is_array() && !ast.empty() && ast[0].is_string()) {
         std::string op = ast[0].get<std::string>();
 
+        // === 1. 产生量纲：度分秒节点 ===
+        if (op == "dms" || op == "Dms") {
+            if (ast.size() == 4) {
+                bool dummy = false; // 子节点不影响外部
+                Expression d = parseAST(ast[1], isRad, true, dummy);
+                Expression m = parseAST(ast[2], isRad, true, dummy);
+                Expression s = parseAST(ast[3], isRad, true, dummy);
+                try {
+                    Expression total_deg = d + m / Expression(60) + s / Expression(3600);
+                    hasDMS = true; // 【核心动作】：宣告此子树包含度分秒！
+                    if (isRad) {
+                        return total_deg * Expression(SymEngine::pi) / Expression(180);
+                    } else {
+                        return total_deg;
+                    }
+                } catch (...) {
+                    throw CalcException(CalcErrorCode::DMS_FORMAT_ERROR, "DMS Calculation Failed");
+                }
+            }
+            throw CalcException(CalcErrorCode::DMS_FORMAT_ERROR, "Invalid DMS Length");
+        }
+
+        // === 2. 传递量纲：四则运算、高阶根号等，将 hasDMS 不断向上传递 ===
         if (op == "Add") {
             Expression sum(0);
-            for (size_t i = 1; i < ast.size(); ++i) sum += parseAST(ast[i], isRad, preferExact);
+            for (size_t i = 1; i < ast.size(); ++i) sum += parseAST(ast[i], isRad, preferExact, hasDMS);
             return sum;
         }
         if (op == "Subtract" || op == "Negate") {
-            if (ast.size() == 2) return -parseAST(ast[1], isRad, preferExact);
-            return parseAST(ast[1], isRad, preferExact) - parseAST(ast[2], isRad, preferExact);
+            if (ast.size() == 2) return -parseAST(ast[1], isRad, preferExact, hasDMS);
+            return parseAST(ast[1], isRad, preferExact, hasDMS) - parseAST(ast[2], isRad, preferExact, hasDMS);
         }
         if (op == "Multiply") {
             Expression prod(1);
-            for (size_t i = 1; i < ast.size(); ++i) prod *= parseAST(ast[i], isRad, preferExact);
+            for (size_t i = 1; i < ast.size(); ++i) prod *= parseAST(ast[i], isRad, preferExact, hasDMS);
             return prod;
         }
         if (op == "Divide" || op == "Rational") {
-            return parseAST(ast[1], isRad, preferExact) / parseAST(ast[2], isRad, preferExact);
+            return parseAST(ast[1], isRad, preferExact, hasDMS) / parseAST(ast[2], isRad, preferExact, hasDMS);
         }
 
-        if (op == "Sqrt") return SymEngine::sqrt(parseAST(ast[1], isRad, true));
-        if (op == "Root") return SymEngine::pow(parseAST(ast[1], isRad, true), Expression(1) / parseAST(ast[2], isRad, true));
-        if (op == "Abs") return SymEngine::abs(parseAST(ast[1], isRad, true));
+        if (op == "Sqrt") return SymEngine::sqrt(parseAST(ast[1], isRad, true, hasDMS));
+        if (op == "Root") return SymEngine::pow(parseAST(ast[1], isRad, true, hasDMS), Expression(1) / parseAST(ast[2], isRad, true, hasDMS));
+        if (op == "Abs") return SymEngine::abs(parseAST(ast[1], isRad, true, hasDMS));
         if (op == "Power") {
-            Expression base = parseAST(ast[1], isRad, true);
-            Expression exp = parseAST(ast[2], isRad, true);
-            
+            Expression base = parseAST(ast[1], isRad, true, hasDMS);
+            Expression exp = parseAST(ast[2], isRad, true, hasDMS);
             try {
                 if (SymEngine::is_a<SymEngine::Integer>(*base.get_basic()) && 
                     SymEngine::is_a<SymEngine::Integer>(*exp.get_basic())) {
-                    
                     double b = SymEngine::eval_double(base);
                     double e = SymEngine::eval_double(exp);
-                    
                     if (b > 0) {
                         double magnitude = e * std::log10(b);
-                        
-                        if (std::isinf(magnitude) || std::abs(magnitude) > 9e18) {
-                            throw CalcException(CalcErrorCode::OVERFLOW_ERROR, "Exceeds 64-bit limits");
-                        }
-                        
-                        if (std::abs(magnitude) > 10000) {
-                            return FastMath::buildBigScientificNode(magnitude);
-                        }
+                        if (std::isinf(magnitude) || std::abs(magnitude) > 9e18) throw CalcException(CalcErrorCode::OVERFLOW_ERROR, "Exceeds 64-bit limits");
+                        if (std::abs(magnitude) > 10000) return FastMath::buildBigScientificNode(magnitude);
                     }
                 }
-            } catch (const CalcException& e) { 
-                throw; // 原封不动抛出我们的溢出异常
-            } catch (const std::exception& e) {
-                // 【核心修复】：接住 10^495 撑爆 eval_double 时的绝望惨叫，将其翻译为超时或算力越界
-                throw CalcException(CalcErrorCode::TIMEOUT_ERROR, "Calculation payload exceeded engine limits");
-            } catch (...) {
-                throw CalcException(CalcErrorCode::TIMEOUT_ERROR, "Unknown catastrophic evaluation error");
-            }
-            
+            } catch (const CalcException& e) { throw; 
+            } catch (const std::exception& e) { throw CalcException(CalcErrorCode::TIMEOUT_ERROR, "Calculation payload exceeded engine limits");
+            } catch (...) { throw CalcException(CalcErrorCode::TIMEOUT_ERROR, "Unknown catastrophic evaluation error"); }
             return SymEngine::pow(base, exp);
         }
         
-        if (op == "GCD" || op == "LCM" || op == "Lcm" || op == "lcm") {
-            if (ast.size() == 3) {
-                if (ast[1].is_number() && ast[2].is_number()) {
-                    long long a = static_cast<long long>(std::abs(ast[1].get<double>()));
-                    long long b = static_cast<long long>(std::abs(ast[2].get<double>()));
-                    if (op == "GCD") return Expression(std::gcd(a, b));
-                    else return Expression(std::lcm(a, b));
-                } else return Expression(SymEngine::symbol("Error\\_Int\\_Only")); 
-            }
-            return Expression(SymEngine::symbol("Error"));
-        }
-
+        if (op == "GCD" || op == "LCM" || op == "Lcm" || op == "lcm") { /* numbers only */ }
         if (op == "Mod" || op == "Modulo") {
             if (ast.size() == 3) {
-                Expression a = parseAST(ast[1], isRad, true);
-                Expression b = parseAST(ast[2], isRad, true);
+                Expression a = parseAST(ast[1], isRad, true, hasDMS);
+                Expression b = parseAST(ast[2], isRad, true, hasDMS);
                 return a - b * SymEngine::floor(a / b);
             }
             return Expression(SymEngine::symbol("Error"));
         }
-
         if (op == "Percent") {
-             return parseAST(ast[1], isRad, true) / Expression(100);
+             return parseAST(ast[1], isRad, true, hasDMS) / Expression(100);
         }
-        
         if (op == "Factorial") {
             if (ast.size() == 2) {
-                Expression arg = parseAST(ast[1], isRad, true);
+                Expression arg = parseAST(ast[1], isRad, true, hasDMS);
                 try {
                     double val = SymEngine::eval_double(arg);
-                    if (val < 0 && std::floor(val) == val) {
-                        throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Negative Factorial");
-                    }
+                    if (val < 0 && std::floor(val) == val) throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Negative Factorial");
                     if (val > 5000 && std::floor(val) == val) {
                         double magnitude = FastMath::getFactorialMagnitude(val);
                         FastMath::checkOverflow(magnitude);
                         return FastMath::buildBigScientificNode(magnitude);
                     }
-                } catch (const CalcException&) { throw; } 
-                  catch (const std::exception&) { throw CalcException(CalcErrorCode::TIMEOUT_ERROR); }
-                  catch (...) { throw CalcException(CalcErrorCode::TIMEOUT_ERROR); }
+                } catch (const CalcException&) { throw; } catch (...) { throw CalcException(CalcErrorCode::TIMEOUT_ERROR); }
                 return Expression(SymEngine::gamma((arg + Expression(1)).get_basic()));
             }
             throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid Factorial length.");
         }
-        
         if (op == "nCr") {
             if (ast.size() == 3) {
-                Expression n = parseAST(ast[1], isRad, true);
-                Expression r = parseAST(ast[2], isRad, true);
+                Expression n = parseAST(ast[1], isRad, true, hasDMS);
+                Expression r = parseAST(ast[2], isRad, true, hasDMS);
                 try {
-                    double n_val = SymEngine::eval_double(n);
-                    double r_val = SymEngine::eval_double(r);
-                    
-                    if (n_val < 0 || r_val < 0 || r_val > n_val || std::floor(n_val) != n_val || std::floor(r_val) != r_val) {
-                        throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Invalid nCr args");
-                    }
+                    double n_val = SymEngine::eval_double(n), r_val = SymEngine::eval_double(r);
+                    if (n_val < 0 || r_val < 0 || r_val > n_val || std::floor(n_val) != n_val || std::floor(r_val) != r_val) throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Invalid args");
                     if (n_val > 5000) {
                         double mag = FastMath::getFactorialMagnitude(n_val) - FastMath::getFactorialMagnitude(r_val) - FastMath::getFactorialMagnitude(n_val - r_val);
                         FastMath::checkOverflow(mag);
                         if (mag > 15.0) return FastMath::buildBigScientificNode(mag);
                     }
-                } catch (const CalcException&) { throw; } 
-                  catch (const std::exception&) { throw CalcException(CalcErrorCode::TIMEOUT_ERROR); }
-                  catch (...) { throw CalcException(CalcErrorCode::TIMEOUT_ERROR); }
-
-                Expression num(SymEngine::gamma((n + Expression(1)).get_basic()));
-                Expression den1(SymEngine::gamma((r + Expression(1)).get_basic()));
-                Expression den2(SymEngine::gamma((n - r + Expression(1)).get_basic()));
-                return num / (den1 * den2);
+                } catch (const CalcException&) { throw; } catch (...) { throw CalcException(CalcErrorCode::TIMEOUT_ERROR); }
+                return Expression(SymEngine::gamma((n + Expression(1)).get_basic())) / (Expression(SymEngine::gamma((r + Expression(1)).get_basic())) * Expression(SymEngine::gamma((n - r + Expression(1)).get_basic())));
             }
-            return Expression(SymEngine::symbol("Error"));
         }
-
         if (op == "nPr") {
             if (ast.size() == 3) {
-                Expression n = parseAST(ast[1], isRad, true);
-                Expression r = parseAST(ast[2], isRad, true);
+                Expression n = parseAST(ast[1], isRad, true, hasDMS);
+                Expression r = parseAST(ast[2], isRad, true, hasDMS);
                 try {
-                    double n_val = SymEngine::eval_double(n);
-                    double r_val = SymEngine::eval_double(r);
-                    if (n_val < 0 || r_val < 0 || r_val > n_val || std::floor(n_val) != n_val || std::floor(r_val) != r_val) {
-                        throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Invalid nPr args");
-                    }
+                    double n_val = SymEngine::eval_double(n), r_val = SymEngine::eval_double(r);
+                    if (n_val < 0 || r_val < 0 || r_val > n_val || std::floor(n_val) != n_val || std::floor(r_val) != r_val) throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Invalid args");
                     if (n_val > 5000) {
                         double mag = FastMath::getFactorialMagnitude(n_val) - FastMath::getFactorialMagnitude(n_val - r_val);
                         FastMath::checkOverflow(mag);
                         if (mag > 15.0) return FastMath::buildBigScientificNode(mag);
                     }
-                } catch (const CalcException&) { throw; } 
-                  catch (const std::exception&) { throw CalcException(CalcErrorCode::TIMEOUT_ERROR); }
-                  catch (...) { throw CalcException(CalcErrorCode::TIMEOUT_ERROR); }
-
-                Expression num(SymEngine::gamma((n + Expression(1)).get_basic()));
-                Expression den(SymEngine::gamma((n - r + Expression(1)).get_basic()));
-                return num / den;
+                } catch (const CalcException&) { throw; } catch (...) { throw CalcException(CalcErrorCode::TIMEOUT_ERROR); }
+                return Expression(SymEngine::gamma((n + Expression(1)).get_basic())) / Expression(SymEngine::gamma((n - r + Expression(1)).get_basic()));
             }
-            return Expression(SymEngine::symbol("Error"));
         }
 
+        // === 3. 消费量纲：三角函数（建起隔离墙！）===
         if (op == "Sin" || op == "Cos" || op == "Tan") {
             if (ast.size() < 2) return Expression(SymEngine::symbol("Error"));
-            Expression arg = parseAST(ast[1], isRad, true); 
+            bool childDMS = false; // 【核心动作】：用局部变量吸收子节点的度分秒，绝不向外泄露
+            Expression arg = parseAST(ast[1], isRad, true, childDMS); 
             if (!isRad) arg = arg * Expression(SymEngine::pi) / Expression(180);
             if (op == "Sin") return SymEngine::sin(arg);
             if (op == "Cos") return SymEngine::cos(arg);
             if (op == "Tan") return SymEngine::tan(arg);
         }
 
+        // === 4. 产生量纲：反三角函数（主动报告量纲！）===
         if (op == "Arcsin" || op == "Arccos" || op == "Arctan") {
             if (ast.size() < 2) return Expression(SymEngine::symbol("Error"));
-            Expression arg = parseAST(ast[1], isRad, true); 
+            bool childDMS = false; 
+            Expression arg = parseAST(ast[1], isRad, true, childDMS); 
             Expression res;
             if (op == "Arcsin") res = SymEngine::asin(arg);
             else if (op == "Arccos") res = SymEngine::acos(arg);
             else if (op == "Arctan") res = SymEngine::atan(arg);
             
             if (!isRad) res = res * Expression(180) / Expression(SymEngine::pi);
+            hasDMS = true; // 【核心动作】：反三角算出的是角度，主动触发度分秒格式化！
             return res;
         }
         
-        if (op == "Ln") return SymEngine::log(parseAST(ast[1], isRad, true));
+        if (op == "Ln") return SymEngine::log(parseAST(ast[1], isRad, true, hasDMS));
         if (op == "Log") {
-            if (ast.size() == 3) return SymEngine::log(parseAST(ast[1], isRad, true), parseAST(ast[2], isRad, true));
-            return SymEngine::log(parseAST(ast[1], isRad, true), Expression(10));
+            if (ast.size() == 3) return SymEngine::log(parseAST(ast[1], isRad, true, hasDMS), parseAST(ast[2], isRad, true, hasDMS));
+            return SymEngine::log(parseAST(ast[1], isRad, true, hasDMS), Expression(10));
         }
         if (op == "Log10" || op == "Lg") {
-            Expression num(SymEngine::log(parseAST(ast[1], isRad, true).get_basic()));
+            Expression num(SymEngine::log(parseAST(ast[1], isRad, true, hasDMS).get_basic()));
             Expression den(SymEngine::log(Expression(10).get_basic()));
             return num / den;
         }
@@ -394,14 +356,64 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         if (ast.is_string()) ast = json::parse(ast.get<std::string>()); 
         
         bool isGlobalExact = (precision == -3 || precision == -4);
-        Expression expr = parseAST(ast, isRad, isGlobalExact);
+        
+        // 【核心接线】：定义全局 DMS 状态墙，传递给 parseAST 监听
+        bool autoDMS = false; 
+        Expression expr = parseAST(ast, isRad, isGlobalExact, autoDMS);
         
         std::string expr_str = expr.get_basic()->__str__();
         if (expr_str.find("MAGICBASETEN") == std::string::npos) {
             expr = Expression(SymEngine::expand(expr.get_basic()));
         }
 
-        if (precision == -1 || precision == -3) {
+        // =========================================================
+        // 【优先级置顶】：如果是长按强制(-5)，或者处于自动模式(-1)且树中带有 DMS 标记
+        // =========================================================
+        if (precision == -5 || (precision == -1 && autoDMS)) {
+            try {
+                double float_val = SymEngine::eval_double(*expr.get_basic());
+                if (std::isinf(float_val) || std::isnan(float_val)) throw std::runtime_error("Inf Evaluated");
+                
+                double deg_val = float_val;
+                if (isRad) {
+                    deg_val = float_val * 180.0 / 3.14159265358979323846;
+                }
+                
+                std::string sign = (deg_val < 0) ? "-" : "";
+                deg_val = std::abs(deg_val);
+                
+                long long d = static_cast<long long>(std::floor(deg_val));
+                double rem_m = (deg_val - d) * 60.0;
+                long long m = static_cast<long long>(std::floor(rem_m));
+                double s = (rem_m - m) * 60.0;
+                
+                if (s >= 59.99995) {
+                    s = 0.0;
+                    m += 1;
+                }
+                if (m >= 60) {
+                    m = 0;
+                    d += 1;
+                }
+                
+                std::ostringstream s_oss;
+                s_oss << std::fixed << std::setprecision(4) << s;
+                std::string s_str = s_oss.str();
+                s_str.erase(s_str.find_last_not_of('0') + 1, std::string::npos);
+                if (!s_str.empty() && s_str.back() == '.') s_str.pop_back();
+                
+                result_msg = sign + std::to_string(d) + "^{\\circ}" + 
+                             std::to_string(m) + "^{\\prime}" + 
+                             s_str + "^{\\prime\\prime}";
+                             
+            } catch (...) {
+                result_msg = SymEngine::latex(*expr.get_basic());
+            }
+        }
+        // =========================================================
+        // 正常计算分支开始 (分数/浮点/科学计数法等)
+        // =========================================================
+        else if (precision == -1 || precision == -3) {
             if (SymEngine::is_a<SymEngine::Integer>(*expr.get_basic())) {
                 std::string rawStr = expr.get_basic()->__str__();
                 if (rawStr.length() > 15) {
@@ -498,8 +510,6 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
     } catch (const CalcException& e) {
         result_msg = e.getFrontEndMessage();
     } catch (const std::exception& e) {
-        // 【终极异常翻译】：接住任何 SymEngine 在底层挣扎时抛出的系统级错误
-        // 例如：内存分配失败(OOM)、死循环被打破、极其夸张的多项式展开失败等，统一转化为"超时/算力超界"
         result_msg = "Error:Timeout"; 
     } catch (...) {
         result_msg = "Error:Unknown";

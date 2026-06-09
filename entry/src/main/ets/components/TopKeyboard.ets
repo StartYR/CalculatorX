@@ -1,123 +1,150 @@
 // entry/src/main/ets/components/TopKeyboard.ets
 import { topButtons, topShiftButtons, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
 import { PreferenceConfigs, CombinationOptions, PermutationOptions } from '../utils/CalculatorConfigs';
+import { keyContextMenuRegistry, CustomMenuItem } from '../utils/CalculatorConfigs';
+import { vibrator } from '@kit.SensorServiceKit'; // 新增：引入系统级震动马达
+
+@Component
+struct TopKeyItem {
+  btn: string | Resource = '';
+  btnIndex: number = 0;
+  @Link isShift: boolean;
+  @StorageProp(PreferenceConfigs.KEY_COMBINATION_SELECT) combSelect: number = 1;
+  @StorageProp(PreferenceConfigs.KEY_PERMUTATION_SELECT) permSelect: number = 1;
+
+  // 新增：读取全局震动配置
+  @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
+
+  // 新增：手动控制菜单的弹出状态
+  @State isMenuShow: boolean = false;
+
+  onKeyPress: (btn: string | Resource) => void = () => {};
+  onMenuSelect: (actionCode: string) => void = () => {};
+
+  @Builder
+  MenuBuilder() {
+    Menu() {
+      ForEach(keyContextMenuRegistry[this.btn as string] || [], (item: CustomMenuItem) => {
+        MenuItem({ content: item.value })
+          .onClick(() => {
+            this.isMenuShow = false; // 点击后立刻收起弹窗，状态归位
+            this.onMenuSelect(item.actionCode);
+          })
+      })
+    }
+  }
+
+  build() {
+    Column() {
+      if (this.btnIndex >= 6) {
+        Row() {
+          if (typeof topShiftButtons[this.btnIndex] === 'string') {
+            Text(topShiftButtons[this.btnIndex] as string)
+              .fontFamily(getFontFamily(topShiftButtons[this.btnIndex]))
+              .fontSize(15)
+              .fontColor('#ffac8100')
+              .textAlign(TextAlign.Center)
+              .width('100%')
+          } else {
+            Image(topShiftButtons[this.btnIndex] as Resource)
+              .width(24)
+              .height(24)
+              .fillColor('#ffac8100')
+              .objectFit(ImageFit.Contain)
+          }
+        }
+        .width('100%')
+        .height(16)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .margin({ bottom: 1 })
+      } else {
+        Row().width('100%').height(6)
+      }
+
+      Button() {
+        if (this.btn === 'nCr') {
+          Image(CombinationOptions[this.combSelect].icon).width('100%').height(36).objectFit(ImageFit.Contain).fillColor($r('sys.color.font_secondary'))
+        } else if (this.btn === 'nPr') {
+          Image(PermutationOptions[this.permSelect].icon).width('100%').height(36).objectFit(ImageFit.Contain).fillColor($r('sys.color.font_secondary'))
+        } else if (typeof this.btn === 'string') {
+          Text(this.btn).fontFamily(getFontFamily(this.btn)).fontSize(getFontSize(this.btn)).fontWeight(FontWeight.Medium).fontColor(getFontColor(this.btn))
+        } else {
+          Image(this.btn).width(36).height(36).fillColor($r('sys.color.font_secondary'))
+        }
+      }
+      .type(ButtonType.Normal)
+      .borderRadius(12)
+      .width('100%')
+      .layoutWeight(1)
+      .padding({ left: 2, right: 2, top: 0, bottom: 0 })
+      .backgroundColor(getBgColor(this.btn, this.isShift))
+      .shadow(ShadowStyle.OUTER_DEFAULT_SM)
+      .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
+      .borderColor($r('app.color.btn_highlight'))
+      .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
+      .stateStyles({
+        pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
+        normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
+      })
+      .onClick(() => {
+        if (this.btn === '⇧Shift') {
+          this.isShift = !this.isShift;
+          return;
+        }
+        if (this.isShift && topShiftButtons[this.btnIndex] !== '') {
+          this.onKeyPress(topShiftButtons[this.btnIndex]);
+          this.isShift = false;
+        } else {
+          this.onKeyPress(this.btn);
+        }
+      })
+      // —— 程序化状态控制与极速长按手势 ——
+      .bindContextMenu(this.isMenuShow, this.MenuBuilder, {
+        onDisappear: () => {
+          this.isMenuShow = false; // 监听点击空白处关闭的事件，防止状态不同步
+        }
+      })
+      .gesture(
+        LongPressGesture({ repeat: false, duration: 300 })
+          .onAction(() => {
+            if (typeof this.btn === 'string' && keyContextMenuRegistry[this.btn]) {
+              // 1. 触发像点按一样干脆的马达震动 (sharp)
+              if (this.hapticFeedback) {
+                vibrator.startVibration({
+                  type: 'preset',
+                  effectId: 'haptic.effect.sharp',
+                  count: 1
+                }, { usage: 'touch' }).catch(() => {});
+              }
+              // 2. 展开毛玻璃菜单
+              this.isMenuShow = true;
+            }
+          })
+      )
+    }
+    .width('100%')
+    .height('100%')
+  }
+}
 
 @Component
 export struct TopKeyboard {
   @Link isShift: boolean;
-  @StorageProp(PreferenceConfigs.KEY_COMBINATION_SELECT) combSelect: number = 1;
-  @StorageProp(PreferenceConfigs.KEY_PERMUTATION_SELECT) permSelect: number = 1;
   onKeyPress: (btn: string | Resource) => void = () => {};
+  onMenuSelect: (actionCode: string) => void = () => {};
 
   build() {
     Grid() {
       ForEach(topButtons, (btn: string | Resource, index: number) => {
         GridItem() {
-          Column() {
-            if (index >= 6) {
-              // Shift 副功能文本区
-              Row() {
-                if (typeof topShiftButtons[index] === 'string') {
-                  Text(topShiftButtons[index] as string)
-                    .fontFamily(getFontFamily(topShiftButtons[index]))
-                    .fontSize(15)
-                    .fontColor('#ffac8100')
-                    .textAlign(TextAlign.Center)
-                    .width('100%')
-                } else {
-                  Image(topShiftButtons[index] as Resource)
-                    .width(24)
-                    .height(24)
-                    .fillColor('#ffac8100')
-                    // .fillColor($r('sys.color.icon_secondary'))
-                    .objectFit(ImageFit.Contain)
-                }
-              }
-              .width('100%')
-              .height(16)
-              .justifyContent(FlexAlign.Center)
-              .alignItems(VerticalAlign.Center)
-              .margin({ bottom: 1 })
-            } else {
-              Row()
-                .width('100%')
-                .height(6)
-            }
-
-            // 主按钮
-            Button() {
-              if (btn === 'nCr') {
-                // 如果是组合键，使用全局配置里的 SVG 图标
-                Image(CombinationOptions[this.combSelect].icon)
-                  .width('100%')
-                  .height(36)
-                  .objectFit(ImageFit.Contain)
-                  .fillColor($r('sys.color.font_secondary'))
-
-              } else if (btn === 'nPr') {
-                // 如果是排列键，使用全局配置里的 SVG 图标
-                Image(PermutationOptions[this.permSelect].icon)
-                  .width('100%')
-                  .height(36)
-                  .objectFit(ImageFit.Contain)
-                  .fillColor($r('sys.color.font_secondary'))
-
-              } else if (typeof btn === 'string') {
-                // 普通字符串按键，渲染 Text
-                Text(btn)
-                  .fontFamily(getFontFamily(btn))
-                  .fontSize(getFontSize(btn))
-                  .fontWeight(FontWeight.Medium)
-                  .fontColor(getFontColor(btn))
-
-              } else {
-                // Image 按键
-                Image(btn)
-                  .width(36)
-                  .height(36)
-                  .fillColor($r('sys.color.font_secondary'))
-              }
-            }
-            .type(ButtonType.Normal)
-            .borderRadius(12)
-            .width('100%')
-            .layoutWeight(1)
-            .padding({ left: 2, right: 2, top: 0, bottom: 0 })
-            .backgroundColor(getBgColor(btn, this.isShift))
-
-            // 物理按键的 3D 静态渲染
-            .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-            .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
-            .borderColor($r('app.color.btn_highlight'))
-
-            // 系统级物理回弹与压暗光效
-            .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
-            .stateStyles({
-              pressed: {
-                .opacity(0.7)
-                .shadow(ShadowStyle.OUTER_DEFAULT_XS)
-              },
-              normal: {
-                .opacity(1.0)
-                .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-              }
-            })
-
-            .onClick(() => {
-              if (btn === '⇧Shift') {
-                this.isShift = !this.isShift;
-                return;
-              }
-              if (this.isShift && topShiftButtons[index] !== '') {
-                this.onKeyPress(topShiftButtons[index]);
-                this.isShift = false;
-              } else {
-                this.onKeyPress(btn);
-              }
-            })
-          }
-          .width('100%')
-          .height('100%')
+          TopKeyItem({
+            btn: btn,
+            btnIndex: index,
+            isShift: $isShift,
+            onKeyPress: this.onKeyPress,
+            onMenuSelect: this.onMenuSelect
+          })
         }
       })
     }

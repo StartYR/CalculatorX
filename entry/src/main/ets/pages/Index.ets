@@ -60,11 +60,13 @@ struct Index {
         Column() {
           TopKeyboard({
             isShift: $isShift,
-            onKeyPress: (btn: string | Resource): void => { this.handleButtonClick(btn); }
+            onKeyPress: (btn: string | Resource): void => { this.handleButtonClick(btn); },
+            onMenuSelect: (actionCode: string): void => { this.handleButtonLongPress(actionCode); }
           })
 
           BottomKeyboard({
-            onKeyPress: (btn: string | Resource): void => { this.handleButtonClick(btn); }
+            onKeyPress: (btn: string | Resource): void => { this.handleButtonClick(btn); },
+            onMenuSelect: (actionCode: string): void => { this.handleButtonLongPress(actionCode); }
           })
         }
         .width('100%')
@@ -188,6 +190,12 @@ struct Index {
             return `\\operatorname{nPr}\\left(${n},${r}\\right)`;
           };
 
+          // --- 度分秒 (DMS) 的正则替换器 ---
+          let repDMS3 = (m: string, d: string, mnt: string, s: string): string => { return `\\operatorname{dms}\\left(${d},${mnt},${s}\\right)`; };
+          let repDMS2 = (m: string, d: string, mnt: string): string => { return `\\operatorname{dms}\\left(${d},${mnt},0\\right)`; };
+          let repDMS_DS = (m: string, d: string, s: string): string => { return `\\operatorname{dms}\\left(${d},0,${s}\\right)`; };
+          let repDMS1 = (m: string, d: string): string => { return `\\operatorname{dms}\\left(${d},0,0\\right)`; };
+
           let cleanedLatex = rawLatex
           // --- 组合 (C) 的 5 种样式防御 ---
             .replace(/\\mathrm\{C\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))\^(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repC)
@@ -201,7 +209,17 @@ struct Index {
             .replace(/\\mathrm\{P\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))\^(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repP)
             .replace(/\{\}\^(?:\{(.+?)\}|([a-zA-Z0-9.]))\\mathrm\{P\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repP)
             .replace(/\{\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))\\mathrm\{P\}_(?:\{(.+?)\}|([a-zA-Z0-9.]))/g, repP)
-            .replace(/\\mathrm\{P\}\\left\((.+?),\s*(.+?)\\right\)/g, repFlatP);
+            .replace(/\\mathrm\{P\}\\left\((.+?),\s*(.+?)\\right\)/g, repFlatP)
+
+            // --- 度分秒拦截 ---
+            // 匹配完整的 12°34'56"
+            .replace(/([0-9.]+)\^\{\\circ\}\s*([0-9.]+)\^\{\\prime\}\s*([0-9.]+)\^\{\\prime\s*\\prime\}/g, repDMS3)
+            // 匹配缺秒的 12°34' (负向先行断言防止误杀)
+            .replace(/([0-9.]+)\^\{\\circ\}\s*([0-9.]+)\^\{\\prime\}(?!\s*\\prime)/g, repDMS2)
+            // 匹配缺分的 12°56"
+            .replace(/([0-9.]+)\^\{\\circ\}\s*([0-9.]+)\^\{\\prime\s*\\prime\}/g, repDMS_DS)
+            // 匹配只有度的 12°
+            .replace(/([0-9.]+)\^\{\\circ\}/g, repDMS1);
 
           // 给反斜杠和引号加上双重转义，防止破坏 JS 边界
           let safeLatex = cleanedLatex.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, "\\n");
@@ -327,6 +345,8 @@ struct Index {
         case 'GCD':      latexChar = '\\gcd\\left(\\placeholder{}, \\placeholder{}\\right)'; break;
         case 'LCM':      latexChar = '\\operatorname{lcm}\\left(\\placeholder{}, \\placeholder{}\\right)'; break;
 
+        case '° \' \"':  this.webviewController.runJavaScript('insertDMS()'); return;
+
         case 'Ans':
           if (this.lastAnsLatex === "0") {
             latexChar = "0"; // 初始状态
@@ -361,8 +381,44 @@ struct Index {
     }
   }
 
+  // 长按菜单指令分发
+  handleButtonLongPress(actionCode: string) {
+    if (!this.lastValidJson) return;
+
+    let cppPrecisionMode = -1;
+
+    switch (actionCode) {
+      case 'LONG_SD_DEC':   // 强制度分秒转回小数
+        this.isTempDecimal = true;
+        cppPrecisionMode = (this.decimalPrecision === 16 ? -2 : this.decimalPrecision);
+        break;
+      case 'LONG_SD_FRAC':  // 强制假分数
+        this.isTempDecimal = false;
+        cppPrecisionMode = -3;
+        break;
+      case 'LONG_SD_MIXED': // 强制带分数
+        this.isTempDecimal = false;
+        cppPrecisionMode = -4;
+        break;
+      case 'LONG_SD_DMS':   // 💡 核心：强制逆向度分秒格式化渲染！
+        cppPrecisionMode = -5; // 将全新的控制码发送给 C++
+        break;
+      default:
+        return;
+    }
+
+    // 调用 C++ 引擎重新渲染形态
+    let cppResponse: string = testNapi.calculate(this.lastValidJson, this.isRad, cppPrecisionMode);
+    if (cppResponse.includes("Error")) {
+      console.error("C++ 转换错误: " + cppResponse);
+    }
+    // 让前端屏幕显示最新渲染出来的形态
+    this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
+  }
+
   insertToWeb(str: string) {
     let safeString = JSON.stringify(str);
     this.webviewController.runJavaScript(`insertMath(${safeString})`);
   }
 }
+

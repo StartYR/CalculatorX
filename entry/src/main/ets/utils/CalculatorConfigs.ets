@@ -180,3 +180,20 @@ export class PreferenceConfigs {
   static readonly KEY_PERMUTATION_SELECT = 'permutationSelectIndex';
   static readonly KEY_HAPTIC_FEEDBACK = 'hapticFeedback';
 }
+
+// 长按菜单
+export interface CustomMenuItem {
+  value: string;
+  actionCode: string; // 传给后端的独立控制码
+}
+
+export const keyContextMenuRegistry: Record<string, CustomMenuItem[]> = {
+  'S⇄D': [
+    { value: '标准小数', actionCode: 'LONG_SD_DEC' },
+    { value: '假分数 (分式)', actionCode: 'LONG_SD_FRAC' },
+    { value: '带分数', actionCode: 'LONG_SD_MIXED' },
+    { value: '度分秒 (DMS)', actionCode: 'LONG_SD_DMS' }
+  ],
+  // 🔮 以后其他按键（例如 Ans、sin、log）需要长按时，直接在这里追加一行即可！
+  // 'Ans': [{ value: '清除历史记录', actionCode: 'CLEAR_HISTORY' }]
+};
