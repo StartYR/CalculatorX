@@ -67,7 +67,7 @@ export const PermutationOptions: MathStyleOption[] = [
 
 export const topShiftButtons: Array<string | Resource> = [
   '', '', '', '', '', '',
-  '', '', 'd/dx', icon_indef_integral, 'GCD', 'LCM',
+  '', '', '', 'd/dx','gcd', 'lcm',
   '', '', '', 'CONST', icon_e_power, 'lg',
   'mod', icon_sqrt3, '%', icon_power3, icon_comma, icon_inverse,
   'sin⁻¹', 'cos⁻¹', 'tan⁻¹', 'x', 'y', 'z',
