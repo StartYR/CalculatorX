@@ -333,9 +333,7 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
         if (op == "Integrate") {
             if (ast.size() == 3) {
                 
-                // ==========================================
                 // 路线 A：不定积分 (Indefinite Integration)
-                // ==========================================
                 if (ast[2].is_string()) {
                     std::string var_name = ast[2].get<std::string>();
                     bool dummy = false;
@@ -356,9 +354,7 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                     }
                 }
                 
-                // ==========================================
-                // 路线 B：定积分 (Definite Integration)
-                // ==========================================
+                // 定积分 (Definite Integration)
                 else if (ast[2].is_array() && ast[2][0] == "Tuple") {
                     std::string var_name = "x";
                     if (ast[2].size() > 1 && ast[2][1].is_string()) var_name = ast[2][1].get<std::string>();
@@ -369,23 +365,19 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                     Expression upper_expr = parseAST(ast[2][3], isRad, true, dummy);
                     auto sym_var = SymEngine::symbol(var_name);
 
-                    // ----------------------------------------------------
-                    // 兜底机制第一层：里施算法 / 符号解析 (精确解)
-                    // ----------------------------------------------------
+                    // 里施算法 / 符号解析 (精确解)
                     try {
-                        // 同样预留接口：若未来有了原函数 F(x)，便可使用牛顿-莱布尼茨公式
+                        // 预留占位接口：若未来有了原函数 F(x)，便可使用牛顿-莱布尼茨公式
                         // SymEngine::map_basic_basic subs_map_a, subs_map_b;
                         // subs_map_a[sym_var] = lower_expr.get_basic();
                         // subs_map_b[sym_var] = upper_expr.get_basic();
                         // Expression exact_result = Expression(F_x->subs(subs_map_b)) - Expression(F_x->subs(subs_map_a));
                         // return exact_result;
                         
-                        // 目前直接触发异常，强行将控制流导向第二层数值兜底！
+                        // 目前直接触发异常，转换辛普森算法
                         throw std::runtime_error("Force Numerical Fallback");
                     } 
-                    // ----------------------------------------------------
-                    // 兜底机制第二层：辛普森 1/3 极速数值积分 (近似解)
-                    // ----------------------------------------------------
+                    // 辛普森 1/3 极速数值积分 (近似解)
                     catch (...) {
                         try {
                             double a = SymEngine::eval_double(lower_expr);
@@ -506,11 +498,17 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
     std::string result_msg;
     try {
         json ast = json::parse(json_str);
-        if (ast.is_string()) ast = json::parse(ast.get<std::string>()); 
+        if (ast.is_string()) {
+            std::string inner_str = ast.get<std::string>();
+            // 只有当它看起来像被二次序列化的 JSON 数组或对象时，才尝试二次解析
+            if (!inner_str.empty() && (inner_str[0] == '[' || inner_str[0] == '{')) {
+                ast = json::parse(inner_str);
+            }
+        }
         
         bool isGlobalExact = (precision == -3 || precision == -4);
         
-        // 【核心接线】：定义全局 DMS 状态墙，传递给 parseAST 监听
+        // 定义全局 DMS 状态墙，传递给 parseAST 监听
         bool autoDMS = false; 
         Expression expr = parseAST(ast, isRad, isGlobalExact, autoDMS);
         
@@ -520,7 +518,7 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         }
 
         // =========================================================
-        // 【优先级置顶】：如果是长按强制(-5)，或者处于自动模式(-1)且树中带有 DMS 标记
+        // 如果是长按强制(-5)，或者处于自动模式(-1)且树中带有 DMS 标记
         // =========================================================
         if (precision == -5 || (precision == -1 && autoDMS)) {
             try {
