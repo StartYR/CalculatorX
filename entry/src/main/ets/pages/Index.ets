@@ -339,6 +339,7 @@ struct Index {
         case 'cos⁻¹':    latexChar = "\\arccos\\left(\\placeholder{}\\right)"; break;
         case 'tan⁻¹':    latexChar = "\\arctan\\left(\\placeholder{}\\right)"; break;
         case 'integral': latexChar = "\\int_{\\placeholder{}}^{\\placeholder{}}\\left(\\placeholder{}\\right)d\\placeholder{}"; break;
+        case 'indef_integral': latexChar = "\\int\\left(\\placeholder{}\\right)d\\placeholder{}"; break;
         case 'sum':      latexChar = "\\sum_{x=\\placeholder{}}^{\\placeholder{}}\\left(\\placeholder{}\\right)"; break;
         case 'product':  latexChar = "\\prod_{x=\\placeholder{}}^{\\placeholder{}}\\left(\\placeholder{}\\right)"; break;
         case 'd/dx':     latexChar = "\\frac{d}{dx}\\left(\\placeholder{}\\right)"; break;

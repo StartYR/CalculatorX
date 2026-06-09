@@ -329,50 +329,87 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
         }
 
         // === 微积分：定积分 (Numerical Integration) ===
+        // === 7. 微积分：积分 (Integration) 双轨制引擎 ===
         if (op == "Integrate") {
-            if (ast.size() == 3 && ast[2].is_array() && ast[2][0] == "Tuple") {
-                // 1. 获取微分元 (通常是 x)
-                std::string var_name = "x";
-                if (ast[2].size() > 1 && ast[2][1].is_string()) var_name = ast[2][1].get<std::string>();
-
-                // 2. 解析主体和积分界限
-                bool dummy = false;
-                Expression body = parseAST(ast[1], isRad, true, dummy);
-                Expression lower_expr = parseAST(ast[2][2], isRad, true, dummy);
-                Expression upper_expr = parseAST(ast[2][3], isRad, true, dummy);
-
-                auto sym_var = SymEngine::symbol(var_name);
-
-                try {
-                    // 求出上下限的具体数值
-                    double a = SymEngine::eval_double(lower_expr);
-                    double b = SymEngine::eval_double(upper_expr);
-
-                    // 3. 采用辛普森 1/3 算法 (Simpson's 1/3 Rule) 进行极速高精度数值积分
-                    // （卡西欧等专业实体计算器底层同样采用此算法来对抗无法求出原函数的顽固积分）
-                    int N = 1000; // 迭代 1000 次，保证精度且在手机端仅需几毫秒
-                    double h = (b - a) / N;
-                    double sum = 0.0;
-
-                    for (int i = 0; i <= N; ++i) {
-                        double x_i = a + i * h;
+            if (ast.size() == 3) {
+                
+                // ==========================================
+                // 路线 A：不定积分 (Indefinite Integration)
+                // ==========================================
+                if (ast[2].is_string()) {
+                    std::string var_name = ast[2].get<std::string>();
+                    bool dummy = false;
+                    Expression body = parseAST(ast[1], isRad, true, dummy);
+                    auto sym_var = SymEngine::symbol(var_name);
+                    
+                    try {
+                        // ⚠️ 占位说明：由于 SymEngine C++ 核心库未暴露高级符号积分 API，
+                        // 这里预留了完美架构。如果你未来编译了带积分扩展的包，可以在这里调用：
+                        // Expression F_x = SymEngine::integrate(body.get_basic(), sym_var);
+                        // return F_x + Expression(SymEngine::symbol("C")); // 贴心地加上常数 C
                         
-                        // 动态代入变量 (将表达式中的 x 替换为当前循环的具体数字 x_i)
-                        SymEngine::map_basic_basic subs_map;
-                        subs_map[sym_var] = Expression(x_i).get_basic();
-                        
-                        // 计算当前坐标下的 Y 值
-                        double y_i = SymEngine::eval_double(Expression(body.get_basic()->subs(subs_map)));
-
-                        // 权重分配：首尾为1，奇数为4，偶数为2
-                        double weight = (i == 0 || i == N) ? 1.0 : ((i % 2 == 1) ? 4.0 : 2.0);
-                        sum += weight * y_i;
+                        // 目前为了防止 C++ 编译报错，我们主动抛出异常，交给前端渲染特定提示
+                        throw std::runtime_error("Symbolic integration not implemented in C++ core");
+                    } catch (...) {
+                        // 抛出特定的语法错误，前端界面可以直接显示 "Error:NoIntegralAlg"
+                        throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Error:NoIntegralAlg");
                     }
-                    
-                    return Expression(sum * h / 3.0);
-                    
-                } catch (...) {
-                    throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Integration failed or bounds invalid");
+                }
+                
+                // ==========================================
+                // 路线 B：定积分 (Definite Integration)
+                // ==========================================
+                else if (ast[2].is_array() && ast[2][0] == "Tuple") {
+                    std::string var_name = "x";
+                    if (ast[2].size() > 1 && ast[2][1].is_string()) var_name = ast[2][1].get<std::string>();
+
+                    bool dummy = false;
+                    Expression body = parseAST(ast[1], isRad, true, dummy);
+                    Expression lower_expr = parseAST(ast[2][2], isRad, true, dummy);
+                    Expression upper_expr = parseAST(ast[2][3], isRad, true, dummy);
+                    auto sym_var = SymEngine::symbol(var_name);
+
+                    // ----------------------------------------------------
+                    // 兜底机制第一层：里施算法 / 符号解析 (精确解)
+                    // ----------------------------------------------------
+                    try {
+                        // 同样预留接口：若未来有了原函数 F(x)，便可使用牛顿-莱布尼茨公式
+                        // SymEngine::map_basic_basic subs_map_a, subs_map_b;
+                        // subs_map_a[sym_var] = lower_expr.get_basic();
+                        // subs_map_b[sym_var] = upper_expr.get_basic();
+                        // Expression exact_result = Expression(F_x->subs(subs_map_b)) - Expression(F_x->subs(subs_map_a));
+                        // return exact_result;
+                        
+                        // 目前直接触发异常，强行将控制流导向第二层数值兜底！
+                        throw std::runtime_error("Force Numerical Fallback");
+                    } 
+                    // ----------------------------------------------------
+                    // 兜底机制第二层：辛普森 1/3 极速数值积分 (近似解)
+                    // ----------------------------------------------------
+                    catch (...) {
+                        try {
+                            double a = SymEngine::eval_double(lower_expr);
+                            double b = SymEngine::eval_double(upper_expr);
+
+                            int N = 1000;
+                            double h = (b - a) / N;
+                            double sum = 0.0;
+
+                            for (int i = 0; i <= N; ++i) {
+                                double x_i = a + i * h;
+                                SymEngine::map_basic_basic subs_map;
+                                subs_map[sym_var] = Expression(x_i).get_basic();
+                                double y_i = SymEngine::eval_double(Expression(body.get_basic()->subs(subs_map)));
+                                
+                                // 权重分配：首尾为 1，奇数为 4，偶数为 2
+                                double weight = (i == 0 || i == N) ? 1.0 : ((i % 2 == 1) ? 4.0 : 2.0);
+                                sum += weight * y_i;
+                            }
+                            return Expression(sum * h / 3.0);
+                        } catch (...) {
+                            throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Integration bounds invalid or body unresolvable");
+                        }
+                    }
                 }
             }
             throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid Integral format");
