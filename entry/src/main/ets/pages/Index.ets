@@ -11,6 +11,8 @@ import { RoutePath } from '../utils/CalculatorConfigs';
 import router from '@ohos.router';
 import { PreferenceConfigs } from '../utils/CalculatorConfigs';
 
+// PersistentStorage.persistProp('angleModeIndex', 0);
+
 @Entry
 @Component
 struct Index {
@@ -22,6 +24,7 @@ struct Index {
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
   @StorageProp(PreferenceConfigs.KEY_COMBINATION_SELECT) combSelect: number = 1;
   @StorageProp(PreferenceConfigs.KEY_PERMUTATION_SELECT) permSelect: number = 1;
+  @StorageLink('isRad') angleModeIndex: number = 0;
   webviewController: web_webview.WebviewController = new web_webview.WebviewController();
 
   @State isShift: boolean = false;
@@ -304,6 +307,8 @@ struct Index {
     } else if (action === '⇨') {
       this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveToNextChar')`);
     } else if (action === 'R/D') {
+      this.isRad = this.isRad === false ? true : false;// 状态翻转：0 变 1，1 变 0
+      // this.playVibration();
       return;
     } else {
       let latexChar = action;
