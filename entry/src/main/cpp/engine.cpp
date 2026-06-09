@@ -262,6 +262,151 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
             return num / den;
         }
         
+        // === 作用域与迭代：求和 (Sum) 与求积 (Product) ===
+        if (op == "Sum" || op == "Product") {
+            // 确保具有足够的参数，且边界是一个 Tuple
+            if (ast.size() == 3 && ast[2].is_array() && ast[2].size() >= 4 && ast[2][0] == "Tuple") {
+                
+                // 1. 提取迭代变量名 (通常是 "x", "n", "i" 等)
+                std::string var_name = "x";
+                if (ast[2][1].is_string()) var_name = ast[2][1].get<std::string>();
+                
+                // 2. 解析上下限，并求出具体的整数值
+                Expression lower_expr = parseAST(ast[2][2], isRad, true, hasDMS);
+                Expression upper_expr = parseAST(ast[2][3], isRad, true, hasDMS);
+                
+                long long start = 0, end = 0;
+                try {
+                    start = static_cast<long long>(std::floor(SymEngine::eval_double(lower_expr)));
+                    end = static_cast<long long>(std::floor(SymEngine::eval_double(upper_expr)));
+                } catch (...) {
+                    throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Limits must be calculable numbers");
+                }
+                
+                // 如果下限大于上限，数学上求和为 0，求积为 1
+                if (end < start) return (op == "Sum") ? Expression(0) : Expression(1);
+                
+                // 3. 防止恶意大循环导致死机
+                if (end - start > 10000) {
+                    throw CalcException(CalcErrorCode::TIMEOUT_ERROR, "Iteration limit exceeded");
+                }
+                
+                // 4. 解析主体表达式 (此时它内部带有一个未赋值的符号 var_name)
+                Expression body = parseAST(ast[1], isRad, true, hasDMS);
+                
+                // 5. 初始化累加/累乘器
+                Expression total = (op == "Sum") ? Expression(0) : Expression(1);
+                SymEngine::RCP<const SymEngine::Symbol> sym_var = SymEngine::symbol(var_name);
+                
+                // 6. C++ 极速循环代入
+                for (long long i = start; i <= end; ++i) {
+                    // 创建代入字典：让表达式中的变量 (如 x) 替换为当前的数字 i
+                    SymEngine::map_basic_basic subs_map;
+                    subs_map[sym_var] = Expression(i).get_basic();
+                    
+                    // 进行替换并计算当前项
+                    Expression evaluated_term(body.get_basic()->subs(subs_map));
+                    
+                    // 累加或累乘
+                    if (op == "Sum") total += evaluated_term;
+                    else total *= evaluated_term;
+                }
+                
+                return total;
+            }
+            throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid Sum/Product format");
+        }
+        
+        // === 微积分：求导 (Derivative) ===
+        // 这里直接调用 SymEngine 硬核的符号求导能力！
+        if (op == "diff" || op == "Diff") {
+            if (ast.size() == 2) {
+                bool dummy = false;
+                Expression body = parseAST(ast[1], isRad, true, dummy);
+                // 默认对 x 进行完美符号求导
+                return Expression(body.get_basic()->diff(SymEngine::symbol("x")));
+            }
+        }
+
+        // === 微积分：定积分 (Numerical Integration) ===
+        // === 7. 微积分：积分 (Integration) 双轨制引擎 ===
+        if (op == "Integrate") {
+            if (ast.size() == 3) {
+                
+                // 路线 A：不定积分 (Indefinite Integration)
+                if (ast[2].is_string()) {
+                    std::string var_name = ast[2].get<std::string>();
+                    bool dummy = false;
+                    Expression body = parseAST(ast[1], isRad, true, dummy);
+                    auto sym_var = SymEngine::symbol(var_name);
+                    
+                    try {
+                        // ⚠️ 占位说明：由于 SymEngine C++ 核心库未暴露高级符号积分 API，
+                        // 这里预留了完美架构。如果你未来编译了带积分扩展的包，可以在这里调用：
+                        // Expression F_x = SymEngine::integrate(body.get_basic(), sym_var);
+                        // return F_x + Expression(SymEngine::symbol("C")); // 贴心地加上常数 C
+                        
+                        // 目前为了防止 C++ 编译报错，我们主动抛出异常，交给前端渲染特定提示
+                        throw std::runtime_error("Symbolic integration not implemented in C++ core");
+                    } catch (...) {
+                        // 抛出特定的语法错误，前端界面可以直接显示 "Error:NoIntegralAlg"
+                        throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Error:NoIntegralAlg");
+                    }
+                }
+                
+                // 定积分 (Definite Integration)
+                else if (ast[2].is_array() && ast[2][0] == "Tuple") {
+                    std::string var_name = "x";
+                    if (ast[2].size() > 1 && ast[2][1].is_string()) var_name = ast[2][1].get<std::string>();
+
+                    bool dummy = false;
+                    Expression body = parseAST(ast[1], isRad, true, dummy);
+                    Expression lower_expr = parseAST(ast[2][2], isRad, true, dummy);
+                    Expression upper_expr = parseAST(ast[2][3], isRad, true, dummy);
+                    auto sym_var = SymEngine::symbol(var_name);
+
+                    // 里施算法 / 符号解析 (精确解)
+                    try {
+                        // 预留占位接口：若未来有了原函数 F(x)，便可使用牛顿-莱布尼茨公式
+                        // SymEngine::map_basic_basic subs_map_a, subs_map_b;
+                        // subs_map_a[sym_var] = lower_expr.get_basic();
+                        // subs_map_b[sym_var] = upper_expr.get_basic();
+                        // Expression exact_result = Expression(F_x->subs(subs_map_b)) - Expression(F_x->subs(subs_map_a));
+                        // return exact_result;
+                        
+                        // 目前直接触发异常，转换辛普森算法
+                        throw std::runtime_error("Force Numerical Fallback");
+                    } 
+                    // 辛普森 1/3 极速数值积分 (近似解)
+                    catch (...) {
+                        try {
+                            double a = SymEngine::eval_double(lower_expr);
+                            double b = SymEngine::eval_double(upper_expr);
+
+                            int N = 1000;
+                            double h = (b - a) / N;
+                            double sum = 0.0;
+
+                            for (int i = 0; i <= N; ++i) {
+                                double x_i = a + i * h;
+                                SymEngine::map_basic_basic subs_map;
+                                subs_map[sym_var] = Expression(x_i).get_basic();
+                                double y_i = SymEngine::eval_double(Expression(body.get_basic()->subs(subs_map)));
+                                
+                                // 权重分配：首尾为 1，奇数为 4，偶数为 2
+                                double weight = (i == 0 || i == N) ? 1.0 : ((i % 2 == 1) ? 4.0 : 2.0);
+                                sum += weight * y_i;
+                            }
+                            return Expression(sum * h / 3.0);
+                        } catch (...) {
+                            throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Integration bounds invalid or body unresolvable");
+                        }
+                    }
+                }
+            }
+            throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid Integral format");
+        }
+        
         return Expression(SymEngine::symbol("Unknown\\_" + op));
     }
     return Expression(SymEngine::symbol("Invalid\\_Node"));
@@ -353,11 +498,17 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
     std::string result_msg;
     try {
         json ast = json::parse(json_str);
-        if (ast.is_string()) ast = json::parse(ast.get<std::string>()); 
+        if (ast.is_string()) {
+            std::string inner_str = ast.get<std::string>();
+            // 只有当它看起来像被二次序列化的 JSON 数组或对象时，才尝试二次解析
+            if (!inner_str.empty() && (inner_str[0] == '[' || inner_str[0] == '{')) {
+                ast = json::parse(inner_str);
+            }
+        }
         
         bool isGlobalExact = (precision == -3 || precision == -4);
         
-        // 【核心接线】：定义全局 DMS 状态墙，传递给 parseAST 监听
+        // 定义全局 DMS 状态墙，传递给 parseAST 监听
         bool autoDMS = false; 
         Expression expr = parseAST(ast, isRad, isGlobalExact, autoDMS);
         
@@ -367,7 +518,7 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         }
 
         // =========================================================
-        // 【优先级置顶】：如果是长按强制(-5)，或者处于自动模式(-1)且树中带有 DMS 标记
+        // 如果是长按强制(-5)，或者处于自动模式(-1)且树中带有 DMS 标记
         // =========================================================
         if (precision == -5 || (precision == -1 && autoDMS)) {
             try {

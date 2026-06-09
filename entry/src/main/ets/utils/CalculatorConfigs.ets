@@ -4,6 +4,7 @@
 export const icon_sum: Resource = $rawfile('math-icons/icon_sum.svg');
 export const icon_product: Resource = $rawfile('math-icons/icon_product.svg');
 export const icon_integral: Resource = $rawfile('math-icons/icon_integral.svg');
+export const icon_indef_integral: Resource = $rawfile('math-icons/icon_indef_integral.svg');
 export const icon_abs: Resource = $rawfile('math-icons/icon_abs.svg');
 export const icon_sqrt: Resource = $rawfile('math-icons/icon_sqrt.svg');
 export const icon_sqrt3: Resource = $rawfile('math-icons/icon_sqrt3.svg');
@@ -17,6 +18,7 @@ export const icon_inverse: Resource = $rawfile('math-icons/icon_inverse.svg');
 export const icon_e_power: Resource = $rawfile('math-icons/icon_e_power.svg');
 export const icon_comma: Resource = $rawfile('math-icons/icon_comma.svg');
 export const icon_fact: Resource = $rawfile('math-icons/icon_fact.svg');
+
 
 export class MathIcons {
   // 组合 (Combination)
@@ -65,15 +67,15 @@ export const PermutationOptions: MathStyleOption[] = [
 
 export const topShiftButtons: Array<string | Resource> = [
   '', '', '', '', '', '',
-  '', '', '', 'GCD', 'LCM', 'd/dx',
-  '', '', '', 'CONST', icon_e_power, 'lg',
+  '', '', '', 'd/dx','gcd', 'lcm',
+  '', '', '', '', icon_e_power, 'lg',
   'mod', icon_sqrt3, '%', icon_power3, icon_comma, icon_inverse,
   'sin⁻¹', 'cos⁻¹', 'tan⁻¹', 'x', 'y', 'z',
 ];
 
 export const topButtons: Array<string | Resource> = [
   '⇧Shift', 'R/D', '⇦', '⇨', 'S⇄D', 'i',
-  'lim', '∞', '° \' \"', icon_sum, icon_product, icon_integral,
+  '° \' \"', '∞', 'lim', icon_integral, icon_sum, icon_product,
   icon_fact, 'nCr', 'nPr', 'e', 'ln', 'log',
   icon_abs, icon_sqrt, icon_sqrtx, icon_power2, icon_power, icon_fraction,
   'sin', 'cos', 'tan', 'π', '(', ')',
@@ -100,6 +102,8 @@ export function getActionId(btn: string | Resource): string {
   if (btn === icon_sum) return 'sum';
   if (btn === icon_product) return 'product';
   if (btn === icon_integral) return 'integral';
+  if (btn === icon_indef_integral) return 'indef_integral';
+
   if (btn === icon_exp) return 'icon_exp';
   if (btn === icon_inverse) return 'inverse';
   if (btn === icon_e_power) return 'e_power';
@@ -189,11 +193,12 @@ export interface CustomMenuItem {
 
 export const keyContextMenuRegistry: Record<string, CustomMenuItem[]> = {
   'S⇄D': [
-    { value: '标准小数', actionCode: 'LONG_SD_DEC' },
-    { value: '假分数 (分式)', actionCode: 'LONG_SD_FRAC' },
+    { value: '小数', actionCode: 'LONG_SD_DEC' },
+    { value: '分数', actionCode: 'LONG_SD_FRAC' },
     { value: '带分数', actionCode: 'LONG_SD_MIXED' },
-    { value: '度分秒 (DMS)', actionCode: 'LONG_SD_DMS' }
+    { value: '度分秒', actionCode: 'LONG_SD_DMS' }
   ],
+
   // 🔮 以后其他按键（例如 Ans、sin、log）需要长按时，直接在这里追加一行即可！
   // 'Ans': [{ value: '清除历史记录', actionCode: 'CLEAR_HISTORY' }]
 };
