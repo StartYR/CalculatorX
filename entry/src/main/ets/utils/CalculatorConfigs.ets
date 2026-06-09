@@ -4,6 +4,7 @@
 export const icon_sum: Resource = $rawfile('math-icons/icon_sum.svg');
 export const icon_product: Resource = $rawfile('math-icons/icon_product.svg');
 export const icon_integral: Resource = $rawfile('math-icons/icon_integral.svg');
+export const icon_indef_integral: Resource = $rawfile('math-icons/icon_indef_integral.svg');
 export const icon_abs: Resource = $rawfile('math-icons/icon_abs.svg');
 export const icon_sqrt: Resource = $rawfile('math-icons/icon_sqrt.svg');
 export const icon_sqrt3: Resource = $rawfile('math-icons/icon_sqrt3.svg');
@@ -17,6 +18,7 @@ export const icon_inverse: Resource = $rawfile('math-icons/icon_inverse.svg');
 export const icon_e_power: Resource = $rawfile('math-icons/icon_e_power.svg');
 export const icon_comma: Resource = $rawfile('math-icons/icon_comma.svg');
 export const icon_fact: Resource = $rawfile('math-icons/icon_fact.svg');
+
 
 export class MathIcons {
   // 组合 (Combination)
@@ -65,7 +67,7 @@ export const PermutationOptions: MathStyleOption[] = [
 
 export const topShiftButtons: Array<string | Resource> = [
   '', '', '', '', '', '',
-  '', '', 'd/dx', '', 'GCD', 'LCM',
+  '', '', 'd/dx', icon_indef_integral, 'GCD', 'LCM',
   '', '', '', 'CONST', icon_e_power, 'lg',
   'mod', icon_sqrt3, '%', icon_power3, icon_comma, icon_inverse,
   'sin⁻¹', 'cos⁻¹', 'tan⁻¹', 'x', 'y', 'z',
@@ -100,6 +102,8 @@ export function getActionId(btn: string | Resource): string {
   if (btn === icon_sum) return 'sum';
   if (btn === icon_product) return 'product';
   if (btn === icon_integral) return 'integral';
+  if (btn === icon_indef_integral) return 'indef_integral';
+
   if (btn === icon_exp) return 'icon_exp';
   if (btn === icon_inverse) return 'inverse';
   if (btn === icon_e_power) return 'e_power';
