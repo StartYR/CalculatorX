@@ -30,9 +30,7 @@ void replaceAll(std::string& str, const std::string& from, const std::string& to
     }
 }
 
-// =======================================================
-// ⚔️ Giac 灭霸引擎专区 (专门处理极限等高阶数学推导)
-// =======================================================
+// Giac 引擎 (处理极限等高阶数学推导)
 std::string evaluateWithGiac(const std::string& mathExpression) {
     try {
         giac::context ctx;
@@ -56,7 +54,6 @@ std::string evaluateWithGiac(const std::string& mathExpression) {
 
 std::string buildGiacCommand(const json& ast) {
     try {
-        // 确保匹配了前端 MathJSON 的极限格式: ["Limit", ["Function", expr, var], target]
         if (ast.is_array() && ast.size() >= 3 && ast[0] == "Limit") {
             json funcNode = ast[1]; 
             json targetNode = ast[2]; 
@@ -89,7 +86,7 @@ std::string buildGiacCommand(const json& ast) {
             replaceAll(targetStr, "Infinity", "infinity");
             replaceAll(targetStr, "\\infty", "infinity");
 
-            // 4. 使用 latex() 函数包裹，让 Giac 计算后直接吐出供屏幕渲染的 LaTeX！
+            // 4. 使用 latex() 函数包裹，让 Giac 计算后直接返回供屏幕渲染的 LaTeX
             return "latex(limit(" + exprStr + ", " + varStr + ", " + targetStr + "))";
         }
     } catch (...) {
@@ -99,9 +96,6 @@ std::string buildGiacCommand(const json& ast) {
 }
 
 
-// =======================================================
-// ⚡ SymEngine 极速常规引擎专区 (基础计算、微积分数值兜底)
-// =======================================================
 Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS) {
     if (ast.is_number()) {
         double val = ast.get<double>();
@@ -133,6 +127,8 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
         if (s == "Pi") return Expression(SymEngine::pi);
         if (s == "ExponentialE" || s == "e") return Expression(SymEngine::E);
         if (s == "NaN") throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Frontend folded to NaN");
+        if (s == "PositiveInfinity" || s == "Infinity") return Expression(SymEngine::symbol("infinity"));
+        if (s == "NegativeInfinity") return -Expression(SymEngine::symbol("infinity"));
         return Expression(SymEngine::symbol(s));
     }
     
@@ -197,6 +193,11 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
             throw CalcException(CalcErrorCode::DMS_FORMAT_ERROR, "Invalid DMS Length");
         }
 
+        if (op == "Delimiter") {
+            if (ast.size() > 1) return parseAST(ast[1], isRad, preferExact, hasDMS);
+            return Expression(0);
+        }
+        
         if (op == "Add") {
             Expression sum(0);
             for (size_t i = 1; i < ast.size(); ++i) sum += parseAST(ast[i], isRad, preferExact, hasDMS);
@@ -378,20 +379,73 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                 return Expression(body.get_basic()->diff(SymEngine::symbol("x")));
             }
         }
-
+        
+        // === 微积分：极限 (Limit) ===
+        if (op == "Limit") {
+            if (ast.size() >= 3) {
+                json funcNode = ast[1];
+                json targetNode = ast[2];
+                std::string varStr = "x";
+                
+                if (funcNode.is_array() && funcNode.size() >= 3 && funcNode[0] == "Function") {
+                    bool dummy = false;
+                    Expression body = parseAST(funcNode[1], isRad, true, dummy);
+                    if (funcNode[2].is_string()) varStr = funcNode[2].get<std::string>();
+                    Expression targetExpr = parseAST(targetNode, isRad, true, dummy);
+                    
+                    std::string exprStr = body.get_basic()->__str__();
+                    std::string targetStr = targetExpr.get_basic()->__str__();
+                    
+                    replaceAll(exprStr, "**", "^");
+                    replaceAll(targetStr, "**", "^");
+                    
+                    // 呼叫 Giac
+                    std::string giacCmd = "latex(limit(" + exprStr + ", " + varStr + ", " + targetStr + "))";
+                    std::string rawResult = evaluateWithGiac(giacCmd);
+                    
+                    if (rawResult.size() >= 2 && rawResult.front() == '"' && rawResult.back() == '"') {
+                        rawResult = rawResult.substr(1, rawResult.size() - 2);
+                    }
+                    return Expression(SymEngine::symbol("MAGICGIACRESULT" + rawResult));
+                }
+            }
+            throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid Limit format");
+        }
+        
+        // === 微积分：积分 (Integration) 双轨制引擎 ===
         if (op == "Integrate") {
             if (ast.size() == 3) {
+                
+                // 路线 A：不定积分 (Indefinite Integration)
                 if (ast[2].is_string()) {
                     std::string var_name = ast[2].get<std::string>();
                     bool dummy = false;
                     Expression body = parseAST(ast[1], isRad, true, dummy);
-                    auto sym_var = SymEngine::symbol(var_name);
+                    
                     try {
-                        throw std::runtime_error("Symbolic integration not implemented in C++ core");
+                        // 1. 将 SymEngine 被积函数转为字符串，并进行语法适配
+                        std::string exprStr = body.get_basic()->__str__();
+                        replaceAll(exprStr, "**", "^");
+                        
+                        // 2. 组装 Giac 指令
+                        std::string giacCmd = "latex(simplify(integrate(" + exprStr + ", " + var_name + ")))";
+                        std::string rawResult = evaluateWithGiac(giacCmd);
+                        
+                        // 3. 剥离 Giac 输出自带的双引号
+                        if (rawResult.size() >= 2 && rawResult.front() == '"' && rawResult.back() == '"') {
+                            rawResult = rawResult.substr(1, rawResult.size() - 2);
+                        }
+                        
+                        // 4. 加上常数 C
+                        std::string boxedResult = "MAGICGIACRESULT" + rawResult + " + \\mathbf{C}";
+                        return Expression(SymEngine::symbol(boxedResult));
+                        
                     } catch (...) {
                         throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Error:NoIntegralAlg");
                     }
                 }
+                
+                // 路线 B：定积分 (Definite Integration)
                 else if (ast[2].is_array() && ast[2][0] == "Tuple") {
                     std::string var_name = "x";
                     if (ast[2].size() > 1 && ast[2][1].is_string()) var_name = ast[2][1].get<std::string>();
@@ -402,10 +456,43 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                     Expression upper_expr = parseAST(ast[2][3], isRad, true, dummy);
                     auto sym_var = SymEngine::symbol(var_name);
 
+                    // 里施算法 / 符号解析
                     try {
-                        throw std::runtime_error("Force Numerical Fallback");
-                    } catch (...) {
+                        std::string exprStr = body.get_basic()->__str__();
+                        std::string lowerStr = lower_expr.get_basic()->__str__();
+                        std::string upperStr = upper_expr.get_basic()->__str__();
+                        
+                        replaceAll(exprStr, "**", "^");
+                        replaceAll(lowerStr, "**", "^");
+                        replaceAll(upperStr, "**", "^");
+                        
+                        // 调用 Giac 尝试算出精确解
+                        std::string giacCmd = "latex(simplify(integrate(" + exprStr + ", " + var_name + ", " + lowerStr + ", " + upperStr + ")))";
+                        std::string rawResult = evaluateWithGiac(giacCmd);
+                        
+                        if (rawResult.size() >= 2 && rawResult.front() == '"' && rawResult.back() == '"') {
+                            rawResult = rawResult.substr(1, rawResult.size() - 2);
+                        }
+                        
+                        // 如果 Giac 算不出来，它会返回 undef、原样返回 integrate(...)，或者带有问号
+                        if (rawResult.find("undef") != std::string::npos || 
+                            rawResult.find("\\int") != std::string::npos || 
+                            rawResult.find("integrate") != std::string::npos ||
+                            rawResult.find("?") != std::string::npos ||
+                            rawResult.empty()) {
+                            // 主动熔断抛出异常，使用辛普森算法兜底
+                            throw std::runtime_error("Force Numerical Fallback");
+                        }
+                        
+                        // 计算成功
+                        std::string boxedResult = "MAGICGIACRESULT" + rawResult;
+                        return Expression(SymEngine::symbol(boxedResult));
+                        
+                    } 
+                    // 辛普森 1/3 极速数值积分 (近似解)
+                    catch (...) {
                         try {
+                            // ⚠️ 你的原版辛普森核心逻辑完全保留，一字未动！
                             double a = SymEngine::eval_double(lower_expr);
                             double b = SymEngine::eval_double(upper_expr);
 
@@ -419,10 +506,12 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                                 subs_map[sym_var] = Expression(x_i).get_basic();
                                 double y_i = SymEngine::eval_double(Expression(body.get_basic()->subs(subs_map)));
                                 
+                                // 权重分配：首尾为 1，奇数为 4，偶数为 2
                                 double weight = (i == 0 || i == N) ? 1.0 : ((i % 2 == 1) ? 4.0 : 2.0);
                                 sum += weight * y_i;
                             }
                             double raw_result = sum * h / 3.0;
+                            // 四舍五入保留 10 位小数
                             double snapped_result = std::round(raw_result * 1e10) / 1e10;
                             return Expression(snapped_result);
                         } catch (...) {
@@ -489,9 +578,7 @@ std::string formatLargeIntegerToScientific(const std::string& intStr) {
     }
 }
 
-// =======================================================
 // 🧠 核心调度入口 N-API Calculate
-// =======================================================
 static napi_value Calculate(napi_env env, napi_callback_info info) {
     size_t argc = 3;
     napi_value args[3] = {nullptr};
@@ -535,27 +622,23 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
             }
         }
         
-        // =========================================================
-        // 【智能侦测拦截】: Giac 专线处理极限
-        // =========================================================
-        if (ast.is_array() && ast.size() >= 1 && ast[0] == "Limit") {
-            std::string giacCommand = buildGiacCommand(ast);
-            if (!giacCommand.empty()) {
-                result_msg = evaluateWithGiac(giacCommand);
-                
-                // 进行格式清理以便完美匹配显示引擎
-                replaceAll(result_msg, "infinity", "\\infty");
-                replaceAll(result_msg, "undef", "\\text{undefined}");
-                
-                napi_value result;
-                napi_create_string_utf8(env, result_msg.c_str(), NAPI_AUTO_LENGTH, &result);
-                return result;
-            }
-        }
+//        // Giac 专线处理极限
+//        if (ast.is_array() && ast.size() >= 1 && ast[0] == "Limit") {
+//            std::string giacCommand = buildGiacCommand(ast);
+//            if (!giacCommand.empty()) {
+//                result_msg = evaluateWithGiac(giacCommand);
+//                
+//                // 进行格式清理以便完美匹配显示引擎
+//                replaceAll(result_msg, "infinity", "\\infty");
+//                replaceAll(result_msg, "undef", "\\text{undefined}");
+//                
+//                napi_value result;
+//                napi_create_string_utf8(env, result_msg.c_str(), NAPI_AUTO_LENGTH, &result);
+//                return result;
+//            }
+//        }
         
-        // =========================================================
-        // 【SymEngine 主流程】: 常规极速计算
-        // =========================================================
+        // 常规极速计算
         bool isGlobalExact = (precision == -3 || precision == -4);
         bool autoDMS = false; 
         Expression expr = parseAST(ast, isRad, isGlobalExact, autoDMS);
@@ -721,6 +804,12 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         }
     }
     replaceAll(result_msg, " \\times 10", "\\times 10");
+    
+    // SymEngine 的 latex() 打印器会自动给变量里的下划线加上转义反斜杠 (\_)
+    replaceAll(result_msg, "MAGICGIACRESULT", "");
+    // Giac 返回格式的 UI 美化，统一成前端样式
+    replaceAll(result_msg, "infinity", "\\infty");
+    replaceAll(result_msg, "undef", "\\text{undefined}");
     
     napi_value result;
     napi_create_string_utf8(env, result_msg.c_str(), NAPI_AUTO_LENGTH, &result);
