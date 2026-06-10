@@ -9,8 +9,12 @@ struct BottomKeyItem {
   @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
   @State isMenuShow: boolean = false;
 
+  private startDelayTimer: number = -1;
+  private repeatDeleteTimer: number = -1;
+
   onKeyPress: (btn: string | Resource) => void = () => {};
   onMenuSelect: (actionCode: string) => void = () => {};
+  onContinuousDelete: () => void = () => {};
 
   @Builder
   MenuBuilder() {
@@ -18,6 +22,7 @@ struct BottomKeyItem {
       ForEach(keyContextMenuRegistry[this.btn as string] || [], (item: CustomMenuItem) => {
         MenuItem({ content: item.value })
           .onClick(() => {
+
             this.isMenuShow = false;
             this.onMenuSelect(item.actionCode);
           })
@@ -55,8 +60,30 @@ struct BottomKeyItem {
       normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
     })
     .onClick(() => {
-      this.onKeyPress(this.btn as string);
+        this.onKeyPress(this.btn as string);
     })
+    // 为退格键独家定制的连删触摸回路
+    .onTouch((event: TouchEvent) => {
+      if (this.btn === '⌫') {
+        if (event.type === TouchType.Down) {
+          // 清理可能存在的残留定时器
+          clearTimeout(this.startDelayTimer);
+          clearInterval(this.repeatDeleteTimer);
+
+          // 开启长按判定：500ms 后启动疯狂连发模式
+          this.startDelayTimer = setTimeout(() => {
+            this.repeatDeleteTimer = setInterval(() => {
+              this.onKeyPress(this.btn as string);
+            }, 80); // 80毫秒删一个
+          }, 500);
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          // 手指抬起或滑走：瞬间切断机枪！
+          clearTimeout(this.startDelayTimer);
+          clearInterval(this.repeatDeleteTimer);
+        }
+      }
+    })
+
     .bindContextMenu(this.isMenuShow, this.MenuBuilder, {
       onDisappear: () => {
         this.isMenuShow = false;
@@ -84,6 +111,7 @@ struct BottomKeyItem {
 export struct BottomKeyboard {
   onKeyPress: (btn: string | Resource) => void = () => {};
   onMenuSelect: (actionCode: string) => void = () => {};
+  onContinuousDelete: () => void = () => {};
 
   build() {
     Grid() {
@@ -92,7 +120,8 @@ export struct BottomKeyboard {
           BottomKeyItem({
             btn: btn,
             onKeyPress: this.onKeyPress,
-            onMenuSelect: this.onMenuSelect
+            onMenuSelect: this.onMenuSelect,
+            onContinuousDelete: this.onContinuousDelete
           })
         }
       })
