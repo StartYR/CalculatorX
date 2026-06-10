@@ -11,8 +11,6 @@ import { RoutePath } from '../utils/CalculatorConfigs';
 import router from '@ohos.router';
 import { PreferenceConfigs } from '../utils/CalculatorConfigs';
 
-// PersistentStorage.persistProp('angleModeIndex', 0);
-
 @Entry
 @Component
 struct Index {
@@ -100,6 +98,28 @@ struct Index {
     .height('100%')
     .backgroundColor($r('sys.color.background_primary'))
   }
+
+  // // 全局定时器变量
+  // private startDelayTimer: number = -1;
+  // private repeatDeleteTimer: number = -1;
+  //
+  // // 用于长按连删的高频执行函数
+  // executeDelete() {
+  //   // 1. 触发删除指令
+  //   this.webviewController.runJavaScript('deleteMath()');
+  //
+  //   // 2. 伴随轻微震动 (仅在总开关打开时)
+  //   if (this.hapticFeedback) {
+  //     vibrator.startVibration({
+  //       type: 'preset',
+  //       // 连删震动必须极其轻微，使用 soft 即可，不要用 hard
+  //       effectId: 'haptic.effect.soft',
+  //       count: 1
+  //     }, { usage: 'touch' }).catch((err: BusinessError) => {
+  //       console.warn(`连删震动异常: ${err.message}`);
+  //     });
+  //   }
+  // }
 
   handleButtonClick(btn: string | Resource) {
     // 提前解析按键类型，供计算和震动引擎共同使用

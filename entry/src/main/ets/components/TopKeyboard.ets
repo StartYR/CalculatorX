@@ -12,11 +12,15 @@ struct TopKeyItem {
   @StorageProp(PreferenceConfigs.KEY_COMBINATION_SELECT) combSelect: number = 1;
   @StorageProp(PreferenceConfigs.KEY_PERMUTATION_SELECT) permSelect: number = 1;
 
-  // 新增：读取全局震动配置
+  // 读取全局震动配置
   @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
 
-  // 新增：手动控制菜单的弹出状态
+  // 手动控制菜单的弹出状态
   @State isMenuShow: boolean = false;
+
+  // 光标长按定时器
+  private startDelayTimer: number = -1;
+  private repeatMoveTimer: number = -1;
 
   onKeyPress: (btn: string | Resource) => void = () => {};
   onMenuSelect: (actionCode: string) => void = () => {};
@@ -99,6 +103,28 @@ struct TopKeyItem {
           this.onKeyPress(this.btn);
         }
       })
+
+      .onTouch((event: TouchEvent) => {
+        if (this.btn === '⇦' || this.btn === '⇨') {
+          if (event.type === TouchType.Down) {
+            // 清理可能存在的残留定时器
+            clearTimeout(this.startDelayTimer);
+            clearInterval(this.repeatMoveTimer);
+
+            // 长按判定：500ms
+            this.startDelayTimer = setTimeout(() => {
+              this.repeatMoveTimer = setInterval(() => {
+                this.onKeyPress(this.btn as string);
+              }, 80); // 80毫秒
+            }, 500);
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            // 手指抬起或滑走瞬间停下
+            clearTimeout(this.startDelayTimer);
+            clearInterval(this.repeatMoveTimer);
+          }
+        }
+      })
+
       // —— 程序化状态控制与极速长按手势 ——
       .bindContextMenu(this.isMenuShow, this.MenuBuilder, {
         onDisappear: () => {
