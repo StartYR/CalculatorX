@@ -332,8 +332,6 @@ struct Index {
         case 'icon_exp': latexChar = '\\times 10^{\\placeholder{}}'; break;
         case 'abs':      latexChar = "\\left| \\placeholder{} \\right|"; break;
         case 'fact':     latexChar = "!"; break;
-        case 'eˣ':       latexChar = "e^{\\placeholder{}}"; break;
-        case '10ˣ':      latexChar = "10^{\\placeholder{}}"; break;
         case 'ln':       latexChar = "\\ln\\left(\\placeholder{}\\right)"; break;
         case 'lg':       latexChar = '\\lg\\left(\\placeholder{}\\right)'; break;
         case 'log':      latexChar = "\\log_{\\placeholder{}}\\left(\\placeholder{}\\right)"; break;
@@ -348,7 +346,7 @@ struct Index {
         case 'sum':      latexChar = "\\sum_{x=\\placeholder{}}^{\\placeholder{}}\\left(\\placeholder{}\\right)"; break;
         case 'product':  latexChar = "\\prod_{x=\\placeholder{}}^{\\placeholder{}}\\left(\\placeholder{}\\right)"; break;
         case 'd/dx':     latexChar = "\\frac{d}{dx}\\left(\\placeholder{}\\right)"; break;
-        case 'lim':      latexChar = "\\lim_{x \\to \\placeholder{}}"; break;
+        case 'lim':      latexChar = "\\lim_{x \\to \\placeholder{}}\\left(\\placeholder{}\\right)"; break;
         case '%':        latexChar = '\\%'; break;
         case 'mod':      latexChar = '\\bmod '; break;
         case 'GCD':      latexChar = '\\gcd\\left(\\placeholder{}, \\placeholder{}\\right)'; break;
