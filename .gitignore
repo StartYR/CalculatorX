@@ -35,3 +35,4 @@ local.properties
 
 # C++ 依赖包
 boost_*.tar.gz
+giac-*.tar.gz
