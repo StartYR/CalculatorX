@@ -12,9 +12,14 @@
 #include <numeric>
 #include "ErrorHandler.h"
 #include "FastMath.h"
+#include <string>
+#include "giac.h"
 
 using json = nlohmann::json;
 using SymEngine::Expression;
+
+// 前置声明 parseAST，让后续函数可以复用符号解析能力
+Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS);
 
 void replaceAll(std::string& str, const std::string& from, const std::string& to) {
     if (from.empty()) return;
@@ -25,6 +30,78 @@ void replaceAll(std::string& str, const std::string& from, const std::string& to
     }
 }
 
+// =======================================================
+// ⚔️ Giac 灭霸引擎专区 (专门处理极限等高阶数学推导)
+// =======================================================
+std::string evaluateWithGiac(const std::string& mathExpression) {
+    try {
+        giac::context ctx;
+        giac::gen g(mathExpression, &ctx);
+        giac::gen result = giac::eval(g, &ctx);
+        
+        std::string resStr = result.print(&ctx);
+        
+        // Giac 的 LaTeX/字符串输出两端带有双引号，这里将其剥离
+        if (resStr.size() >= 2 && resStr.front() == '"' && resStr.back() == '"') {
+            resStr = resStr.substr(1, resStr.size() - 2);
+        }
+        
+        return resStr;
+    } catch (const std::exception& e) {
+        return "Error: " + std::string(e.what());
+    } catch (...) {
+        return "Error: Giac Unknown";
+    }
+}
+
+std::string buildGiacCommand(const json& ast) {
+    try {
+        // 确保匹配了前端 MathJSON 的极限格式: ["Limit", ["Function", expr, var], target]
+        if (ast.is_array() && ast.size() >= 3 && ast[0] == "Limit") {
+            json funcNode = ast[1]; 
+            json targetNode = ast[2]; 
+
+            std::string exprStr = "";
+            std::string varStr = "x";
+
+            // 1. 解析函数体与变量
+            if (funcNode.is_array() && funcNode.size() >= 3 && funcNode[0] == "Function") {
+                bool dummyDMS = false;
+                // 复用你的 SymEngine 解析器生成标准的符号表达式
+                Expression expr = parseAST(funcNode[1], true, true, dummyDMS);
+                exprStr = expr.get_basic()->__str__(); 
+                
+                if (funcNode[2].is_string()) {
+                    varStr = funcNode[2].get<std::string>(); 
+                }
+            }
+
+            // 2. 解析趋近值
+            bool dummyDMS = false;
+            Expression targetExpr = parseAST(targetNode, true, true, dummyDMS);
+            std::string targetStr = targetExpr.get_basic()->__str__();
+
+            // 3. 语法适配替换
+            // 修复乘方语法适配
+            replaceAll(exprStr, "**", "^");
+            replaceAll(targetStr, "**", "^");
+            // 将 SymEngine 可能会解析的无穷大符号映射给 Giac
+            replaceAll(targetStr, "Infinity", "infinity");
+            replaceAll(targetStr, "\\infty", "infinity");
+
+            // 4. 使用 latex() 函数包裹，让 Giac 计算后直接吐出供屏幕渲染的 LaTeX！
+            return "latex(limit(" + exprStr + ", " + varStr + ", " + targetStr + "))";
+        }
+    } catch (...) {
+        return ""; 
+    }
+    return "";
+}
+
+
+// =======================================================
+// ⚡ SymEngine 极速常规引擎专区 (基础计算、微积分数值兜底)
+// =======================================================
 Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS) {
     if (ast.is_number()) {
         double val = ast.get<double>();
@@ -60,7 +137,6 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
     }
     
     if (ast.is_object() && ast.contains("num")) {
-        // (保留原有的极大数解析逻辑)
         std::string s = ast["num"].get<std::string>();
         try {
             size_t ePos = s.find('e');
@@ -100,16 +176,15 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
     if (ast.is_array() && !ast.empty() && ast[0].is_string()) {
         std::string op = ast[0].get<std::string>();
 
-        // === 1. 产生量纲：度分秒节点 ===
         if (op == "dms" || op == "Dms") {
             if (ast.size() == 4) {
-                bool dummy = false; // 子节点不影响外部
+                bool dummy = false; 
                 Expression d = parseAST(ast[1], isRad, true, dummy);
                 Expression m = parseAST(ast[2], isRad, true, dummy);
                 Expression s = parseAST(ast[3], isRad, true, dummy);
                 try {
                     Expression total_deg = d + m / Expression(60) + s / Expression(3600);
-                    hasDMS = true; // 【核心动作】：宣告此子树包含度分秒！
+                    hasDMS = true;
                     if (isRad) {
                         return total_deg * Expression(SymEngine::pi) / Expression(180);
                     } else {
@@ -122,7 +197,6 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
             throw CalcException(CalcErrorCode::DMS_FORMAT_ERROR, "Invalid DMS Length");
         }
 
-        // === 2. 传递量纲：四则运算、高阶根号等，将 hasDMS 不断向上传递 ===
         if (op == "Add") {
             Expression sum(0);
             for (size_t i = 1; i < ast.size(); ++i) sum += parseAST(ast[i], isRad, preferExact, hasDMS);
@@ -225,10 +299,9 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
             }
         }
 
-        // === 3. 消费量纲：三角函数（建起隔离墙！）===
         if (op == "Sin" || op == "Cos" || op == "Tan") {
             if (ast.size() < 2) return Expression(SymEngine::symbol("Error"));
-            bool childDMS = false; // 【核心动作】：用局部变量吸收子节点的度分秒，绝不向外泄露
+            bool childDMS = false; 
             Expression arg = parseAST(ast[1], isRad, true, childDMS); 
             if (!isRad) arg = arg * Expression(SymEngine::pi) / Expression(180);
             if (op == "Sin") return SymEngine::sin(arg);
@@ -236,7 +309,6 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
             if (op == "Tan") return SymEngine::tan(arg);
         }
 
-        // === 4. 产生量纲：反三角函数（主动报告量纲！）===
         if (op == "Arcsin" || op == "Arccos" || op == "Arctan") {
             if (ast.size() < 2) return Expression(SymEngine::symbol("Error"));
             bool childDMS = false; 
@@ -247,7 +319,7 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
             else if (op == "Arctan") res = SymEngine::atan(arg);
             
             if (!isRad) res = res * Expression(180) / Expression(SymEngine::pi);
-            hasDMS = true; // 【核心动作】：反三角算出的是角度，主动触发度分秒格式化！
+            hasDMS = true; 
             return res;
         }
         
@@ -262,16 +334,11 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
             return num / den;
         }
         
-        // === 作用域与迭代：求和 (Sum) 与求积 (Product) ===
         if (op == "Sum" || op == "Product") {
-            // 确保具有足够的参数，且边界是一个 Tuple
             if (ast.size() == 3 && ast[2].is_array() && ast[2].size() >= 4 && ast[2][0] == "Tuple") {
-                
-                // 1. 提取迭代变量名 (通常是 "x", "n", "i" 等)
                 std::string var_name = "x";
                 if (ast[2][1].is_string()) var_name = ast[2][1].get<std::string>();
                 
-                // 2. 解析上下限，并求出具体的整数值
                 Expression lower_expr = parseAST(ast[2][2], isRad, true, hasDMS);
                 Expression upper_expr = parseAST(ast[2][3], isRad, true, hasDMS);
                 
@@ -283,77 +350,48 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                     throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Limits must be calculable numbers");
                 }
                 
-                // 如果下限大于上限，数学上求和为 0，求积为 1
                 if (end < start) return (op == "Sum") ? Expression(0) : Expression(1);
-                
-                // 3. 防止恶意大循环导致死机
                 if (end - start > 10000) {
                     throw CalcException(CalcErrorCode::TIMEOUT_ERROR, "Iteration limit exceeded");
                 }
                 
-                // 4. 解析主体表达式 (此时它内部带有一个未赋值的符号 var_name)
                 Expression body = parseAST(ast[1], isRad, true, hasDMS);
-                
-                // 5. 初始化累加/累乘器
                 Expression total = (op == "Sum") ? Expression(0) : Expression(1);
                 SymEngine::RCP<const SymEngine::Symbol> sym_var = SymEngine::symbol(var_name);
                 
-                // 6. C++ 极速循环代入
                 for (long long i = start; i <= end; ++i) {
-                    // 创建代入字典：让表达式中的变量 (如 x) 替换为当前的数字 i
                     SymEngine::map_basic_basic subs_map;
                     subs_map[sym_var] = Expression(i).get_basic();
-                    
-                    // 进行替换并计算当前项
                     Expression evaluated_term(body.get_basic()->subs(subs_map));
-                    
-                    // 累加或累乘
                     if (op == "Sum") total += evaluated_term;
                     else total *= evaluated_term;
                 }
-                
                 return total;
             }
             throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid Sum/Product format");
         }
         
-        // === 微积分：求导 (Derivative) ===
-        // 这里直接调用 SymEngine 硬核的符号求导能力！
         if (op == "diff" || op == "Diff") {
             if (ast.size() == 2) {
                 bool dummy = false;
                 Expression body = parseAST(ast[1], isRad, true, dummy);
-                // 默认对 x 进行完美符号求导
                 return Expression(body.get_basic()->diff(SymEngine::symbol("x")));
             }
         }
 
-        // === 微积分：积分 (Integration) 双轨制引擎 ===
         if (op == "Integrate") {
             if (ast.size() == 3) {
-                
-                // 路线 A：不定积分 (Indefinite Integration)
                 if (ast[2].is_string()) {
                     std::string var_name = ast[2].get<std::string>();
                     bool dummy = false;
                     Expression body = parseAST(ast[1], isRad, true, dummy);
                     auto sym_var = SymEngine::symbol(var_name);
-                    
                     try {
-                        // ⚠️ 占位说明：由于 SymEngine C++ 核心库未暴露高级符号积分 API，
-                        // 这里预留了完美架构。如果你未来编译了带积分扩展的包，可以在这里调用：
-                        // Expression F_x = SymEngine::integrate(body.get_basic(), sym_var);
-                        // return F_x + Expression(SymEngine::symbol("C")); // 贴心地加上常数 C
-                        
-                        // 目前为了防止 C++ 编译报错，我们主动抛出异常，交给前端渲染特定提示
                         throw std::runtime_error("Symbolic integration not implemented in C++ core");
                     } catch (...) {
-                        // 抛出特定的语法错误，前端界面可以直接显示 "Error:NoIntegralAlg"
                         throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Error:NoIntegralAlg");
                     }
                 }
-                
-                // 定积分 (Definite Integration)
                 else if (ast[2].is_array() && ast[2][0] == "Tuple") {
                     std::string var_name = "x";
                     if (ast[2].size() > 1 && ast[2][1].is_string()) var_name = ast[2][1].get<std::string>();
@@ -364,20 +402,9 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                     Expression upper_expr = parseAST(ast[2][3], isRad, true, dummy);
                     auto sym_var = SymEngine::symbol(var_name);
 
-                    // 里施算法 / 符号解析 (精确解)
                     try {
-                        // 预留占位接口：若未来有了原函数 F(x)，便可使用牛顿-莱布尼茨公式
-                        // SymEngine::map_basic_basic subs_map_a, subs_map_b;
-                        // subs_map_a[sym_var] = lower_expr.get_basic();
-                        // subs_map_b[sym_var] = upper_expr.get_basic();
-                        // Expression exact_result = Expression(F_x->subs(subs_map_b)) - Expression(F_x->subs(subs_map_a));
-                        // return exact_result;
-                        
-                        // 目前直接触发异常，转换辛普森算法
                         throw std::runtime_error("Force Numerical Fallback");
-                    } 
-                    // 辛普森 1/3 极速数值积分 (近似解)
-                    catch (...) {
+                    } catch (...) {
                         try {
                             double a = SymEngine::eval_double(lower_expr);
                             double b = SymEngine::eval_double(upper_expr);
@@ -392,12 +419,10 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                                 subs_map[sym_var] = Expression(x_i).get_basic();
                                 double y_i = SymEngine::eval_double(Expression(body.get_basic()->subs(subs_map)));
                                 
-                                // 权重分配：首尾为 1，奇数为 4，偶数为 2
                                 double weight = (i == 0 || i == N) ? 1.0 : ((i % 2 == 1) ? 4.0 : 2.0);
                                 sum += weight * y_i;
                             }
                             double raw_result = sum * h / 3.0;
-                            // 四舍五入保留 10 位小数
                             double snapped_result = std::round(raw_result * 1e10) / 1e10;
                             return Expression(snapped_result);
                         } catch (...) {
@@ -464,6 +489,9 @@ std::string formatLargeIntegerToScientific(const std::string& intStr) {
     }
 }
 
+// =======================================================
+// 🧠 核心调度入口 N-API Calculate
+// =======================================================
 static napi_value Calculate(napi_env env, napi_callback_info info) {
     size_t argc = 3;
     napi_value args[3] = {nullptr};
@@ -502,15 +530,33 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         json ast = json::parse(json_str);
         if (ast.is_string()) {
             std::string inner_str = ast.get<std::string>();
-            // 只有当它看起来像被二次序列化的 JSON 数组或对象时，才尝试二次解析
             if (!inner_str.empty() && (inner_str[0] == '[' || inner_str[0] == '{')) {
                 ast = json::parse(inner_str);
             }
         }
         
-        bool isGlobalExact = (precision == -3 || precision == -4);
+        // =========================================================
+        // 【智能侦测拦截】: Giac 专线处理极限
+        // =========================================================
+        if (ast.is_array() && ast.size() >= 1 && ast[0] == "Limit") {
+            std::string giacCommand = buildGiacCommand(ast);
+            if (!giacCommand.empty()) {
+                result_msg = evaluateWithGiac(giacCommand);
+                
+                // 进行格式清理以便完美匹配显示引擎
+                replaceAll(result_msg, "infinity", "\\infty");
+                replaceAll(result_msg, "undef", "\\text{undefined}");
+                
+                napi_value result;
+                napi_create_string_utf8(env, result_msg.c_str(), NAPI_AUTO_LENGTH, &result);
+                return result;
+            }
+        }
         
-        // 定义全局 DMS 状态墙，传递给 parseAST 监听
+        // =========================================================
+        // 【SymEngine 主流程】: 常规极速计算
+        // =========================================================
+        bool isGlobalExact = (precision == -3 || precision == -4);
         bool autoDMS = false; 
         Expression expr = parseAST(ast, isRad, isGlobalExact, autoDMS);
         
@@ -519,9 +565,6 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
             expr = Expression(SymEngine::expand(expr.get_basic()));
         }
 
-        // =========================================================
-        // 如果是长按强制(-5)，或者处于自动模式(-1)且树中带有 DMS 标记
-        // =========================================================
         if (precision == -5 || (precision == -1 && autoDMS)) {
             try {
                 double float_val = SymEngine::eval_double(*expr.get_basic());
@@ -563,9 +606,6 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
                 result_msg = SymEngine::latex(*expr.get_basic());
             }
         }
-        // =========================================================
-        // 正常计算分支开始 (分数/浮点/科学计数法等)
-        // =========================================================
         else if (precision == -1 || precision == -3) {
             if (SymEngine::is_a<SymEngine::Integer>(*expr.get_basic())) {
                 std::string rawStr = expr.get_basic()->__str__();
