@@ -198,6 +198,18 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
             return Expression(0);
         }
         
+        // 复数 (Complex)
+        if (op == "Complex") {
+            if (ast.size() == 3) {
+                bool dummy = false;
+                Expression real_part = parseAST(ast[1], isRad, true, dummy);
+                Expression imag_part = parseAST(ast[2], isRad, true, dummy);
+                // 实部 + 虚部 * i
+                return real_part + imag_part * Expression(SymEngine::I);
+            }
+            throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid Complex format");
+        }
+        
         if (op == "Add") {
             Expression sum(0);
             for (size_t i = 1; i < ast.size(); ++i) sum += parseAST(ast[i], isRad, preferExact, hasDMS);
@@ -622,22 +634,6 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
             }
         }
         
-//        // Giac 专线处理极限
-//        if (ast.is_array() && ast.size() >= 1 && ast[0] == "Limit") {
-//            std::string giacCommand = buildGiacCommand(ast);
-//            if (!giacCommand.empty()) {
-//                result_msg = evaluateWithGiac(giacCommand);
-//                
-//                // 进行格式清理以便完美匹配显示引擎
-//                replaceAll(result_msg, "infinity", "\\infty");
-//                replaceAll(result_msg, "undef", "\\text{undefined}");
-//                
-//                napi_value result;
-//                napi_create_string_utf8(env, result_msg.c_str(), NAPI_AUTO_LENGTH, &result);
-//                return result;
-//            }
-//        }
-        
         // 常规极速计算
         bool isGlobalExact = (precision == -3 || precision == -4);
         bool autoDMS = false; 
@@ -810,6 +806,11 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
     // Giac 返回格式的 UI 美化，统一成前端样式
     replaceAll(result_msg, "infinity", "\\infty");
     replaceAll(result_msg, "undef", "\\text{undefined}");
+    // 将 \log 翻译为 \ln
+    replaceAll(result_msg, "\\log", "\\ln");
+    
+    replaceAll(result_msg, "j", "i");
+    
     
     napi_value result;
     napi_create_string_utf8(env, result_msg.c_str(), NAPI_AUTO_LENGTH, &result);
