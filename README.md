@@ -1,12 +1,12 @@
-# CalculatorX 🚀
+# [CalculatorX](https://calcx.startyi.com) 🚀
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-🌐 **官网：[CalculatorX](https://calcx.startyi.com)**
+### 🌐 官网：<https://calcx.startyi.com>
 
 ## 📝 项目简介
 
-CalculatorX 是一款面向 HarmonyOS 的专业符号计算器，支持**精确符号运算**与**高精度数值计算**双模式输出。应用采用"前端 UI + Web 渲染 + 双 C++ 引擎"三层架构，集成 **Giac** 与 **SymEngine** 两大工业级计算机代数系统，覆盖三角函数、排列组合阶乘、根号与次方、分数、极限、定/不定积分、导数、表达式化简等核心功能。计算结果既可直接输出高精度小数，也可保留 √2、π、e 等精确符号形式，提供媲美桌面数学软件的交互体验。
+CalculatorX 是一款面向 HarmonyOS 的专业符号计算器，支持**精确符号运算**与**高精度数值计算**双模式输出。应用采用"前端 UI + Web 渲染 + 双 C++ 引擎"三层架构，集成 **Giac** 与 **SymEngine** 两大工业级计算机代数系统，覆盖三角函数、排列组合阶乘、根号与次方、分数、极限、定/不定积分、导数、表达式化简等核心功能。计算结果既可直接输出高精度小数，也可保留 $\sqrt{2}$ 、 $\pi$ 、 $e$ 等精确符号形式，提供媲美桌面数学软件的交互体验。
 
 ## 🖼️ 界面展示
 
