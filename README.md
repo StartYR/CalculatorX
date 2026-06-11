@@ -47,8 +47,9 @@ DevEco Studio (HarmonyOS)
 
 3.  **⚙️ 双引擎计算层 (C++ & N-API)**
     *   底层通过 `CMakeLists.txt` 统一配置编译，静态链接两大计算核心，通过 N-API 向 ArkTS 层暴露统一接口。
-    *   **[Giac](https://www-fourier.ujf-grenoble.fr/~parisse/giac.html) 引擎**：负责符号计算核心任务，包括代数化简、微积分（求导/积分/极限）、方程求解、表达式精确符号运算（保留 $\sqrt{2}$、$\pi$、$e$ 等）。
-    *   **[SymEngine](https://symengine.org/) 引擎**：负责高精度数值计算与 AST 解析，通过手写 `parseAST` 模块将 MathJSON 转换为内部表达式树，涵盖四则运算、三角函数、对数及常数，同时承担组合数学与特殊函数的快速数值求值。    *   **FastMath 模块**：解耦的超大数计算模块，基于对数变换与斯特林近似，实现在 O(1) 时间复杂度下处理 $10^{10^{19}}$ 级别的超大阶乘与组合数。
+    *   **[Giac](https://www-fourier.ujf-grenoble.fr/~parisse/giac.html) 引擎**：负责符号计算核心任务，包括代数化简、微积分（求导/积分/极限）、方程求解、表达式精确符号运算（保留 $\sqrt{2}$ 、 $\pi$ 、 $e$ 等）。
+    *   **[SymEngine](https://symengine.org/) 引擎**：负责高精度数值计算与 AST 解析，通过手写 `parseAST` 模块将 MathJSON 转换为内部表达式树，涵盖四则运算、三角函数、对数及常数，同时承担组合数学与特殊函数的快速数值求值。    
+    *   **FastMath 模块**：解耦的超大数计算模块，基于对数变换与斯特林近似，实现在 O(1) 时间复杂度下处理 $10^{9000000000000000000}$ 级别的超大阶乘与组合数。
     *   **ErrorHandler 模块**：自定义异常状态机，精准拦截除零、溢出、定义域错误等异常，保障前端无闪退。
 
 ## 📂 核心目录结构
