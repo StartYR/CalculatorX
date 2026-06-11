@@ -1,4 +1,4 @@
-// entry/src/main/ets/pages/Settings.ets
+// entry/src/main/ets/pages/settings/Settings.ets
 import { preferences } from '@kit.ArkData';
 import { PreferenceConfigs, CombinationOptions, PermutationOptions, RoutePath, MathStyleOption } from '../../utils/CalculatorConfigs';
 import router from '@ohos.router';

@@ -5,13 +5,26 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "C:\\Users\\yrid\\.ohos\\config\\default_CalculatorX_RUdoBXcuCHCBucvjdDRMmG18Q01spdBpqCcWsc-pCBs=.cer",
-          "keyAlias": "debugKey",
-          "keyPassword": "0000001BB877C414833891013DA354619F32E6FC9640E3E4CF8EFE3BF495EB12120B357A1C4936C863504B",
-          "profile": "C:\\Users\\yrid\\.ohos\\config\\default_CalculatorX_RUdoBXcuCHCBucvjdDRMmG18Q01spdBpqCcWsc-pCBs=.p7b",
+          "storeFile": "E:/Program Files/HUAWEI/Keys/CalculatorX.p12",
+          "storePassword": "00000020B603D45261FEF3BBD8B805CA8A04E00FB8A854E39F2A01E4C6BD8483C39EB95F79357B8734A3B29B73D2FB60",
+          "keyAlias": "calc_x",
+          "keyPassword": "0000002052C49481783B15EF9E0C3D5AA4C5421073EAD2E30E0502F13578BF933615D855BD1F53BEB9C24F62F6A83506",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "C:\\Users\\yrid\\.ohos\\config\\default_CalculatorX_RUdoBXcuCHCBucvjdDRMmG18Q01spdBpqCcWsc-pCBs=.p12",
-          "storePassword": "0000001B0E0247C66E434EB31F06F45538503019A88E11CA31863D0CEB76E80A03B1E81A27DBE236C5B8E5"
+          "profile": "E:/Program Files/HUAWEI/Keys/calcxRelease.p7b",
+          "certpath": "E:/Program Files/HUAWEI/Keys/CalculatorX_Release_Cert.cer"
+        }
+      },
+      {
+        "name": "CalcX",
+        "type": "HarmonyOS",
+        "material": {
+          "storeFile": "E:/Program Files/HUAWEI/Keys/CalculatorX.p12",
+          "storePassword": "00000020AD31901BFEB0386CB2A7E3AD448AA1416A2A8E1CD99D49DA68F3F5AD319BCC08FDA9C3D98FA4476B0D996AA1",
+          "keyAlias": "calcx",
+          "keyPassword": "00000020A57DFCBEFBB55410DCF205080E7806AD178422EA67366105B119B4A0E37A7ED68B75AE50B8C9E7B1E9EE5A16",
+          "signAlg": "SHA256withECDSA",
+          "profile": "E:/Program Files/HUAWEI/Keys/calcxRelease.p7b",
+          "certpath": "E:/Program Files/HUAWEI/Keys/CalculatorX_Release_Cert.cer"
         }
       }
     ],
