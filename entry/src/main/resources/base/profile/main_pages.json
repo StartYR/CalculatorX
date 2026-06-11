@@ -3,6 +3,7 @@
     "pages/Index",
     "pages/DocViewer",
     "pages/settings/Settings",
-	"pages/settings/About"
+	"pages/settings/About",
+    "pages/settings/Credits"
   ]
 }

@@ -2,23 +2,29 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
+🌐 **官网：[CalculatorX](https://calcx.startyi.com)**
+
 ## 📝 项目简介
 
-CalculatorX 是一款高性能专业科学计算器。本项目采用现代化的“前端 UI + Web 渲染 + C++ 计算”三层架构，致力于提供媲美实体科学计算器的交互体验和出版级的数学公式排版。
+CalculatorX 是一款面向 HarmonyOS 的专业符号计算器，支持**精确符号运算**与**高精度数值计算**双模式输出。应用采用"前端 UI + Web 渲染 + 双 C++ 引擎"三层架构，集成 **Giac** 与 **SymEngine** 两大工业级计算机代数系统，覆盖三角函数、排列组合阶乘、根号与次方、分数、极限、定/不定积分、导数、表达式化简等核心功能。计算结果既可直接输出高精度小数，也可保留 √2、π、e 等精确符号形式，提供媲美桌面数学软件的交互体验。
 
 ## 🖼️ 界面展示
 
 ### 1. 深浅模式
 
-<img src="docs/image/README/file-20260604180333394.png" width="700" />
+<img src="docs/image/README/file-20260611144436467.webp" width="480" />
 
-### 2. 设置界面
+### 2. 基础计算
 
-<img src="docs/image/README/file-20260604180406610.png" width="350" />
+<img src="docs/image/README/file-20260611144436430.webp" width="720" />
 
-### 3. 排列与组合选择样式
+### 3. 高等数学
 
-<img src="docs/image/README/file-20260604180649578.png" width="700" />
+<img src="docs/image/README/file-20260611144436443.webp" width="720" />
+
+### 4. 设置界面
+
+<img src="docs/image/README/file-20260611144436423.webp" width="720" />
 
 ## 💡 开发环境
 
@@ -26,18 +32,24 @@ DevEco Studio (HarmonyOS)
 
 ## 🏗️ 核心架构体系
 
-本项目摒弃了传统的纯前端计算方案，采用深度融合架构:
+本项目采用深度融合的三层架构，将计算能力下沉至 C++ 层，通过 N-API 与前端高效协同：
 
-1. **🧠 UI 控制层 (ArkTS / ArkUI)**
-    * 采用声明式 UI 构建原生键盘与功能面板。
-    * 实现了完善的交互逻辑，包含 `⇧Shift` 状态机拦截、动态字体路由（根据功能按需切换 `Cambria Math` / `Cambria Italic` / 无衬线字体）。
-2. **🎨 渲染引擎层 (Web Component)**
-    * 采用 `Web` 组件挂载本地沙箱内的 HTML 文件。
-    * 核心渲染器使用全本地部署的 [MathLive](https://mathlive.io/) 库（`mathlive.min.js`），支持完全离线运行。
-    * 支持通过 ArkTS 的 `runJavaScript` 进行跨端 DOM 操作与光标控制。
-3. **⚙️ 计算引擎层 (C++ & N-API)**
-    * 底层通过 `CMakeLists.txt` 配置，使用 C++ 进行硬核的高级数学计算。
-    * 计划实现对 LaTeX 字符串的 AST（抽象语法树）解析，并将计算结果通过 N-API 回传给 ArkTS 层。
+1.  **🧠 UI 控制层 (ArkTS / ArkUI)**
+    *   采用声明式 UI 构建原生键盘与功能面板。
+    *   实现完善的交互逻辑，包含 `⇧Shift` 状态机拦截、动态字体路由及角度制/弧度制状态管理。
+    *   统一调度下层计算资源，根据表达式类型智能路由至对应引擎。
+
+2.  **🎨 渲染引擎层 (Web Component)**
+    *   采用 `Web` 组件挂载本地沙箱内的 HTML 文件，核心渲染基于全本地部署的 [MathLive](https://mathlive.io/) 库，支持完全离线运行。
+    *   负责出版级 LaTeX 数学公式的高清渲染与双向交互。
+    *   承担"数据降维"职责：将复杂的二维 LaTeX 表达式转化为结构化的 **MathJSON** 格式，大幅降低底层 C++ 引擎的解析复杂度。
+    *   通过 ArkTS 的 `runJavaScript` 实现跨端 DOM 操作、光标控制与渲染指令通信。
+
+3.  **⚙️ 双引擎计算层 (C++ & N-API)**
+    *   底层通过 `CMakeLists.txt` 统一配置编译，静态链接两大计算核心，通过 N-API 向 ArkTS 层暴露统一接口。
+    *   **[Giac](https://www-fourier.ujf-grenoble.fr/~parisse/giac.html) 引擎**：负责符号计算核心任务，包括代数化简、微积分（求导/积分/极限）、方程求解、表达式精确符号运算（保留 $\sqrt{2}$、$\pi$、$e$ 等）。
+    *   **[SymEngine](https://symengine.org/) 引擎**：负责高精度数值计算与 AST 解析，通过手写 `parseAST` 模块将 MathJSON 转换为内部表达式树，涵盖四则运算、三角函数、对数及常数，同时承担组合数学与特殊函数的快速数值求值。    *   **FastMath 模块**：解耦的超大数计算模块，基于对数变换与斯特林近似，实现在 O(1) 时间复杂度下处理 $10^{10^{19}}$ 级别的超大阶乘与组合数。
+    *   **ErrorHandler 模块**：自定义异常状态机，精准拦截除零、溢出、定义域错误等异常，保障前端无闪退。
 
 ## 📂 核心目录结构
 
@@ -52,7 +64,8 @@ CalculatorX/
 │   │   ├── pages/  
 │   │   │   ├── settings/                  # 设置
 │   │   │   │   ├── Settings.ets           # 设置主页
-│   │   │   │   └── About.ets              # 关于页
+│   │   │   │   ├── About.ets              # 关于页
+│   │   │   │   └── Credits.ets            # 特别鸣谢
 │   │   │   ├── Index.ets                  # 主页面：处理按键逻辑、调用 Webview/C++，参数状态映射
 │   │   │   └── DocViewer.ets              # 文档展示页：系统级 WebView，负责加载云端协议网页
 │   │   │
