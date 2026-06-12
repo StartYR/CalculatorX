@@ -1,0 +1,66 @@
+// ============================================================
+// CalculatorX 构建配置模板 (仅供参考)
+// ============================================================
+// 此文件展示了完整的 build-profile.json5 结构，包括签名配置。
+// 实际使用的 build-profile.json5 不应包含任何密钥/密码等敏感信息。
+//
+// 签名配置方法：
+//   方案 1 (推荐): 在 DevEco Studio 中通过
+//     File → Project Structure → Signing Configs 配置签名
+//   方案 2: 参考 local.properties.template 创建 local.properties，
+//     然后手动在 build-profile.json5 中添加 signingConfigs
+// ============================================================
+
+{
+  "app": {
+    // ⚠️ signingConfigs 严禁提交到 Git！
+    // 应在 DevEco Studio 中本地配置，或通过 local.properties 管理。
+    // "signingConfigs": [
+    //   {
+    //     "name": "default",
+    //     "type": "HarmonyOS",
+    //     "material": {
+    //       "storeFile": "本地 .p12 密钥库路径",
+    //       "storePassword": "密钥库密码（请勿硬编码）",
+    //       "keyAlias": "密钥别名",
+    //       "keyPassword": "密钥密码（请勿硬编码）",
+    //       "signAlg": "SHA256withECDSA",
+    //       "profile": "本地 .p7b profile 路径",
+    //       "certpath": "本地 .cer 证书路径"
+    //     }
+    //   }
+    // ],
+    "products": [
+      {
+        "name": "default",
+        // "signingConfig": "default",  // 配置签名后取消此行注释
+        "targetSdkVersion": "6.1.1(24)",
+        "compatibleSdkVersion": "6.1.0(23)",
+        "runtimeOS": "HarmonyOS",
+        "buildOption": {
+          "nativeCompiler": "BiSheng",
+          "strictMode": {
+            "caseSensitiveCheck": true,
+            "useNormalizedOHMUrl": true
+          }
+        }
+      }
+    ],
+    "buildModeSet": [
+      { "name": "debug" },
+      { "name": "release" }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": ["default"]
+        }
+      ]
+    }
+  ]
+}

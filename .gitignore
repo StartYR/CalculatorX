@@ -33,6 +33,10 @@ local.properties
 /local.properties
 .devco/
 
+# 构建签名与本地敏感配置（严禁提交密钥/密码）
+build-profile.json5
+/build-profile.json5
+
 # C++ 依赖包
 boost_*.tar.gz
 giac-*.tar.gz
