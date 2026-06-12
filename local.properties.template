@@ -1,0 +1,45 @@
+# ============================================================
+# CalculatorX 本地开发配置模板
+# ============================================================
+# 使用方法:
+#   1. 复制此文件为 local.properties
+#   2. 将下方占位符替换为你的实际路径和密钥信息
+#   3. local.properties 已在 .gitignore 中，不会被提交到 Git
+# ============================================================
+
+# --- HarmonyOS 签名配置 ---
+# 以下属性对应 build-profile.json5 中 signingConfigs 的敏感字段。
+# 签名所需文件（.p12, .p7b, .cer）应存放在安全目录中，不要放在项目目录下。
+
+# 密钥库文件路径（.p12 文件，绝对路径或相对路径）
+signing.storeFile=/path/to/your/CalculatorX.p12
+
+# 密钥库密码（从华为 AppGallery Connect 获取）
+signing.storePassword=your-store-password-here
+
+# 密钥别名
+signing.keyAlias=your-key-alias
+
+# 密钥密码
+signing.keyPassword=your-key-password-here
+
+# 签名算法（通常为 SHA256withECDSA）
+signing.signAlg=SHA256withECDSA
+
+# Profile 文件路径（.p7b 文件）
+signing.profile=/path/to/your/release.p7b
+
+# 证书文件路径（.cer 文件）
+signing.certpath=/path/to/your/release.cer
+
+# --- 第二套签名配置（如需多套签名）---
+# signing2.storeFile=
+# signing2.storePassword=
+# signing2.keyAlias=
+# signing2.keyPassword=
+# signing2.signAlg=
+# signing2.profile=
+# signing2.certpath=
+
+# --- DevEco Studio SDK 路径（如非默认路径）---
+# sdk.dir=E:/Program Files/HUAWEI/DevEco Studio/sdk
