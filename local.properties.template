@@ -43,3 +43,4 @@ signing.certpath=/path/to/your/release.cer
 
 # --- DevEco Studio SDK 路径（如非默认路径）---
 # sdk.dir=E:/Program Files/HUAWEI/DevEco Studio/sdk
+
