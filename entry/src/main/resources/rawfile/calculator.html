@@ -93,10 +93,11 @@
             max-width: 100%;
             /* 限制最宽只能和屏幕一样大 */
             margin-top: 8px;
+            max-height: 35vh;
             overflow-x: auto;
-            overflow-y: hidden;
+            overflow-y: auto;
             -webkit-overflow-scrolling: touch;
-            touch-action: pan-x;
+            touch-action: pan-x pan-y;
             scrollbar-width: none;
         }
 
@@ -110,6 +111,7 @@
             width: max-content;
             max-width: none !important;
             padding-right: 2px;
+            touch-action: pan-x pan-y;
         }
 
         #math-result.show {
@@ -135,51 +137,65 @@
 
         // ========== 通用的动态字号缩放核心核心算法 ==========
         function autoScaleFontSize(field, wrapper, maxRem, minRem) {
-            // 1. 先强制恢复到最大初始字号，以此来测量公式如果不受限时的真实最大宽度
+            // 1. 恢复最大字号以便测量
             field.style.fontSize = maxRem + 'rem';
 
-            const wrapperWidth = wrapper.clientWidth;
-            const fieldWidth = field.getBoundingClientRect().width;
+            const wWidth = wrapper.clientWidth;
+            const wHeight = wrapper.clientHeight; // 新增：获取容器可视高度
 
-            // 2. 如果最大字号下的宽度撑满了容器，开始触发缩放逻辑
-            if (fieldWidth > wrapperWidth && wrapperWidth > 0) {
-                // 按物理比例精确计算应该缩小的字号大小（预留5px富余防止贴边抖动）
-                let optimizedFont = maxRem * ((wrapperWidth - 5) / fieldWidth);
+            const fRect = field.getBoundingClientRect(); // 使用 getBoundingClientRect 获取渲染后的精确尺寸
+            const fWidth = fRect.width;
+            const fHeight = fRect.height; // 新增：获取公式的真实高度
 
-                // 3. 边界防御：如果计算出的字号比设定的最小值还小，直接锁死在最小值
+            // 2. 检查：是否宽度溢出 OR 高度溢出
+            // 只有当公式真实尺寸大于容器尺寸时，才触发计算
+            if ((fWidth > wWidth || fHeight > wHeight) && wWidth > 0 && wHeight > 0) {
+
+                // 计算两个维度的缩放比，取最小值，保证缩放后两个维度都不溢出
+                const ratioW = (wWidth - 5) / fWidth;
+                const ratioH = (wHeight - 5) / fHeight;
+                const finalRatio = Math.min(ratioW, ratioH, 1.0); // 确保不会放大
+
+                let optimizedFont = maxRem * finalRatio;
+
+                // 3. 边界防御
                 if (optimizedFont < minRem) {
                     optimizedFont = minRem;
                 }
-                // 4. 赋予新字号
+
                 field.style.fontSize = optimizedFont + 'rem';
             }
         }
 
         // ========== 光标自动追踪探头 ==========
         window.keepCaretInView = function () {
-            // 给渲染引擎 30ms 的时间更新 DOM，确保拿到的是最新位置
             setTimeout(() => {
                 const shadow = mf.shadowRoot;
                 if (!inputWrapper || !shadow) return;
 
-                // 寻找 MathLive 正在闪烁的光标元素
                 const caret = shadow.querySelector('.ML__caret, .ML__text-caret');
 
                 if (caret) {
                     const wRect = inputWrapper.getBoundingClientRect();
                     const cRect = caret.getBoundingClientRect();
 
-                    const padding = 35; // 呼吸空间：不让光标紧贴屏幕边缘，提前 35px 滚动
+                    const paddingX = 35; // 横向呼吸空间
+                    const paddingY = 20; // 纵向呼吸空间
 
+                    // 横向追踪
                     if (cRect.right > wRect.right) {
-                        // 光标越过右边界，向右追尾
-                        inputWrapper.scrollLeft += (cRect.right - wRect.right + padding);
+                        inputWrapper.scrollLeft += (cRect.right - wRect.right + paddingX);
                     } else if (cRect.left < wRect.left) {
-                        // 光标越过左边界，向左回溯
-                        inputWrapper.scrollLeft -= (wRect.left - cRect.left + padding);
+                        inputWrapper.scrollLeft -= (wRect.left - cRect.left + paddingX);
+                    }
+
+                    // 纵向追踪
+                    if (cRect.bottom > wRect.bottom) {
+                        inputWrapper.scrollTop += (cRect.bottom - wRect.bottom + paddingY);
+                    } else if (cRect.top < wRect.top) {
+                        inputWrapper.scrollTop -= (wRect.top - cRect.top + paddingY);
                     }
                 } else {
-                    // 保底策略
                     inputWrapper.scrollLeft = inputWrapper.scrollWidth;
                 }
             }, 30);
@@ -305,15 +321,19 @@
 
         // ========== 输入区滑动拦截 ==========
         let isPanning = false;
-        let startX = 0;
-        let initialScrollLeft = 0;
+        let startX = 0; // X 起点
+        let startY = 0; // Y 起点
+        let initialScrollLeft = 0; // X 初始滚动值
+        let initialScrollTop = 0; // Y 初始滚动值
 
         // 1. 捕获手指按下
         inputWrapper.addEventListener('pointerdown', (e) => {
             if (e.pointerType !== 'touch') return;
             isPanning = false;
             startX = e.clientX;
+            startY = e.clientY;
             initialScrollLeft = inputWrapper.scrollLeft;
+            initialScrollTop = inputWrapper.scrollTop;
         }, { capture: true });
 
         // 2. 捕获手指移动
@@ -321,12 +341,13 @@
             if (e.pointerType !== 'touch') return;
 
             const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY
 
-            // 如果水平移动超过 8px，判定这是“滑动滚动”，而不是“点击插光标”
-            if (!isPanning && Math.abs(deltaX) > 8) {
+            // 如果移动超过 8px，判定这是“滑动滚动”，而不是“点击插光标”
+            if (!isPanning && (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8)) {
                 isPanning = true;
 
-                // 一旦确认是滑动，立刻发送一个 pointercancel，强行打断选中/光标移动逻辑
+                // 打断 MathLive 的蓝色选中
                 mf.dispatchEvent(new PointerEvent('pointercancel', {
                     pointerId: e.pointerId,
                     pointerType: 'touch'
@@ -337,6 +358,7 @@
             if (isPanning) {
                 // 接管滚动权，强行推着 Wrapper 跑
                 inputWrapper.scrollLeft = initialScrollLeft - deltaX;
+                inputWrapper.scrollTop = initialScrollTop - deltaY;
 
                 // 把事件就地销毁，不把滑动过程传递到下层的 MathLive
                 e.stopPropagation();
