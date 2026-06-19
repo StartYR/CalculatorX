@@ -439,19 +439,18 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                                 throw std::runtime_error("Romberg Failed");
                             }
 
-                            // 💡 新增拦截器：处理剧烈震荡函数返回的误差区间 [min, max]
+                            // 处理剧烈震荡函数返回的误差区间 [min, max]
                             if (rawResult.find(',') != std::string::npos && 
                                (rawResult.find('[') != std::string::npos || rawResult.find("left[") != std::string::npos)) {
                                 
                                 std::string cleanStr = rawResult;
-                                // 1. 暴力清洗所有的 LaTeX 包装符号、括号和空格
+                                // 清洗所有的 LaTeX 包装符号、括号和空格
                                 replaceAll(cleanStr, "\\left", "");
                                 replaceAll(cleanStr, "\\right", "");
                                 replaceAll(cleanStr, "[", "");
                                 replaceAll(cleanStr, "]", "");
                                 replaceAll(cleanStr, " ", "");
                                 
-                                // 2. 此时 cleanStr 应该是极其纯净的 "0.503854,0.504016"
                                 size_t commaPos = cleanStr.find(',');
                                 if (commaPos != std::string::npos) {
                                     try {
