@@ -126,7 +126,14 @@ target_link_libraries(giac PUBLIC gmp)
 
 
 # ================= 构建入口 ==================
-add_library(entry SHARED engine.cpp FastMath.cpp)
+add_library(entry SHARED
+    engine.cpp
+    FastMath.cpp
+    core/parser.cpp
+    core/formatter.cpp
+    core/giac_bridge.cpp
+    core/string_utils.cpp
+)
 
 # 将 N-API、SymEngine、Giac 和 arm64 版 GMP 一并链接
 target_link_libraries(entry PUBLIC
