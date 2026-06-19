@@ -67,8 +67,8 @@ export const PermutationOptions: MathStyleOption[] = [
 
 export const topShiftButtons: Array<string | Resource> = [
   '', '', '', '', '', '',
-  '', '', 'd/dx', icon_indef_integral,'GCD', 'LCM',
-  'a', 'b', 'c', '', icon_e_power, 'lg',
+  'm', 'n', 'd/dx', icon_indef_integral,'GCD', 'LCM',
+  'a', 'b', 'c', 'd', icon_e_power, 'lg',
   'mod', icon_sqrt3, '%', icon_power3, icon_comma, icon_inverse,
   'sin⁻¹', 'cos⁻¹', 'tan⁻¹', 'x', 'y', 'z',
 ];
@@ -123,7 +123,7 @@ export class RoutePath {
 export function getFontFamily(btn: string | Resource): string {
   if (typeof btn !== 'string') return 'HarmonyOS Sans';
   if (['AC', '⌫', '='].includes(btn)) return 'HarmonyOS Sans';
-  if (['x', 'y', 'z', 'i', 'e', 'π',].includes(btn)) return 'Cambria Italic';
+  if (['a', 'b', 'c', 'd', 'm', 'n', 'x', 'y', 'z', 'i', 'e', 'π'].includes(btn)) return 'Cambria Italic';
   return 'Cambria Math';
 }
 
@@ -163,7 +163,7 @@ export function getFontColor(btn: string | Resource): ResourceColor {
   // 2. SVG 图标：使用主要文字色
   if (typeof btn !== 'string') return $r('sys.color.font_primary');
 
-  // 3. 右侧运算符：为了让界面更灵动，在灰色背景上使用系统强调色 (蓝色文字)
+  // 3. 右侧运算符：在灰色背景上使用系统强调色 (蓝色文字)
   if (['+', '−', '×', '÷'].includes(action)) return $r('sys.color.font_emphasize');
 
   // 4. 顶部高级功能区：次要文字颜色 (略微弱化，将视觉焦点让给下方数字区)
@@ -199,6 +199,6 @@ export const keyContextMenuRegistry: Record<string, CustomMenuItem[]> = {
     { value: '度分秒', actionCode: 'LONG_SD_DMS' }
   ],
 
-  // 🔮 以后其他按键（例如 Ans、sin、log）需要长按时，直接在这里追加一行即可！
+  // 其他按键（例如 Ans、sin、log）需要长按时，直接在这里追加一行即可！
   // 'Ans': [{ value: '清除历史记录', actionCode: 'CLEAR_HISTORY' }]
 };
