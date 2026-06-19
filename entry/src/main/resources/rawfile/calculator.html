@@ -7,6 +7,7 @@
     <script src="./compute-engine.min.js"></script>
     <script src="./mathlive.min.js"></script>
     <style>
+        /* ========== 1. 主题变量 ========== */
         :root {
             --bg-color: #F1F3F5;
             --text-color: #1A1C1E;
@@ -21,6 +22,14 @@
             }
         }
 
+        /* ========== 2. 页面基础 ========== */
+        html,
+        body {
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: hidden !important;
+        }
+
         body {
             display: flex;
             flex-direction: column;
@@ -30,12 +39,12 @@
             padding: 48px 16px 20px 16px;
             box-sizing: border-box;
             overflow-y: auto;
-            overflow-x: auto;
             -webkit-touch-callout: none;
             background-color: var(--bg-color);
             transition: background-color 0.3s ease;
         }
 
+        /* ========== 3. math-field 共用基础 ========== */
         math-field {
             width: fit-content;
             max-width: 100%;
@@ -46,12 +55,28 @@
             --placeholder-color: var(--text-color);
             --placeholder-opacity: 0.35;
             transition: color 0.3s ease;
+        }
 
+        /* ========== 4. 输入区 ========== */
+        .input-scroll-wrapper {
+            margin-top: auto;
+            /* 顶住上方空间，将自己推到最下方 */
+            max-width: 100%;
+            min-width: 0;
+            /* 允许比内部公式窄，触发滚动 */
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-x;
+            scrollbar-width: none;
         }
 
         #math-input {
-            margin-top: auto;
-            font-size: 2.5rem;
+            font-size: 3rem; /* 初始最大字号 */
+            display: block;
+            width: max-content;
+            max-width: none !important;
+            touch-action: pan-x;
         }
 
         #math-input:focus-within {
@@ -63,14 +88,28 @@
             display: none;
         }
 
-        #math-result {
-            font-size: 1.8rem;
-            color: var(--result-color);
+        /* ========== 5. 结果区 ========== */
+        .result-scroll-wrapper {
+            max-width: 100%;
+            /* 限制最宽只能和屏幕一样大 */
             margin-top: 8px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-x;
+            scrollbar-width: none;
+        }
+
+        #math-result {
+            font-size: 3rem; /* 初始最大字号 */
+            color: var(--result-color);
             opacity: 0;
             transition: opacity 0.2s ease;
             pointer-events: none;
-            text-align: right;
+            display: block;
+            width: max-content;
+            max-width: none !important;
+            padding-right: 2px;
         }
 
         #math-result.show {
@@ -80,19 +119,91 @@
 </head>
 
 <body>
-<math-field id="math-input" math-virtual-keyboard-policy="manual"></math-field>
-<math-field id="math-result" read-only></math-field>
+<div class="input-scroll-wrapper">
+    <math-field id="math-input" math-virtual-keyboard-policy="manual"></math-field>
+</div>
+<div class="result-scroll-wrapper">
+    <math-field id="math-result" read-only></math-field>
+</div>
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const mf = document.getElementById('math-input');
         const resField = document.getElementById('math-result');
+        const inputWrapper = document.querySelector('.input-scroll-wrapper');
+        const resWrapper = document.querySelector('.result-scroll-wrapper');
+
+        // ========== 通用的动态字号缩放核心核心算法 ==========
+        function autoScaleFontSize(field, wrapper, maxRem, minRem) {
+            // 1. 先强制恢复到最大初始字号，以此来测量公式如果不受限时的真实最大宽度
+            field.style.fontSize = maxRem + 'rem';
+
+            const wrapperWidth = wrapper.clientWidth;
+            const fieldWidth = field.getBoundingClientRect().width;
+
+            // 2. 如果最大字号下的宽度撑满了容器，开始触发缩放逻辑
+            if (fieldWidth > wrapperWidth && wrapperWidth > 0) {
+                // 按物理比例精确计算应该缩小的字号大小（预留5px富余防止贴边抖动）
+                let optimizedFont = maxRem * ((wrapperWidth - 5) / fieldWidth);
+
+                // 3. 边界防御：如果计算出的字号比设定的最小值还小，直接锁死在最小值
+                if (optimizedFont < minRem) {
+                    optimizedFont = minRem;
+                }
+                // 4. 赋予新字号
+                field.style.fontSize = optimizedFont + 'rem';
+            }
+        }
+
+        // ========== 光标自动追踪探头 ==========
+        window.keepCaretInView = function () {
+            // 给渲染引擎 30ms 的时间更新 DOM，确保拿到的是最新位置
+            setTimeout(() => {
+                const shadow = mf.shadowRoot;
+                if (!inputWrapper || !shadow) return;
+
+                // 寻找 MathLive 正在闪烁的光标元素
+                const caret = shadow.querySelector('.ML__caret, .ML__text-caret');
+
+                if (caret) {
+                    const wRect = inputWrapper.getBoundingClientRect();
+                    const cRect = caret.getBoundingClientRect();
+
+                    const padding = 35; // 呼吸空间：不让光标紧贴屏幕边缘，提前 35px 滚动
+
+                    if (cRect.right > wRect.right) {
+                        // 光标越过右边界，向右追尾
+                        inputWrapper.scrollLeft += (cRect.right - wRect.right + padding);
+                    } else if (cRect.left < wRect.left) {
+                        // 光标越过左边界，向左回溯
+                        inputWrapper.scrollLeft -= (wRect.left - cRect.left + padding);
+                    }
+                } else {
+                    // 保底策略
+                    inputWrapper.scrollLeft = inputWrapper.scrollWidth;
+                }
+            }, 30);
+        };
+
+        // ========== 劫持 MathLive 的底层执行核心 ==========
+        const originalExecute = mf.executeCommand.bind(mf);
+        mf.executeCommand = function (...args) {
+            const result = originalExecute(...args);
+
+            // 【高级进化】：每次输入/删除内容发生改变，先动态伸缩字号
+            // 输入框：最大 2.5rem，最小缩到 1.6rem
+            autoScaleFontSize(mf, inputWrapper, 3.0, 2.0);
+
+            // 字号缩放完成后，再去计算光标追踪轨道的安全视口
+            window.keepCaretInView();
+            return result;
+        };
 
         // 清空 MathLive 内置菜单项
         mf.menuItems = [];
 
         // 拦截浏览器原生的长按/右键菜单事件
-        mf.addEventListener('contextmenu', function(event) {
+        mf.addEventListener('contextmenu', function (event) {
             event.preventDefault();
             event.stopPropagation();
         });
@@ -103,6 +214,19 @@
         window.showResult = function (latexString) {
             resField.value = latexString;
             resField.classList.add('show');
+
+            // 【高级进化】：输出结果动态缩放
+            // 结果框：最大 2.0rem，最小缩到 1.3rem
+            setTimeout(() => {
+                void resField.offsetWidth; // 强制浏览器在测量前完成 DOM 重绘
+                autoScaleFontSize(resField, resWrapper, 3.0, 2.0);// 执行动态缩放
+
+                // 缩放完成后，如果达到了最小字号依然超长，自动将视角推到最右侧看结果末尾
+                setTimeout(() => {
+                    resWrapper.scrollLeft = resWrapper.scrollWidth;
+                }, 20);
+
+            }, 50);
         };
 
         mf.addEventListener('input', () => {
@@ -137,7 +261,7 @@
             const lastDegree = currentLatex.lastIndexOf('^{\\circ}');
             const lastMinute = currentLatex.lastIndexOf('^{\\prime}');
             const lastSecond1 = currentLatex.lastIndexOf('^{\\prime\\prime}');
-            const lastSecond2 = currentLatex.lastIndexOf('^{\\prime \\prime}');
+            const lastSecond2 = currentLatex.lastIndexOf('^{\\prime \\ dynamic}');
             const lastSecond = Math.max(lastSecond1, lastSecond2);
 
             const maxIndex = Math.max(lastDegree, lastMinute, lastSecond);
@@ -150,8 +274,6 @@
                 } else if (maxIndex === lastMinute) {
                     toInsert = '^{\\prime\\prime}'; // 紧挨着分：插入秒 (")
                 } else if (maxIndex === lastSecond) {
-                    // 因为上方已经拦截了紧挨着秒的情况，走到这里说明光标不在秒后面
-                    // 比如 12°34'56" + 1，此时按下 DMS，开启新一轮的循环
                     toInsert = '^{\\circ}';
                 }
             }
@@ -181,36 +303,55 @@
             return JSON.stringify(jsonAST);
         };
 
-        // 度分秒逻辑
-        window.insertDMS = function () {
-            const currentLatex = mf.value;
+        // ========== 输入区滑动拦截 ==========
+        let isPanning = false;
+        let startX = 0;
+        let initialScrollLeft = 0;
 
-            // 查找最后一个出现的度、分、秒符号的索引
-            const lastDegree = currentLatex.lastIndexOf('^{\\circ}');
-            const lastMinute = currentLatex.lastIndexOf('^{\\prime}');
+        // 1. 捕获手指按下
+        inputWrapper.addEventListener('pointerdown', (e) => {
+            if (e.pointerType !== 'touch') return;
+            isPanning = false;
+            startX = e.clientX;
+            initialScrollLeft = inputWrapper.scrollLeft;
+        }, { capture: true });
 
-            // MathLive 内部对连续单引号的渲染可能有两种空格格式，做个兼容
-            const lastSecond1 = currentLatex.lastIndexOf('^{\\prime\\prime}');
-            const lastSecond2 = currentLatex.lastIndexOf('^{\\prime \\prime}');
-            const lastSecond = Math.max(lastSecond1, lastSecond2);
+        // 2. 捕获手指移动
+        inputWrapper.addEventListener('pointermove', (e) => {
+            if (e.pointerType !== 'touch') return;
 
-            const maxIndex = Math.max(lastDegree, lastMinute, lastSecond);
+            const deltaX = e.clientX - startX;
 
-            let toInsert = '^{\\circ}'; // 默认状态：插入度 (°)
+            // 如果水平移动超过 8px，判定这是“滑动滚动”，而不是“点击插光标”
+            if (!isPanning && Math.abs(deltaX) > 8) {
+                isPanning = true;
 
-            if (maxIndex !== -1) {
-                if (maxIndex === lastDegree) {
-                    toInsert = '^{\\prime}';        // 紧跟在度后面：插入分 (')
-                } else if (maxIndex === lastMinute) {
-                    toInsert = '^{\\prime\\prime}'; // 紧跟在分后面：插入秒 (")
-                } else if (maxIndex === lastSecond) {
-                    toInsert = '^{\\circ}';         // 紧跟在秒后面：开启下一个循环，插入度 (°)
-                }
+                // 一旦确认是滑动，立刻发送一个 pointercancel，强行打断选中/光标移动逻辑
+                mf.dispatchEvent(new PointerEvent('pointercancel', {
+                    pointerId: e.pointerId,
+                    pointerType: 'touch'
+                }));
             }
 
-            mf.executeCommand(['insert', toInsert]);
-            mf.focus();
-        };
+            // 如果确认是滑动状态
+            if (isPanning) {
+                // 接管滚动权，强行推着 Wrapper 跑
+                inputWrapper.scrollLeft = initialScrollLeft - deltaX;
+
+                // 把事件就地销毁，不把滑动过程传递到下层的 MathLive
+                e.stopPropagation();
+                e.preventDefault();
+            }
+        }, { capture: true });
+
+        // 3. 捕获手指抬起
+        inputWrapper.addEventListener('pointerup', (e) => {
+            if (e.pointerType !== 'touch') return;
+            if (isPanning) {
+                e.stopPropagation();
+                isPanning = false;
+            }
+        }, { capture: true });
     });
 </script>
 </body>
