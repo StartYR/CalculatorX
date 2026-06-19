@@ -79,8 +79,6 @@
             display: block;
             width: max-content;
             max-width: none !important;
-            min-width: 100%;
-            text-align: right;
             padding-right: 2px;
         }
 
@@ -90,10 +88,8 @@
 
         /* 专门负责原生滚动的外部容器 */
         .result-scroll-wrapper {
-            width: 100%;
             max-width: 100%;
-            /* 限制容器自己不能超出屏幕 */
-            min-width: 0;
+            /* 限制最宽只能和屏幕一样大 */
             margin-top: 8px;
             overflow-x: auto;
             overflow-y: hidden;
@@ -131,15 +127,17 @@
             resField.value = latexString;
             resField.classList.add('show');
 
-            // 等待 MathLive 渲染并撑开 Wrapper 宽度后，自动滚到最右侧
-            setTimeout(() => {
-                const scrollWrapper = document.querySelector('.result-scroll-wrapper');
-                if (scrollWrapper) {
-                    // 让滚动条的位置等于它被撑开的总长度
-                    scrollWrapper.scrollLeft = scrollWrapper.scrollWidth;
-                }
-            }, 50);
-        };
+<!--            // 等待 MathLive 渲染并撑开 Wrapper 宽度后，自动滚到最右侧-->
+< !--setTimeout(() => {
+                -->
+< !--                const scrollWrapper = document.querySelector('.result-scroll-wrapper'); -->
+< !--                if (scrollWrapper) {
+                    -->
+< !--                    // 让滚动条的位置等于它被撑开的总长度-->
+< !--scrollWrapper.scrollLeft = scrollWrapper.scrollWidth; -->
+< !--                } -->
+< !--            }, 50); -->
+    };
 
         mf.addEventListener('input', () => {
             resField.classList.remove('show');
