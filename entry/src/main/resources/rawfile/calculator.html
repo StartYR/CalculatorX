@@ -7,6 +7,7 @@
     <script src="./compute-engine.min.js"></script>
     <script src="./mathlive.min.js"></script>
     <style>
+        /* ========== 1. 主题变量 ========== */
         :root {
             --bg-color: #F1F3F5;
             --text-color: #1A1C1E;
@@ -21,6 +22,7 @@
             }
         }
 
+        /* ========== 2. 页面基础 ========== */
         html,
         body {
             width: 100%;
@@ -42,6 +44,7 @@
             transition: background-color 0.3s ease;
         }
 
+        /* ========== 3. math-field 共用基础 ========== */
         math-field {
             width: fit-content;
             max-width: 100%;
@@ -52,12 +55,12 @@
             --placeholder-color: var(--text-color);
             --placeholder-opacity: 0.35;
             transition: color 0.3s ease;
-
         }
 
+        /* ========== 4. 输入区 ========== */
         .input-scroll-wrapper {
             margin-top: auto;
-            /* 🌟 核心：从原 input 迁移过来，顶住上方空间，将自己推到最下方 */
+            /* 顶住上方空间，将自己推到最下方 */
             max-width: 100%;
             min-width: 0;
             /* 允许比内部公式窄，触发滚动 */
@@ -74,8 +77,6 @@
             width: max-content;
             max-width: none !important;
             /* 突破 100% 宽度封印 */
-
-            /* 👇 核心防选中魔法 👇 */
             touch-action: pan-x;
             /* 强制浏览器层接管横向平移，物理打断 MathLive 的拖拽选中判定 */
         }
@@ -89,24 +90,7 @@
             display: none;
         }
 
-        #math-result {
-            font-size: 2.8rem;
-            color: var(--result-color);
-            opacity: 0;
-            transition: opacity 0.2s ease;
-            pointer-events: none;
-
-            display: block;
-            width: max-content;
-            max-width: none !important;
-            padding-right: 2px;
-        }
-
-        #math-result.show {
-            opacity: 1;
-        }
-
-        /* 专门负责原生滚动的外部容器 */
+        /* ========== 5. 结果区 ========== */
         .result-scroll-wrapper {
             max-width: 100%;
             /* 限制最宽只能和屏幕一样大 */
@@ -116,6 +100,22 @@
             -webkit-overflow-scrolling: touch;
             touch-action: pan-x;
             scrollbar-width: none;
+        }
+
+        #math-result {
+            font-size: 1.8rem;
+            color: var(--result-color);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+            display: block;
+            width: max-content;
+            max-width: none !important;
+            padding-right: 2px;
+        }
+
+        #math-result.show {
+            opacity: 1;
         }
     </style>
 </head>
