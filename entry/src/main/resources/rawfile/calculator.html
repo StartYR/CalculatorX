@@ -167,29 +167,33 @@
 
         // ========== 光标自动追踪探头 ==========
         window.keepCaretInView = function () {
-            // 给渲染引擎 30ms 的时间更新 DOM，确保拿到的是最新位置
             setTimeout(() => {
                 const shadow = mf.shadowRoot;
                 if (!inputWrapper || !shadow) return;
 
-                // 寻找 MathLive 正在闪烁的光标元素
                 const caret = shadow.querySelector('.ML__caret, .ML__text-caret');
 
                 if (caret) {
                     const wRect = inputWrapper.getBoundingClientRect();
                     const cRect = caret.getBoundingClientRect();
 
-                    const padding = 35; // 呼吸空间：不让光标紧贴屏幕边缘，提前 35px 滚动
+                    const paddingX = 35; // 横向呼吸空间
+                    const paddingY = 20; // 纵向呼吸空间
 
+                    // 横向追踪
                     if (cRect.right > wRect.right) {
-                        // 光标越过右边界，向右追尾
-                        inputWrapper.scrollLeft += (cRect.right - wRect.right + padding);
+                        inputWrapper.scrollLeft += (cRect.right - wRect.right + paddingX);
                     } else if (cRect.left < wRect.left) {
-                        // 光标越过左边界，向左回溯
-                        inputWrapper.scrollLeft -= (wRect.left - cRect.left + padding);
+                        inputWrapper.scrollLeft -= (wRect.left - cRect.left + paddingX);
+                    }
+
+                    // 纵向追踪
+                    if (cRect.bottom > wRect.bottom) {
+                        inputWrapper.scrollTop += (cRect.bottom - wRect.bottom + paddingY);
+                    } else if (cRect.top < wRect.top) {
+                        inputWrapper.scrollTop -= (wRect.top - cRect.top + paddingY);
                     }
                 } else {
-                    // 保底策略
                     inputWrapper.scrollLeft = inputWrapper.scrollWidth;
                 }
             }, 30);
@@ -315,15 +319,19 @@
 
         // ========== 输入区滑动拦截 ==========
         let isPanning = false;
-        let startX = 0;
-        let initialScrollLeft = 0;
+        let startX = 0; // X 起点
+        let startY = 0; // Y 起点
+        let initialScrollLeft = 0; // X 初始滚动值
+        let initialScrollTop = 0; // Y 初始滚动值
 
         // 1. 捕获手指按下
         inputWrapper.addEventListener('pointerdown', (e) => {
             if (e.pointerType !== 'touch') return;
             isPanning = false;
             startX = e.clientX;
+            startY = e.clientY;
             initialScrollLeft = inputWrapper.scrollLeft;
+            initialScrollTop = inputWrapper.scrollTop;
         }, { capture: true });
 
         // 2. 捕获手指移动
@@ -331,12 +339,13 @@
             if (e.pointerType !== 'touch') return;
 
             const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY
 
-            // 如果水平移动超过 8px，判定这是“滑动滚动”，而不是“点击插光标”
-            if (!isPanning && Math.abs(deltaX) > 8) {
+            // 如果移动超过 8px，判定这是“滑动滚动”，而不是“点击插光标”
+            if (!isPanning && (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8)) {
                 isPanning = true;
 
-                // 一旦确认是滑动，立刻发送一个 pointercancel，强行打断选中/光标移动逻辑
+                // 打断 MathLive 的蓝色选中
                 mf.dispatchEvent(new PointerEvent('pointercancel', {
                     pointerId: e.pointerId,
                     pointerType: 'touch'
@@ -347,6 +356,7 @@
             if (isPanning) {
                 // 接管滚动权，强行推着 Wrapper 跑
                 inputWrapper.scrollLeft = initialScrollLeft - deltaX;
+                inputWrapper.scrollTop = initialScrollTop - deltaY;
 
                 // 把事件就地销毁，不把滑动过程传递到下层的 MathLive
                 e.stopPropagation();
