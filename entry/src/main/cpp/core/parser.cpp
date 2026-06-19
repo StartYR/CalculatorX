@@ -268,34 +268,36 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                 std::string var_name = "x";
                 if (ast[2][1].is_string()) var_name = ast[2][1].get<std::string>();
                 
+                // 解析表达式与上下限
+                Expression body = parseAST(ast[1], isRad, true, hasDMS);
                 Expression lower_expr = parseAST(ast[2][2], isRad, true, hasDMS);
                 Expression upper_expr = parseAST(ast[2][3], isRad, true, hasDMS);
                 
-                long long start = 0, end = 0;
-                try {
-                    start = static_cast<long long>(std::floor(SymEngine::eval_double(lower_expr)));
-                    end = static_cast<long long>(std::floor(SymEngine::eval_double(upper_expr)));
-                } catch (...) {
-                    throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Limits must be calculable numbers");
+                // 转换为字符串，供 Giac 识别
+                std::string exprStr = body.get_basic()->__str__();
+                std::string lowerStr = lower_expr.get_basic()->__str__();
+                std::string upperStr = upper_expr.get_basic()->__str__();
+                
+                // 语法适配：将 SymEngine 的乘方符号替换为 Giac 的乘方符号
+                replaceAll(exprStr, "**", "^");
+                replaceAll(lowerStr, "**", "^");
+                replaceAll(upperStr, "**", "^");
+                
+                // 根据操作符选择对应的 Giac 函数
+                std::string giacFuncName = (op == "Sum") ? "sum" : "product";
+                
+                // 构建 Giac 指令，套上 simplify 和 latex
+                std::string giacCmd = "latex(simplify(" + giacFuncName + "(" + exprStr + ", " + var_name + ", " + lowerStr + ", " + upperStr + ")))";
+                
+                std::string rawResult = evaluateWithGiac(giacCmd);
+                
+                // 剥离 Giac 输出自带的双引号
+                if (rawResult.size() >= 2 && rawResult.front() == '"' && rawResult.back() == '"') {
+                    rawResult = rawResult.substr(1, rawResult.size() - 2);
                 }
                 
-                if (end < start) return (op == "Sum") ? Expression(0) : Expression(1);
-                if (end - start > 10000) {
-                    throw CalcException(CalcErrorCode::TIMEOUT_ERROR, "Iteration limit exceeded");
-                }
-                
-                Expression body = parseAST(ast[1], isRad, true, hasDMS);
-                Expression total = (op == "Sum") ? Expression(0) : Expression(1);
-                SymEngine::RCP<const SymEngine::Symbol> sym_var = SymEngine::symbol(var_name);
-                
-                for (long long i = start; i <= end; ++i) {
-                    SymEngine::map_basic_basic subs_map;
-                    subs_map[sym_var] = Expression(i).get_basic();
-                    Expression evaluated_term(body.get_basic()->subs(subs_map));
-                    if (op == "Sum") total += evaluated_term;
-                    else total *= evaluated_term;
-                }
-                return total;
+                // 直接装箱返回前端渲染，绕过 SymEngine 解析
+                return Expression(SymEngine::symbol("MAGICGIACRESULT" + rawResult));
             }
             throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid Sum/Product format");
         }
@@ -382,19 +384,18 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                     Expression body = parseAST(ast[1], isRad, true, dummy);
                     Expression lower_expr = parseAST(ast[2][2], isRad, true, dummy);
                     Expression upper_expr = parseAST(ast[2][3], isRad, true, dummy);
-                    auto sym_var = SymEngine::symbol(var_name);
 
-                    // 里施算法 / 符号解析
+                    // 💡 优化：将字符串解析提到 try 块外面，让双轨制引擎共享参数
+                    std::string exprStr = body.get_basic()->__str__();
+                    std::string lowerStr = lower_expr.get_basic()->__str__();
+                    std::string upperStr = upper_expr.get_basic()->__str__();
+                    
+                    replaceAll(exprStr, "**", "^");
+                    replaceAll(lowerStr, "**", "^");
+                    replaceAll(upperStr, "**", "^");
+
+                    // 里施算法 / 符号解析 (尝试求精确解)
                     try {
-                        std::string exprStr = body.get_basic()->__str__();
-                        std::string lowerStr = lower_expr.get_basic()->__str__();
-                        std::string upperStr = upper_expr.get_basic()->__str__();
-                        
-                        replaceAll(exprStr, "**", "^");
-                        replaceAll(lowerStr, "**", "^");
-                        replaceAll(upperStr, "**", "^");
-                        
-                        // 调用 Giac 尝试算出精确解
                         std::string giacCmd = "latex(simplify(integrate(" + exprStr + ", " + var_name + ", " + lowerStr + ", " + upperStr + ")))";
                         std::string rawResult = evaluateWithGiac(giacCmd);
                         
@@ -402,45 +403,68 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                             rawResult = rawResult.substr(1, rawResult.size() - 2);
                         }
                         
-                        // 如果 Giac 算不出来，它会返回 undef、原样返回 integrate(...)，或者带有问号
+                        // 如果 Giac 算不出来精确解析解，
+                        // 或者算出了过于超纲的“特殊函数”（如 Ci, igamma, erf 等），主动熔断触发数值积分兜底
                         if (rawResult.find("undef") != std::string::npos || 
                             rawResult.find("\\int") != std::string::npos || 
                             rawResult.find("integrate") != std::string::npos ||
                             rawResult.find("?") != std::string::npos ||
+                            rawResult.find("Ci") != std::string::npos || 
+                            rawResult.find("Si") != std::string::npos || 
+                            rawResult.find("igamma") != std::string::npos || 
+                            rawResult.find("erf") != std::string::npos || 
                             rawResult.empty()) {
-                            // 主动熔断抛出异常，使用辛普森算法兜底
                             throw std::runtime_error("Force Numerical Fallback");
                         }
                         
-                        // 计算成功
                         std::string boxedResult = "MAGICGIACRESULT" + rawResult;
                         return Expression(SymEngine::symbol(boxedResult));
                         
                     } 
-                    // 辛普森 1/3 极速数值积分 (近似解)
+                    // 极速数值积分兜底 (接管了之前的辛普森 1/3)
                     catch (...) {
                         try {
-                            double a = SymEngine::eval_double(lower_expr);
-                            double b = SymEngine::eval_double(upper_expr);
+                            // 调用 Giac 内部的 Romberg 自适应高精度数值积分算法
+                            std::string giacCmd = "latex(romberg(" + exprStr + ", " + var_name + ", " + lowerStr + ", " + upperStr + "))";
+                            std::string rawResult = evaluateWithGiac(giacCmd);
 
-                            int N = 1000;
-                            double h = (b - a) / N;
-                            double sum = 0.0;
-
-                            for (int i = 0; i <= N; ++i) {
-                                double x_i = a + i * h;
-                                SymEngine::map_basic_basic subs_map;
-                                subs_map[sym_var] = Expression(x_i).get_basic();
-                                double y_i = SymEngine::eval_double(Expression(body.get_basic()->subs(subs_map)));
-                                
-                                // 权重分配：首尾为 1，奇数为 4，偶数为 2
-                                double weight = (i == 0 || i == N) ? 1.0 : ((i % 2 == 1) ? 4.0 : 2.0);
-                                sum += weight * y_i;
+                            if (rawResult.size() >= 2 && rawResult.front() == '"' && rawResult.back() == '"') {
+                                rawResult = rawResult.substr(1, rawResult.size() - 2);
                             }
-                            double raw_result = sum * h / 3.0;
-                            // 四舍五入保留 10 位小数
-                            double snapped_result = std::round(raw_result * 1e10) / 1e10;
-                            return Expression(snapped_result);
+
+                            if (rawResult.find("undef") != std::string::npos || 
+                                rawResult.find("romberg") != std::string::npos ||
+                                rawResult.find("?") != std::string::npos ||
+                                rawResult.empty()) {
+                                throw std::runtime_error("Romberg Failed");
+                            }
+
+                            // 💡 新增拦截器：处理剧烈震荡函数返回的误差区间 [min, max]
+                            if (rawResult.find(',') != std::string::npos && 
+                               (rawResult.find('[') != std::string::npos || rawResult.find("left[") != std::string::npos)) {
+                                
+                                std::string cleanStr = rawResult;
+                                // 1. 暴力清洗所有的 LaTeX 包装符号、括号和空格
+                                replaceAll(cleanStr, "\\left", "");
+                                replaceAll(cleanStr, "\\right", "");
+                                replaceAll(cleanStr, "[", "");
+                                replaceAll(cleanStr, "]", "");
+                                replaceAll(cleanStr, " ", "");
+                                
+                                // 2. 此时 cleanStr 应该是极其纯净的 "0.503854,0.504016"
+                                size_t commaPos = cleanStr.find(',');
+                                if (commaPos != std::string::npos) {
+                                    try {
+                                        double num1 = std::stod(cleanStr.substr(0, commaPos));
+                                        double num2 = std::stod(cleanStr.substr(commaPos + 1));
+                                        double mid = (num1 + num2) / 2.0; // 取区间中点
+                                        rawResult = std::to_string(mid);
+                                    } catch (...) {} // 解析失败则原样放行
+                                }
+                            }
+
+                            std::string boxedResult = "MAGICGIACRESULT" + rawResult;
+                            return Expression(SymEngine::symbol(boxedResult));
                         } catch (...) {
                             throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Integration bounds invalid or body unresolvable");
                         }
