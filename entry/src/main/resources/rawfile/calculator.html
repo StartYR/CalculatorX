@@ -218,8 +218,15 @@
             // 【高级进化】：输出结果动态缩放
             // 结果框：最大 2.0rem，最小缩到 1.3rem
             setTimeout(() => {
-                autoScaleFontSize(resField, resWrapper, 3.0, 2.0);
-            }, 10);
+                void resField.offsetWidth; // 强制浏览器在测量前完成 DOM 重绘
+                autoScaleFontSize(resField, resWrapper, 3.0, 2.0);// 执行动态缩放
+
+                // 缩放完成后，如果达到了最小字号依然超长，自动将视角推到最右侧看结果末尾
+                setTimeout(() => {
+                    resWrapper.scrollLeft = resWrapper.scrollWidth;
+                }, 20);
+
+            }, 50);
         };
 
         mf.addEventListener('input', () => {
