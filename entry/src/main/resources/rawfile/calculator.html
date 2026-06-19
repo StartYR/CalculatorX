@@ -56,25 +56,29 @@
         }
 
         .input-scroll-wrapper {
-    margin-top: auto; /* 🌟 核心：从原 input 迁移过来，顶住上方空间，将自己推到最下方 */
-    max-width: 100%;
-    min-width: 0;     /* 允许比内部公式窄，触发滚动 */
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-x;
-    scrollbar-width: none;
-}
+            margin-top: auto;
+            /* 🌟 核心：从原 input 迁移过来，顶住上方空间，将自己推到最下方 */
+            max-width: 100%;
+            min-width: 0;
+            /* 允许比内部公式窄，触发滚动 */
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-x;
+            scrollbar-width: none;
+        }
 
         #math-input {
-    font-size: 2.5rem;
-    display: block;
-    width: max-content;
-    max-width: none !important; /* 突破 100% 宽度封印 */
+            font-size: 2.5rem;
+            display: block;
+            width: max-content;
+            max-width: none !important;
+            /* 突破 100% 宽度封印 */
 
-    /* 👇 核心防选中魔法 👇 */
-    touch-action: pan-x; /* 强制浏览器层接管横向平移，物理打断 MathLive 的拖拽选中判定 */
-}
+            /* 👇 核心防选中魔法 👇 */
+            touch-action: pan-x;
+            /* 强制浏览器层接管横向平移，物理打断 MathLive 的拖拽选中判定 */
+        }
 
         #math-input:focus-within {
             outline: none;
@@ -129,6 +133,47 @@
         const mf = document.getElementById('math-input');
         const resField = document.getElementById('math-result');
 
+        // ========== 光标自动追踪探头 ==========
+        window.keepCaretInView = function () {
+            // 给渲染引擎 30ms 的时间更新 DOM，确保拿到的是最新位置
+            setTimeout(() => {
+                const wrapper = document.querySelector('.input-scroll-wrapper');
+                // MathLive 所有的元素都在影子 DOM 里，我们要强行穿透进去找
+                const shadow = mf.shadowRoot;
+                if (!wrapper || !shadow) return;
+
+                // 寻找 MathLive 正在闪烁的光标元素
+                const caret = shadow.querySelector('.ML__caret, .ML__text-caret');
+
+                if (caret) {
+                    const wRect = wrapper.getBoundingClientRect();
+                    const cRect = caret.getBoundingClientRect();
+
+                    const padding = 35; // 呼吸空间：不让光标紧贴屏幕边缘，提前 35px 滚动
+
+                    if (cRect.right > wRect.right) {
+                        // 光标越过右边界，向右追尾
+                        wrapper.scrollLeft += (cRect.right - wRect.right + padding);
+                    } else if (cRect.left < wRect.left) {
+                        // 光标越过左边界，向左回溯
+                        wrapper.scrollLeft -= (wRect.left - cRect.left + padding);
+                    }
+                } else {
+                    // 保底策略：如果因为某种原因没找到光标，默认将视口推到最右侧
+                    wrapper.scrollLeft = wrapper.scrollWidth;
+                }
+            }, 30);
+        };
+
+        // ========== 劫持 MathLive 的底层执行核心 ==========
+        // 拦截executeCommand ，在它执行完毕后，自动触发光标追踪
+        const originalExecute = mf.executeCommand.bind(mf);
+        mf.executeCommand = function (...args) {
+            const result = originalExecute(...args);
+            window.keepCaretInView(); // 每次执行完指令，立刻追踪！
+            return result;
+        };
+
         // 清空 MathLive 内置菜单项
         mf.menuItems = [];
 
@@ -146,7 +191,7 @@
             resField.classList.add('show');
 
 
-    };
+        };
 
         mf.addEventListener('input', () => {
             resField.classList.remove('show');
@@ -254,7 +299,7 @@
             mf.executeCommand(['insert', toInsert]);
             mf.focus();
         };
-        // ========== 输入区滑动拦截官 ==========
+        // ========== 输入区滑动拦截 ==========
         const inputWrapper = document.querySelector('.input-scroll-wrapper');
         let isPanning = false;
         let startX = 0;
@@ -278,8 +323,7 @@
             if (!isPanning && Math.abs(deltaX) > 8) {
                 isPanning = true;
 
-                // 【核心魔法】：给 MathLive 发送“触摸被系统取消”的假情报！
-                // 强制打断 MathLive 内部试图生成蓝色高亮选区的逻辑
+                // 一旦确认是滑动，立刻发送一个 pointercancel，强行打断选中/光标移动逻辑
                 mf.dispatchEvent(new PointerEvent('pointercancel', {
                     pointerId: e.pointerId,
                     pointerType: 'touch'
@@ -291,7 +335,7 @@
                 // 接管滚动权，强行推着 Wrapper 跑
                 inputWrapper.scrollLeft = initialScrollLeft - deltaX;
 
-                // 【拦截】：把事件就地销毁，不让下层的 MathLive 看到任何滑动过程
+                // 把事件就地销毁，不把滑动过程传递到下层的 MathLive
                 e.stopPropagation();
                 e.preventDefault();
             }
