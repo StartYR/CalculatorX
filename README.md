@@ -78,29 +78,28 @@ CalculatorX/
 │   │   │   ├── TopKeyboard.ets            # 自定义组件：上方科学计算与微积分键盘
 │   │   │   └── BottomKeyboard.ets         # 自定义组件：下方基础数字与四则运算键盘
 │   │   │
-│   │   └── utils/  
-│   │       └── CalculatorConfigs.ets      # 配置文件
+│   │   └── utils/CalculatorConfigs.ets    # 页面配置文件
 │   │  
 │   ├── cpp/                               # C++ 计算机代数系统 (CAS) 引擎层
 │   │   ├── CMakeLists.txt                 # 构建脚本：配置 N-API，链接 SymEngine 及 Boost
 │   │   ├── engine.cpp                     # 核心引擎： AST 树解析、精度控制与 N-API 通信中枢
 │   │   ├── ErrorHandler.h                 # 核心模块：自定义异常状态机，精准拦截除零、溢出、定义域等业务错误
-│   │   ├── FastMath.h/cpp                 # 核心模块：极速数学降维模块，实现在 O(1) 时间内计算超大数（最大支持10^9000000000000000000）
+│   │   ├── FastMath.cpp/h                 # 核心模块：极速数学降维模块，实现在 O(1) 时间内计算超大数（最大支持10^9000000000000000000）
 │   │   ├── boost_1_82_0.tar.gz            # 离线依赖：纯头文件的高性能大数库 (供 SymEngine 使用)
-│   │   ├── include/  
-│   │   │   └── json.hpp                   # 核心依赖：nlohmann/json，解析 MathJSON 字符串
 │   │   ├── giac-1.9.0.tar.gz              # 离线依赖：Giac 符号计算核心
-│   │   └── libs/                          
-│   │       └── arm64-v8a/                 
-│   │           └── libgmp.a               # 编译产物：高精度数学静态库
+│   │   ├── include/json.hpp               # 核心依赖：nlohmann/json，解析 MathJSON 字符串
+│   │   ├── libs/arm64-v8a/libgmp.a        # 预编译静态库
+│   │   └── core/                          # 内部核心代数层
+│   │       ├── parser.cpp/h               # AST 递归下降解析器
+│   │       ├── formatter.cpp/h            # 输出数据清洗与 LaTeX 格式化
+│   │       ├── giac_bridge.cpp/h          # Giac 引擎上下文隔离与桥接
+│   │       └── string_utils.cpp/h         # 基础文本处理工具箱
 │   │  
 │   ├── resources/  
 │   │   ├── base/
-│   │   │   ├── profile/
-│   │   │   │   └── main_pages.json        # 页面注册表
+│   │   │   ├── profile/main_pages.json    # 页面注册表
 │   │   │   ├── media/                     # 静态资源：App 图标
-│   │   │   └── element/
-│   │   │       └── string.json            # 局部字符串
+│   │   │   └── element/string.json        # 局部字符串
 │   │   │
 │   │   └── rawfile/                       # 本地 Web 沙箱渲染与降维层  
 │   │       ├── calculator.html            # MathLive 容器：负责 LaTeX 公式的高清渲染及 MathJSON 降维导出
@@ -119,7 +118,6 @@ CalculatorX/
 
 - [x] **基础 UI 构建**：完成 ArkTS 网格键盘布局，支持主功能与 ⇧Shift 副功能平滑切换与展示。
 - [x] **跨端通信打通**：实现 ArkTS 与 Webview 的双向通信，将纯文本按键和 SVG 图标精准映射为 MathLive 的 LaTeX 指令。
-- [x] **前端代码重构**：将臃肿的 `Index.ets` 成功拆分为独立的组件 (Components) 与配置文件 (Utils)，实现高内聚低耦合。
 - [x] **N-API 通道建立**：完成 ArkTS 向 C++ 引擎的数据通信链路搭建。
 - [x] **数据降维处理**：利用 Web 容器将复杂的二维 LaTeX 公式转化为结构化的 MathJSON，极大降低底层解析难度。
 - [x] **引入顶级 CAS 引擎**：克服交叉编译与网络环境障碍，在 C++ 端成功静态链接工业级计算机代数系统 **SymEngine** 与 **Boost** 库。
@@ -133,9 +131,12 @@ CalculatorX/
     - [x] 实现主题颜色、页面布局的自定义选项。
 - [x] **异常捕获与精细化状态机**：构建了专属的 ErrorHandler 模块，实现多种状态的错误拦截。
 - [x] **超大数计算**：建立解耦的 FastMath 模块，针对 $10^{10^{19}}$ 级别的宇宙级指数、超大组合数与阶乘，利用对数公式与斯特林近似 (Stirling's approximation) 提取量级，实现在 O(1) 的时间复杂度下计算超大数（最大支持 $10^{9000000000000000000}$）
-- [x] **进阶数学能力解锁** ：进一步放开高级指令（如 `Solve` 解方程、`Derivative` 求导、`Integral` 积分）的解析映射。
+- [x] **进阶数学能力解锁** ：进一步放开高级指令（如 `Derivative` 求导、`Integral` 积分）的解析映射。
 - [ ] **历史记录功能**：实现计算过程（输入 LaTeX 与结果 LaTeX）的持久化存储与列表展示，并支持一键回填至当前计算器屏幕。
-- [ ] **自动计算**：不按等于号，直接输出结果
+- [ ] **自动计算**：不按等于号，直接输出结果。
+- [ ] **函数图像功能**
+- [ ] **方程求解**
+- [ ] **单位转换**：进制、汇率、长度、面积等等。
 - [ ] **待定**
 
 ## 📄 许可证
