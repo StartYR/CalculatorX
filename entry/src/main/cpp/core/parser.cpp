@@ -167,14 +167,42 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
             return SymEngine::pow(base, exp);
         }
         
-        if (op == "GCD" || op == "LCM" || op == "Lcm" || op == "lcm") { /* numbers only */ }
-        if (op == "Mod" || op == "Modulo") {
+        // === 代数与数论：最大公约数、最小公倍数、求余数 ===
+        if (op == "GCD" || op == "LCM" || op == "Lcm" || op == "lcm" || op == "Mod" || op == "Modulo") {
             if (ast.size() == 3) {
-                Expression a = parseAST(ast[1], isRad, true, hasDMS);
-                Expression b = parseAST(ast[2], isRad, true, hasDMS);
-                return a - b * SymEngine::floor(a / b);
+                bool dummy = false;
+                Expression a = parseAST(ast[1], isRad, true, dummy);
+                Expression b = parseAST(ast[2], isRad, true, dummy);
+                
+                std::string aStr = a.get_basic()->__str__();
+                std::string bStr = b.get_basic()->__str__();
+                
+                replaceAll(aStr, "**", "^");
+                replaceAll(bStr, "**", "^");
+                
+                std::string giacFunc;
+                if (op == "GCD") giacFunc = "gcd";
+                else if (op == "LCM" || op == "Lcm" || op == "lcm") giacFunc = "lcm";
+                else giacFunc = "irem"; // Giac 的多态求余指令，支持数字和多项式
+
+                // 构建 Giac 指令
+                std::string giacCmd = "latex(simplify(" + giacFunc + "(" + aStr + ", " + bStr + ")))";
+                std::string rawResult = evaluateWithGiac(giacCmd);
+                
+                if (rawResult.size() >= 2 && rawResult.front() == '"' && rawResult.back() == '"') {
+                    rawResult = rawResult.substr(1, rawResult.size() - 2);
+                }
+                
+                // 处理 Giac 无法计算的降级情况
+                if (rawResult.find("undef") != std::string::npos || 
+                    rawResult.find(giacFunc) != std::string::npos || 
+                    rawResult.empty()) {
+                    throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Invalid arguments for " + giacFunc);
+                }
+                
+                return Expression(SymEngine::symbol("MAGICGIACRESULT" + rawResult));
             }
-            return Expression(SymEngine::symbol("Error"));
+            throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid format for GCD/LCM/Mod");
         }
         if (op == "Percent") {
              return parseAST(ast[1], isRad, true, hasDMS) / Expression(100);
