@@ -72,13 +72,11 @@
         }
 
         #math-input {
-            font-size: 2.5rem;
+            font-size: 3rem; /* 初始最大字号 */
             display: block;
             width: max-content;
             max-width: none !important;
-            /* 突破 100% 宽度封印 */
             touch-action: pan-x;
-            /* 强制浏览器层接管横向平移，物理打断 MathLive 的拖拽选中判定 */
         }
 
         #math-input:focus-within {
@@ -103,7 +101,7 @@
         }
 
         #math-result {
-            font-size: 2rem;
+            font-size: 3rem; /* 初始最大字号 */
             color: var(--result-color);
             opacity: 0;
             transition: opacity 0.2s ease;
@@ -132,45 +130,72 @@
     document.addEventListener("DOMContentLoaded", function () {
         const mf = document.getElementById('math-input');
         const resField = document.getElementById('math-result');
+        const inputWrapper = document.querySelector('.input-scroll-wrapper');
+        const resWrapper = document.querySelector('.result-scroll-wrapper');
+
+        // ========== 通用的动态字号缩放核心核心算法 ==========
+        function autoScaleFontSize(field, wrapper, maxRem, minRem) {
+            // 1. 先强制恢复到最大初始字号，以此来测量公式如果不受限时的真实最大宽度
+            field.style.fontSize = maxRem + 'rem';
+
+            const wrapperWidth = wrapper.clientWidth;
+            const fieldWidth = field.getBoundingClientRect().width;
+
+            // 2. 如果最大字号下的宽度撑满了容器，开始触发缩放逻辑
+            if (fieldWidth > wrapperWidth && wrapperWidth > 0) {
+                // 按物理比例精确计算应该缩小的字号大小（预留5px富余防止贴边抖动）
+                let optimizedFont = maxRem * ((wrapperWidth - 5) / fieldWidth);
+
+                // 3. 边界防御：如果计算出的字号比设定的最小值还小，直接锁死在最小值
+                if (optimizedFont < minRem) {
+                    optimizedFont = minRem;
+                }
+                // 4. 赋予新字号
+                field.style.fontSize = optimizedFont + 'rem';
+            }
+        }
 
         // ========== 光标自动追踪探头 ==========
         window.keepCaretInView = function () {
             // 给渲染引擎 30ms 的时间更新 DOM，确保拿到的是最新位置
             setTimeout(() => {
-                const wrapper = document.querySelector('.input-scroll-wrapper');
-                // MathLive 所有的元素都在影子 DOM 里，我们要强行穿透进去找
                 const shadow = mf.shadowRoot;
-                if (!wrapper || !shadow) return;
+                if (!inputWrapper || !shadow) return;
 
                 // 寻找 MathLive 正在闪烁的光标元素
                 const caret = shadow.querySelector('.ML__caret, .ML__text-caret');
 
                 if (caret) {
-                    const wRect = wrapper.getBoundingClientRect();
+                    const wRect = inputWrapper.getBoundingClientRect();
                     const cRect = caret.getBoundingClientRect();
 
                     const padding = 35; // 呼吸空间：不让光标紧贴屏幕边缘，提前 35px 滚动
 
                     if (cRect.right > wRect.right) {
                         // 光标越过右边界，向右追尾
-                        wrapper.scrollLeft += (cRect.right - wRect.right + padding);
+                        inputWrapper.scrollLeft += (cRect.right - wRect.right + padding);
                     } else if (cRect.left < wRect.left) {
                         // 光标越过左边界，向左回溯
-                        wrapper.scrollLeft -= (wRect.left - cRect.left + padding);
+                        inputWrapper.scrollLeft -= (wRect.left - cRect.left + padding);
                     }
                 } else {
-                    // 保底策略：如果因为某种原因没找到光标，默认将视口推到最右侧
-                    wrapper.scrollLeft = wrapper.scrollWidth;
+                    // 保底策略
+                    inputWrapper.scrollLeft = inputWrapper.scrollWidth;
                 }
             }, 30);
         };
 
         // ========== 劫持 MathLive 的底层执行核心 ==========
-        // 拦截executeCommand ，在它执行完毕后，自动触发光标追踪
         const originalExecute = mf.executeCommand.bind(mf);
         mf.executeCommand = function (...args) {
             const result = originalExecute(...args);
-            window.keepCaretInView(); // 每次执行完指令，立刻追踪！
+
+            // 【高级进化】：每次输入/删除内容发生改变，先动态伸缩字号
+            // 输入框：最大 2.5rem，最小缩到 1.6rem
+            autoScaleFontSize(mf, inputWrapper, 3.0, 2.0);
+
+            // 字号缩放完成后，再去计算光标追踪轨道的安全视口
+            window.keepCaretInView();
             return result;
         };
 
@@ -190,7 +215,11 @@
             resField.value = latexString;
             resField.classList.add('show');
 
-
+            // 【高级进化】：输出结果动态缩放
+            // 结果框：最大 2.0rem，最小缩到 1.3rem
+            setTimeout(() => {
+                autoScaleFontSize(resField, resWrapper, 3.0, 2.0);
+            }, 10);
         };
 
         mf.addEventListener('input', () => {
@@ -225,7 +254,7 @@
             const lastDegree = currentLatex.lastIndexOf('^{\\circ}');
             const lastMinute = currentLatex.lastIndexOf('^{\\prime}');
             const lastSecond1 = currentLatex.lastIndexOf('^{\\prime\\prime}');
-            const lastSecond2 = currentLatex.lastIndexOf('^{\\prime \\prime}');
+            const lastSecond2 = currentLatex.lastIndexOf('^{\\prime \\ dynamic}');
             const lastSecond = Math.max(lastSecond1, lastSecond2);
 
             const maxIndex = Math.max(lastDegree, lastMinute, lastSecond);
@@ -238,8 +267,6 @@
                 } else if (maxIndex === lastMinute) {
                     toInsert = '^{\\prime\\prime}'; // 紧挨着分：插入秒 (")
                 } else if (maxIndex === lastSecond) {
-                    // 因为上方已经拦截了紧挨着秒的情况，走到这里说明光标不在秒后面
-                    // 比如 12°34'56" + 1，此时按下 DMS，开启新一轮的循环
                     toInsert = '^{\\circ}';
                 }
             }
@@ -270,26 +297,25 @@
         };
 
         // ========== 输入区滑动拦截 ==========
-        const inputWrapper = document.querySelector('.input-scroll-wrapper');
         let isPanning = false;
         let startX = 0;
         let initialScrollLeft = 0;
 
-        // 1. 捕获手指按下（此时还不知道是点击还是滑动）
+        // 1. 捕获手指按下
         inputWrapper.addEventListener('pointerdown', (e) => {
             if (e.pointerType !== 'touch') return;
             isPanning = false;
             startX = e.clientX;
             initialScrollLeft = inputWrapper.scrollLeft;
-        }, { capture: true }); // 使用 capture: true 确保我们在 MathLive 之前拿到事件
+        }, { capture: true });
 
-        // 2. 捕获手指移动（判定意图的生死线）
+        // 2. 捕获手指移动
         inputWrapper.addEventListener('pointermove', (e) => {
             if (e.pointerType !== 'touch') return;
 
             const deltaX = e.clientX - startX;
 
-            // 如果水平移动超过 8px，我们判定这是“滑动滚动”，而不是“点击插光标”
+            // 如果水平移动超过 8px，判定这是“滑动滚动”，而不是“点击插光标”
             if (!isPanning && Math.abs(deltaX) > 8) {
                 isPanning = true;
 
@@ -315,7 +341,6 @@
         inputWrapper.addEventListener('pointerup', (e) => {
             if (e.pointerType !== 'touch') return;
             if (isPanning) {
-                // 如果刚刚发生了滑动，拦截抬起事件，防止滑动停止瞬间触发一次错误的点击
                 e.stopPropagation();
                 isPanning = false;
             }
