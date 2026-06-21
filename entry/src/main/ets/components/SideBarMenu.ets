@@ -1,4 +1,5 @@
 // entry/src/main/ets/components/SideBarMenu.ets
+import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from './MenuComponents';
 
 @Component
 export struct SideBarMenu {
@@ -56,76 +57,60 @@ export struct SideBarMenu {
           })
         }
         .width('100%')
-        .padding({ left: 24, right: 24, top: 64, bottom: 32 }) // 右侧增加了 24 的 padding 保持对称
+        .padding({ left: 24, right: 24, top: 64, bottom: 32 })
 
-        // 菜单项区域
+        // 菜单项区域 (极致清爽版)
         Scroll() {
           Column() {
             // ====================== 1. 常用 ==========================
             Column() {
-              this.GroupHeader('常用')
-              Column({ space: 4 }) {
-                this.MenuButton($r('sys.symbol.arrow_counterclockwise_clock'), '历史记录', () => { /* TODO */ })
+              GroupHeader({ title: '常用' })
+              MenuGroup() {
+                MenuButton({ icon: $r('sys.symbol.arrow_counterclockwise_clock'), title: '历史记录', onClickAction: () => { /* TODO */ } })
               }
-              .backgroundColor($r('sys.color.comp_background_primary'))
-              .borderRadius(19)
-              .clip(true)
-              .padding({ left: 3, right: 3, top: 3, bottom: 3 })
             }
             .padding({ left: 16, right: 16, bottom: 12 })
 
             // ====================== 2. 进阶计算 ==========================
             Column() {
-              this.GroupHeader('进阶计算')
-              Column({ space: 4 }) {
-                this.MenuButton($r('sys.symbol.rectangle_portrait_wave_2'), '函数图像', () => { /* TODO */ })
-                this.ItemDivider()
-                this.MenuButton($r('sys.symbol.exponentiation'), '方程求解', () => { /* TODO */ })
-                this.ItemDivider()
-                this.MenuButton($r('sys.symbol.square_grid_2x2'), '矩阵与向量', () => { /* TODO */ })
-                this.ItemDivider()
-                this.MenuButton($r('sys.symbol.xmark'), '统计分析', () => { /* TODO */ })
+              GroupHeader({ title: '进阶计算' })
+              MenuGroup() {
+                MenuButton({ icon: $r('sys.symbol.rectangle_portrait_wave_2'), title: '函数图像', onClickAction: () => { /* TODO */ } })
+                ItemDivider()
+                MenuButton({ icon: $r('sys.symbol.exponentiation'), title: '方程求解', onClickAction: () => { /* TODO */ } })
+                ItemDivider()
+                MenuButton({ icon: $r('sys.symbol.square_grid_2x2'), title: '矩阵与向量', onClickAction: () => { /* TODO */ } })
+                ItemDivider()
+                MenuButton({ icon: $r('sys.symbol.square_grid_2x2'), title: '统计分析', onClickAction: () => { /* TODO */ } })
               }
-              .backgroundColor($r('sys.color.comp_background_primary'))
-              .borderRadius(19)
-              .clip(true)
-              .padding({ left: 3, right: 3, top: 3, bottom: 3 })
             }
             .padding({ left: 16, right: 16, bottom: 12 })
 
             // ====================== 3. 实用转换 ==========================
             Column() {
-              this.GroupHeader('实用转换')
-              Column({ space: 4 }) {
-                this.MenuButton($r('sys.symbol.arrow_left_arrow_right'), '单位转换', () => { /* TODO */ })
-                this.ItemDivider()
-                this.MenuButton($r('sys.symbol.xmark'), '进制转换', () => { /* TODO */ })
-                this.ItemDivider()
-                this.MenuButton($r('sys.symbol.xmark'), '汇率', () => { /* TODO */ })
+              GroupHeader({ title: '实用转换' })
+              MenuGroup() {
+                MenuButton({ icon: $r('sys.symbol.arrow_left_arrow_right'), title: '单位转换', onClickAction: () => { /* TODO */ } })
+                ItemDivider()
+                MenuButton({ icon: $r('sys.symbol.square_grid_2x2'), title: '进制转换', onClickAction: () => { /* TODO */ } })
+                ItemDivider()
+                MenuButton({ icon: $r('sys.symbol.square_grid_2x2'), title: '汇率', onClickAction: () => { /* TODO */ } })
               }
-              .backgroundColor($r('sys.color.comp_background_primary'))
-              .borderRadius(19)
-              .clip(true)
-              .padding({ left: 3, right: 3, top: 3, bottom: 3 })
             }
             .padding({ left: 16, right: 16, bottom: 12 })
 
             // ====================== 4. 参考与帮助 ==========================
             Column() {
-              this.GroupHeader('参考与帮助')
-              Column({ space: 4 }) {
-                this.MenuButton($r('sys.symbol.doc_plaintext'), '公式库', () => { /* TODO */ })
-                this.ItemDivider()
-                this.MenuButton($r('sys.symbol.e'), '科学常数', () => { /* TODO */ })
-                this.ItemDivider()
-                this.MenuButton($r('sys.symbol.questionmark_circle'), '帮助', () => { /* TODO */ })
+              GroupHeader({ title: '参考与帮助' })
+              MenuGroup() {
+                MenuButton({ icon: $r('sys.symbol.doc_plaintext'), title: '公式库', onClickAction: () => { /* TODO */ } })
+                ItemDivider()
+                MenuButton({ icon: $r('sys.symbol.e'), title: '科学常数', onClickAction: () => { /* TODO */ } })
+                ItemDivider()
+                MenuButton({ icon: $r('sys.symbol.questionmark_circle'), title: '帮助', onClickAction: () => { /* TODO */ } })
               }
-              .backgroundColor($r('sys.color.comp_background_primary'))
-              .borderRadius(19)
-              .clip(true)
-              .padding({ left: 3, right: 3, top: 3, bottom: 3 })
             }
-            .padding({ left: 16, right: 16, bottom: 32 }) // 底部多留点白，防止内容贴紧边缘
+            .padding({ left: 16, right: 16, bottom: 32 })
           }
           .width('100%')
           .justifyContent(FlexAlign.Start)
@@ -143,65 +128,5 @@ export struct SideBarMenu {
     }
     .width('100%')
     .height('100%')
-  }
-
-  // ==================== UI 组件 ====================
-
-  @Builder GroupHeader(title: string) {
-    Text(title)
-      .fontSize(14)
-      .fontColor($r('sys.color.font_secondary'))
-      .width('100%')
-      .padding({ left: 16, top: 12, bottom: 4 })
-  }
-
-  // 分隔线
-  @Builder ItemDivider() {
-    Row() {
-      Divider()
-        .strokeWidth(1)
-        .color($r('sys.color.comp_divider')) // 鸿蒙原生分割线颜色
-        .margin({ left: 44, right: 12 }) // 完美对齐文字与右侧边缘
-    }
-    .width('100%')
-    // .height(0.14) // 高度为 0
-    .margin({ top: -3, bottom: -3 }) // 负边距，完美吃掉 Column 额外生成的 4px 空间
-    .zIndex(1) // 保证线浮在两个胶囊之间的缝隙顶层
-    .hitTestBehavior(HitTestMode.None) // 防止这条看不见的线阻挡点击事件
-  }
-
-  // 菜单项
-  @Builder
-  MenuButton(icon: Resource, title: string, onClick: () => void) {
-    Row() {
-      SymbolGlyph(icon)
-        .fontSize(20)
-        .fontColor([$r('sys.color.icon_secondary')])
-        .margin({ right: 12 })
-
-      Text(title)
-        .fontSize(16)
-        .fontColor($r('sys.color.font_primary'))
-
-      Blank()
-
-      SymbolGlyph($r('sys.symbol.chevron_right'))
-        .fontSize(16)
-        .fontColor([$r('sys.color.icon_tertiary')])
-    }
-    .width('100%')
-    .height(46)
-    .padding({ left: 12, right: 12 })
-    .margin(0)
-    .borderRadius(16)
-    .stateStyles({
-      pressed: {
-        .backgroundColor($r('sys.color.comp_background_secondary'))
-      },
-      normal: {
-        .backgroundColor(Color.Transparent)
-      }
-    })
-    .onClick(onClick)
   }
 }
