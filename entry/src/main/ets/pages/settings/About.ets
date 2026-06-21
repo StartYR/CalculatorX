@@ -1,6 +1,6 @@
 // entry/src/main/ets/pages/settings/About.ets
 import router from '@ohos.router';
-import common from '@ohos.app.ability.common'; // 新增：用于获取上下文以启动外部应用
+import common from '@ohos.app.ability.common'; // 用于获取上下文以启动外部应用
 import {
   HdsNavigation,
   HdsNavigationTitleMode,
@@ -131,16 +131,21 @@ struct About {
           Column() {
             // App 图标
             Image($r('app.media.foreground'))
-              .width(80)
-              .height(80)
+              .width(108)
+              .height(108)
               .borderRadius(18)
-              .shadow({ radius: 16, color: 'rgba(0, 0, 0, 0.08)', offsetY: 6 })
+              .shadow({ radius: 32, color: 'rgba(0, 0, 0, 0.43)', offsetY: 6 })
 
-            Text('CalculatorX')
-              .fontSize(28)
-              .fontWeight(FontWeight.Bold)
-              .fontColor($r('sys.color.font_primary'))
-              .margin({ top: 20 })
+            Row() {
+              Text('Calculator')
+                .fontSize(36)
+                .fontWeight(FontWeight.Bolder)
+                .fontColor($r('sys.color.font_primary'))
+              Text('X')
+                .fontSize(36)
+                .fontWeight(FontWeight.Bolder)
+                .fontColor($r('sys.color.font_emphasize'))
+            }
 
             Text('Version 0.1.2 Beta (HarmonyOS)')
               .fontSize(14)
