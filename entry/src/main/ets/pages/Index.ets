@@ -78,20 +78,58 @@ struct Index {
       .width('100%')
       .height('100%')
 
-      // 左上角设置按钮
-      Button({ type: ButtonType.Capsule, stateEffect: true }) {
-        SymbolGlyph($r('sys.symbol.gearshape_fill'))
-          .fontSize(20)
-          .fontColor([$r('sys.color.icon_primary')])
+      // 顶部悬浮控制栏（横向容器）
+      Row() {
+        // 左侧：设置菜单按钮
+        Button({ type: ButtonType.Capsule, stateEffect: true }) {
+          SymbolGlyph($r('sys.symbol.gearshape_fill'))
+            .fontSize(20)
+            .fontColor([$r('sys.color.icon_primary')])
+        }
+        .width(48)
+        .height(32)
+        .backgroundColor(Color.Transparent)
+        .backgroundBlurStyle(BlurStyle.BACKGROUND_THICK)
+        .onClick(() => {
+          // TODO: 第三步将在此处触发打开左侧边栏/菜单（原先的 router 跳转先删掉）
+        })
+
+        // 中间：弹性占位组件
+        Blank()
+
+        // 右侧：历史记录按钮
+        Button({ type: ButtonType.Capsule, stateEffect: true }) {
+          // 暂用 clock 占位
+          SymbolGlyph($r('sys.symbol.clock'))
+            .fontSize(20)
+            .fontColor([$r('sys.color.icon_primary')])
+        }
+        .width(48)
+        .height(32)
+        .backgroundColor(Color.Transparent)
+        .backgroundBlurStyle(BlurStyle.BACKGROUND_THICK)
+        .onClick(() => {
+          // TODO: 触发历史记录面板
+        })
       }
-      .width(48)
-      .height(32)
-      .margin({ top: 36, left: 12 })
-      .backgroundColor(Color.Transparent)
-      .backgroundBlurStyle(BlurStyle.BACKGROUND_THICK)
-      .onClick(() => {
-        router.pushUrl({ url: RoutePath.SETTINGS });
-      })
+      .width('100%')
+      // 原先单独控制左侧按钮的 margin 改成了整行的 padding
+      .padding({ top: 36, left: 12, right: 12 })
+
+      // // 左上角设置按钮
+      // Button({ type: ButtonType.Capsule, stateEffect: true }) {
+      //   SymbolGlyph($r('sys.symbol.gearshape_fill'))
+      //     .fontSize(20)
+      //     .fontColor([$r('sys.color.icon_primary')])
+      // }
+      // .width(48)
+      // .height(32)
+      // .margin({ top: 36, left: 12 })
+      // .backgroundColor(Color.Transparent)
+      // .backgroundBlurStyle(BlurStyle.BACKGROUND_THICK)
+      // .onClick(() => {
+      //   router.pushUrl({ url: RoutePath.SETTINGS });
+      // })
 
     }
     .width('100%')
