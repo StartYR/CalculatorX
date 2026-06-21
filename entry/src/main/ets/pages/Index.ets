@@ -79,14 +79,14 @@ struct Index {
       .height('100%')
 
       // 左上角设置按钮
-      Button({ type: ButtonType.Circle, stateEffect: true }) {
+      Button({ type: ButtonType.Capsule, stateEffect: true }) {
         SymbolGlyph($r('sys.symbol.gearshape_fill'))
-          .fontSize(22)
+          .fontSize(20)
           .fontColor([$r('sys.color.icon_primary')])
       }
-      .width(44)
-      .height(44)
-      .margin({ top: 48, left: 16 })
+      .width(48)
+      .height(32)
+      .margin({ top: 36, left: 12 })
       .backgroundColor(Color.Transparent)
       .backgroundBlurStyle(BlurStyle.BACKGROUND_THICK)
       .onClick(() => {
@@ -98,28 +98,6 @@ struct Index {
     .height('100%')
     .backgroundColor($r('sys.color.background_primary'))
   }
-
-  // // 全局定时器变量
-  // private startDelayTimer: number = -1;
-  // private repeatDeleteTimer: number = -1;
-  //
-  // // 用于长按连删的高频执行函数
-  // executeDelete() {
-  //   // 1. 触发删除指令
-  //   this.webviewController.runJavaScript('deleteMath()');
-  //
-  //   // 2. 伴随轻微震动 (仅在总开关打开时)
-  //   if (this.hapticFeedback) {
-  //     vibrator.startVibration({
-  //       type: 'preset',
-  //       // 连删震动必须极其轻微，使用 soft 即可，不要用 hard
-  //       effectId: 'haptic.effect.soft',
-  //       count: 1
-  //     }, { usage: 'touch' }).catch((err: BusinessError) => {
-  //       console.warn(`连删震动异常: ${err.message}`);
-  //     });
-  //   }
-  // }
 
   handleButtonClick(btn: string | Resource) {
     // 提前解析按键类型，供计算和震动引擎共同使用
