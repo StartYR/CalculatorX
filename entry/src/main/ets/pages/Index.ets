@@ -78,20 +78,31 @@ struct Index {
       .width('100%')
       .height('100%')
 
-      // 顶部悬浮控制栏（横向容器）
+      // 顶部悬浮控制栏
       Row() {
         // 左侧：设置菜单按钮
         Button({ type: ButtonType.Capsule, stateEffect: true }) {
           SymbolGlyph($r('sys.symbol.gearshape_fill'))
-            .fontSize(20)
+            .fontSize(18)
             .fontColor([$r('sys.color.icon_primary')])
         }
         .width(48)
         .height(32)
-        .backgroundColor(Color.Transparent)
-        .backgroundBlurStyle(BlurStyle.BACKGROUND_THICK)
+        .backgroundColor('#54ffffff')
+        .backgroundBlurStyle(BlurStyle.COMPONENT_THICK) // 👈 切换为组件级厚磨砂，质感更细腻
+        .border({
+          width: 0.5,
+          color: $r('sys.color.comp_divider'),
+          radius: 16
+        })
+        .shadow({
+          radius: 32,
+          color: '#25000000',
+          offsetX: 3,
+          offsetY: 6
+        })
         .onClick(() => {
-          // TODO: 第三步将在此处触发打开左侧边栏/菜单（原先的 router 跳转先删掉）
+          // TODO: 第三步将在此处触发打开左侧边栏/菜单
         })
 
         // 中间：弹性占位组件
@@ -99,21 +110,30 @@ struct Index {
 
         // 右侧：历史记录按钮
         Button({ type: ButtonType.Capsule, stateEffect: true }) {
-          // 暂用 clock 占位
           SymbolGlyph($r('sys.symbol.clock'))
-            .fontSize(20)
+            .fontSize(18)
             .fontColor([$r('sys.color.icon_primary')])
         }
         .width(48)
         .height(32)
-        .backgroundColor(Color.Transparent)
-        .backgroundBlurStyle(BlurStyle.BACKGROUND_THICK)
+        .backgroundColor('#54ffffff')
+        .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+        .border({
+          width: 0.5,
+          color: $r('sys.color.comp_divider'),
+          radius: 16
+        })
+        .shadow({
+          radius: 32,
+          color: '#25000000',
+          offsetX: 3,
+          offsetY: 6
+        })
         .onClick(() => {
           // TODO: 触发历史记录面板
         })
       }
       .width('100%')
-      // 原先单独控制左侧按钮的 margin 改成了整行的 padding
       .padding({ top: 36, left: 12, right: 12 })
 
       // // 左上角设置按钮
