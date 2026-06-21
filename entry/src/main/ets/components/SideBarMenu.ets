@@ -6,6 +6,9 @@ export struct SideBarMenu {
   @Link isSidebarOpen: boolean;
   onSettingsClick?: () => void;
 
+  // 用于实时记录手指拖拽的横向偏移量
+  @State dragOffsetX: number = 0;
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       // 1. 底层：全屏模糊遮罩
@@ -125,12 +128,42 @@ export struct SideBarMenu {
         .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true }) // 触底触顶回弹
         .fadingEdge(true)//
       }
-      .width('65%')
+      .width('70%')
       .height('100%')
       .backgroundColor($r('sys.color.background_secondary'))
       .borderRadius({ topRight: 32, bottomRight: 32 })
       .shadow({ radius: 48, color: '#25000000', offsetX: 12, offsetY: 0 })
+
+      // 👇 1. 实时绑定手势滑动的偏移量
+      .translate({ x: this.dragOffsetX })
       .transition({ type: TransitionType.All, translate: { x: '-100%' } })
+      // 👇 2. 挂载原生平移手势
+      .gesture(
+        PanGesture({ direction: PanDirection.Horizontal })
+          .onActionUpdate((event: GestureEvent) => {
+            // 实时跟手：只允许向左拖拽（偏移量为负数），防止向右拉出屏幕边缘
+            if (event.offsetX < 0) {
+              this.dragOffsetX = event.offsetX;
+            }
+          })
+          .onActionEnd((event: GestureEvent) => {
+            // 手指松开时的判定逻辑
+            // 如果向左滑动的距离超过 80px，或者向左甩动的速度极快 (velocityX < -500)
+            if (this.dragOffsetX < -80 || event.velocityX < -500) {
+              // 触发关闭动画
+              animateTo({ duration: 350, curve: Curve.Friction }, () => {
+                this.isSidebarOpen = false;
+                this.dragOffsetX = 0; // 动画的同时将拖拽偏移量归零
+              });
+            } else {
+              // 没达到关闭阈值，触发回弹动画，乖乖回到原位
+              animateTo({ duration: 350, curve: Curve.Friction }, () => {
+                this.dragOffsetX = 0;
+              });
+            }
+          })
+      )
+      // .transition({ type: TransitionType.All, translate: { x: '-100%' } })
     }
     .width('100%')
     .height('100%')
