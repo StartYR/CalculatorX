@@ -11,6 +11,9 @@ import {
 } from '@kit.UIDesignKit';
 import { ConfigurationConstant, common } from '@kit.AbilityKit';
 
+// 引入我们刚刚抽离的全局菜单组件库
+import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from '../../components/MenuComponents';
+
 // ==================== 底部半模态面板内容：数学公式样式选择 ====================
 @Component
 struct MathStyleSheet {
@@ -152,21 +155,6 @@ export struct Settings {
   //   }
   // }
 
-  @Builder GroupHeader(title: string) {
-    Text(title)
-      .fontSize(14)
-      .fontColor($r('sys.color.font_secondary'))
-      .width('100%')
-      .padding({ left: 16, top: 12, bottom: 4 })
-  }
-
-  @Builder ItemDivider() {
-    Divider()
-      .strokeWidth(1.5)
-      .color($r('sys.color.comp_background_tertiary'))
-      .margin({ left: 48, right: 16 })
-  }
-
 
   build() {
     HdsNavigation() {
@@ -176,9 +164,9 @@ export struct Settings {
 
           // ====================== 计算设置 ==========================
           Column() {
-            this.GroupHeader('计算设置')
+            GroupHeader({ title: '计算设置' })
 
-            Column() {
+            MenuGroup() {
               // 1. 角度单位
               Row() {
                 SymbolGlyph($r('sys.symbol.triangleshape'))
@@ -210,7 +198,7 @@ export struct Settings {
               .width('100%')
               .padding({ left: 16, right: 12, top: 8, bottom: 8 })
 
-              this.ItemDivider()
+              ItemDivider()
 
               // 2. 答案输出模式
               Row() {
@@ -245,7 +233,7 @@ export struct Settings {
 
               // 3. 小数精度 (仅在“小数模式”下渲染显示)
               if (this.answerOutputMode === 1) {
-                this.ItemDivider()
+                ItemDivider()
 
                 Column({ space: 4 }) {
                   Row() {
@@ -294,27 +282,27 @@ export struct Settings {
                 .padding({ left: 16, right: 16, top: 10, bottom: 6 })
               }
             }
-            .backgroundColor($r('sys.color.comp_background_primary'))
-            .borderRadius(16)
           }
           .padding({ left: 16, right: 16, bottom: 12 })
 
 
           // ====================== 按键样式 ==========================
           Column() {
-            this.GroupHeader('按键样式')
+            GroupHeader({ title: '按键样式' })
 
-            Column() {
+            MenuGroup() {
               // 3. 组合计数样式
               Row() {
                 SymbolGlyph($r('sys.symbol.square_grid_2x2'))
                   .fontSize(20)
                   .fontColor([$r('sys.color.icon_secondary')])
                   .margin({ right: 12 })
+
                 Text('组合显示样式')
                   .fontSize(16)
                   .fontColor($r('sys.color.font_primary'))
-                  .layoutWeight(1) // 撑开中间，让右侧文字和箭头靠右
+
+                Blank() // 撑开中间，让右侧文字和箭头靠右
 
                 // 动态显示当前选中的样式名称
                 Text(this.combSelect === 0 ? '国际学术' : this.combSelect === 1 ? '角标式 Cₙʳ' : this.combSelect === 2 ? '现代计算器 ⁿCᵣ' : this.combSelect === 3 ? '早期计算器 ₙCᵣ' : '平铺风格 C(n, r)')
@@ -327,14 +315,24 @@ export struct Settings {
                   .fontColor([$r('sys.color.icon_tertiary')])
               }
               .width('100%')
-              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+              .height(46) // 完美对齐 MenuButton 的高度
+              .padding({ left: 12, right: 12 }) // 完美对齐内边距
+              .borderRadius(16) // 独立胶囊圆角
+              .stateStyles({
+                pressed: {
+                  .backgroundColor($r('sys.color.comp_background_secondary'))
+                },
+                normal: {
+                  .backgroundColor(Color.Transparent)
+                }
+              })
               .onClick(() => {
                 // 拉起面板
                 this.currentSheetType = 'comb';
                 this.isShowMathSheet = true;
               })
 
-              this.ItemDivider()
+              ItemDivider()
 
               // 4. 排列计数样式
               Row() {
@@ -342,10 +340,12 @@ export struct Settings {
                   .fontSize(20)
                   .fontColor([$r('sys.color.icon_secondary')])
                   .margin({ right: 12 })
+
                 Text('排列显示样式')
                   .fontSize(16)
                   .fontColor($r('sys.color.font_primary'))
-                  .layoutWeight(1)
+
+                Blank()
 
                 // 动态显示当前选中的样式名称
                 Text(this.permSelect === 0 ? '角标式 Aₙʳ' : this.permSelect === 1 ? '角标式 Pₙʳ' : this.permSelect === 2 ? '现代计算器 ⁿPᵣ' : this.permSelect === 3 ? '早期计算器 ₙPᵣ' : '平铺风格 P(n, r)')
@@ -358,23 +358,31 @@ export struct Settings {
                   .fontColor([$r('sys.color.icon_tertiary')])
               }
               .width('100%')
-              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+              .height(46)
+              .padding({ left: 12, right: 12 })
+              .borderRadius(16)
+              .stateStyles({
+                pressed: {
+                  .backgroundColor($r('sys.color.comp_background_secondary'))
+                },
+                normal: {
+                  .backgroundColor(Color.Transparent)
+                }
+              })
               .onClick(() => {
                 // 拉起面板
                 this.currentSheetType = 'perm';
                 this.isShowMathSheet = true;
               })
             }
-            .backgroundColor($r('sys.color.comp_background_primary'))
-            .borderRadius(16)
           }
           .padding({ left: 16, right: 16, bottom: 12 })
 
           // ============================= 外观与体验 =====================================
           Column() {
-            this.GroupHeader('外观与体验')
+            GroupHeader({ title: '外观与体验' })
 
-            Column() {
+            MenuGroup() {
               // 颜色模式
               Row() {
                 SymbolGlyph($r('sys.symbol.paintbrush'))
@@ -421,7 +429,7 @@ export struct Settings {
               .width('100%')
               .padding({ left: 16, right: 12, top: 8, bottom: 8 })
 
-              this.ItemDivider()
+              ItemDivider()
 
               // 触感反馈
               Row() {
@@ -458,7 +466,7 @@ export struct Settings {
 
 
               if (this.hapticFeedback) {
-                this.ItemDivider()
+                ItemDivider()
 
                 // 振动风格
                 Row() {
@@ -479,7 +487,7 @@ export struct Settings {
                     .selected(this.vibrationCurve)
                     .value(this.vibrationCurve === 0 ? '自动' :
                       this.vibrationCurve === 1 ? '清脆' :
-                      this.vibrationCurve === 2 ? '轻柔' : '厚重')
+                        this.vibrationCurve === 2 ? '轻柔' : '厚重')
                     .font({ size: 14 })
                     .fontColor($r('sys.color.font_primary'))
                     .onSelect((index: number) => {
@@ -496,127 +504,78 @@ export struct Settings {
                 .padding({ left: 16, right: 12, top: 8, bottom: 8 })
               }
             }
-            .backgroundColor($r('sys.color.comp_background_primary'))
-            .borderRadius(16)
           }
           .padding({ left: 16, right: 16, bottom: 12 })
 
           // ============================ 关于 ====================================
           Column() {
-            this.GroupHeader('关于')
+            GroupHeader({ title: '关于' })
 
-            Column() {
-
+            MenuGroup() {
               // 使用帮助
-              Row() {
-                SymbolGlyph($r('sys.symbol.checkmark_lightbulb_max'))
-                  .fontSize(20)
-                  .fontColor([$r('sys.color.icon_secondary')])
-                  .margin({ right: 12 })
-                Text('使用帮助')
-                  .fontSize(16)
-                  .fontColor($r('sys.color.font_primary'))
-                Blank()
-                SymbolGlyph($r('sys.symbol.chevron_right'))
-                  .fontSize(20)
-                  .fontColor([$r('sys.color.icon_tertiary')])
-              }
-              .width('100%')
-              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
-              .onClick(() => {
-                console.info('点击：使用帮助');
-                router.pushUrl({
-                  url: RoutePath.DOC_VIEWER,
-                  params: {
-                    title: '使用帮助',
-                    url: 'https://calcx.startyi.com/help'
-                  }
-                });
+              MenuButton({
+                icon: $r('sys.symbol.checkmark_lightbulb_max'),
+                title: '使用帮助',
+                onClickAction: () => {
+                  console.info('点击：使用帮助');
+                  router.pushUrl({
+                    url: RoutePath.DOC_VIEWER,
+                    params: {
+                      title: '使用帮助',
+                      url: 'https://calcx.startyi.com/help'
+                    }
+                  });
+                }
               })
 
-              this.ItemDivider()
+              ItemDivider()
 
               // 隐私政策
-              Row() {
-                SymbolGlyph($r('sys.symbol.private_browsing_mode'))
-                  .fontSize(20)
-                  .fontColor([$r('sys.color.icon_secondary')])
-                  .margin({ right: 12 })
-                Text('隐私政策')
-                  .fontSize(16)
-                  .fontColor($r('sys.color.font_primary'))
-                Blank()
-                SymbolGlyph($r('sys.symbol.chevron_right'))
-                  .fontSize(20)
-                  .fontColor([$r('sys.color.icon_tertiary')])
-              }
-              .width('100%')
-              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
-              .onClick(() => {
-                console.info('点击：隐私政策');
-                router.pushUrl({
-                  url: RoutePath.DOC_VIEWER,
-                  params: {
-                    title: '隐私政策',
-                    url: 'https://calcx.startyi.com/privacy'
-                  }
-                });
+              MenuButton({
+                icon: $r('sys.symbol.private_browsing_mode'),
+                title: '隐私政策',
+                onClickAction: () => {
+                  console.info('点击：隐私政策');
+                  router.pushUrl({
+                    url: RoutePath.DOC_VIEWER,
+                    params: {
+                      title: '隐私政策',
+                      url: 'https://calcx.startyi.com/privacy'
+                    }
+                  });
+                }
               })
 
-              this.ItemDivider()
+              ItemDivider()
 
               // 用户协议
-              Row() {
-                SymbolGlyph($r('sys.symbol.doc_plaintext'))
-                  .fontSize(20)
-                  .fontColor([$r('sys.color.icon_secondary')])
-                  .margin({ right: 12 })
-                Text('用户协议')
-                  .fontSize(16)
-                  .fontColor($r('sys.color.font_primary'))
-                Blank()
-                SymbolGlyph($r('sys.symbol.chevron_right'))
-                  .fontSize(20)
-                  .fontColor([$r('sys.color.icon_tertiary')])
-              }
-              .width('100%')
-              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
-              .onClick(() => {
-                console.info('点击：用户协议');
-                router.pushUrl({
-                  url: RoutePath.DOC_VIEWER,
-                  params: {
-                    title: '用户协议',
-                    url: 'https://calcx.startyi.com/agreement'
-                  }
-                });
+              MenuButton({
+                icon: $r('sys.symbol.doc_plaintext'),
+                title: '用户协议',
+                onClickAction: () => {
+                  console.info('点击：用户协议');
+                  router.pushUrl({
+                    url: RoutePath.DOC_VIEWER,
+                    params: {
+                      title: '用户协议',
+                      url: 'https://calcx.startyi.com/agreement'
+                    }
+                  });
+                }
               })
 
-              this.ItemDivider()
+              ItemDivider()
 
               // 关于此应用
-              Row() {
-                SymbolGlyph($r('sys.symbol.info_circle'))
-                  .fontSize(20)
-                  .fontColor([$r('sys.color.icon_secondary')])
-                  .margin({ right: 12 })
-                Text('关于此应用')
-                  .fontSize(16)
-                  .fontColor($r('sys.color.font_primary'))
-                Blank()
-                SymbolGlyph($r('sys.symbol.chevron_right'))
-                  .fontSize(20)
-                  .fontColor([$r('sys.color.icon_tertiary')])
-              }
-              .width('100%')
-              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
-              .onClick(() => {
-                console.info('点击：关于此应用');
-                router.pushUrl({ url: RoutePath.ABOUT });
+              MenuButton({
+                icon: $r('sys.symbol.info_circle'),
+                title: '关于此应用',
+                onClickAction: () => {
+                  console.info('点击：关于此应用');
+                  router.pushUrl({ url: RoutePath.ABOUT });
+                }
               })
             }
-            .backgroundColor($r('sys.color.comp_background_primary'))
-            .borderRadius(16)
           }
           .padding({ left: 16, right: 16, bottom: 32 + this.navBarHeight })
         }
