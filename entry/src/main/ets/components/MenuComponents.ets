@@ -80,13 +80,15 @@ export struct MenuButton {
 // 菜单项容器（分组卡片底板）
 @Component
 export struct MenuGroup {
-  @BuilderParam content: () => void;
+  // 👇 1. 核心修复：在结构体内部定义一个空的 @Builder 函数
+  @Builder defaultContent() {}
+
+  // 👇 2. 核心修复：使用 this.defaultContent 作为默认初始值
+  @BuilderParam content: () => void = this.defaultContent;
 
   build() {
     Column({ space: 4 }) {
-      if (this.content) {
-        this.content()
-      }
+      this.content()
     }
     .width('100%')
     .backgroundColor($r('sys.color.comp_background_primary'))

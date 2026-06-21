@@ -112,7 +112,7 @@ export struct SideBarMenu {
               MenuGroup() {
                 MenuButton({ icon: $r('sys.symbol.doc_plaintext'), title: '公式库', onClickAction: () => { /* TODO */ } })
                 ItemDivider()
-                MenuButton({ icon: $r('sys.symbol.e'), title: '科学常数', onClickAction: () => { /* TODO */ } })
+                MenuButton({ icon: $r('app.media.icon_pi'), title: '科学常数', onClickAction: () => { /* TODO */ } })
                 ItemDivider()
                 MenuButton({ icon: $r('sys.symbol.questionmark_circle'), title: '帮助', onClickAction: () => { /* TODO */ } })
               }
