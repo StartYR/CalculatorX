@@ -67,13 +67,17 @@ export struct SideBarMenu {
               GroupHeader({ title: '常用' })
               MenuGroup() {
                 MenuButton({ icon: $r('sys.symbol.arrow_counterclockwise_clock'), title: '历史记录', onClickAction: () => { /* TODO */ } })
+                ItemDivider()
+                MenuButton({ icon: $r('sys.symbol.calculator_1'), title: '基础计算', onClickAction: () => { /* TODO */ } })
+                ItemDivider()
+                MenuButton({ icon: $r('sys.symbol.calculator'), title: '科学计算', onClickAction: () => { /* TODO */ } })
               }
             }
             .padding({ left: 16, right: 16, bottom: 12 })
 
-            // ====================== 2. 进阶计算 ==========================
+            // ====================== 2. 进阶 ==========================
             Column() {
-              GroupHeader({ title: '进阶计算' })
+              GroupHeader({ title: '进阶' })
               MenuGroup() {
                 MenuButton({ icon: $r('sys.symbol.rectangle_portrait_wave_2'), title: '函数图像', onClickAction: () => { /* TODO */ } })
                 ItemDivider()
@@ -86,9 +90,9 @@ export struct SideBarMenu {
             }
             .padding({ left: 16, right: 16, bottom: 12 })
 
-            // ====================== 3. 实用转换 ==========================
+            // ====================== 3. 转换 ==========================
             Column() {
-              GroupHeader({ title: '实用转换' })
+              GroupHeader({ title: '转换' })
               MenuGroup() {
                 MenuButton({ icon: $r('sys.symbol.arrow_left_arrow_right'), title: '单位转换', onClickAction: () => { /* TODO */ } })
                 ItemDivider()
@@ -99,9 +103,9 @@ export struct SideBarMenu {
             }
             .padding({ left: 16, right: 16, bottom: 12 })
 
-            // ====================== 4. 参考与帮助 ==========================
+            // ====================== 4. 参考 ==========================
             Column() {
-              GroupHeader({ title: '参考与帮助' })
+              GroupHeader({ title: '参考' })
               MenuGroup() {
                 MenuButton({ icon: $r('sys.symbol.doc_plaintext'), title: '公式库', onClickAction: () => { /* TODO */ } })
                 ItemDivider()
