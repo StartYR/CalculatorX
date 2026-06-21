@@ -10,6 +10,7 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { RoutePath } from '../utils/CalculatorConfigs';
 import router from '@ohos.router';
 import { PreferenceConfigs } from '../utils/CalculatorConfigs';
+import { TopBar } from '../components/TopBar';
 
 @Entry
 @Component
@@ -79,78 +80,14 @@ struct Index {
       .height('100%')
 
       // 顶部悬浮控制栏
-      Row() {
-        // 左侧：设置菜单按钮
-        Button({ type: ButtonType.Capsule, stateEffect: true }) {
-          SymbolGlyph($r('sys.symbol.gearshape_fill'))
-            .fontSize(18)
-            .fontColor([$r('sys.color.icon_primary')])
-        }
-        .width(48)
-        .height(32)
-        .backgroundColor('#54ffffff')
-        .backgroundBlurStyle(BlurStyle.COMPONENT_THICK) // 👈 切换为组件级厚磨砂，质感更细腻
-        .border({
-          width: 0.5,
-          color: $r('sys.color.comp_divider'),
-          radius: 16
-        })
-        .shadow({
-          radius: 32,
-          color: '#25000000',
-          offsetX: 3,
-          offsetY: 6
-        })
-        .onClick(() => {
-          // TODO: 第三步将在此处触发打开左侧边栏/菜单
-        })
-
-        // 中间：弹性占位组件
-        Blank()
-
-        // 右侧：历史记录按钮
-        Button({ type: ButtonType.Capsule, stateEffect: true }) {
-          SymbolGlyph($r('sys.symbol.clock'))
-            .fontSize(18)
-            .fontColor([$r('sys.color.icon_primary')])
-        }
-        .width(48)
-        .height(32)
-        .backgroundColor('#54ffffff')
-        .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
-        .border({
-          width: 0.5,
-          color: $r('sys.color.comp_divider'),
-          radius: 16
-        })
-        .shadow({
-          radius: 32,
-          color: '#25000000',
-          offsetX: 3,
-          offsetY: 6
-        })
-        .onClick(() => {
+      TopBar({
+        onMenuClick: () => {
+          // TODO: 第三步将在此处改变状态，触发打开左侧边栏
+        },
+        onHistoryClick: () => {
           // TODO: 触发历史记录面板
-        })
-      }
-      .width('100%')
-      .padding({ top: 36, left: 12, right: 12 })
-
-      // // 左上角设置按钮
-      // Button({ type: ButtonType.Capsule, stateEffect: true }) {
-      //   SymbolGlyph($r('sys.symbol.gearshape_fill'))
-      //     .fontSize(20)
-      //     .fontColor([$r('sys.color.icon_primary')])
-      // }
-      // .width(48)
-      // .height(32)
-      // .margin({ top: 36, left: 12 })
-      // .backgroundColor(Color.Transparent)
-      // .backgroundBlurStyle(BlurStyle.BACKGROUND_THICK)
-      // .onClick(() => {
-      //   router.pushUrl({ url: RoutePath.SETTINGS });
-      // })
-
+        }
+      })
     }
     .width('100%')
     .height('100%')
