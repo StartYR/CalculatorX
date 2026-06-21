@@ -11,6 +11,7 @@ import { RoutePath } from '../utils/CalculatorConfigs';
 import router from '@ohos.router';
 import { PreferenceConfigs } from '../utils/CalculatorConfigs';
 import { TopBar } from '../components/TopBar';
+import { SideBarMenu } from '../components/SideBarMenu';
 
 @Entry
 @Component
@@ -30,6 +31,7 @@ struct Index {
   @State lastAnsLatex: string = "0";      // 供 Ans 调用的上一次结果
   @State lastValidJson: string = "";      // 供 S⇄D 重新计算的纯净 AST
   @State isTempDecimal: boolean = false;  // 当前 S⇄D 面板的显示状态
+  @State isSidebarOpen: boolean = false;  // 控制侧边栏的开合
 
   aboutToAppear() {
     font.registerFont({
@@ -82,12 +84,25 @@ struct Index {
       // 顶部悬浮控制栏
       TopBar({
         onMenuClick: () => {
-          // TODO: 第三步将在此处改变状态，触发打开左侧边栏
+          animateTo({ duration: 350, curve: Curve.Friction }, () => {
+            this.isSidebarOpen = true;
+          });
         },
         onHistoryClick: () => {
           // TODO: 触发历史记录面板
         }
       })
+
+      if (this.isSidebarOpen) {
+        SideBarMenu({
+          isSidebarOpen: $isSidebarOpen, // 传递引用，允许子组件自行关闭
+          onSettingsClick: () => {
+            // 接收子组件的跳转请求，恢复原有的路由逻辑
+            router.pushUrl({ url: RoutePath.SETTINGS });
+          }
+        })
+      }
+
     }
     .width('100%')
     .height('100%')
