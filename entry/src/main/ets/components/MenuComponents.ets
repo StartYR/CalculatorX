@@ -22,7 +22,7 @@ export struct ItemDivider {
     Row() {
       Divider()
         .strokeWidth(1)
-        .color($r('sys.color.comp_divider')) // 鸿蒙原生分割线颜色
+        .color($r('sys.color.comp_background_tertiary'))
         .margin({ left: 44, right: 12 }) // 完美对齐文字与右侧边缘
     }
     .width('100%')
