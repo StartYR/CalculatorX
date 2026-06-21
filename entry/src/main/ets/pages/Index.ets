@@ -81,6 +81,16 @@ struct Index {
       .width('100%')
       .height('100%')
 
+      // 打开时缩小到 92%，关闭时恢复 100%
+      .scale({
+        x: this.isSidebarOpen ? 0.92 : 1.0,
+        y: this.isSidebarOpen ? 0.92 : 1.0
+      })
+      // 打开时四周变圆滑（像一张退后的卡片），关闭时恢复直角
+      .borderRadius(this.isSidebarOpen ? 32 : 0)
+      // 保证缩放时背景颜色不会透出奇怪的东西
+      .backgroundColor($r('sys.color.background_primary'))
+
       // 顶部悬浮控制栏
       TopBar({
         onMenuClick: () => {
