@@ -5,6 +5,7 @@ import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from './MenuComponent
 export struct SideBarMenu {
   @Link isSidebarOpen: boolean;
   onSettingsClick?: () => void;
+  onHistoryClick?: () => void;
 
   // 用于实时记录手指拖拽的横向偏移量
   @State dragOffsetX: number = 0;
@@ -41,9 +42,27 @@ export struct SideBarMenu {
               .fontColor($r('sys.color.font_emphasize'))
           }
 
-          Blank() // 弹性空白，把设置按钮完美推到最右侧
+          Blank() // 弹性空白，把设置和历史记录按钮推到最右侧
 
-          // 右侧独立的圆形设置按钮
+          // 历史记录
+          Button({ type: ButtonType.Circle, stateEffect: true }) {
+            SymbolGlyph($r('sys.symbol.arrow_counterclockwise_clock'))
+              .fontSize(20)
+              .fontColor([$r('sys.color.icon_primary')])
+          }
+          .width(40)
+          .height(40)
+          .backgroundColor($r('sys.color.comp_background_tertiary'))
+          .margin({ right: 12 }) // 👈 与右侧设置按钮拉开间距
+          .onClick(() => {
+            // 点击后先收起侧边栏，再触发外部回调
+            animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+            if (this.onHistoryClick) {
+              this.onHistoryClick();
+            }
+          })
+
+          // 设置
           Button({ type: ButtonType.Circle, stateEffect: true }) {
             SymbolGlyph($r('sys.symbol.gearshape_fill'))
               .fontSize(20)
@@ -65,12 +84,10 @@ export struct SideBarMenu {
         // 菜单项区域 (极致清爽版)
         Scroll() {
           Column() {
-            // ====================== 1. 常用 ==========================
+            // ====================== 1. 模式 ==========================
             Column() {
-              GroupHeader({ title: '常用' })
+              GroupHeader({ title: '模式' })
               MenuGroup() {
-                MenuButton({ icon: $r('sys.symbol.arrow_counterclockwise_clock'), title: '历史记录', onClickAction: () => { /* TODO */ } })
-                ItemDivider()
                 MenuButton({ icon: $r('sys.symbol.calculator_1'), title: '基础计算', onClickAction: () => { /* TODO */ } })
                 ItemDivider()
                 MenuButton({ icon: $r('sys.symbol.calculator'), title: '科学计算', onClickAction: () => { /* TODO */ } })
@@ -82,13 +99,13 @@ export struct SideBarMenu {
             Column() {
               GroupHeader({ title: '进阶' })
               MenuGroup() {
-                MenuButton({ icon: $r('sys.symbol.rectangle_portrait_wave_2'), title: '函数图像', onClickAction: () => { /* TODO */ } })
+                MenuButton({ icon: $r('sys.symbol.foldline_screen'), title: '函数图像', onClickAction: () => { /* TODO */ } })
                 ItemDivider()
                 MenuButton({ icon: $r('sys.symbol.exponentiation'), title: '方程求解', onClickAction: () => { /* TODO */ } })
                 ItemDivider()
                 MenuButton({ icon: $r('sys.symbol.square_grid_2x2'), title: '矩阵与向量', onClickAction: () => { /* TODO */ } })
                 ItemDivider()
-                MenuButton({ icon: $r('sys.symbol.square_grid_2x2'), title: '统计分析', onClickAction: () => { /* TODO */ } })
+                MenuButton({ icon: $r('sys.symbol.data'), title: '统计分析', onClickAction: () => { /* TODO */ } })
               }
             }
             .padding({ left: 16, right: 16, bottom: 12 })
@@ -99,9 +116,9 @@ export struct SideBarMenu {
               MenuGroup() {
                 MenuButton({ icon: $r('sys.symbol.arrow_left_arrow_right'), title: '单位转换', onClickAction: () => { /* TODO */ } })
                 ItemDivider()
-                MenuButton({ icon: $r('sys.symbol.square_grid_2x2'), title: '进制转换', onClickAction: () => { /* TODO */ } })
+                MenuButton({ icon: $r('sys.symbol.gobackward_10'), title: '进制转换', onClickAction: () => { /* TODO */ } })
                 ItemDivider()
-                MenuButton({ icon: $r('sys.symbol.square_grid_2x2'), title: '汇率', onClickAction: () => { /* TODO */ } })
+                MenuButton({ icon: $r('sys.symbol.yuansign_arrow_2_circlepath'), title: '汇率', onClickAction: () => { /* TODO */ } })
               }
             }
             .padding({ left: 16, right: 16, bottom: 12 })
@@ -112,7 +129,7 @@ export struct SideBarMenu {
               MenuGroup() {
                 MenuButton({ icon: $r('sys.symbol.doc_plaintext'), title: '公式库', onClickAction: () => { /* TODO */ } })
                 ItemDivider()
-                MenuButton({ icon: $r('app.media.icon_pi'), title: '科学常数', onClickAction: () => { /* TODO */ } })
+                MenuButton({ icon: $r('sys.symbol.e'), title: '科学常数', onClickAction: () => { /* TODO */ } })
                 ItemDivider()
                 MenuButton({ icon: $r('sys.symbol.questionmark_circle'), title: '帮助', onClickAction: () => { /* TODO */ } })
               }
