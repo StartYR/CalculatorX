@@ -57,7 +57,7 @@ export struct SideBarMenu {
           })
         }
         .width('100%')
-        .padding({ left: 24, right: 24, top: 64, bottom: 32 })
+        .padding({ left: 24, right: 24, top: 64, bottom: 16 })
 
         // 菜单项区域 (极致清爽版)
         Scroll() {
@@ -118,6 +118,8 @@ export struct SideBarMenu {
         .layoutWeight(1)
         .align(Alignment.Top)
         .scrollBar(BarState.Off)
+        .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true }) // 触底触顶回弹
+        .fadingEdge(true)//
       }
       .width('65%')
       .height('100%')
