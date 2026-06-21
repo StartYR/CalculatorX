@@ -11,7 +11,7 @@ export struct TopBar {
     Row() {
       // 左侧：设置菜单按钮
       Button({ type: ButtonType.Capsule, stateEffect: true }) {
-        SymbolGlyph($r('sys.symbol.gearshape_fill'))
+        SymbolGlyph($r('sys.symbol.slider_horizontal_2_1'))
           .fontSize(18)
           .fontColor([$r('sys.color.icon_primary')])
       }
@@ -41,7 +41,7 @@ export struct TopBar {
 
       // 右侧：历史记录按钮
       Button({ type: ButtonType.Capsule, stateEffect: true }) {
-        SymbolGlyph($r('sys.symbol.clock'))
+        SymbolGlyph($r('sys.symbol.arrow_counterclockwise_clock'))
           .fontSize(18)
           .fontColor([$r('sys.color.icon_primary')])
       }
