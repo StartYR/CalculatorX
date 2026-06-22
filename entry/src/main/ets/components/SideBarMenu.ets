@@ -81,7 +81,7 @@ export struct SideBarMenu {
         .width('100%')
         .padding({ left: 24, right: 24, top: 64, bottom: 16 })
 
-        // 菜单项区域 (极致清爽版)
+        // 菜单项区域
         Scroll() {
           Column() {
             // ====================== 1. 模式 ==========================
