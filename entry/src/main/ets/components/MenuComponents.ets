@@ -23,12 +23,12 @@ export struct ItemDivider {
   build() {
     Row() {
       Divider()
-        .strokeWidth(1)
-        .color($r('sys.color.comp_background_tertiary'))
+        .strokeWidth(0.75)
+        .color($r('sys.color.comp_divider'))
         .margin({ left: this.marginLeft, right: 12 })
     }
     .width('100%')
-    .margin({ top: -3, bottom: -3 })
+    .margin({ top: -4, bottom: -4 })
     .zIndex(1)
     .hitTestBehavior(HitTestMode.None)
   }
