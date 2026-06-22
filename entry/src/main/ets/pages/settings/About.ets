@@ -1,6 +1,7 @@
 // entry/src/main/ets/pages/settings/About.ets
 import router from '@ohos.router';
-import common from '@ohos.app.ability.common'; // 新增：用于获取上下文以启动外部应用
+import common from '@ohos.app.ability.common'; // 用于获取上下文以启动外部应用
+import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from '../../components/MenuComponents';
 import {
   HdsNavigation,
   HdsNavigationTitleMode,
@@ -93,15 +94,8 @@ struct About {
     offset: { dx: 0, dy: 0 }
   });
 
-  @Builder ItemDivider() {
-    Divider()
-      .strokeWidth(1)
-      .color($r('sys.color.comp_divider'))
-      .margin({ left: 48, right: 16 })
-  }
-
   // 统一封装拉起外部浏览器的函数
-  private openUrlInBrowser(url: string) {
+  private openUrlInBrowser(url: string): void {
     this.context.startAbility({
       action: "ohos.want.action.viewData",
       entities: ["entity.system.browsable"],
@@ -112,7 +106,7 @@ struct About {
   }
 
   // 统一封装拉起邮件客户端的函数
-  private sendEmail(email: string) {
+  private sendEmail(email: string): void {
     this.context.startAbility({
       action: "ohos.want.action.sendData",
       uri: `mailto:${email}`
@@ -131,18 +125,24 @@ struct About {
           Column() {
             // App 图标
             Image($r('app.media.foreground'))
-              .width(80)
-              .height(80)
+              .width(108)
+              .height(108)
               .borderRadius(18)
-              .shadow({ radius: 16, color: 'rgba(0, 0, 0, 0.08)', offsetY: 6 })
+              .shadow({ radius: 64, color: 'rgba(0, 0, 0, 0.28)', offsetX: 12, offsetY: 24 })
 
-            Text('CalculatorX')
-              .fontSize(28)
-              .fontWeight(FontWeight.Bold)
-              .fontColor($r('sys.color.font_primary'))
-              .margin({ top: 20 })
+            Row() {
+              Text('Calculator')
+                .fontSize(36)
+                .fontWeight(FontWeight.Bolder)
+                .fontColor($r('sys.color.font_primary'))
+              Text('X')
+                .fontSize(36)
+                .fontWeight(FontWeight.Bolder)
+                .fontColor($r('sys.color.font_emphasize'))
+            }
+            .padding({top: 32})
 
-            Text('Version 0.1.2 Beta (HarmonyOS)')
+            Text('Version 1.1.0 Beta (HarmonyOS)')
               .fontSize(14)
               .fontColor($r('sys.color.font_tertiary'))
               .margin({ top: 6, bottom: 40 })
@@ -152,111 +152,59 @@ struct About {
 
           // ====================== 特别鸣谢 ==========================
           Column() {
-            Column() {
-              Row() {
-                SymbolGlyph($r('sys.symbol.gift'))
-                  .fontSize(20)
-                  .fontColor([$r('sys.color.icon_secondary')])
-                  .margin({ right: 12 })
-                Text('特别鸣谢')
-                  .fontSize(16)
-                  .fontColor($r('sys.color.font_primary'))
-                Blank()
-                Text('SymEngine')
-                  .fontSize(14)
-                  .fontColor($r('sys.color.font_tertiary'))
-                  .margin({ right: 4 })
-                SymbolGlyph($r('sys.symbol.chevron_right'))
-                  .fontSize(20)
-                  .fontColor([$r('sys.color.icon_tertiary')])
-              }
-              .width('100%')
-              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
-              .onClick(() => {
-                console.info('点击：特别鸣谢');
-                // this.creditsDialogController.open();
-                router.pushUrl({
-                  url: 'pages/settings/Credits',
-                });
+            MenuGroup() {
+              MenuButton({
+                icon: $r('sys.symbol.gift'),
+                title: '特别鸣谢',
+                onClickAction: (): void => {
+                  console.info('点击：特别鸣谢');
+                  // this.creditsDialogController.open();
+                  router.pushUrl({
+                    url: 'pages/settings/Credits',
+                  });
+                }
               })
             }
-            .backgroundColor($r('sys.color.comp_background_primary'))
-            .borderRadius(16)
           }
           .padding({ left: 16, right: 16, bottom: 16 })
 
           // ====================== 联系与支持 ==========================
           Column() {
-            Column() {
+            MenuGroup() {
               // 官方主页
-              Row() {
-                SymbolGlyph($r('sys.symbol.house'))
-                  .fontSize(20)
-                  .fontColor([$r('sys.color.icon_secondary')])
-                  .margin({ right: 12 })
-                Text('官方主页')
-                  .fontSize(16)
-                  .fontColor($r('sys.color.font_primary'))
-                Blank()
-                SymbolGlyph($r('sys.symbol.chevron_right'))
-                  .fontSize(20)
-                  .fontColor([$r('sys.color.icon_tertiary')])
-              }
-              .width('100%')
-              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
-              .onClick(() => {
-                console.info('点击：官方主页');
-                this.openUrlInBrowser('https://calcx.startyi.com');
+              MenuButton({
+                icon: $r('sys.symbol.house'),
+                title: '官方主页',
+                onClickAction: (): void => {
+                  console.info('点击：官方主页');
+                  this.openUrlInBrowser('https://calcx.startyi.com');
+                }
               })
 
-              this.ItemDivider()
+              ItemDivider()
 
               // 开源地址
-              Row() {
-                SymbolGlyph($r('sys.symbol.share'))
-                  .fontSize(20)
-                  .fontColor([$r('sys.color.icon_secondary')])
-                  .margin({ right: 12 })
-                Text('开源地址')
-                  .fontSize(16)
-                  .fontColor($r('sys.color.font_primary'))
-                Blank()
-                SymbolGlyph($r('sys.symbol.chevron_right'))
-                  .fontSize(20)
-                  .fontColor([$r('sys.color.icon_tertiary')])
-              }
-              .width('100%')
-              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
-              .onClick(() => {
-                console.info('点击：开源地址');
-                this.openUrlInBrowser('https://github.com/StarHeartY/CalculatorX');
+              MenuButton({
+                icon: $r('sys.symbol.share'),
+                title: '开源地址',
+                onClickAction: (): void => {
+                  console.info('点击：开源地址');
+                  this.openUrlInBrowser('https://github.com/StarHeartY/CalculatorX');
+                }
               })
 
-              this.ItemDivider()
+              ItemDivider()
 
               // 联系开发者
-              Row() {
-                SymbolGlyph($r('sys.symbol.envelope'))
-                  .fontSize(20)
-                  .fontColor([$r('sys.color.icon_secondary')])
-                  .margin({ right: 12 })
-                Text('联系开发者')
-                  .fontSize(16)
-                  .fontColor($r('sys.color.font_primary'))
-                Blank()
-                SymbolGlyph($r('sys.symbol.chevron_right'))
-                  .fontSize(20)
-                  .fontColor([$r('sys.color.icon_tertiary')])
-              }
-              .width('100%')
-              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
-              .onClick(() => {
-                console.info('点击：联系开发者');
-                this.sendEmail('support@startyi.com');
+              MenuButton({
+                icon: $r('sys.symbol.envelope'),
+                title: '联系开发者',
+                onClickAction: (): void => {
+                  console.info('点击：联系开发者');
+                  this.sendEmail('support@startyi.com');
+                }
               })
             }
-            .backgroundColor($r('sys.color.comp_background_primary'))
-            .borderRadius(16)
           }
           .padding({ left: 16, right: 16, bottom: 32 })
 

@@ -10,6 +10,8 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { RoutePath } from '../utils/CalculatorConfigs';
 import router from '@ohos.router';
 import { PreferenceConfigs } from '../utils/CalculatorConfigs';
+import { TopBar } from '../components/TopBar';
+import { SideBarMenu } from '../components/SideBarMenu';
 
 @Entry
 @Component
@@ -29,6 +31,7 @@ struct Index {
   @State lastAnsLatex: string = "0";      // 供 Ans 调用的上一次结果
   @State lastValidJson: string = "";      // 供 S⇄D 重新计算的纯净 AST
   @State isTempDecimal: boolean = false;  // 当前 S⇄D 面板的显示状态
+  @State isSidebarOpen: boolean = false;  // 控制侧边栏的开合
 
   aboutToAppear() {
     font.registerFont({
@@ -78,20 +81,37 @@ struct Index {
       .width('100%')
       .height('100%')
 
-      // 左上角设置按钮
-      Button({ type: ButtonType.Capsule, stateEffect: true }) {
-        SymbolGlyph($r('sys.symbol.gearshape_fill'))
-          .fontSize(20)
-          .fontColor([$r('sys.color.icon_primary')])
-      }
-      .width(48)
-      .height(32)
-      .margin({ top: 36, left: 12 })
-      .backgroundColor(Color.Transparent)
-      .backgroundBlurStyle(BlurStyle.BACKGROUND_THICK)
-      .onClick(() => {
-        router.pushUrl({ url: RoutePath.SETTINGS });
+      // 打开时缩小到 92%，关闭时恢复 100%
+      .scale({
+        x: this.isSidebarOpen ? 0.92 : 1.0,
+        y: this.isSidebarOpen ? 0.92 : 1.0
       })
+      // 打开时四周变圆滑（像一张退后的卡片），关闭时恢复直角
+      .borderRadius(this.isSidebarOpen ? 32 : 0)
+      // 保证缩放时背景颜色不会透出奇怪的东西
+      .backgroundColor($r('sys.color.background_primary'))
+
+      // 顶部悬浮控制栏
+      TopBar({
+        onMenuClick: () => {
+          animateTo({ duration: 350, curve: Curve.Friction }, () => {
+            this.isSidebarOpen = true;
+          });
+        },
+        onHistoryClick: () => {
+          // TODO: 触发历史记录面板
+        }
+      })
+
+      if (this.isSidebarOpen) {
+        SideBarMenu({
+          isSidebarOpen: $isSidebarOpen, // 传递引用，允许子组件自行关闭
+          onSettingsClick: () => {
+            // 接收子组件的跳转请求，恢复原有的路由逻辑
+            router.pushUrl({ url: RoutePath.SETTINGS });
+          }
+        })
+      }
 
     }
     .width('100%')

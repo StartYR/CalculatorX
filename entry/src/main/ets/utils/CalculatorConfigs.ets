@@ -1,39 +1,39 @@
 // entry/src/main/ets/utils/CalculatorConfigs.ets
 
 // ========== 1. SVG 资源定义 ==========
-export const icon_sum: Resource = $rawfile('math-icons/icon_sum.svg');
-export const icon_product: Resource = $rawfile('math-icons/icon_product.svg');
-export const icon_integral: Resource = $rawfile('math-icons/icon_integral.svg');
-export const icon_indef_integral: Resource = $rawfile('math-icons/icon_indef_integral.svg');
-export const icon_abs: Resource = $rawfile('math-icons/icon_abs.svg');
-export const icon_sqrt: Resource = $rawfile('math-icons/icon_sqrt.svg');
-export const icon_sqrt3: Resource = $rawfile('math-icons/icon_sqrt3.svg');
-export const icon_sqrtx: Resource = $rawfile('math-icons/icon_sqrtx.svg');
-export const icon_power2: Resource = $rawfile('math-icons/icon_power2.svg');
-export const icon_power: Resource = $rawfile('math-icons/icon_power.svg');
-export const icon_fraction: Resource = $rawfile('math-icons/icon_fraction.svg');
-export const icon_power3: Resource = $rawfile('math-icons/icon_power3.svg');
-export const icon_exp: Resource = $rawfile('math-icons/icon_exp.svg');
-export const icon_inverse: Resource = $rawfile('math-icons/icon_inverse.svg');
-export const icon_e_power: Resource = $rawfile('math-icons/icon_e_power.svg');
-export const icon_comma: Resource = $rawfile('math-icons/icon_comma.svg');
-export const icon_fact: Resource = $rawfile('math-icons/icon_fact.svg');
+export const icon_sum: Resource = $rawfile('icons/math/icon_sum.svg');
+export const icon_product: Resource = $rawfile('icons/math/icon_product.svg');
+export const icon_integral: Resource = $rawfile('icons/math/icon_integral.svg');
+export const icon_indef_integral: Resource = $rawfile('icons/math/icon_indef_integral.svg');
+export const icon_abs: Resource = $rawfile('icons/math/icon_abs.svg');
+export const icon_sqrt: Resource = $rawfile('icons/math/icon_sqrt.svg');
+export const icon_sqrt3: Resource = $rawfile('icons/math/icon_sqrt3.svg');
+export const icon_sqrtx: Resource = $rawfile('icons/math/icon_sqrtx.svg');
+export const icon_power2: Resource = $rawfile('icons/math/icon_power2.svg');
+export const icon_power: Resource = $rawfile('icons/math/icon_power.svg');
+export const icon_fraction: Resource = $rawfile('icons/math/icon_fraction.svg');
+export const icon_power3: Resource = $rawfile('icons/math/icon_power3.svg');
+export const icon_exp: Resource = $rawfile('icons/math/icon_exp.svg');
+export const icon_inverse: Resource = $rawfile('icons/math/icon_inverse.svg');
+export const icon_e_power: Resource = $rawfile('icons/math/icon_e_power.svg');
+export const icon_comma: Resource = $rawfile('icons/math/icon_comma.svg');
+export const icon_fact: Resource = $rawfile('icons/math/icon_fact.svg');
 
 
 export class MathIcons {
   // 组合 (Combination)
-  static readonly COMB_SUBSUP = $rawfile('math-icons/comb/icon_comb_subsup.svg'); // C角标 Cₙᵏ C_n^r
-  static readonly COMB_BINOM = $rawfile('math-icons/comb/icon_comb_binom.svg'); // 国际规范 \binom{n}{r}
-  static readonly COMB_CALC = $rawfile('math-icons/comb/icon_comb_calc.svg'); // 左上标 ⁿCᵣ ^nC_r
-  static readonly COMB_CALC2 = $rawfile('math-icons/comb/icon_comb_calc2.svg'); // 左下标 ₙCᵣ _nC_r
-  static readonly COMB_INLINE = $rawfile('math-icons/comb/icon_comb_inline.svg'); // 平铺 C(n,r)
+  static readonly COMB_SUBSUP = $rawfile('icons/math/comb/icon_comb_subsup.svg'); // C角标 Cₙᵏ C_n^r
+  static readonly COMB_BINOM = $rawfile('icons/math/comb/icon_comb_binom.svg'); // 国际规范 \binom{n}{r}
+  static readonly COMB_CALC = $rawfile('icons/math/comb/icon_comb_calc.svg'); // 左上标 ⁿCᵣ ^nC_r
+  static readonly COMB_CALC2 = $rawfile('icons/math/comb/icon_comb_calc2.svg'); // 左下标 ₙCᵣ _nC_r
+  static readonly COMB_INLINE = $rawfile('icons/math/comb/icon_comb_inline.svg'); // 平铺 C(n,r)
 
   // 排列 (Permutation)
-  static readonly PERM_A = $rawfile('math-icons/perm/icon_perm_a.svg'); // A角标 Aₙᵏ A_n^r
-  static readonly PERM_P = $rawfile('math-icons/perm/icon_perm_p.svg'); // P角标 Pₙʳ P_n^r
-  static readonly PERM_CALC = $rawfile('math-icons/perm/icon_perm_calc.svg'); // 左上标 ⁿPᵣ ^nP_r
-  static readonly PERM_CALC2 = $rawfile('math-icons/perm/icon_perm_calc2.svg'); // 左下标 ₙPᵣ _nP_r
-  static readonly PERM_INLINE = $rawfile('math-icons/perm/icon_perm_inline.svg'); // 平铺 P(n,r)
+  static readonly PERM_A = $rawfile('icons/math/perm/icon_perm_a.svg'); // A角标 Aₙᵏ A_n^r
+  static readonly PERM_P = $rawfile('icons/math/perm/icon_perm_p.svg'); // P角标 Pₙʳ P_n^r
+  static readonly PERM_CALC = $rawfile('icons/math/perm/icon_perm_calc.svg'); // 左上标 ⁿPᵣ ^nP_r
+  static readonly PERM_CALC2 = $rawfile('icons/math/perm/icon_perm_calc2.svg'); // 左下标 ₙPᵣ _nP_r
+  static readonly PERM_INLINE = $rawfile('icons/math/perm/icon_perm_inline.svg'); // 平铺 P(n,r)
 }
 
 // 定义选项的数据结构

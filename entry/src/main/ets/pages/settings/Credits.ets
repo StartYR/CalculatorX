@@ -1,6 +1,7 @@
 // entry/src/main/ets/pages/settings/Credits.ets
 import router from '@ohos.router';
 import common from '@ohos.app.ability.common';
+import { MenuGroup, MenuButton, ItemDivider } from '../../components/MenuComponents';
 import {
   HdsNavigation,
   HdsNavigationTitleMode,
@@ -30,7 +31,7 @@ struct Credits {
   private context = getContext(this) as common.UIAbilityContext;
 
   // 统一封装拉起外部浏览器的函数
-  private openUrlInBrowser(url: string) {
+  private openUrlInBrowser(url: string): void {
     this.context.startAbility({
       action: "ohos.want.action.viewData",
       entities: ["entity.system.browsable"],
@@ -48,45 +49,24 @@ struct Credits {
 
           // ====================== 鸣谢列表 ==========================
           Column() {
-            ForEach(creditsList, (item: CreditItem, index: number) => {
-              Column() {
-                Row() {
-                  Column({ space: 4 }) {
-                    Text(item.name)
-                      .fontSize(16)
-                      .fontWeight(FontWeight.Medium)
-                      .fontColor($r('sys.color.font_primary'))
-                    Text(item.desc)
-                      .fontSize(14)
-                      .fontColor($r('sys.color.font_tertiary'))
+            MenuGroup() {
+              ForEach(creditsList, (item: CreditItem, index: number) => {
+                MenuButton({
+                  title: item.name,
+                  subTitle: item.desc,
+                  onClickAction: (): void => {
+                    this.openUrlInBrowser(item.url);
                   }
-                  .alignItems(HorizontalAlign.Start)
-                  .layoutWeight(1)
-
-                  SymbolGlyph($r('sys.symbol.chevron_right'))
-                    .fontSize(20)
-                    .fontColor([$r('sys.color.icon_tertiary')])
-                }
-                .width('100%')
-                .padding({ left: 16, right: 16, top: 14, bottom: 14 })
-                .onClick(() => {
-                  this.openUrlInBrowser(item.url);
                 })
 
                 // 除了最后一项，都加上分割线
                 if (index < creditsList.length - 1) {
-                  Divider()
-                    .strokeWidth(1)
-                    .color($r('sys.color.comp_divider'))
-                    .margin({ left: 16, right: 16 })
+                  ItemDivider({ marginLeft: 12 })
                 }
-              }
-            })
+              })
+            }
           }
-          .backgroundColor($r('sys.color.comp_background_primary'))
-          .borderRadius(16)
-          .padding({ bottom: 4 })
-          .margin({ left: 16, right: 16, bottom: 32 })
+          .padding({ left: 16, right: 16, bottom: 32 })
 
           Text('我们站在巨人的肩膀上。')
             .fontSize(12)
