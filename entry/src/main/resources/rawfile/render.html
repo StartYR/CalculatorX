@@ -39,13 +39,14 @@
             // 挂载输入的 DOM
             const divIn = document.createElement('div');
             divIn.innerHTML = htmlIn;
+            divIn.style.display = 'inline-block'; // 强制让容器宽度收缩至公式真实大小
             container.appendChild(divIn);
 
             // 挂载输出的 DOM
             const divOut = document.createElement('div');
             divOut.innerHTML = htmlOut;
-            // 因为我们分别截图，不需要它们在 DOM 里有具体的上下间距，直接追加即可
-            container.appendChild(divOut);
+            divOut.style.display = 'inline-block'; // 强制让容器宽度收缩至公式真实大小
+            container.appendChild(divOut); // 分别截图，不需要它们在 DOM 里有具体的上下间距，直接追加即可
 
             // 3. 给浏览器排版引擎一点喘息时间（50ms），确保复杂的积分号、分式完全对齐就位
             await new Promise(resolve => setTimeout(resolve, 50));
