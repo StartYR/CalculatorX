@@ -53,7 +53,18 @@ export struct SideBarMenu {
           .width(40)
           .height(40)
           .backgroundColor($r('sys.color.comp_background_tertiary'))
-          .margin({ right: 12 }) // 👈 与右侧设置按钮拉开间距
+          .margin({ right: 12 }) // 按钮间距
+          .border({
+            width: 0.5,
+            color: $r('sys.color.comp_divider'),
+            radius: 16
+          })
+          .shadow({
+            radius: 32,
+            color: '#25000000',
+            offsetX: 3,
+            offsetY: 6
+          })
           .onClick(() => {
             // 点击后先收起侧边栏，再触发外部回调
             animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
@@ -70,7 +81,18 @@ export struct SideBarMenu {
           }
           .width(40)
           .height(40)
-          .backgroundColor($r('sys.color.comp_background_tertiary')) // 极其微弱的底色，凸显圆形
+          .backgroundColor($r('sys.color.comp_background_tertiary')) // 底色
+          .border({
+            width: 0.5,
+            color: $r('sys.color.comp_divider'),
+            radius: 16
+          })
+          .shadow({
+            radius: 32,
+            color: '#25000000',
+            offsetX: 3,
+            offsetY: 6
+          })
           .onClick(() => {
             animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
             if (this.onSettingsClick) {
