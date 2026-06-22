@@ -150,15 +150,45 @@ struct Index {
 
       // 暗房 Webview
       Web({
-        src: $rawfile('render.html'), // 指向接下来要新建的专属渲染页面
+        src: $rawfile('render.html'),
         controller: this.renderWebController
       })
-        .width(1000)  // 给一个足够宽的画布，防止长公式自动换行打乱排版
-        .height(2000) // 保证高度充裕
-        .position({ x: -5000, y: -5000 }) // 物理放逐到十万八千里外
+        .width(1000)
+        .height(2000)
+        .position({ x: -5000, y: -5000 })
         .backgroundColor(Color.Transparent)
         .javaScriptAccess(true)
         .domStorageAccess(true)
+        // [新增] 注册通信桥梁，把 ArkTS 的方法暴露给 render.html
+        .javaScriptProxy({
+          object: {
+            onImageReady: (jsonStr: string) => {
+              try {
+                let parsed = JSON.parse(jsonStr) as Record<string, string>;
+                if (parsed['error']) {
+                  console.error("暗房报错: " + parsed['error']);
+                  return;
+                }
+                // 在这里执行真正的数据库异步插入
+                HistoryRepository.insertRecord({
+                  moduleType: 'scientific',
+                  inputContent: parsed['inputLatex'],
+                  outputContent: parsed['outputLatex'],
+                  inputBase64: parsed['inputBase64'],
+                  outputBase64: parsed['outputBase64'],
+                  timestamp: Date.now(),
+                }).then((rowId: number) => {
+                  console.info(`HistoryRepository: 历史记录图文保存成功, rowId = ${rowId}`);
+                });
+              } catch (e) {
+                console.error("解析暗房回传数据失败");
+              }
+            }
+          },
+          name: "arktsBridge",           // 前端通过 window.arktsBridge 访问
+          methodList: ["onImageReady"],  // 暴露给前端的方法名
+          controller: this.renderWebController
+        })
 
     }
     .width('100%')
@@ -358,68 +388,18 @@ struct Index {
               // 把成功的计算结果存入 Ans
               this.lastAnsLatex = cppResponse;
 
-
-              // 请求前端 Web 生成公式图片的 Base64
+              // 发送指令给暗房
               this.renderWebController.runJavaScript(
-                `window.exportLatexToPng(${JSON.stringify(rawLatex)}, ${JSON.stringify(cppResponse)})`,
-                (imgErr, base64Json) => {
+                `window.exportLatexToPng(${JSON.stringify(rawLatex)}, ${JSON.stringify(cppResponse)})`
+              );
 
-                  // [探针1 加入这里]
-                  console.info(`【探针1-A】收到的 imgErr: ${imgErr}`);
-                  console.info(`【探针1-B】收到的 base64Json 前50字: ${base64Json ? base64Json.substring(0, 50) : '空'}`);
-
-                  let inBase64: string = "";
-                  let outBase64: string = "";
-
-                  if (!imgErr && base64Json && base64Json !== 'null') {
-                    try {
-                      // 彻底放弃正则！避开 DevEco Studio 编译器的解析 Bug
-                      // 采用安全的双重 JSON.parse 来处理 Web 端传回的可能带有双重转义的数据
-                      let firstParse = JSON.parse(base64Json) as string | Record<string, string>;
-                      let parsedObj: Record<string, string>;
-
-                      if (typeof firstParse === 'string') {
-                        parsedObj = JSON.parse(firstParse) as Record<string, string>;
-                      } else {
-                        parsedObj = firstParse;
-                      }
-
-                      if (parsedObj && parsedObj['input']) {
-                        inBase64 = parsedObj['input'];
-                      }
-                      console.info(`【探针1-C】解析后的 inBase64 长度: ${inBase64.length}`);
-                      if (parsedObj && parsedObj['output']) {
-                        outBase64 = parsedObj['output'];
-                      }
-                    } catch (e) {
-                      console.error("解析 Web 端图片 Base64 失败");
-                    }
-                  }
-
-
-                  // 异步保存到历史记录数据库
-                  HistoryRepository.insertRecord({
-                    moduleType: 'scientific',
-                    inputContent: rawLatex, // 保存清洗前最纯净的输入 LaTeX
-                    outputContent: cppResponse, // 保存计算结果
-                    inputBase64: inBase64, // 保存生成的输入图片
-                    outputBase64: outBase64, // 保存生成的输出图片
-                    timestamp: Date.now(),
-                  }).then((rowId: number) => {
-                    console.info(`HistoryRepository: 历史记录保存成功, rowId = ${rowId}`);
-                  }).catch((err: Error) => {
-                    console.error(`HistoryRepository: 历史记录保存失败. message: ${err.message}`);
-                  });
-
-                  // 如果是自动模式(-1)，则通过判断结果里有没有小数点来判断是否为小数
-                  if (cppPrecisionMode === -1) {
-                    this.isTempDecimal = cppResponse.includes('.');
-                  } else {
-                    this.isTempDecimal = true;
-                  }
-                  this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
-
-                });
+              // 如果是自动模式(-1)，则通过判断结果里有没有小数点来判断是否为小数
+              if (cppPrecisionMode === -1) {
+                this.isTempDecimal = cppResponse.includes('.');
+              } else {
+                this.isTempDecimal = true;
+              }
+              this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
             }
           });
         });

@@ -69,11 +69,15 @@
             // 7. 销毁小黑屋，清理 DOM 节点释放内存
             document.body.removeChild(container);
 
-            // 8. 组装成 JSON 字符串返回给 ArkTS
-            return JSON.stringify({
-                input: base64In,
-                output: base64Out
-            });
+            // 8. 主动呼叫 ArkTS 注入的桥接方法
+            if (window.arktsBridge && window.arktsBridge.onImageReady) {
+                window.arktsBridge.onImageReady(JSON.stringify({
+                    inputBase64: base64In,
+                    outputBase64: base64Out,
+                    inputLatex: inputLatex,     // 原样传回给 ArkTS 存库
+                    outputLatex: outputLatex    // 原样传回给 ArkTS 存库
+                }));
+            }
 
         } catch (err) {
             console.error("图片生成失败:", err);
