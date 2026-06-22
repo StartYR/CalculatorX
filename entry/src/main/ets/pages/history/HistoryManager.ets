@@ -63,13 +63,15 @@ struct HistoryListTab {
               Column() {
                 // 上半部分：优先显示输入表达式的图片，没有则显示文本
                 if (item.inputBase64 && item.inputBase64.length > 0) {
-                  Image(item.inputBase64)
-                    .height(32) // 高度可根据截图实际清晰度微调
-                    .objectFit(ImageFit.Contain)
-                    .align(Alignment.Start)
-                    .width('100%')
-                  // 深色模式反色滤镜预留位（把纯黑字反转成纯白字）
-                  // .colorFilter(this.isDarkMode ? [ -1, 0, 0, 0, 255, 0, -1, 0, 0, 255, 0, 0, -1, 0, 255, 0, 0, 0, 1, 0 ] : undefined)
+                  Row() {
+                    Image(item.inputBase64)
+                      .height(32) // 高度可根据截图实际清晰度微调
+                      .objectFit(ImageFit.Contain)
+                    // 深色模式反色滤镜预留位
+                    // .colorFilter(this.isDarkMode ? [ -1, 0, 0, 0, 255, 0, -1, 0, 0, 255, 0, 0, -1, 0, 255, 0, 0, 0, 1, 0 ] : undefined)
+                  }
+                  .width('100%')
+                  .justifyContent(FlexAlign.Start) // [新增] Row 强制把内部紧凑的图片推到最左边
                 } else {
                   Text(item.inputContent)
                     .fontSize(16)
