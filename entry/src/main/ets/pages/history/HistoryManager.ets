@@ -61,21 +61,50 @@ struct HistoryListTab {
           ForEach(this.historyList, (item: HistoryRecord) => {
             ListItem() {
               Column() {
-                Text(item.inputContent)
-                  .fontSize(16)
-                  .fontColor($r('sys.color.font_primary'))
-                  .width('100%')
-                  .textAlign(TextAlign.Start)
-                  .maxLines(3)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                // 上半部分：优先显示输入表达式的图片，没有则显示文本
+                if (item.inputBase64 && item.inputBase64.length > 0) {
+                  Image(item.inputBase64)
+                    .height(32) // 高度可根据截图实际清晰度微调
+                    .objectFit(ImageFit.Contain)
+                    .align(Alignment.Start)
+                    .width('100%')
+                  // 深色模式反色滤镜预留位（把纯黑字反转成纯白字）
+                  // .colorFilter(this.isDarkMode ? [ -1, 0, 0, 0, 255, 0, -1, 0, 0, 255, 0, 0, -1, 0, 255, 0, 0, 0, 1, 0 ] : undefined)
+                } else {
+                  Text(item.inputContent)
+                    .fontSize(16)
+                    .fontColor($r('sys.color.font_primary'))
+                    .width('100%')
+                    .textAlign(TextAlign.Start)
+                    .maxLines(3)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                }
 
-                Text(`=  ${item.outputContent}`)
-                  .fontSize(20)
-                  .fontWeight(FontWeight.Medium)
-                  .fontColor($r('sys.color.font_primary'))
+                // 下半部分：优先显示计算结果的图片，没有则显示文本
+                if (item.outputBase64 && item.outputBase64.length > 0) {
+                  Row() {
+                    Text('=  ')
+                      .fontSize(20)
+                      .fontWeight(FontWeight.Medium)
+                      .fontColor($r('sys.color.font_primary'))
+
+                    Image(item.outputBase64)
+                      .height(40) // 结果字号稍微大一点
+                      .objectFit(ImageFit.Contain)
+                    // .colorFilter(...) 同上，深色模式可套用反色矩阵
+                  }
                   .width('100%')
-                  .textAlign(TextAlign.End)
+                  .justifyContent(FlexAlign.End) // 结果整体靠右对齐
                   .margin({ top: 8 })
+                } else {
+                  Text(`=  ${item.outputContent}`)
+                    .fontSize(20)
+                    .fontWeight(FontWeight.Medium)
+                    .fontColor($r('sys.color.font_primary'))
+                    .width('100%')
+                    .textAlign(TextAlign.End)
+                    .margin({ top: 8 })
+                }
               }
               .padding(16)
               .backgroundColor($r('sys.color.comp_background_primary'))
@@ -110,20 +139,20 @@ export struct HistoryManager {
   private getTabItems(): TabItemConfig[] {
     const allTab: TabItemConfig = {
       label: '全部',
-      icon: new SymbolGlyphModifier($r('sys.symbol.list_bullet'))
+      icon: new SymbolGlyphModifier($r('sys.symbol.list_bullet_square_fill'))
         .fontSize(24)
         .fontColor([$r('sys.color.icon_primary')]),
-      selectedIcon: new SymbolGlyphModifier($r('sys.symbol.list_bullet'))
+      selectedIcon: new SymbolGlyphModifier($r('sys.symbol.list_bullet_square_fill'))
         .fontSize(24)
         .fontColor([$r('sys.color.icon_emphasize')])
     };
 
     const scientificTab: TabItemConfig = {
       label: '科学计算',
-      icon: new SymbolGlyphModifier($r('sys.symbol.calculator'))
+      icon: new SymbolGlyphModifier($r('sys.symbol.calculator_fill'))
         .fontSize(24)
         .fontColor([$r('sys.color.icon_primary')]),
-      selectedIcon: new SymbolGlyphModifier($r('sys.symbol.calculator'))
+      selectedIcon: new SymbolGlyphModifier($r('sys.symbol.calculator_fill'))
         .fontSize(24)
         .fontColor([$r('sys.color.icon_emphasize')])
     };

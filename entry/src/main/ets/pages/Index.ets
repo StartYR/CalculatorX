@@ -30,6 +30,7 @@ struct Index {
   @StorageProp(PreferenceConfigs.KEY_PERMUTATION_SELECT) permSelect: number = 1;
   @StorageLink('isRad') angleModeIndex: number = 0;
   webviewController: web_webview.WebviewController = new web_webview.WebviewController();
+  renderWebController: web_webview.WebviewController = new web_webview.WebviewController();
 
   @State isShift: boolean = false;
   @State lastAnsLatex: string = "0";      // 供 Ans 调用的上一次结果
@@ -146,6 +147,18 @@ struct Index {
           }
         })
       }
+
+      // 暗房 Webview
+      Web({
+        src: $rawfile('render.html'), // 指向接下来要新建的专属渲染页面
+        controller: this.renderWebController
+      })
+        .width(1000)  // 给一个足够宽的画布，防止长公式自动换行打乱排版
+        .height(2000) // 保证高度充裕
+        .position({ x: -5000, y: -5000 }) // 物理放逐到十万八千里外
+        .backgroundColor(Color.Transparent)
+        .javaScriptAccess(true)
+        .domStorageAccess(true)
 
     }
     .width('100%')
@@ -346,9 +359,8 @@ struct Index {
               this.lastAnsLatex = cppResponse;
 
 
-              // [新增] 请求前端 Web 生成公式图片的 Base64
-              // (需要你在 calculator.html 中补充一个挂载在 window 上的 exportLatexToPng 函数，返回包含 input 和 output 两个 base64 的 JSON)
-              this.webviewController.runJavaScript(
+              // 请求前端 Web 生成公式图片的 Base64
+              this.renderWebController.runJavaScript(
                 `window.exportLatexToPng(${JSON.stringify(rawLatex)}, ${JSON.stringify(cppResponse)})`,
                 (imgErr, base64Json) => {
                   let inBase64: string = "";

@@ -72,14 +72,14 @@ export struct HistorySheet {
           ForEach(this.historyList, (item: HistoryRecord) => {
             ListItem() {
               Column() {
-                // 上半部分：输入的表达式 (LaTeX 源码)
+                // 上半部分：优先显示输入表达式的图片，没有则显示文本
                 if (item.inputBase64 && item.inputBase64.length > 0) {
                   Image(item.inputBase64)
-                    .height(32) // 高度可根据你导出的图片清晰度自行微调
-                    .width('100%')
+                    .height(32) // 高度可根据截图实际清晰度微调
                     .objectFit(ImageFit.Contain)
                     .align(Alignment.Start)
-                  // TODO: 适配深色模式时，可取消下方注释，应用反色矩阵
+                    .width('100%')
+                  // 深色模式反色滤镜预留位（把纯黑字反转成纯白字）
                   // .colorFilter(this.isDarkMode ? [ -1, 0, 0, 0, 255, 0, -1, 0, 0, 255, 0, 0, -1, 0, 255, 0, 0, 0, 1, 0 ] : undefined)
                 } else {
                   Text(item.inputContent)
@@ -91,7 +91,7 @@ export struct HistorySheet {
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                 }
 
-                // 下半部分：计算结果
+                // 下半部分：优先显示计算结果的图片，没有则显示文本
                 if (item.outputBase64 && item.outputBase64.length > 0) {
                   Row() {
                     Text('=  ')
@@ -100,18 +100,18 @@ export struct HistorySheet {
                       .fontColor($r('sys.color.font_primary'))
 
                     Image(item.outputBase64)
-                      .height(40)
+                      .height(40) // 结果字号稍微大一点
                       .objectFit(ImageFit.Contain)
-                    // .colorFilter(...) 同样可以加上深色反转滤镜
+                    // .colorFilter(...) 同上，深色模式可套用反色矩阵
                   }
                   .width('100%')
-                  .justifyContent(FlexAlign.End) // 结果靠右对齐
+                  .justifyContent(FlexAlign.End) // 结果整体靠右对齐
                   .margin({ top: 8 })
                 } else {
                   Text(`=  ${item.outputContent}`)
                     .fontSize(20)
                     .fontWeight(FontWeight.Medium)
-                    .fontColor($r('sys.color.font_primary')) // 品牌色，比如 $r('sys.color.brand') 可以替换
+                    .fontColor($r('sys.color.font_primary'))
                     .width('100%')
                     .textAlign(TextAlign.End)
                     .margin({ top: 8 })
