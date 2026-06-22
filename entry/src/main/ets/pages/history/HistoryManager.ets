@@ -7,12 +7,12 @@ import {
   hdsMaterial,
   ScrollEffectType,
   HdsTabs,
-  HdsTabsController
+  HdsTabsController,
+  // BottomTabBarStyle
 } from '@kit.UIDesignKit';
 import { SymbolGlyphModifier } from '@kit.ArkUI';
 
-// ==================== 定义页签项的数据结构 ====================
-// 声明一个接口来描述页签项的完整类型
+// ==================== 页签项数据结构 ====================
 interface TabItemConfig {
   label: string;
   icon: SymbolGlyphModifier;
@@ -37,6 +37,7 @@ struct HistoryListTab {
   build() {
     Column() {
       if (this.historyList.length === 0) {
+        // 空状态
         Column() {
           SymbolGlyph($r('sys.symbol.clock'))
             .fontSize(48)
@@ -50,7 +51,13 @@ struct HistoryListTab {
         .justifyContent(FlexAlign.Center)
         .width('100%')
       } else {
+        // 数据列表
         List({ space: 12 }) {
+          // 【关键修复】顶部占位，让内容从标题栏下方开始，保留沉浸光感
+          ListItem() {
+            Row().width('100%').height(96) // 与 HdsNavigation 标题栏高度匹配
+          }
+
           ForEach(this.historyList, (item: HistoryRecord) => {
             ListItem() {
               Column() {
@@ -76,13 +83,14 @@ struct HistoryListTab {
             }
           }, (item: HistoryRecord) => item.id?.toString())
 
+          // 底部占位：小横条 + 悬浮胶囊高度 + 边距
           ListItem() {
             Row().width('100%').height(this.navBarHeight + 104)
           }
         }
         .layoutWeight(1)
         .width('100%')
-        .padding({ left: 16, right: 16, top: 16, bottom: 0 })
+        .padding({ left: 16, right: 16, top: 0, bottom: 0 }) // 顶部内边距归零，由占位控制
         .scrollBar(BarState.Off)
       }
     }
@@ -98,9 +106,8 @@ export struct HistoryManager {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   private controller: HdsTabsController = new HdsTabsController();
 
-  // 【修复2】明确指定返回类型为 TabItemConfig[]，并正确构建对象
+  // 构建页签配置数组
   private getTabItems(): TabItemConfig[] {
-    // 使用显式的对象创建，每个属性都符合 TabItemConfig 接口
     const allTab: TabItemConfig = {
       label: '全部',
       icon: new SymbolGlyphModifier($r('sys.symbol.list_bullet'))
@@ -131,17 +138,14 @@ export struct HistoryManager {
         .fontColor([$r('sys.color.icon_emphasize')])
     };
 
-    // 返回显式类型的数组
     return [allTab, scientificTab, equationTab];
   }
 
-  // 构建页签UI的方法，接收 TabItemConfig 数组
   @Builder
   buildTabs(tabsConfig: TabItemConfig[]) {
     HdsTabs({ controller: this.controller }) {
       ForEach(tabsConfig, (tab: TabItemConfig, index: number) => {
         TabContent() {
-          // 根据索引或tab.label决定显示哪个列表
           if (index === 0) {
             HistoryListTab({ moduleType: 'all' })
           } else if (index === 1) {
@@ -150,7 +154,6 @@ export struct HistoryManager {
             HistoryListTab({ moduleType: 'equation' })
           }
         }
-        // 使用 HdsTabs 的页签样式，注意这里传入的是 Modifier 对象
         .tabBar(new BottomTabBarStyle({
           normal: tab.icon,
           selected: tab.selectedIcon
@@ -173,14 +176,16 @@ export struct HistoryManager {
 
   build() {
     HdsNavigation() {
-      // 调用构建方法，传入页签配置
       this.buildTabs(this.getTabItems())
     }
     .mode(NavigationMode.Stack)
     .titleBar({
       content: { title: { mainTitle: '全局历史记录' } },
       style: {
-        scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: ScrollEffectType.GRADIENT_BLUR },
+        scrollEffectOpts: {
+          enableScrollEffect: true,
+          scrollEffectType: ScrollEffectType.GRADIENT_BLUR
+        },
         systemMaterialEffect: {
           materialType: hdsMaterial.MaterialType.ADAPTIVE,
           materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
