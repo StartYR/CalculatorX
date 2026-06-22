@@ -134,6 +134,9 @@ export class HistoryRepository {
         const output = resultSet.getString(resultSet.getColumnIndex('output_content'));
         const inputImg = resultSet.getString(resultSet.getColumnIndex('input_base64'));
         const outputImg = resultSet.getString(resultSet.getColumnIndex('output_base64'));
+
+        console.info(`【探针2】DB读出 id=${id}, inputImg 长度: ${inputImg ? inputImg.length : 'undefined/null'}`);
+
         const extra = resultSet.getString(resultSet.getColumnIndex('extra_params'));
         const time = resultSet.getLong(resultSet.getColumnIndex('timestamp'));
 

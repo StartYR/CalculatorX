@@ -363,6 +363,11 @@ struct Index {
               this.renderWebController.runJavaScript(
                 `window.exportLatexToPng(${JSON.stringify(rawLatex)}, ${JSON.stringify(cppResponse)})`,
                 (imgErr, base64Json) => {
+
+                  // [探针1 加入这里]
+                  console.info(`【探针1-A】收到的 imgErr: ${imgErr}`);
+                  console.info(`【探针1-B】收到的 base64Json 前50字: ${base64Json ? base64Json.substring(0, 50) : '空'}`);
+
                   let inBase64: string = "";
                   let outBase64: string = "";
 
@@ -382,6 +387,7 @@ struct Index {
                       if (parsedObj && parsedObj['input']) {
                         inBase64 = parsedObj['input'];
                       }
+                      console.info(`【探针1-C】解析后的 inBase64 长度: ${inBase64.length}`);
                       if (parsedObj && parsedObj['output']) {
                         outBase64 = parsedObj['output'];
                       }

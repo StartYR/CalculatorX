@@ -18,6 +18,11 @@ export struct HistorySheet {
   // 异步加载数据库中的记录
   async loadHistory() {
     this.historyList = await HistoryRepository.queryRecords(this.moduleType, 50);
+
+    if (this.historyList.length > 0) {
+      console.info(`【探针3】UI列表第1条的 inputBase64 类型: ${typeof this.historyList[0].inputBase64}, 长度: ${this.historyList[0].inputBase64?.length}`);
+    }
+
   }
 
   build() {
