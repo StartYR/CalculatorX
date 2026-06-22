@@ -6,6 +6,7 @@ import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, ScrollEffectType } 
 // ==================== 内部子组件：用于渲染不同模块的列表 ====================
 @Component
 struct HistoryListTab {
+  @StorageProp('navBarHeight') navBarHeight: number = 0;
   @Prop moduleType: string = 'all';
   @State historyList: HistoryRecord[] = [];
 
@@ -61,10 +62,15 @@ struct HistoryListTab {
               .borderRadius(16)
             }
           }, (item: HistoryRecord) => item.id?.toString())
+
+          ListItem() {
+            Row().width('100%').height(this.navBarHeight + 16)
+          }
         }
+
         .layoutWeight(1)
         .width('100%')
-        .padding({ left: 16, right: 16, top: 16, bottom: 16 })
+        .padding({ left: 16, right: 16, top: 16, bottom: 0})
         .scrollBar(BarState.Off)
       }
     }
@@ -132,7 +138,7 @@ export struct HistoryManager {
       }
       .width('100%')
       .height('100%')
-      .padding({ bottom: this.navBarHeight })
+      // .padding({ bottom: this.navBarHeight })
     }
     .mode(NavigationMode.Stack)
     .titleBar({
