@@ -76,7 +76,9 @@ CalculatorX/
 │   │   │
 │   │   ├── components/  
 │   │   │   ├── TopKeyboard.ets            # 自定义组件：上方科学计算与微积分键盘
-│   │   │   └── BottomKeyboard.ets         # 自定义组件：下方基础数字与四则运算键盘
+│   │   │   ├── BottomKeyboard.ets         # 自定义组件：下方基础数字与四则运算键盘
+│   │   │   ├── SideBarMenu.ets            # 自定义组件：左侧侧边栏菜单（手势驱动、包含原生边缘渐隐效果）
+│   │   │   └── MenuComponents.ets         # UI 组件库：统一管理 MenuGroup, MenuButton, ItemDivider 等底层样式
 │   │   │
 │   │   └── utils/CalculatorConfigs.ets    # 页面配置文件
 │   │  
@@ -105,7 +107,7 @@ CalculatorX/
 │   │       ├── calculator.html            # MathLive 容器：负责 LaTeX 公式的高清渲染及 MathJSON 降维导出
 │   │       ├── mathlive.min.js            # 核心依赖：离线 Web 数学排版与解析库  
 │   │       ├── fonts/                     # 字体资源
-│   │       └── math-icons/                # 图标资源：积分、求和、根号等 SVG 图标
+│   │       └── icons/                     # 图标资源：积分、求和、根号等 SVG 图标 (包括排列组合的自定义 SVG) 
 │   │
 │   └── module.json5                       # 模块配置：声明了 ohos.permission.INTERNET 与 VIBRATE 权限
 │
