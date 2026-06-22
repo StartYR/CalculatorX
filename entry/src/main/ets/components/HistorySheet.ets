@@ -73,22 +73,49 @@ export struct HistorySheet {
             ListItem() {
               Column() {
                 // 上半部分：输入的表达式 (LaTeX 源码)
-                Text(item.inputContent)
-                  .fontSize(16)
-                  .fontColor($r('sys.color.font_primary'))
-                  .width('100%')
-                  .textAlign(TextAlign.Start)
-                  .maxLines(3)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                if (item.inputBase64 && item.inputBase64.length > 0) {
+                  Image(item.inputBase64)
+                    .height(32) // 高度可根据你导出的图片清晰度自行微调
+                    .width('100%')
+                    .objectFit(ImageFit.Contain)
+                    .align(Alignment.Start)
+                  // TODO: 适配深色模式时，可取消下方注释，应用反色矩阵
+                  // .colorFilter(this.isDarkMode ? [ -1, 0, 0, 0, 255, 0, -1, 0, 0, 255, 0, 0, -1, 0, 255, 0, 0, 0, 1, 0 ] : undefined)
+                } else {
+                  Text(item.inputContent)
+                    .fontSize(16)
+                    .fontColor($r('sys.color.font_primary'))
+                    .width('100%')
+                    .textAlign(TextAlign.Start)
+                    .maxLines(3)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                }
 
                 // 下半部分：计算结果
-                Text(`=  ${item.outputContent}`)
-                  .fontSize(20)
-                  .fontWeight(FontWeight.Medium)
-                  .fontColor($r('sys.color.font_primary')) // 品牌色，比如 $r('sys.color.brand') 可以替换
+                if (item.outputBase64 && item.outputBase64.length > 0) {
+                  Row() {
+                    Text('=  ')
+                      .fontSize(20)
+                      .fontWeight(FontWeight.Medium)
+                      .fontColor($r('sys.color.font_primary'))
+
+                    Image(item.outputBase64)
+                      .height(40)
+                      .objectFit(ImageFit.Contain)
+                    // .colorFilter(...) 同样可以加上深色反转滤镜
+                  }
                   .width('100%')
-                  .textAlign(TextAlign.End)
+                  .justifyContent(FlexAlign.End) // 结果靠右对齐
                   .margin({ top: 8 })
+                } else {
+                  Text(`=  ${item.outputContent}`)
+                    .fontSize(20)
+                    .fontWeight(FontWeight.Medium)
+                    .fontColor($r('sys.color.font_primary')) // 品牌色，比如 $r('sys.color.brand') 可以替换
+                    .width('100%')
+                    .textAlign(TextAlign.End)
+                    .margin({ top: 8 })
+                }
               }
               .padding(16)
               .backgroundColor($r('sys.color.comp_background_primary'))
