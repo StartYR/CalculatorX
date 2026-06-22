@@ -12,6 +12,7 @@ import router from '@ohos.router';
 import { PreferenceConfigs } from '../utils/CalculatorConfigs';
 import { TopBar } from '../components/TopBar';
 import { SideBarMenu } from '../components/SideBarMenu';
+import { HistorySheet } from '../components/HistorySheet'; // 引入历史记录面板组件
 import { common } from '@kit.AbilityKit';
 import { HistoryRepository } from '../database/HistoryRepository'; // 数据库
 
@@ -35,6 +36,22 @@ struct Index {
   @State lastValidJson: string = "";      // 供 S⇄D 重新计算的纯净 AST
   @State isTempDecimal: boolean = false;  // 当前 S⇄D 面板的显示状态
   @State isSidebarOpen: boolean = false;  // 控制侧边栏的开合
+  @State isShowHistorySheet: boolean = false; // 控制历史记录半模态面板的显示状态
+
+  // 历史记录面板的生成器
+  @Builder HistorySheetBuilder() {
+    HistorySheet({
+      moduleType: 'scientific', // 当前是科学计算模块
+      onItemClick: (record) => {
+        // 当用户点击历史记录时，执行追加输入
+        this.insertToWeb(record.inputContent);
+      },
+      onClose: () => {
+        // 点击后丝滑收起面板
+        this.isShowHistorySheet = false;
+      }
+    })
+  }
 
   aboutToAppear() {
     // 初始化历史记录数据库
@@ -105,9 +122,17 @@ struct Index {
           });
         },
         onHistoryClick: () => {
-          // TODO: 触发历史记录面板
+          this.isShowHistorySheet = true; // 触发历史记录面板
         }
       })
+
+      // 为顶部控制栏绑定历史记录半模态面板
+        .bindSheet($$this.isShowHistorySheet, this.HistorySheetBuilder(), {
+          height: SheetSize.FIT_CONTENT, // 面板高度自适应内容
+          dragBar: true,                 // 顶部显示可拖拽的灰色小横条
+          backgroundColor: $r('sys.color.background_secondary'), // 统一底色
+          showClose: false               // 隐藏右上角默认关闭按钮
+        })
 
       if (this.isSidebarOpen) {
         SideBarMenu({
