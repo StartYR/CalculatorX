@@ -128,10 +128,10 @@ struct Index {
 
       // 为顶部控制栏绑定历史记录半模态面板
         .bindSheet($$this.isShowHistorySheet, this.HistorySheetBuilder(), {
-          height: SheetSize.FIT_CONTENT, // 面板高度自适应内容
+          height: '75%', // 面板高度
           dragBar: true,                 // 顶部显示可拖拽的灰色小横条
           backgroundColor: $r('sys.color.background_secondary'), // 统一底色
-          showClose: false               // 隐藏右上角默认关闭按钮
+          showClose: false               // 右上角关闭按钮
         })
 
       if (this.isSidebarOpen) {
@@ -140,6 +140,9 @@ struct Index {
           onSettingsClick: () => {
             // 接收子组件的跳转请求，恢复原有的路由逻辑
             router.pushUrl({ url: RoutePath.SETTINGS });
+          },
+          onHistoryClick: () => {
+            router.pushUrl({ url: RoutePath.HISTORY });
           }
         })
       }
