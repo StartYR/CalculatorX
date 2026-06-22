@@ -1,7 +1,7 @@
 // entry/src/main/ets/pages/history/HistoryManager.ets
 import router from '@ohos.router';
 import { HistoryRepository, HistoryRecord } from '../../database/HistoryRepository';
-import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, ScrollEffectType } from '@kit.UIDesignKit';
+import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, ScrollEffectType, HdsTabs, HdsTabsController } from '@kit.UIDesignKit';
 
 // ==================== 内部子组件：用于渲染不同模块的列表 ====================
 @Component
@@ -85,50 +85,39 @@ struct HistoryListTab {
 export struct HistoryManager {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @State currentIndex: number = 0;
-  private tabsController: TabsController = new TabsController();
+  private tabsController: HdsTabsController = new HdsTabsController();
 
   // 自定义 Tab 样式，选中时变大加粗
-  @Builder TabBuilder(title: string, targetIndex: number) {
-    Column() {
-      Text(title)
-        .fontColor(this.currentIndex === targetIndex ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
-        .fontSize(this.currentIndex === targetIndex ? 16 : 14)
-        .fontWeight(this.currentIndex === targetIndex ? FontWeight.Bold : FontWeight.Normal)
-    }
-    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
-    .onClick(() => {
-      this.currentIndex = targetIndex;
-      this.tabsController.changeIndex(targetIndex);
-    })
-  }
+
 
   build() {
     HdsNavigation() {
       Column() {
+        // [保留] 顶部的标题避让占位依然需要
         Row().width('100%').height(96)
 
-        Tabs({ barPosition: BarPosition.Start, controller: this.tabsController }) {
+        // 替换为 HdsTabs，并将位置强制锁定到底部 (BarPosition.End)
+        HdsTabs({  controller: this.tabsController }) {
           // Tab 1: 全部记录
           TabContent() {
             HistoryListTab({ moduleType: 'all' })
           }
-          .tabBar(this.TabBuilder('全部', 0))
+          .tabBar('全部') // [修改] 剥离自定义样式，直接传纯文本，系统会自动渲染高斯模糊底板与选中光感！
 
           // Tab 2: 科学计算
           TabContent() {
             HistoryListTab({ moduleType: 'scientific' })
           }
-          .tabBar(this.TabBuilder('科学计算', 1))
+          .tabBar('科学计算')
 
           // Tab 3: 方程求解 (未来的功能占位)
           TabContent() {
             HistoryListTab({ moduleType: 'equation' })
           }
-          .tabBar(this.TabBuilder('方程求解', 2))
+          .tabBar('方程求解')
         }
         .vertical(false)
-        .barMode(BarMode.Scrollable) // 如果未来分类很多，允许顶部 Tab 左右滑动
-        .barHeight(52)
+        .barMode(BarMode.Fixed) // [修改] 底部页签通常设为 Fixed 以便均分屏幕宽度
         .animationDuration(300)
         .onChange((index: number) => {
           this.currentIndex = index;
