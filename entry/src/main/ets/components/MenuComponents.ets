@@ -18,47 +18,83 @@ export struct GroupHeader {
 // 分隔线
 @Component
 export struct ItemDivider {
+  marginLeft: number = 44; // 允许外部传入左边距，默认为 44
+
   build() {
     Row() {
       Divider()
         .strokeWidth(1)
         .color($r('sys.color.comp_background_tertiary'))
-        .margin({ left: 44, right: 12 }) // 完美对齐文字与右侧边缘
+        .margin({ left: this.marginLeft, right: 12 })
     }
     .width('100%')
-    .margin({ top: -3, bottom: -3 }) // 负边距，完美吃掉 Column 额外生成的 4px 空间
-    .zIndex(1) // 保证线浮在两个胶囊之间的缝隙顶层
-    .hitTestBehavior(HitTestMode.None) // 防止这条看不见的线阻挡点击事件
+    .margin({ top: -3, bottom: -3 })
+    .zIndex(1)
+    .hitTestBehavior(HitTestMode.None)
   }
 }
 
-// 菜单项
+// 菜单项 (支持无图标、支持副标题的完全体)
 @Component
 export struct MenuButton {
-  @Prop icon: Resource;
+  // 👇 将图标改为可选属性，去掉 @Prop
+  icon?: Resource;
   @Prop title: string;
+  // 👇 新增：可选的副标题
+  subTitle?: string;
+  @Prop isCustomSvg: boolean = false;
   onClickAction?: () => void;
 
   build() {
     Row() {
-      SymbolGlyph(this.icon)
-        .fontSize(20)
-        .fontColor([$r('sys.color.icon_secondary')])
-        .margin({ right: 12 })
+      // 1. 图标区（如果有才渲染）
+      if (this.icon) {
+        if (this.isCustomSvg) {
+          Image(this.icon)
+            .width(20)
+            .height(20)
+            .objectFit(ImageFit.Contain)
+            .fillColor($r('sys.color.icon_secondary'))
+            .margin({ right: 12 })
+        } else {
+          SymbolGlyph(this.icon)
+            .fontSize(20)
+            .fontColor([$r('sys.color.icon_secondary')])
+            .margin({ right: 12 })
+        }
+      }
 
-      Text(this.title)
-        .fontSize(16)
-        .fontColor($r('sys.color.font_primary'))
+      // 2. 文本区
+      Column() {
+        Text(this.title)
+          .fontSize(16)
+          .fontWeight(this.subTitle ? FontWeight.Medium : FontWeight.Regular) // 如果有副标题，主标题稍微加粗一点，层级更分明
+          .fontColor($r('sys.color.font_primary'))
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Blank()
+        if (this.subTitle) {
+          Text(this.subTitle)
+            .fontSize(14)
+            .fontColor($r('sys.color.font_tertiary'))
+            .margin({ top: 4 })
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+      }
+      .alignItems(HorizontalAlign.Start)
 
+      .layoutWeight(1) // 让文本容器占据所有剩余空间，把右侧箭头挤过去
+
+      // 3. 箭头区
       SymbolGlyph($r('sys.symbol.chevron_right'))
         .fontSize(16)
         .fontColor([$r('sys.color.icon_tertiary')])
+        .margin({ left: 12 })
     }
     .width('100%')
-    .height(46)
-    .padding({ left: 12, right: 12 })
+    .constraintSize({ minHeight: 46 }) // 使用最小高度，如果副标题很长，卡片会自动被撑高
+    .padding({ left: 12, right: 12, top: 12, bottom: 12 }) // 增加上下内边距，让双行文本呼吸感更好
     .margin(0)
     .borderRadius(16)
     .stateStyles({
