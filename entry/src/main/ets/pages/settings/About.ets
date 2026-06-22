@@ -1,6 +1,7 @@
 // entry/src/main/ets/pages/settings/About.ets
 import router from '@ohos.router';
 import common from '@ohos.app.ability.common'; // 用于获取上下文以启动外部应用
+import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from '../../components/MenuComponents';
 import {
   HdsNavigation,
   HdsNavigationTitleMode,
@@ -134,7 +135,7 @@ struct About {
               .width(108)
               .height(108)
               .borderRadius(18)
-              .shadow({ radius: 32, color: 'rgba(0, 0, 0, 0.43)', offsetY: 6 })
+              .shadow({ radius: 64, color: 'rgba(0, 0, 0, 0.28)', offsetX: 12, offsetY: 24 })
 
             Row() {
               Text('Calculator')
@@ -146,8 +147,9 @@ struct About {
                 .fontWeight(FontWeight.Bolder)
                 .fontColor($r('sys.color.font_emphasize'))
             }
+            .padding({top: 32})
 
-            Text('Version 0.1.2 Beta (HarmonyOS)')
+            Text('Version 1.1.0 Beta (HarmonyOS)')
               .fontSize(14)
               .fontColor($r('sys.color.font_tertiary'))
               .margin({ top: 6, bottom: 40 })
@@ -167,10 +169,10 @@ struct About {
                   .fontSize(16)
                   .fontColor($r('sys.color.font_primary'))
                 Blank()
-                Text('SymEngine')
-                  .fontSize(14)
-                  .fontColor($r('sys.color.font_tertiary'))
-                  .margin({ right: 4 })
+                // Text('SymEngine')
+                //   .fontSize(14)
+                //   .fontColor($r('sys.color.font_tertiary'))
+                //   .margin({ right: 4 })
                 SymbolGlyph($r('sys.symbol.chevron_right'))
                   .fontSize(20)
                   .fontColor([$r('sys.color.icon_tertiary')])
