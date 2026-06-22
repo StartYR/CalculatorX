@@ -1,7 +1,23 @@
 // entry/src/main/ets/pages/history/HistoryManager.ets
 import router from '@ohos.router';
 import { HistoryRepository, HistoryRecord } from '../../database/HistoryRepository';
-import { HdsNavigation, HdsNavigationTitleMode, hdsMaterial, ScrollEffectType } from '@kit.UIDesignKit';
+import {
+  HdsNavigation,
+  HdsNavigationTitleMode,
+  hdsMaterial,
+  ScrollEffectType,
+  HdsTabs,
+  HdsTabsController
+} from '@kit.UIDesignKit';
+import { SymbolGlyphModifier } from '@kit.ArkUI';
+
+// ==================== 定义页签项的数据结构 ====================
+// 声明一个接口来描述页签项的完整类型
+interface TabItemConfig {
+  label: string;
+  icon: SymbolGlyphModifier;
+  selectedIcon: SymbolGlyphModifier;
+}
 
 // ==================== 内部子组件：用于渲染不同模块的列表 ====================
 @Component
@@ -21,7 +37,6 @@ struct HistoryListTab {
   build() {
     Column() {
       if (this.historyList.length === 0) {
-        // 空状态
         Column() {
           SymbolGlyph($r('sys.symbol.clock'))
             .fontSize(48)
@@ -35,7 +50,6 @@ struct HistoryListTab {
         .justifyContent(FlexAlign.Center)
         .width('100%')
       } else {
-        // 数据列表
         List({ space: 12 }) {
           ForEach(this.historyList, (item: HistoryRecord) => {
             ListItem() {
@@ -62,7 +76,6 @@ struct HistoryListTab {
             }
           }, (item: HistoryRecord) => item.id?.toString())
 
-          // 【核心占位】：高度 = 小横条(navBarHeight) + 悬浮胶囊高度(64) + 悬浮底边距(24) + 留白(16)
           ListItem() {
             Row().width('100%').height(this.navBarHeight + 104)
           }
@@ -83,92 +96,95 @@ struct HistoryListTab {
 @Component
 export struct HistoryManager {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
-  @State currentIndex: number = 0;
-  private tabsController: TabsController = new TabsController();
+  private controller: HdsTabsController = new HdsTabsController();
 
-  // 自定义悬浮胶囊内的按钮样式 (带图标与弹性动效)
-  @Builder PillTabItem(title: string, icon: Resource, targetIndex: number) {
-    Column() {
-      SymbolGlyph(icon)
+  // 【修复2】明确指定返回类型为 TabItemConfig[]，并正确构建对象
+  private getTabItems(): TabItemConfig[] {
+    // 使用显式的对象创建，每个属性都符合 TabItemConfig 接口
+    const allTab: TabItemConfig = {
+      label: '全部',
+      icon: new SymbolGlyphModifier($r('sys.symbol.list_bullet'))
         .fontSize(24)
-        .fontColor([this.currentIndex === targetIndex ? $r('sys.color.font_emphasize') : $r('sys.color.icon_primary')])
-        .fontWeight(this.currentIndex === targetIndex ? FontWeight.Bold : FontWeight.Normal)
-        .margin({ bottom: 4 })
-      Text(title)
-        .fontColor(this.currentIndex === targetIndex ? $r('sys.color.font_emphasize') : $r('sys.color.font_primary'))
-        .fontSize(12)
-        .fontWeight(this.currentIndex === targetIndex ? FontWeight.Medium : FontWeight.Normal)
+        .fontColor([$r('sys.color.icon_primary')]),
+      selectedIcon: new SymbolGlyphModifier($r('sys.symbol.list_bullet'))
+        .fontSize(24)
+        .fontColor([$r('sys.color.icon_emphasize')])
+    };
+
+    const scientificTab: TabItemConfig = {
+      label: '科学计算',
+      icon: new SymbolGlyphModifier($r('sys.symbol.calculator'))
+        .fontSize(24)
+        .fontColor([$r('sys.color.icon_primary')]),
+      selectedIcon: new SymbolGlyphModifier($r('sys.symbol.calculator'))
+        .fontSize(24)
+        .fontColor([$r('sys.color.icon_emphasize')])
+    };
+
+    const equationTab: TabItemConfig = {
+      label: '方程求解',
+      icon: new SymbolGlyphModifier($r('sys.symbol.exponentiation'))
+        .fontSize(24)
+        .fontColor([$r('sys.color.icon_primary')]),
+      selectedIcon: new SymbolGlyphModifier($r('sys.symbol.exponentiation'))
+        .fontSize(24)
+        .fontColor([$r('sys.color.icon_emphasize')])
+    };
+
+    // 返回显式类型的数组
+    return [allTab, scientificTab, equationTab];
+  }
+
+  // 构建页签UI的方法，接收 TabItemConfig 数组
+  @Builder
+  buildTabs(tabsConfig: TabItemConfig[]) {
+    HdsTabs({ controller: this.controller }) {
+      ForEach(tabsConfig, (tab: TabItemConfig, index: number) => {
+        TabContent() {
+          // 根据索引或tab.label决定显示哪个列表
+          if (index === 0) {
+            HistoryListTab({ moduleType: 'all' })
+          } else if (index === 1) {
+            HistoryListTab({ moduleType: 'scientific' })
+          } else {
+            HistoryListTab({ moduleType: 'equation' })
+          }
+        }
+        // 使用 HdsTabs 的页签样式，注意这里传入的是 Modifier 对象
+        .tabBar(new BottomTabBarStyle({
+          normal: tab.icon,
+          selected: tab.selectedIcon
+        }, tab.label))
+      })
     }
-    .layoutWeight(1)
-    .height('100%')
-    .justifyContent(FlexAlign.Center)
-    .onClick(() => {
-      // 点击时触发原生弹性动画，并切换页面
-      animateTo({ duration: 350, curve: Curve.Friction }, () => {
-        this.currentIndex = targetIndex;
-      });
-      this.tabsController.changeIndex(targetIndex);
+    .barOverlap(true)
+    .vertical(false)
+    .barPosition(BarPosition.End)
+    .barFloatingStyle({
+      barBottomMargin: 24,
+      systemMaterialEffect: {
+        materialType: hdsMaterial.MaterialType.ADAPTIVE,
+        materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+      }
     })
+    .height('100%')
+    .width('100%')
   }
 
   build() {
     HdsNavigation() {
-      // 【核心架构重构】：使用 Stack 实现真正的悬浮叠底
-      Stack({ alignContent: Alignment.Bottom }) {
-
-        // ================= 1. 底层内容区 =================
-        Column() {
-          // 顶部标题占位，防止与 HdsNavigation 标题栏重叠
-          Row().width('100%').height(96)
-
-          Tabs({ barPosition: BarPosition.End, controller: this.tabsController }) {
-            TabContent() { HistoryListTab({ moduleType: 'all' }) }
-            TabContent() { HistoryListTab({ moduleType: 'scientific' }) }
-            TabContent() { HistoryListTab({ moduleType: 'equation' }) }
-          }
-          .vertical(false)
-          .barHeight(0) // 核心：彻底干掉系统原生 TabBar，完全由我们接管 UI
-          .animationDuration(350)
-          .onChange((index: number) => {
-            animateTo({ duration: 350, curve: Curve.Friction }, () => {
-              this.currentIndex = index;
-            });
-          })
-          .width('100%')
-          .layoutWeight(1)
-        }
-        .width('100%')
-        .height('100%')
-
-        // ================= 2. 顶层悬浮胶囊 =================
-        Row() {
-          this.PillTabItem('全部', $r('sys.symbol.list_bullet'), 0)
-          this.PillTabItem('科学计算', $r('sys.symbol.calculator'), 1)
-          this.PillTabItem('方程求解', $r('sys.symbol.exponentiation'), 2)
-        }
-        .width('85%') // 胶囊宽度，两边留出空隙
-        .height(64)
-        .backgroundColor('#54ffffff') // 半透明白底，配合深浅模式
-        .backgroundBlurStyle(BlurStyle.COMPONENT_ULTRA_THICK) // 开启终极厚材质毛玻璃
-        .borderRadius(32) // 极致圆角形成胶囊
-        .border({ width: 0.5, color: $r('sys.color.comp_divider') }) // 细微的边缘高光线
-        .shadow({
-          radius: 32,
-          color: '#15000000',
-          offsetX: 0,
-          offsetY: 8
-        })
-        .margin({ bottom: this.navBarHeight + 24 }) // 精准悬浮在小横条上方 24vp
-      }
-      .width('100%')
-      .height('100%')
+      // 调用构建方法，传入页签配置
+      this.buildTabs(this.getTabItems())
     }
     .mode(NavigationMode.Stack)
     .titleBar({
       content: { title: { mainTitle: '全局历史记录' } },
       style: {
         scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: ScrollEffectType.GRADIENT_BLUR },
-        systemMaterialEffect: { materialType: hdsMaterial.MaterialType.ADAPTIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE }
+        systemMaterialEffect: {
+          materialType: hdsMaterial.MaterialType.ADAPTIVE,
+          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+        }
       },
       avoidLayoutSafeArea: true,
       enableComponentSafeArea: false
