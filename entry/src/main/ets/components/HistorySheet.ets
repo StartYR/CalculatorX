@@ -55,7 +55,7 @@ export struct HistorySheet {
       if (this.historyList.length === 0) {
         // 空状态展示
         Column() {
-          SymbolGlyph($r('sys.symbol.clock'))
+          SymbolGlyph($r('sys.symbol.arrow_counterclockwise_clock'))
             .fontSize(48)
             .fontColor([$r('sys.color.icon_tertiary')])
             .margin({ bottom: 12 })
