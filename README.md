@@ -71,14 +71,21 @@ CalculatorX/
 │   │   │   │   ├── Settings.ets           # 设置主页
 │   │   │   │   ├── About.ets              # 关于页
 │   │   │   │   └── Credits.ets            # 特别鸣谢
+│   │   │   ├── history/                   # 历史记录
+│   │   │   │   └── HistoryManager.ets     # 全局历史管理页：悬浮胶囊导航与全功能历史展示
 │   │   │   ├── Index.ets                  # 主页面：处理按键逻辑、调用 Webview/C++，参数状态映射
 │   │   │   └── DocViewer.ets              # 文档展示页：系统级 WebView，负责加载云端协议网页
 │   │   │
 │   │   ├── components/  
+│   │   │   ├── TopBar.ets                 # 自定义组件：顶部悬浮控制栏 [新增]
+│   │   │   ├── HistorySheet.ets           # 自定义组件：局部历史记录半模态面板 [新增]
 │   │   │   ├── TopKeyboard.ets            # 自定义组件：上方科学计算与微积分键盘
 │   │   │   ├── BottomKeyboard.ets         # 自定义组件：下方基础数字与四则运算键盘
 │   │   │   ├── SideBarMenu.ets            # 自定义组件：左侧侧边栏菜单（手势驱动、包含原生边缘渐隐效果）
 │   │   │   └── MenuComponents.ets         # UI 组件库：统一管理 MenuGroup, MenuButton, ItemDivider 等底层样式
+│   │   │
+│   │   ├── database/                      # 本地数据持久化层
+│   │   │   └── HistoryRepository.ets      # 关系型数据库 (RDB) 仓库：统一调度历史记录的增删查
 │   │   │
 │   │   └── utils/CalculatorConfigs.ets    # 页面配置文件
 │   │  

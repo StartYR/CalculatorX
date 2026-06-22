@@ -10,6 +10,8 @@ export interface HistoryRecord {
   moduleType: string;   // 模块类型：'scientific'-科学计算, 'equation'-方程求解, 'graph'-函数图像 等
   inputContent: string; // 用户的输入内容（例如科学计算存原始 LaTeX 串）
   outputContent: string;// 计算出来的结果（例如科学计算存 C++ 返回的 LaTeX 结果）
+  inputBase64?: string; // 输入的 PNG 图片 Base64
+  outputBase64?: string;// 结果的 PNG 图片 Base64
   extraParams?: string; // 核心扩展槽：未来异构数据使用，存 JSON 字符串（如坐标轴边界、矩阵阶数等）
   timestamp: number;    // 毫秒级时间戳，用于排序
 }
@@ -30,6 +32,8 @@ export class HistoryRepository {
       module_type TEXT NOT NULL,
       input_content TEXT NOT NULL,
       output_content TEXT NOT NULL,
+      input_base64 TEXT,
+      output_base64 TEXT,
       extra_params TEXT,
       timestamp INTEGER NOT NULL
     );
@@ -76,10 +80,19 @@ export class HistoryRepository {
         'module_type': record.moduleType,
         'input_content': record.inputContent,
         'output_content': record.outputContent,
+        'input_base64': record.inputBase64 || '',
+        'output_base64': record.outputBase64 || '',
         'extra_params': record.extraParams || '',
         'timestamp': record.timestamp
       };
-      return await HistoryRepository.rdbStore.insert('history', valueBucket);
+
+      let rowId = await HistoryRepository.rdbStore.insert('history', valueBucket);
+
+      // 滚动清理：保证单一模块最多只保留 100 条记录
+      const sql = `DELETE FROM history WHERE module_type = '${record.moduleType}' AND id NOT IN (SELECT id FROM history WHERE module_type = '${record.moduleType}' ORDER BY timestamp DESC LIMIT 100)`;
+      await HistoryRepository.rdbStore.executeSql(sql);
+
+      return rowId;
     } catch (err) {
       console.error(`HistoryRepository: 插入记录失败. message: ${err.message}`);
       return -1;
@@ -119,6 +132,8 @@ export class HistoryRepository {
         const mType = resultSet.getString(resultSet.getColumnIndex('module_type'));
         const input = resultSet.getString(resultSet.getColumnIndex('input_content'));
         const output = resultSet.getString(resultSet.getColumnIndex('output_content'));
+        const inputImg = resultSet.getString(resultSet.getColumnIndex('input_base64'));
+        const outputImg = resultSet.getString(resultSet.getColumnIndex('output_base64'));
         const extra = resultSet.getString(resultSet.getColumnIndex('extra_params'));
         const time = resultSet.getLong(resultSet.getColumnIndex('timestamp'));
 
@@ -127,6 +142,8 @@ export class HistoryRepository {
           moduleType: mType,
           inputContent: input,
           outputContent: output,
+          inputBase64: inputImg,
+          outputBase64: outputImg,
           extraParams: extra,
           timestamp: time
         });

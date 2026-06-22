@@ -319,7 +319,8 @@ struct Index {
             let jsonStrToSave = typeof cleanJsonString === 'string' ? cleanJsonString : JSON.stringify(cleanJsonString);
             this.lastValidJson = jsonStrToSave;
 
-            console.info(`【清洗后传给C++的JSON】: ${typeof cleanJsonString === 'string' ? cleanJsonString : JSON.stringify(cleanJsonString)}`);
+            console.info(`【清洗后传给C++的JSON】: ${typeof cleanJsonString === 'string' ? cleanJsonString :
+              JSON.stringify(cleanJsonString)}`);
 
             // ===== 将前端双状态映射为 C++ 单一控制码 =====
             let cppPrecisionMode = -1;
@@ -333,7 +334,9 @@ struct Index {
               }
             }
 
-            let cppResponse: string = testNapi.calculate(typeof cleanJsonString === 'string' ? cleanJsonString : JSON.stringify(cleanJsonString), this.isRad, cppPrecisionMode);
+            let cppResponse: string = testNapi.calculate(
+              typeof cleanJsonString === 'string' ? cleanJsonString : JSON.stringify(cleanJsonString), this.isRad,
+              cppPrecisionMode);
 
             if (cppResponse.includes("Error")) {
               console.error("C++ 计算错误: " + cppResponse);
@@ -342,30 +345,66 @@ struct Index {
               // 把成功的计算结果存入 Ans
               this.lastAnsLatex = cppResponse;
 
-              // 异步保存到历史记录数据库
-              HistoryRepository.insertRecord({
-                moduleType: 'scientific',
-                inputContent: rawLatex, // 保存清洗前最纯净的输入 LaTeX
-                outputContent: cppResponse, // 保存计算结果
-                timestamp: Date.now(),
-              }).then((rowId: number) => {
-                console.info(`HistoryRepository: 历史记录保存成功, rowId = ${rowId}`);
-              }).catch((err: Error) => {
-                console.error(`HistoryRepository: 历史记录保存失败. message: ${err.message}`);
-              });
 
-              // 如果是自动模式(-1)，则通过判断结果里有没有小数点来判断是否为小数
-              if (cppPrecisionMode === -1) {
-                this.isTempDecimal = cppResponse.includes('.');
-              } else {
-                this.isTempDecimal = true;
-              }
-              this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
+              // [新增] 请求前端 Web 生成公式图片的 Base64
+              // (需要你在 calculator.html 中补充一个挂载在 window 上的 exportLatexToPng 函数，返回包含 input 和 output 两个 base64 的 JSON)
+              this.webviewController.runJavaScript(
+                `window.exportLatexToPng(${JSON.stringify(rawLatex)}, ${JSON.stringify(cppResponse)})`,
+                (imgErr, base64Json) => {
+                  let inBase64: string = "";
+                  let outBase64: string = "";
+
+                  if (!imgErr && base64Json && base64Json !== 'null') {
+                    try {
+                      // 彻底放弃正则！避开 DevEco Studio 编译器的解析 Bug
+                      // 采用安全的双重 JSON.parse 来处理 Web 端传回的可能带有双重转义的数据
+                      let firstParse = JSON.parse(base64Json) as string | Record<string, string>;
+                      let parsedObj: Record<string, string>;
+
+                      if (typeof firstParse === 'string') {
+                        parsedObj = JSON.parse(firstParse) as Record<string, string>;
+                      } else {
+                        parsedObj = firstParse;
+                      }
+
+                      if (parsedObj && parsedObj['input']) {
+                        inBase64 = parsedObj['input'];
+                      }
+                      if (parsedObj && parsedObj['output']) {
+                        outBase64 = parsedObj['output'];
+                      }
+                    } catch (e) {
+                      console.error("解析 Web 端图片 Base64 失败");
+                    }
+                  }
+
+
+                  // 异步保存到历史记录数据库
+                  HistoryRepository.insertRecord({
+                    moduleType: 'scientific',
+                    inputContent: rawLatex, // 保存清洗前最纯净的输入 LaTeX
+                    outputContent: cppResponse, // 保存计算结果
+                    inputBase64: inBase64, // 保存生成的输入图片
+                    outputBase64: outBase64, // 保存生成的输出图片
+                    timestamp: Date.now(),
+                  }).then((rowId: number) => {
+                    console.info(`HistoryRepository: 历史记录保存成功, rowId = ${rowId}`);
+                  }).catch((err: Error) => {
+                    console.error(`HistoryRepository: 历史记录保存失败. message: ${err.message}`);
+                  });
+
+                  // 如果是自动模式(-1)，则通过判断结果里有没有小数点来判断是否为小数
+                  if (cppPrecisionMode === -1) {
+                    this.isTempDecimal = cppResponse.includes('.');
+                  } else {
+                    this.isTempDecimal = true;
+                  }
+                  this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
+
+                });
             }
-
           });
-        }
-      );
+        });
     } else if (action === '⇦') {
       this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveToPreviousChar')`);
     } else if (action === '⇨') {
