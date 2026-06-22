@@ -9,8 +9,6 @@
 </head>
 <body style="margin: 0; padding: 0; overflow: hidden; background-color: transparent;">
 
-<math-field style="display: none;"></math-field>
-
 <script>
     /**
      * 将输入和输出的 LaTeX 渲染为静态 DOM 并截取为透明底黑字的 Base64 图片
@@ -18,73 +16,71 @@
      */
     window.exportLatexToPng = async function(inputLatex, outputLatex) {
         try {
-            // 1. 建造“隐藏小黑屋”，强制脱离系统深浅模式的影响
-            const container = document.createElement('div');
-            container.style.position = 'absolute';
-            container.style.top = '0px';
-            container.style.left = '0px';
-            container.style.color = '#000000'; // 强制绝对黑色字体
-            container.style.backgroundColor = 'transparent'; // 强制透明底
-            // 设置一个较大的基础字号，保证生成的图片在移动端高分屏上足够清晰
-            container.style.fontSize = '32px';
-            container.style.padding = '12px';  // 留出内边距，防止字体的边缘（如积分号顶部）被切掉
-            // 引入 MathLive 默认的排版字体
-            container.style.fontFamily = 'KaTeX_Math, Cambria Math, serif';
+            // 定义一个通用函数，用来“扁平化” math-field 并截图
+            async function captureMathField(latex) {
+                // 1. 创建真实的 math-field 组件，触发原生引擎
+                const mf = document.createElement('math-field');
+                mf.value = latex;
+                // 必须在屏幕外，但必须有物理尺寸，否则引擎会跳过排版
+                mf.style.position = 'absolute';
+                mf.style.top = '-9999px';
+                mf.style.fontSize = '32px'; // 保证高清
+                mf.style.color = '#000000'; // 强制黑字
+                document.body.appendChild(mf);
 
-            document.body.appendChild(container);
+                // 2. 给引擎 100ms 的时间，确保它把字体文件下载好，把分数线完全画出来
+                await new Promise(r => setTimeout(r, 100));
 
-            // 2. 避开 Web Component 的 Shadow DOM 截图黑洞
-            // 利用 convertLatexToMarkup 将其降维成纯正的 HTML <span> 标签节点
-            const htmlIn = MathLive.convertLatexToMarkup(inputLatex);
-            const htmlOut = MathLive.convertLatexToMarkup(outputLatex);
+                // 3. 核心大招：剥除 Shadow DOM 的隐身衣！
+                const wrapper = document.createElement('div');
+                wrapper.className = 'ML__clone'; // 贴上我们的专属标签
+                wrapper.style.position = 'absolute';
+                wrapper.style.top = '-9999px';
+                wrapper.style.display = 'inline-block'; // 收紧黑边，解决位置偏移
+                wrapper.style.color = '#000000';
+                wrapper.style.padding = '8px';
 
-            // 挂载输入的 DOM
-            const divIn = document.createElement('div');
-            divIn.innerHTML = htmlIn;
-            divIn.style.display = 'inline-block'; // 强制让容器宽度收缩至公式真实大小
-            container.appendChild(divIn);
+                // 将影子内部的所有 HTML（包括它自带的专属 <style>）整个挖出来
+                let shadowHtml = mf.shadowRoot.innerHTML;
+                // 狸猫换太子：让原本属于 :host 的样式，认 wrapper 为主人
+                shadowHtml = shadowHtml.replace(/:host/g, '.ML__clone');
 
-            // 挂载输出的 DOM
-            const divOut = document.createElement('div');
-            divOut.innerHTML = htmlOut;
-            divOut.style.display = 'inline-block'; // 强制让容器宽度收缩至公式真实大小
-            container.appendChild(divOut); // 分别截图，不需要它们在 DOM 里有具体的上下间距，直接追加即可
+                wrapper.innerHTML = shadowHtml;
+                document.body.appendChild(wrapper);
 
-            // 3. 给浏览器排版引擎一点喘息时间（50ms），确保复杂的积分号、分式完全对齐就位
-            await new Promise(resolve => setTimeout(resolve, 50));
+                // 4. 使用 html2canvas 截图 (此时全是普通 DOM，它绝对能看懂！)
+                const canvas = await html2canvas(wrapper, {
+                    backgroundColor: null, // 依然是透明底
+                    scale: 2,
+                    logging: false
+                });
 
-            // 4. 配置 html2canvas
-            const opt = {
-                backgroundColor: null, // 强制透明底
-                scale: 2,              // 2倍超采样，保证锐利度
-                logging: false,        // 关闭控制台日志，提升性能
-                useCORS: true          // 允许跨域（虽然本地不需要，但加上可防玄学报错）
-            };
+                // 5. 毁尸灭迹，释放内存
+                document.body.removeChild(mf);
+                document.body.removeChild(wrapper);
 
-            // 5. 分别进行精准截图
-            const canvasIn = await html2canvas(divIn, opt);
-            const canvasOut = await html2canvas(divOut, opt);
+                return canvas.toDataURL('image/png');
+            }
 
-            // 6. 提取并压缩为 Base64 字符串
-            const base64In = canvasIn.toDataURL('image/png');
-            const base64Out = canvasOut.toDataURL('image/png');
+            // 分别对输入和输出执行“降维截图”
+            const base64In = await captureMathField(inputLatex);
+            const base64Out = await captureMathField(outputLatex);
 
-            // 7. 销毁小黑屋，清理 DOM 节点释放内存
-            document.body.removeChild(container);
-
-            // 8. 主动呼叫 ArkTS 注入的桥接方法
+            // 主动回调，呼叫 ArkTS 存入数据库
             if (window.arktsBridge && window.arktsBridge.onImageReady) {
                 window.arktsBridge.onImageReady(JSON.stringify({
                     inputBase64: base64In,
                     outputBase64: base64Out,
-                    inputLatex: inputLatex,     // 原样传回给 ArkTS 存库
-                    outputLatex: outputLatex    // 原样传回给 ArkTS 存库
+                    inputLatex: inputLatex,
+                    outputLatex: outputLatex
                 }));
             }
 
         } catch (err) {
             console.error("图片生成失败:", err);
-            return JSON.stringify({ error: err.toString() });
+            if (window.arktsBridge && window.arktsBridge.onImageReady) {
+                window.arktsBridge.onImageReady(JSON.stringify({ error: err.toString() }));
+            }
         }
     };
 </script>
