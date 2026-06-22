@@ -12,6 +12,9 @@ import router from '@ohos.router';
 import { PreferenceConfigs } from '../utils/CalculatorConfigs';
 import { TopBar } from '../components/TopBar';
 import { SideBarMenu } from '../components/SideBarMenu';
+import { common } from '@kit.AbilityKit';
+import { HistoryRepository } from '../database/HistoryRepository'; // 数据库
+
 
 @Entry
 @Component
@@ -34,6 +37,9 @@ struct Index {
   @State isSidebarOpen: boolean = false;  // 控制侧边栏的开合
 
   aboutToAppear() {
+    // 初始化历史记录数据库
+    HistoryRepository.init(getContext(this) as common.UIAbilityContext);
+
     font.registerFont({
       familyName: 'Cambria Math',
       familySrc: $rawfile('fonts/Cambria Math.ttf')
@@ -307,6 +313,18 @@ struct Index {
             } else {
               // 把成功的计算结果存入 Ans
               this.lastAnsLatex = cppResponse;
+
+              // 异步保存到历史记录数据库
+              HistoryRepository.insertRecord({
+                moduleType: 'scientific',
+                inputContent: rawLatex, // 保存清洗前最纯净的输入 LaTeX
+                outputContent: cppResponse, // 保存计算结果
+                timestamp: Date.now(),
+              }).then((rowId: number) => {
+                console.info(`HistoryRepository: 历史记录保存成功, rowId = ${rowId}`);
+              }).catch((err: Error) => {
+                console.error(`HistoryRepository: 历史记录保存失败. message: ${err.message}`);
+              });
 
               // 如果是自动模式(-1)，则通过判断结果里有没有小数点来判断是否为小数
               if (cppPrecisionMode === -1) {
