@@ -58,8 +58,7 @@ export struct HistorySheet {
       .width('100%')
       .padding({ left: 24, right: 24, top: 24, bottom: 12 })
       // 毛玻璃材质！
-      .backgroundColor(Color.Transparent)
-      .backgroundBlurStyle(BlurStyle.Regular)
+      .backgroundBlurStyle(BlurStyle.Thin)
 
     }
     .width('100%')
