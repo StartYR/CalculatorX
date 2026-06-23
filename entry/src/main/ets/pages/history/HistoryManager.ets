@@ -11,7 +11,7 @@ import {
   HdsTabsController,
   // BottomTabBarStyle
 } from '@kit.UIDesignKit';
-import { SymbolGlyphModifier } from '@kit.ArkUI';
+import { SymbolGlyphModifier, mediaquery } from '@kit.ArkUI';
 
 // ==================== 页签项数据结构 ====================
 interface TabItemConfig {
@@ -27,12 +27,24 @@ struct HistoryListTab {
   @Prop moduleType: string = 'all';
   @State historyList: HistoryRecord[] = [];
   @State isDarkMode: boolean = false;
+  private darkModeListener: mediaquery.MediaQueryListener = mediaquery.matchMediaSync('(dark-mode: true)');
 
   aboutToAppear() {
-    let context = getContext(this) as common.UIAbilityContext;
-    let currentMode = context.config.colorMode;
-    this.isDarkMode = (currentMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK);
+    // 1. 绑定监听回调：只要系统深浅模式发生“热切换”，这个箭头函数就会被瞬间触发！
+    this.darkModeListener.on('change', (mediaQueryResult: mediaquery.MediaQueryResult) => {
+      // 动态更新状态，触发 UI 重新渲染反色滤镜
+      this.isDarkMode = mediaQueryResult.matches;
+    });
+
+    // 2. 初始化时，先主动问一次当前的状态（替代掉之前 getContext 的写法）
+    this.isDarkMode = this.darkModeListener.matches;
+
+    // 3. 加载历史记录
     this.loadData();
+  }
+  // [新增] 组件销毁时必须解绑，保持极佳的性能习惯
+  aboutToDisappear() {
+    this.darkModeListener.off('change');
   }
 
   async loadData() {
