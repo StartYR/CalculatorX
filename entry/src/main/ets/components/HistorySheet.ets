@@ -1,10 +1,13 @@
 // entry/src/main/ets/components/HistorySheet.ets
 import { HistoryRepository, HistoryRecord } from '../database/HistoryRepository';
+import { common, ConfigurationConstant } from '@kit.AbilityKit';
+
 
 @Component
 export struct HistorySheet {
   @Prop moduleType: string = 'scientific'; // 默认科学计算
   @State historyList: HistoryRecord[] = [];
+  @State isDarkMode: boolean = false;
 
   // 回调：点击某条记录进行回填
   onItemClick?: (record: HistoryRecord) => void;
@@ -12,6 +15,9 @@ export struct HistorySheet {
   onClose?: () => void;
 
   aboutToAppear() {
+    let context = getContext(this) as common.UIAbilityContext;
+    let currentMode = context.config.colorMode;
+    this.isDarkMode = (currentMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK);
     this.loadHistory();
   }
 
@@ -83,11 +89,16 @@ export struct HistorySheet {
                     Image(item.inputBase64)
                       .height(32) // 高度可根据截图实际清晰度微调
                       .objectFit(ImageFit.Contain)
-                    // 深色模式反色滤镜预留位
-                    // .colorFilter(this.isDarkMode ? [ -1, 0, 0, 0, 255, 0, -1, 0, 0, 255, 0, 0, -1, 0, 255, 0, 0, 0, 1, 0 ] : undefined)
+                      // 如果当前系统是深色模式，套用反色矩阵
+                      .colorFilter(this.isDarkMode ? [
+                        -1,  0,  0, 0, 255,
+                        0, -1,  0, 0, 255,
+                        0,  0, -1, 0, 255,
+                        0,  0,  0, 1,   0
+                      ] : undefined)
                   }
                   .width('100%')
-                  .justifyContent(FlexAlign.Start) // [新增] Row 强制把内部紧凑的图片推到最左边
+                  .justifyContent(FlexAlign.Start) // Row 强制把内部紧凑的图片推到最左边
                 } else {
                   Text(item.inputContent)
                     .fontSize(16)
@@ -109,7 +120,12 @@ export struct HistorySheet {
                     Image(item.outputBase64)
                       .height(40) // 结果字号稍微大一点
                       .objectFit(ImageFit.Contain)
-                    // .colorFilter(...) 同上，深色模式可套用反色矩阵
+                      .colorFilter(this.isDarkMode ? [
+                        -1,  0,  0, 0, 255,
+                        0, -1,  0, 0, 255,
+                        0,  0, -1, 0, 255,
+                        0,  0,  0, 1,   0
+                      ] : undefined)
                   }
                   .width('100%')
                   .justifyContent(FlexAlign.End) // 结果整体靠右对齐
