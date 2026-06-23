@@ -11,7 +11,7 @@ import {
 } from '@kit.UIDesignKit';
 import { ConfigurationConstant, common } from '@kit.AbilityKit';
 
-// 引入我们刚刚抽离的全局菜单组件库
+// 引入全局菜单组件库
 import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from '../../components/MenuComponents';
 
 // ==================== 底部半模态面板内容：数学公式样式选择 ====================
