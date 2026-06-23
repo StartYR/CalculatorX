@@ -114,7 +114,7 @@ export struct UniversalHistoryList {
         // 根据是否为全局页面调整内边距
         .padding(this.isGlobalPage ? { left: 16, right: 16, top: 0, bottom: 0 } : { left: 16, right: 16, bottom: 16 })
         .scrollBar(BarState.Off)
-        .edgeEffect(this.isGlobalPage ? EdgeEffect.None : EdgeEffect.Spring)
+        .edgeEffect(EdgeEffect.Spring)
       }
     }
     .width('100%')
