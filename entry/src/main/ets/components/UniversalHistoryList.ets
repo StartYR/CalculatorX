@@ -60,6 +60,10 @@ export struct UniversalHistoryList {
           // 如果是全局页面，顶部增加占位以避开沉浸式标题栏
           if (this.isGlobalPage) {
             ListItem() { Row().width('100%').height(96) }
+          } else {
+            // 给半模态抽屉顶部占位
+            // 64（标题栏的 24上边距 + 28字高 + 12下边距）
+            ListItem() { Row().width('100%').height(64) }
           }
 
           ForEach(this.historyList, (item: HistoryRecord) => {
@@ -106,13 +110,16 @@ export struct UniversalHistoryList {
 
           // 如果是全局页面，底部增加占位以避开 Tab 栏
           if (this.isGlobalPage) {
-            ListItem() { Row().width('100%').height(this.navBarHeight + 104) }
+            ListItem() { Row().width('100%').height(this.navBarHeight + 64) }
+          } else {
+            // 为半模态抽屉增加底部小白条的安全避让高度
+            ListItem() { Row().width('100%').height(12) }
           }
         }
         .layoutWeight(1)
         .width('100%')
         // 根据是否为全局页面调整内边距
-        .padding(this.isGlobalPage ? { left: 16, right: 16, top: 0, bottom: 0 } : { left: 16, right: 16, bottom: 16 })
+        .padding({ left: 16, right: 16, top: 0, bottom: 0 })
         .scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring)
       }
