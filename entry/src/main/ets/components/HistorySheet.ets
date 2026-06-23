@@ -1,13 +1,14 @@
 // entry/src/main/ets/components/HistorySheet.ets
 import { HistoryRepository, HistoryRecord } from '../database/HistoryRepository';
 import { common, ConfigurationConstant } from '@kit.AbilityKit';
-
+import { mediaquery } from '@kit.ArkUI';
 
 @Component
 export struct HistorySheet {
   @Prop moduleType: string = 'scientific'; // 默认科学计算
   @State historyList: HistoryRecord[] = [];
   @State isDarkMode: boolean = false;
+  private darkModeListener: mediaquery.MediaQueryListener = mediaquery.matchMediaSync('(dark-mode: true)');
 
   // 回调：点击某条记录进行回填
   onItemClick?: (record: HistoryRecord) => void;
@@ -15,10 +16,21 @@ export struct HistorySheet {
   onClose?: () => void;
 
   aboutToAppear() {
-    let context = getContext(this) as common.UIAbilityContext;
-    let currentMode = context.config.colorMode;
-    this.isDarkMode = (currentMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK);
+    // 1. 绑定监听回调：只要系统深浅模式发生“热切换”，这个箭头函数就会被瞬间触发！
+    this.darkModeListener.on('change', (mediaQueryResult: mediaquery.MediaQueryResult) => {
+      // 动态更新状态，触发 UI 重新渲染反色滤镜
+      this.isDarkMode = mediaQueryResult.matches;
+    });
+
+    // 2. 初始化时，先主动问一次当前的状态（替代掉之前 getContext 的写法）
+    this.isDarkMode = this.darkModeListener.matches;
+
+    // 3. 加载历史记录
     this.loadHistory();
+  }
+  // 组件销毁时必须解绑
+  aboutToDisappear() {
+    this.darkModeListener.off('change');
   }
 
   // 异步加载数据库中的记录
