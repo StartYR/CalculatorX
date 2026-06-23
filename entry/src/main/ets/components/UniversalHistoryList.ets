@@ -1,6 +1,6 @@
 // entry/src/main/ets/components/UniversalHistoryList.ets
 import { HistoryRepository, HistoryRecord } from '../database/HistoryRepository';
-import { mediaquery } from '@kit.ArkUI';
+import { mediaquery, LengthMetrics } from '@kit.ArkUI';
 
 @Component
 export struct UniversalHistoryList {
@@ -43,11 +43,11 @@ export struct UniversalHistoryList {
       if (this.historyList.length === 0) {
         // 空状态展现
         Column() {
-          SymbolGlyph(this.isGlobalPage ? $r('sys.symbol.clock') : $r('sys.symbol.arrow_counterclockwise_clock'))
+          SymbolGlyph($r('sys.symbol.arrow_counterclockwise_clock'))
             .fontSize(48)
             .fontColor([$r('sys.color.icon_tertiary')])
             .margin({ bottom: 12 })
-          Text(this.isGlobalPage ? '暂无记录' : '暂无计算记录')
+          Text ('暂无历史记录')
             .fontSize(14)
             .fontColor($r('sys.color.font_tertiary'))
         }
@@ -60,10 +60,6 @@ export struct UniversalHistoryList {
           // 如果是全局页面，顶部增加占位以避开沉浸式标题栏
           if (this.isGlobalPage) {
             ListItem() { Row().width('100%').height(96) }
-          } else {
-            // 给半模态抽屉顶部占位
-            // 64（标题栏的 24上边距 + 28字高 + 12下边距）
-            ListItem() { Row().width('100%').height(64) }
           }
 
           ForEach(this.historyList, (item: HistoryRecord) => {
@@ -122,6 +118,8 @@ export struct UniversalHistoryList {
         .padding({ left: 16, right: 16, top: 0, bottom: 0 })
         .scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring)
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
+        .fadingEdge(true, { fadingEdgeLength:LengthMetrics.vp(12) })
       }
     }
     .width('100%')
