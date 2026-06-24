@@ -46,7 +46,7 @@ export struct HistorySheet {
               },
               secondaryButton: {
                 value: '清空',
-                fontColor: '#FF3B30', // 毁灭性操作使用警示红
+                fontColor: '#FF3B30',
                 action: async () => {
                   await HistoryRepository.clearHistory(this.moduleType);
                   this.hasData = false;
