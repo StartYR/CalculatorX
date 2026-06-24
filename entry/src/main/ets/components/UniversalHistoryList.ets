@@ -19,7 +19,7 @@ export struct UniversalHistoryList {
   @State isDarkMode: boolean = false;
   private darkModeListener: mediaquery.MediaQueryListener = mediaquery.matchMediaSync('(dark-mode: true)');
 
-  // 【核心升级 1】：暴露点击事件，并新增 insertType 参数，精准传达点击了哪一半！
+  // 暴露点击事件
   onItemClick?: (record: HistoryRecord, insertType: 'input' | 'output') => void;
 
   aboutToAppear() {
@@ -133,9 +133,9 @@ export struct UniversalHistoryList {
         .justifyContent(FlexAlign.Center)
         .width('100%')
       } else {
-        List({ space: 8 }) {//888
+        List({ space: 8 }) {
           ForEach(this.getGroupedHistory(), (group: HistoryGroup) => {
-            ListItemGroup({ header: this.itemHead(group.title), space: 8 }) {//888
+            ListItemGroup({ header: this.itemHead(group.title), space: 8 }) {
 
               ForEach(group.records, (item: HistoryRecord) => {
                 ListItem() {
@@ -167,8 +167,8 @@ export struct UniversalHistoryList {
                         }
                       }
                       .width('100%')
-                      // 【核心魔法】：吸收顶部原本的 12vp 边距，以及中间 8vp 间距的一半（4vp）
-                      .padding({ top: 12, bottom: 4 })//444
+                      // 吸收顶部原本的 12vp 边距，以及中间 8vp 间距的一半（4vp）
+                      .padding({ top: 12, bottom: 2 })//444
                       .onClick(() => {
                         if (this.onItemClick) this.onItemClick(item, 'input');
                       })
@@ -192,8 +192,7 @@ export struct UniversalHistoryList {
                         }
                       }
                       .width('100%')
-                      // 【核心魔法】：吸收底部原本的 12vp 边距，以及中间 8vp 间距的一半（4vp），彻底取消死板的 margin!
-                      .padding({ top: 4, bottom: 12 })//444
+                      .padding({ top: 2, bottom: 12 })//444
                       .onClick(() => {
                         if (this.onItemClick) this.onItemClick(item, 'output');
                       })
@@ -201,7 +200,6 @@ export struct UniversalHistoryList {
                     .layoutWeight(1)
                   }
                   .width('100%')
-                  // 【核心拔除】：剔除了顶底的死板 Padding，全权交由子控件自动撑起高度！
                   .padding({ left: 16, right: 16 })
                   .backgroundColor($r('sys.color.comp_background_primary'))
                   .borderRadius(16)
