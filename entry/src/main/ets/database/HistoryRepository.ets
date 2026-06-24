@@ -77,6 +77,34 @@ export class HistoryRepository {
       return -1;
     }
     try {
+      // ==================== 【新增核心：静默防刷屏机制】 ====================
+      const predicates = new relationalStore.RdbPredicates('history');
+      // 只查当前同一个计算模块的记录
+      predicates.equalTo('module_type', record.moduleType);
+      // 按时间倒序，最新的在最上面
+      predicates.orderByDesc('timestamp');
+      // 极其关键：只取这最顶上的一条数据（LIMIT 1），性能消耗趋近于 0
+      predicates.limitAs(1);
+
+      // 查询时只抽取出我们需要的字段，进一步压榨性能
+      const resultSet = await HistoryRepository.rdbStore.query(predicates, ['id', 'input_content']);
+
+      if (resultSet.goToFirstRow()) {
+        const lastInput = resultSet.getString(resultSet.getColumnIndex('input_content'));
+        const lastId = resultSet.getLong(resultSet.getColumnIndex('id'));
+
+        // 如果用户刚刚算过的公式，和现在企图插入的公式完全一样
+        if (lastInput === record.inputContent) {
+          console.info('HistoryRepository: 拦截到连续重复计算，已执行静默去重');
+          resultSet.close();
+          // 极其致命的细节：返回上一条记录的 ID，骗过外部 UI，完成静默拦截！
+          return lastId;
+        }
+      }
+      resultSet.close(); // 必须关闭防泄漏
+      // ====================================================================
+
+      // 下面是原本正常的插入逻辑
       const valueBucket: relationalStore.ValuesBucket = {
         'module_type': record.moduleType,
         'input_content': record.inputContent,
@@ -95,7 +123,9 @@ export class HistoryRepository {
 
       return rowId;
     } catch (err) {
-      console.error(`HistoryRepository: 插入记录失败. message: ${err.message}`);
+      // 增加类型断言，解决你之前的 err.message 隐式 any 报错风险
+      let e = err as Error;
+      console.error(`HistoryRepository: 插入记录失败. message: ${e.message}`);
       return -1;
     }
   }
