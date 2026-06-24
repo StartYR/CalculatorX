@@ -100,7 +100,7 @@ export struct UniversalHistoryList {
         .width('100%')
       } else {
         // 核心渲染列表
-        List({ space: 12 }) {
+        List({ space: 8 }) {
           // 如果是全局页面，顶部增加占位以避开沉浸式标题栏
           if (this.isGlobalPage) {
             ListItem() { Row().width('100%').height(96) }
