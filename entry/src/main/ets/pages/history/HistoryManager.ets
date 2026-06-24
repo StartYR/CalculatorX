@@ -132,8 +132,8 @@ export struct HistoryManager {
       .hideBackButton(false)
       .titleMode(HdsNavigationTitleMode.MINI)
       // HdsNavigation 忽略了顶部安全区（钻到了状态栏下面）
-      // .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
-      .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.BOTTOM])
+      .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
+      // .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.BOTTOM])
       .backgroundColor($r('sys.color.background_secondary'))
 
       // 悬浮的垃圾桶菜单
