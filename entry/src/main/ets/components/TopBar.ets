@@ -8,8 +8,8 @@ export struct TopBar {
 
   onMenuClick?: () => void;
   onHistoryClick?: () => void;
-  onUndoClick?: () => void; // [新增] 暴露撤销事件
-  onRedoClick?: () => void; // [新增] 暴露重做事件
+  onUndoClick?: () => void; //  暴露撤销事件
+  onRedoClick?: () => void; // 暴露重做事件
 
   build() {
     // 顶部悬浮控制栏
@@ -36,7 +36,7 @@ export struct TopBar {
             .fontSize(18)
             .fontColor([$r('sys.color.icon_primary')])
         }
-        .width(44)
+        .width(36)
         .height(32)
         .backgroundColor('#54ffffff')
         .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
@@ -81,13 +81,13 @@ export struct TopBar {
 
       // ================= 右侧组合：重做 + 历史 =================
       Row({ space: 8 }) {
-        // 3. [新增] 重做按钮
+        // 3. 重做按钮
         Button({ type: ButtonType.Capsule, stateEffect: true }) {
           SymbolGlyph($r('sys.symbol.arrowshape_turn_up_right')) // 系统级重做图标
             .fontSize(18)
             .fontColor([$r('sys.color.icon_primary')])
         }
-        .width(44)
+        .width(36)
         .height(32)
         .backgroundColor('#54ffffff')
         .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
