@@ -32,6 +32,16 @@ export struct UniversalHistoryList {
     this.darkModeListener.off('change');
   }
 
+  // 智能识别长得高的公式！
+  getDynamicHeight(content: string, isOutput: boolean): number {
+    if (!content) return isOutput ? 40 : 32;
+    // 如果文本中包含 \frac (分数)、^ (指数)、_ (下标)、\int (积分) 等复杂结构
+    if (content.includes('\\frac') || content.includes('^') || content.includes('_') || content.includes('\\int')) {
+      return isOutput ? 72 : 56; // 给予两倍的超大高度，分数绝对不会被压扁！
+    }
+    return isOutput ? 40 : 32; // 普通单行数字，保持紧凑高度
+  }
+
   async loadData() {
     // 引擎不管外壳是谁，只管根据传进来的 moduleType 去查数据库
     let limit = this.isGlobalPage ? 100 : 50;
@@ -65,41 +75,61 @@ export struct UniversalHistoryList {
           ForEach(this.historyList, (item: HistoryRecord) => {
             ListItem() {
               Column() {
-                // 【输入区】
+                // ==================== 【输入区靠左】 ====================
                 if (item.inputBase64 && item.inputBase64.length > 0) {
                   Row() {
                     Image(item.inputBase64)
-                      .height(32)
+                      .height(this.getDynamicHeight(item.inputContent, false))
                       .objectFit(ImageFit.Contain)
-                      .colorFilter(this.isDarkMode ? [ -1, 0, 0, 0, 255, 0, -1, 0, 0, 255, 0, 0, -1, 0, 255, 0, 0, 0, 1, 0 ] : undefined)
-                  }.width('100%').justifyContent(FlexAlign.Start)
+                      // 反色逻辑（适配深色模式）
+                      .colorFilter(this.isDarkMode ? [
+                        -1,  0,  0, 0, 255,
+                        0, -1,  0, 0, 255,
+                        0,  0, -1, 0, 255,
+                        0,  0,  0, 1,   0
+                      ] : undefined)
+                      // 70% 透明度，降低输入的显示权重
+                      .opacity(0.7)
+                  }
+                  .width('100%')
+                  // 弹性容器靠左对齐
+                  .justifyContent(FlexAlign.Start)
                 } else {
-                  Text(item.inputContent).fontSize(16).fontColor($r('sys.color.font_primary'))
+                  // 如果是纯文本，也使用系统的次级文本色
+                  Text(item.inputContent).fontSize(18).fontColor($r('sys.color.font_secondary'))
                     .width('100%').textAlign(TextAlign.Start).maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis })
                 }
 
-                // 【输出区】
+                // ==================== 【输出区靠右】 ====================
                 if (item.outputBase64 && item.outputBase64.length > 0) {
                   Row() {
-                    Text('=  ').fontSize(20).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_primary'))
+                    Text('=  ').fontSize(18).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_primary'))
                     Image(item.outputBase64)
-                      .height(40)
+                      .height(this.getDynamicHeight(item.outputContent, true))
                       .objectFit(ImageFit.Contain)
-                      .colorFilter(this.isDarkMode ? [ -1, 0, 0, 0, 255, 0, -1, 0, 0, 255, 0, 0, -1, 0, 255, 0, 0, 0, 1, 0 ] : undefined)
-                  }.width('100%').justifyContent(FlexAlign.End).margin({ top: 8 })
+                      .colorFilter(this.isDarkMode ? [
+                        -1,  0,  0, 0, 255,
+                        0, -1,  0, 0, 255,
+                        0,  0, -1, 0, 255,
+                        0,  0,  0, 1,   0
+                      ] : undefined)
+                  }
+                  .width('100%')
+                  // 踢掉 Blank()，回归纯粹的靠右对齐！
+                  .justifyContent(FlexAlign.End)
+                  .margin({ top: 8 })
+                  .alignItems(VerticalAlign.Center)
                 } else {
-                  Text(`=  ${item.outputContent}`).fontSize(20).fontWeight(FontWeight.Medium)
+                  Text(`=  ${item.outputContent}`).fontSize(18).fontWeight(FontWeight.Medium)
                     .fontColor($r('sys.color.font_primary')).width('100%').textAlign(TextAlign.End).margin({ top: 8 })
                 }
               }
-              .padding(16)
+              .width('100%')
+              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
               .backgroundColor($r('sys.color.comp_background_primary'))
               .borderRadius(16)
               .onClick(() => {
-                // 将点击事件抛给外部处理
-                if (this.onItemClick) {
-                  this.onItemClick(item);
-                }
+                if (this.onItemClick) this.onItemClick(item);
               })
             }
           }, (item: HistoryRecord) => item.id?.toString())
