@@ -65,6 +65,7 @@ export class HistoryRepository {
     }
   }
 
+
   /**
    * 插入一条历史记录
    * @param record 历史记录对象（不含id）
