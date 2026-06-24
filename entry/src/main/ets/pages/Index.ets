@@ -43,12 +43,20 @@ struct Index {
   @Builder HistorySheetBuilder() {
     HistorySheet({
       moduleType: 'scientific', // 当前是科学计算模块
-      onItemClick: (record) => {
-        // 当用户点击历史记录时，执行追加输入
-        this.insertToWeb(record.inputContent);
+
+      onItemClick: (record, insertType: 'input' | 'output') => {
+
+        if (insertType === 'input') {
+          // 点击上半截，追加输入的表达式
+          this.insertToWeb(record.inputContent);
+        } else {
+          // 点击下半截，追加计算的最终结果
+          this.insertToWeb(record.outputContent);
+        }
+
       },
       onClose: () => {
-        // 点击后丝滑收起面板
+        // 点击后收起面板
         this.isShowHistorySheet = false;
       }
     })

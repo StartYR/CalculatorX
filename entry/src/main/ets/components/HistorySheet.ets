@@ -1,6 +1,7 @@
 // entry/src/main/ets/components/HistorySheet.ets
 import { HistoryRepository, HistoryRecord } from '../database/HistoryRepository';
 import { UniversalHistoryList } from './UniversalHistoryList';
+import { TipsDialog } from '@kit.ArkUI';
 
 @Component
 export struct HistorySheet {
@@ -8,8 +9,33 @@ export struct HistorySheet {
   @State refreshSignal: number = 0;
   @State hasData: boolean = true;
 
-  onItemClick?: (record: HistoryRecord) => void;
+  onItemClick?: (item: HistoryRecord, insertType: 'input' | 'output') => void;
   onClose?: () => void;
+
+  private helpDialogController: CustomDialogController = new CustomDialogController({
+    builder: this.helpDialogBuilder,
+    alignment: DialogAlignment.Center,
+    autoCancel: true,
+    cornerRadius: 16
+  });
+
+  @Builder
+  helpDialogBuilder() {
+    TipsDialog({
+      // 注意：你需要自己在项目的 media 目录下放一张直观的示意图（比如画一条虚线把卡片切两半的图片）
+      imageRes: $r('app.media.image_dialog_help'),
+      imageSize: { width: '100%', height: 180 },
+      title: '如何快速插入记录？',
+      content: '为了提升计算效率，我们加入了“盲操”分区：\n\n👆 点击记录的上半部分（灰色公式），即可插入表达式。\n👇 点击记录的下半部分（黑色结果），即可插入答案。',
+      // 精简掉不再提醒的 CheckBox，因为用户是主动点击问号的
+      primaryButton: {
+        value: '我知道了',
+        action: () => {
+          this.helpDialogController.close();
+        }
+      }
+    })
+  }
 
   aboutToAppear() {
     HistoryRepository.queryRecords(this.moduleType, 1).then(res => {
@@ -24,6 +50,23 @@ export struct HistorySheet {
       Row() {
         Text('历史记录').fontSize(20).fontWeight(FontWeight.Bold).fontColor($r('sys.color.font_primary'))
         Blank()
+
+        // 【新增】：帮助引导按钮
+        Button({ type: ButtonType.Circle, stateEffect: true }) {
+          SymbolGlyph($r('sys.symbol.questionmark_circle'))
+            .fontSize(20)
+            .fontColor([$r('sys.color.icon_primary')])
+        }
+        .width(36)
+        .height(36)
+        .backgroundColor(Color.Transparent)
+        .margin({ right: 8 }) // 和右边的垃圾桶拉开一点间距
+        .onClick(() => {
+          this.helpDialogController.open(); // 召唤图文弹窗
+        })
+
+
+
         if (this.hasData) {
           Button({ type: ButtonType.Circle, stateEffect: true }) {
             SymbolGlyph($r('sys.symbol.trash'))
@@ -65,8 +108,12 @@ export struct HistorySheet {
         moduleType: this.moduleType,
         isGlobalPage: false,
         refreshCounter: this.refreshSignal,
-        onItemClick: (item: HistoryRecord) => {
-          if (this.onItemClick) this.onItemClick(item);
+        // onItemClick: (item: HistoryRecord) => {
+        //   if (this.onItemClick) this.onItemClick(item);
+        //   if (this.onClose) this.onClose();
+        // }
+        onItemClick: (item: HistoryRecord, insertType: 'input' | 'output') => {
+          if (this.onItemClick) this.onItemClick(item, insertType);
           if (this.onClose) this.onClose();
         }
       })
