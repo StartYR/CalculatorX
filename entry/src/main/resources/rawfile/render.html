@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>后台渲染暗房</title>
+    <script src="mathlive.min.js"></script>
+    <script src="html2canvas.min.js"></script>
+
+    <link rel="stylesheet" href="mathlive-static.css">
+    <link rel="stylesheet" href="mathlive-fonts.css">
+</head>
+<body style="margin: 0; padding: 0; overflow: hidden; background-color: transparent;">
+
+<script>
+    window.exportLatexToPng = async function(inputLatex, outputLatex) {
+        try {
+            // 1. 建造干净的容器
+            const container = document.createElement('div');
+            container.style.position = 'absolute';
+            container.style.top = '0px';
+            container.style.left = '0px';
+            container.style.color = '#000000'; // 强制黑字
+            container.style.backgroundColor = 'transparent'; // 强制透明底
+            container.style.fontSize = '32px';
+            container.style.padding = '8px';
+            document.body.appendChild(container);
+
+            // 2. 调用官方静态 API，此时因为头部引入了 css，它们不再是裸奔的 DOM 了！
+            const htmlIn = MathLive.convertLatexToMarkup(inputLatex);
+            const htmlOut = MathLive.convertLatexToMarkup(outputLatex);
+
+            // 挂载输入的 DOM，使用 inline-block 消除多余透明黑边
+            const divIn = document.createElement('div');
+            divIn.innerHTML = htmlIn;
+            divIn.style.display = 'inline-block';
+            container.appendChild(divIn);
+
+            // 挂载输出的 DOM
+            const divOut = document.createElement('div');
+            divOut.innerHTML = htmlOut;
+            divOut.style.display = 'inline-block';
+            container.appendChild(divOut);
+
+            // 3. 稍微等待字体文件和样式应用就绪
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // 4. 配置 html2canvas 并截图
+            const opt = {
+                backgroundColor: null,
+                scale: 2,
+                logging: false
+            };
+
+            const canvasIn = await html2canvas(divIn, opt);
+            const canvasOut = await html2canvas(divOut, opt);
+
+            const base64In = canvasIn.toDataURL('image/png');
+            const base64Out = canvasOut.toDataURL('image/png');
+
+            // 5. 销毁容器
+            document.body.removeChild(container);
+
+            // 6. 呼叫 ArkTS 存入数据库
+            if (window.arktsBridge && window.arktsBridge.onImageReady) {
+                window.arktsBridge.onImageReady(JSON.stringify({
+                    inputBase64: base64In,
+                    outputBase64: base64Out,
+                    inputLatex: inputLatex,
+                    outputLatex: outputLatex
+                }));
+            }
+
+        } catch (err) {
+            console.error("图片生成失败:", err);
+            if (window.arktsBridge && window.arktsBridge.onImageReady) {
+                window.arktsBridge.onImageReady(JSON.stringify({ error: err.toString() }));
+            }
+        }
+    };
+</script>
+
+</body>
+</html>
