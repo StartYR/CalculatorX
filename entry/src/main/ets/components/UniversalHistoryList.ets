@@ -3,11 +3,6 @@
 import { HistoryRepository, HistoryRecord } from '../database/HistoryRepository';
 import { mediaquery, LengthMetrics } from '@kit.ArkUI';
 
-interface HistoryGroup {
-  title: string;
-  records: HistoryRecord[];
-}
-
 @Component
 export struct UniversalHistoryList {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
@@ -16,12 +11,12 @@ export struct UniversalHistoryList {
   @Prop isGlobalPage: boolean = false;
   @Prop @Watch('loadData') refreshCounter: number = 0;
 
+  // 【核心 1】：回归最纯粹的单一状态数据源，彻底抛弃嵌套状态对象！
   @State historyList: HistoryRecord[] = [];
+
   @State isDarkMode: boolean = false;
-  @State groupVersion: number = 0;
   private darkModeListener: mediaquery.MediaQueryListener = mediaquery.matchMediaSync('(dark-mode: true)');
 
-  // 暴露点击事件
   onItemClick?: (record: HistoryRecord, insertType: 'input' | 'output') => void;
 
   aboutToAppear() {
@@ -48,38 +43,32 @@ export struct UniversalHistoryList {
     this.historyList = await HistoryRepository.queryRecords(this.moduleType, limit);
   }
 
-  getGroupedHistory(): HistoryGroup[] {
-    const groups: Map<string, HistoryRecord[]> = new Map();
+  // 【新增工具 1】：智能日期转换器
+  private getTitleForDate(timestamp: number): string {
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
     const yesterday = new Date(now);
     yesterday.setDate(now.getDate() - 1);
     const yesterdayStr = `${yesterday.getFullYear()}-${yesterday.getMonth()}-${yesterday.getDate()}`;
 
+    const recordDate = new Date(timestamp || Date.now());
+    const recordStr = `${recordDate.getFullYear()}-${recordDate.getMonth()}-${recordDate.getDate()}`;
+
+    if (recordStr === todayStr) return '今天';
+    if (recordStr === yesterdayStr) return '昨天';
+    return `${recordDate.getMonth() + 1}月${recordDate.getDate()}日`;
+  }
+
+  // 【新增工具 2】：动态抽取当前所有的分组标题（保持 Key 的极度纯净）
+  private getGroupedTitles(): string[] {
+    const titles: string[] = [];
     this.historyList.forEach((record) => {
-      const recordDate = new Date(record.timestamp || Date.now());
-      const recordStr = `${recordDate.getFullYear()}-${recordDate.getMonth()}-${recordDate.getDate()}`;
-
-      let groupTitle = '';
-      if (recordStr === todayStr) {
-        groupTitle = '今天';
-      } else if (recordStr === yesterdayStr) {
-        groupTitle = '昨天';
-      } else {
-        groupTitle = `${recordDate.getMonth() + 1}月${recordDate.getDate()}日`;
+      const title = this.getTitleForDate(record.timestamp);
+      if (!titles.includes(title)) {
+        titles.push(title);
       }
-
-      if (!groups.has(groupTitle)) {
-        groups.set(groupTitle, []);
-      }
-      groups.get(groupTitle)?.push(record);
     });
-
-    const result: HistoryGroup[] = [];
-    groups.forEach((records, title) => {
-      result.push({ title, records });
-    });
-    return result;
+    return titles;
   }
 
   @Builder
@@ -93,6 +82,7 @@ export struct UniversalHistoryList {
       .backgroundColor(Color.Transparent)
   }
 
+  // 【回归纯净】：不需要改 Version，直接滤除数据！
   async deleteRecord(item: HistoryRecord) {
     if (item.id !== undefined) {
       await HistoryRepository.deleteRecord(item.id);
@@ -100,7 +90,6 @@ export struct UniversalHistoryList {
 
     animateTo({ duration: 350, curve: Curve.Friction }, () => {
       this.historyList = this.historyList.filter(record => record.id !== item.id);
-      this.groupVersion++;
     });
   }
 
@@ -117,7 +106,7 @@ export struct UniversalHistoryList {
       .backgroundColor('#FF3B30')
       .shadow({ radius: 8, color: '#33FF3B30', offsetY: 4 })
       .onClick(() => {
-        this.deleteRecord(item);  // ← 调用普通方法
+        this.deleteRecord(item);
       })
     }
     .height('100%')
@@ -142,22 +131,25 @@ export struct UniversalHistoryList {
         .width('100%')
       } else {
         List({ space: 8 }) {
-          ForEach(this.getGroupedHistory(), (group: HistoryGroup) => {
-            ListItemGroup({ header: this.itemHead(group.title), space: 8 }) {
 
-              ForEach(group.records, (item: HistoryRecord) => {
+          // 【核心魔法 1】：外层循环只绑定纯净的标题字符串。Key 极其稳定，绝不毁灭重建！
+          ForEach(this.getGroupedTitles(), (title: string) => {
+            ListItemGroup({ header: this.itemHead(title), space: 8 }) {
+
+              // 【核心魔法 2】：内层循环直接监听大动脉 historyList！
+              // 因为这里明确使用了 this.historyList，ArkUI 瞬间懂了它们的数据依赖。
+              // 当你删除数据时，它会精准识别出消失的那个 id，并单独为它播放消散动画！
+              ForEach(this.historyList.filter(item => this.getTitleForDate(item.timestamp) === title), (item: HistoryRecord) => {
                 ListItem() {
                   Row() {
-                    // ==================== 【左侧模块图标】 ====================
                     SymbolGlyph($r('sys.symbol.calculator_fill'))
                       .fontSize(22)
                       .fontColor([$r('sys.color.icon_emphasize')])
                       .margin({ right: 14 })
                       .alignSelf(ItemAlign.Center)
 
-                    // ==================== 【右侧内容区】 ====================
                     Column() {
-                      // ==================== 【上半区 100% 热区：插入表达式】 ====================
+                      // 插入表达式热区
                       Column() {
                         if (item.inputBase64 && item.inputBase64.length > 0) {
                           Row() {
@@ -175,13 +167,12 @@ export struct UniversalHistoryList {
                         }
                       }
                       .width('100%')
-                      // 吸收顶部原本的 12vp 边距，以及中间 8vp 间距的一半（4vp）
-                      .padding({ top: 12, bottom: 2 })//444
+                      .padding({ top: 12, bottom: 2 })
                       .onClick(() => {
                         if (this.onItemClick) this.onItemClick(item, 'input');
                       })
 
-                      // ==================== 【下半区 100% 热区：插入结果】 ====================
+                      // 插入结果热区
                       Column() {
                         if (item.outputBase64 && item.outputBase64.length > 0) {
                           Row() {
@@ -200,7 +191,7 @@ export struct UniversalHistoryList {
                         }
                       }
                       .width('100%')
-                      .padding({ top: 2, bottom: 12 })//444
+                      .padding({ top: 2, bottom: 12 })
                       .onClick(() => {
                         if (this.onItemClick) this.onItemClick(item, 'output');
                       })
@@ -220,7 +211,7 @@ export struct UniversalHistoryList {
               }, (item: HistoryRecord) => item.id?.toString())
 
             }
-          }, (group: HistoryGroup) => group.title + this.groupVersion)
+          }, (title: string) => title)
 
           if (this.isGlobalPage) {
             ListItem() { Row().width('100%').height(this.navBarHeight + 64) }
