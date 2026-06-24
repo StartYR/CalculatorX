@@ -163,9 +163,9 @@ export struct UniversalHistoryList {
             ListItem() { Row().width('100%').height(96) }
           }
 
-          // 【核心替换】：从循环扁平数组，改为循环分组数据
+          // 循环分组数据
           ForEach(this.getGroupedHistory(), (group: HistoryGroup) => {
-            // 召唤系统分组包裹器，并挂载刚刚写的吸顶头部！
+            // 系统分组包裹器，挂载吸顶头部
             ListItemGroup({ header: this.itemHead(group.title), space: 8 }) {
 
               // 在分组内部，依然用之前极其完美的卡片代码循环渲染记录
@@ -252,7 +252,7 @@ export struct UniversalHistoryList {
             ListItem() { Row().width('100%').height(12) }
           }
         }
-        // 【最核心的属性】：赋予 List 原生的吸顶魔法！
+        // 吸顶效果
         .sticky(StickyStyle.Header)
 
         .layoutWeight(1)
