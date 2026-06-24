@@ -125,14 +125,27 @@ struct Index {
 
       // 顶部悬浮控制栏
       TopBar({
+        isShift: this.isShift, // 传入 Shift 状态
+        isRad: this.isRad,     // 传入角度制状态
+        moduleTitle: '科学计算', // 传入当前模块名称
         onMenuClick: () => {
           animateTo({ duration: 350, curve: Curve.Friction }, () => {
             this.isSidebarOpen = true;
           });
         },
+        // 撤销
+        onUndoClick: () => {
+          this.webviewController.runJavaScript(`document.querySelector('math-field').executeCommand('undo')`);
+        },
+        // 重做
+        onRedoClick: () => {
+          this.webviewController.runJavaScript(`document.querySelector('math-field').executeCommand('redo')`);
+        },
         onHistoryClick: () => {
-          this.isShowHistorySheet = true; // 触发历史记录面板
-        }
+          // 点击时将状态设为 true，拉起历史记录面板
+          this.isShowHistorySheet = true;
+        },
+
       })
 
       // 为顶部控制栏绑定历史记录半模态面板
