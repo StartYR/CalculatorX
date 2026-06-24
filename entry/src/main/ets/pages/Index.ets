@@ -12,6 +12,10 @@ import router from '@ohos.router';
 import { PreferenceConfigs } from '../utils/CalculatorConfigs';
 import { TopBar } from '../components/TopBar';
 import { SideBarMenu } from '../components/SideBarMenu';
+import { HistorySheet } from '../components/HistorySheet'; // 引入历史记录面板组件
+import { common } from '@kit.AbilityKit';
+import { HistoryRepository } from '../database/HistoryRepository'; // 数据库
+
 
 @Entry
 @Component
@@ -26,14 +30,42 @@ struct Index {
   @StorageProp(PreferenceConfigs.KEY_PERMUTATION_SELECT) permSelect: number = 1;
   @StorageLink('isRad') angleModeIndex: number = 0;
   webviewController: web_webview.WebviewController = new web_webview.WebviewController();
+  renderWebController: web_webview.WebviewController = new web_webview.WebviewController();
 
   @State isShift: boolean = false;
   @State lastAnsLatex: string = "0";      // 供 Ans 调用的上一次结果
   @State lastValidJson: string = "";      // 供 S⇄D 重新计算的纯净 AST
   @State isTempDecimal: boolean = false;  // 当前 S⇄D 面板的显示状态
   @State isSidebarOpen: boolean = false;  // 控制侧边栏的开合
+  @State isShowHistorySheet: boolean = false; // 控制历史记录半模态面板的显示状态
+
+  // 历史记录面板的生成器
+  @Builder HistorySheetBuilder() {
+    HistorySheet({
+      moduleType: 'scientific', // 当前是科学计算模块
+
+      onItemClick: (record, insertType: 'input' | 'output') => {
+
+        if (insertType === 'input') {
+          // 点击上半截，追加输入的表达式
+          this.insertToWeb(record.inputContent);
+        } else {
+          // 点击下半截，追加计算的最终结果
+          this.insertToWeb(record.outputContent);
+        }
+
+      },
+      onClose: () => {
+        // 点击后收起面板
+        this.isShowHistorySheet = false;
+      }
+    })
+  }
 
   aboutToAppear() {
+    // 初始化历史记录数据库
+    HistoryRepository.init(getContext(this) as common.UIAbilityContext);
+
     font.registerFont({
       familyName: 'Cambria Math',
       familySrc: $rawfile('fonts/Cambria Math.ttf')
@@ -99,9 +131,17 @@ struct Index {
           });
         },
         onHistoryClick: () => {
-          // TODO: 触发历史记录面板
+          this.isShowHistorySheet = true; // 触发历史记录面板
         }
       })
+
+      // 为顶部控制栏绑定历史记录半模态面板
+        .bindSheet($$this.isShowHistorySheet, this.HistorySheetBuilder(), {
+          height: '75%', // 面板高度
+          dragBar: true,                 // 顶部显示可拖拽的灰色小横条
+          backgroundColor: $r('sys.color.background_secondary'), // 统一底色
+          showClose: false               // 右上角关闭按钮
+        })
 
       if (this.isSidebarOpen) {
         SideBarMenu({
@@ -109,9 +149,54 @@ struct Index {
           onSettingsClick: () => {
             // 接收子组件的跳转请求，恢复原有的路由逻辑
             router.pushUrl({ url: RoutePath.SETTINGS });
+          },
+          onHistoryClick: () => {
+            router.pushUrl({ url: RoutePath.HISTORY });
           }
         })
       }
+
+      // 暗房 Webview
+      Web({
+        src: $rawfile('render.html'),
+        controller: this.renderWebController
+      })
+        .width(1000)
+        .height(2000)
+        .position({ x: -5000, y: -5000 })
+        .backgroundColor(Color.Transparent)
+        .javaScriptAccess(true)
+        .domStorageAccess(true)
+        // [新增] 注册通信桥梁，把 ArkTS 的方法暴露给 render.html
+        .javaScriptProxy({
+          object: {
+            onImageReady: (jsonStr: string) => {
+              try {
+                let parsed = JSON.parse(jsonStr) as Record<string, string>;
+                if (parsed['error']) {
+                  console.error("暗房报错: " + parsed['error']);
+                  return;
+                }
+                // 在这里执行真正的数据库异步插入
+                HistoryRepository.insertRecord({
+                  moduleType: 'scientific',
+                  inputContent: parsed['inputLatex'],
+                  outputContent: parsed['outputLatex'],
+                  inputBase64: parsed['inputBase64'],
+                  outputBase64: parsed['outputBase64'],
+                  timestamp: Date.now(),
+                }).then((rowId: number) => {
+                  console.info(`HistoryRepository: 历史记录图文保存成功, rowId = ${rowId}`);
+                });
+              } catch (e) {
+                console.error("解析暗房回传数据失败");
+              }
+            }
+          },
+          name: "arktsBridge",           // 前端通过 window.arktsBridge 访问
+          methodList: ["onImageReady"],  // 暴露给前端的方法名
+          controller: this.renderWebController
+        })
 
     }
     .width('100%')
@@ -285,7 +370,8 @@ struct Index {
             let jsonStrToSave = typeof cleanJsonString === 'string' ? cleanJsonString : JSON.stringify(cleanJsonString);
             this.lastValidJson = jsonStrToSave;
 
-            console.info(`【清洗后传给C++的JSON】: ${typeof cleanJsonString === 'string' ? cleanJsonString : JSON.stringify(cleanJsonString)}`);
+            console.info(`【清洗后传给C++的JSON】: ${typeof cleanJsonString === 'string' ? cleanJsonString :
+              JSON.stringify(cleanJsonString)}`);
 
             // ===== 将前端双状态映射为 C++ 单一控制码 =====
             let cppPrecisionMode = -1;
@@ -299,7 +385,9 @@ struct Index {
               }
             }
 
-            let cppResponse: string = testNapi.calculate(typeof cleanJsonString === 'string' ? cleanJsonString : JSON.stringify(cleanJsonString), this.isRad, cppPrecisionMode);
+            let cppResponse: string = testNapi.calculate(
+              typeof cleanJsonString === 'string' ? cleanJsonString : JSON.stringify(cleanJsonString), this.isRad,
+              cppPrecisionMode);
 
             if (cppResponse.includes("Error")) {
               console.error("C++ 计算错误: " + cppResponse);
@@ -307,6 +395,11 @@ struct Index {
             } else {
               // 把成功的计算结果存入 Ans
               this.lastAnsLatex = cppResponse;
+
+              // 发送指令给暗房
+              this.renderWebController.runJavaScript(
+                `window.exportLatexToPng(${JSON.stringify(rawLatex)}, ${JSON.stringify(cppResponse)})`
+              );
 
               // 如果是自动模式(-1)，则通过判断结果里有没有小数点来判断是否为小数
               if (cppPrecisionMode === -1) {
@@ -316,10 +409,8 @@ struct Index {
               }
               this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
             }
-
           });
-        }
-      );
+        });
     } else if (action === '⇦') {
       this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveToPreviousChar')`);
     } else if (action === '⇨') {

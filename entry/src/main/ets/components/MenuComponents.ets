@@ -34,7 +34,7 @@ export struct ItemDivider {
   }
 }
 
-// 菜单项 (支持无图标、支持副标题的完全体)
+// 菜单项 (支持无图标、支持副标题)
 @Component
 export struct MenuButton {
   // 👇 将图标改为可选属性，去掉 @Prop
