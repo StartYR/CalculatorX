@@ -2,6 +2,12 @@
 import { HistoryRepository, HistoryRecord } from '../database/HistoryRepository';
 import { mediaquery, LengthMetrics } from '@kit.ArkUI';
 
+// 【新增】：定义分组数据的接口模型
+interface HistoryGroup {
+  title: string;
+  records: HistoryRecord[];
+}
+
 @Component
 export struct UniversalHistoryList {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
@@ -51,6 +57,60 @@ export struct UniversalHistoryList {
     this.historyList = await HistoryRepository.queryRecords(this.moduleType, limit);
   }
 
+  // 【新增核心引擎】：将扁平的记录按时间智能分组
+  getGroupedHistory(): HistoryGroup[] {
+    const groups: Map<string, HistoryRecord[]> = new Map();
+
+    // 获取今天和昨天的极值基准
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const yesterdayStr = `${yesterday.getFullYear()}-${yesterday.getMonth()}-${yesterday.getDate()}`;
+
+    this.historyList.forEach((record) => {
+      // ⚠️ 注意：这里假设你的记录有 timestamp 字段（时间戳或日期字符串）。
+      // 如果你的字段名是 createTime，请将 record.timestamp 替换为 record.createTime
+      const recordDate = new Date(record.timestamp || Date.now());
+      const recordStr = `${recordDate.getFullYear()}-${recordDate.getMonth()}-${recordDate.getDate()}`;
+
+      let groupTitle = '';
+      if (recordStr === todayStr) {
+        groupTitle = '今天';
+      } else if (recordStr === yesterdayStr) {
+        groupTitle = '昨天';
+      } else {
+        groupTitle = `${recordDate.getMonth() + 1}月${recordDate.getDate()}日`;
+      }
+
+      if (!groups.has(groupTitle)) {
+        groups.set(groupTitle, []);
+      }
+      groups.get(groupTitle)?.push(record);
+    });
+
+    // 转换为数组返回
+    const result: HistoryGroup[] = [];
+    groups.forEach((records, title) => {
+      result.push({ title, records });
+    });
+    return result;
+  }
+
+  // 【新增 UI】：极具质感的吸顶时间标题栏
+  @Builder
+  itemHead(text: string) {
+    Text(text)
+      .fontSize(14)
+      .fontWeight(FontWeight.Medium)
+      .fontColor($r('sys.color.font_secondary'))
+      .width('100%')
+      .padding({ left: 16, top: 16, bottom: 8 }) // 给分组留出舒适的呼吸感
+      // 设置底色非常关键！这样吸顶悬浮时，底下的卡片滑过去就不会穿帮
+      .backgroundColor(Color.Transparent)
+  }
+
   // 左滑显示红色删除按钮
   @Builder
   deleteAction(item: HistoryRecord) {
@@ -72,7 +132,7 @@ export struct UniversalHistoryList {
 
         // 触发原生的 UI 移除动画
         animateTo({ duration: 350, curve: Curve.Friction }, () => {
-          // 将这条记录从当前数组中剔除，ArkUI 会自动播放一个极其完美的卡片向上收缩消散动画
+          // 将这条记录从当前数组中剔除，触发重新分组渲染
           this.historyList = this.historyList.filter(record => record.id !== item.id);
         });
       })
@@ -106,103 +166,105 @@ export struct UniversalHistoryList {
             ListItem() { Row().width('100%').height(96) }
           }
 
-          ForEach(this.historyList, (item: HistoryRecord) => {
-            ListItem() {
-              Row() {
-                // ==================== 【左侧模块图标】 ====================
-                SymbolGlyph($r('sys.symbol.calculator_fill'))
-                .fontSize(22) // 尺寸与 18vp 的字号完美匹配，精致而不突兀
-                .fontColor([$r('sys.color.icon_emphasize')]) // 使用次级图标色，保持低调优雅，不抢风头
-                .margin({ right: 14 }) // 与右侧内容区域拉开舒适的呼吸间距
-                .alignSelf(ItemAlign.Center)
+          // 【核心替换】：从循环扁平数组，改为循环分组数据
+          ForEach(this.getGroupedHistory(), (group: HistoryGroup) => {
+            // 召唤系统分组包裹器，并挂载刚刚写的吸顶头部！
+            ListItemGroup({ header: this.itemHead(group.title), space: 8 }) {
 
-                // ==================== 【右侧内容区】 ====================
-                Column() {
-                  // ==================== 【输入区靠左】 ====================
-                  if (item.inputBase64 && item.inputBase64.length > 0) {
-                    Row() {
-                      Image(item.inputBase64)
-                        .height(this.getDynamicHeight(item.inputContent, false))
-                        .objectFit(ImageFit.Contain)
-                        // 反色逻辑（适配深色模式）
-                        .colorFilter(this.isDarkMode ? [
-                          -1,  0,  0, 0, 255,
-                          0, -1,  0, 0, 255,
-                          0,  0, -1, 0, 255,
-                          0,  0,  0, 1,   0
-                        ] : undefined)
-                        // 70% 透明度，降低输入的显示权重
-                        .opacity(0.7)
-                    }
-                    .width('100%')
-                    // 弹性容器靠左对齐
-                    .justifyContent(FlexAlign.Start)
-                  } else {
-                    // 如果是纯文本，也使用系统的次级文本色
-                    Text(item.inputContent).fontSize(18).fontColor($r('sys.color.font_secondary'))
-                      .width('100%').textAlign(TextAlign.Start).maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis })
-                  }
+              // 在分组内部，依然用之前极其完美的卡片代码循环渲染记录
+              ForEach(group.records, (item: HistoryRecord) => {
+                ListItem() {
+                  Row() {
+                    // ==================== 【左侧模块图标】 ====================
+                    SymbolGlyph($r('sys.symbol.calculator_fill'))
+                      .fontSize(22)
+                      .fontColor([$r('sys.color.icon_emphasize')])
+                      .margin({ right: 14 })
+                      .alignSelf(ItemAlign.Center)
 
-                  // ==================== 【输出区靠右】 ====================
-                  if (item.outputBase64 && item.outputBase64.length > 0) {
-                    Row() {
-                      Text('=  ').fontSize(18).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_primary'))
-                      Image(item.outputBase64)
-                        .height(this.getDynamicHeight(item.outputContent, true))
-                        .objectFit(ImageFit.Contain)
-                        .colorFilter(this.isDarkMode ? [
-                          -1,  0,  0, 0, 255,
-                          0, -1,  0, 0, 255,
-                          0,  0, -1, 0, 255,
-                          0,  0,  0, 1,   0
-                        ] : undefined)
+                    // ==================== 【右侧内容区】 ====================
+                    Column() {
+                      // ==================== 【输入区靠左】 ====================
+                      if (item.inputBase64 && item.inputBase64.length > 0) {
+                        Row() {
+                          Image(item.inputBase64)
+                            .height(this.getDynamicHeight(item.inputContent, false))
+                            .objectFit(ImageFit.Contain)
+                            .colorFilter(this.isDarkMode ? [
+                              -1,  0,  0, 0, 255,
+                              0, -1,  0, 0, 255,
+                              0,  0, -1, 0, 255,
+                              0,  0,  0, 1,   0
+                            ] : undefined)
+                            .opacity(0.7)
+                        }
+                        .width('100%')
+                        .justifyContent(FlexAlign.Start)
+                      } else {
+                        Text(item.inputContent).fontSize(18).fontColor($r('sys.color.font_secondary'))
+                          .width('100%').textAlign(TextAlign.Start).maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis })
+                      }
+
+                      // ==================== 【输出区靠右】 ====================
+                      if (item.outputBase64 && item.outputBase64.length > 0) {
+                        Row() {
+                          Text('=  ').fontSize(18).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_primary'))
+                          Image(item.outputBase64)
+                            .height(this.getDynamicHeight(item.outputContent, true))
+                            .objectFit(ImageFit.Contain)
+                            .colorFilter(this.isDarkMode ? [
+                              -1,  0,  0, 0, 255,
+                              0, -1,  0, 0, 255,
+                              0,  0, -1, 0, 255,
+                              0,  0,  0, 1,   0
+                            ] : undefined)
+                        }
+                        .width('100%')
+                        .justifyContent(FlexAlign.End)
+                        .margin({ top: 8 })
+                        .alignItems(VerticalAlign.Center)
+                      } else {
+                        Text(`=  ${item.outputContent}`).fontSize(18).fontWeight(FontWeight.Medium)
+                          .fontColor($r('sys.color.font_primary')).width('100%').textAlign(TextAlign.End).margin({ top: 8 })
+                      }
                     }
-                    .width('100%')
-                    // 踢掉 Blank()，回归纯粹的靠右对齐！
-                    .justifyContent(FlexAlign.End)
-                    .margin({ top: 8 })
-                    .alignItems(VerticalAlign.Center)
-                  } else {
-                    Text(`=  ${item.outputContent}`).fontSize(18).fontWeight(FontWeight.Medium)
-                      .fontColor($r('sys.color.font_primary')).width('100%').textAlign(TextAlign.End).margin({ top: 8 })
+                    .layoutWeight(1)
                   }
+                  .width('100%')
+                  .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+                  .backgroundColor($r('sys.color.comp_background_primary'))
+                  .borderRadius(16)
+                  .onClick(() => {
+                    if (this.onItemClick) this.onItemClick(item);
+                  })
                 }
-                .layoutWeight(1)
-              }
-              // 所有原本属于卡片主体的样式（边距、背景色、圆角、点击事件）全部平移升级到最外层的 Row 上
-              .width('100%')
-              .padding({ left: 16, right: 16, top: 12, bottom: 12 })
-              .backgroundColor($r('sys.color.comp_background_primary'))
-              .borderRadius(16)
-              .onClick(() => {
-                if (this.onItemClick) this.onItemClick(item);
-              })
-            }
-            .padding({ left: 16, right: 16 })
-            .swipeAction({
-              end: {
-                builder: () => { this.deleteAction(item) }, // 绑定我们上面打造的红色垃圾桶
-              },
-              edgeEffect: SwipeEdgeEffect.Spring // 注入灵魂：加上极其 Q 弹的原生果冻回弹（拉过头会弹回去）！
-            })
-          }, (item: HistoryRecord) => item.id?.toString())
+                .padding({ left: 16, right: 16 })
+                .swipeAction({
+                  end: { builder: () => { this.deleteAction(item) } },
+                  edgeEffect: SwipeEdgeEffect.Spring
+                })
+              }, (item: HistoryRecord) => item.id?.toString())
 
-          // 如果是全局页面，底部增加占位以避开 Tab 栏
+            }
+          }, (group: HistoryGroup) => group.title)
+
+          // 底部占位
           if (this.isGlobalPage) {
             ListItem() { Row().width('100%').height(this.navBarHeight + 64) }
           } else {
-            // 为半模态抽屉增加底部小白条的安全避让高度
             ListItem() { Row().width('100%').height(12) }
           }
         }
+        // 【最核心的属性】：赋予 List 原生的吸顶魔法！
+        .sticky(StickyStyle.Header)
+
         .layoutWeight(1)
         .width('100%')
-        // 根据是否为全局页面调整内边距
         .padding({ top: 0, bottom: 0 })
         .scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring)
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
-        .fadingEdge(true, { fadingEdgeLength:LengthMetrics.vp(12) })
+        .fadingEdge(true, { fadingEdgeLength: LengthMetrics.vp(12) })
       }
     }
     .width('100%')
