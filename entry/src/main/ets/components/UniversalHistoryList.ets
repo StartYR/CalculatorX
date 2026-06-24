@@ -77,56 +77,68 @@ export struct UniversalHistoryList {
 
           ForEach(this.historyList, (item: HistoryRecord) => {
             ListItem() {
-              Column() {
-                // ==================== 【输入区靠左】 ====================
-                if (item.inputBase64 && item.inputBase64.length > 0) {
-                  Row() {
-                    Image(item.inputBase64)
-                      .height(this.getDynamicHeight(item.inputContent, false))
-                      .objectFit(ImageFit.Contain)
-                      // 反色逻辑（适配深色模式）
-                      .colorFilter(this.isDarkMode ? [
-                        -1,  0,  0, 0, 255,
-                        0, -1,  0, 0, 255,
-                        0,  0, -1, 0, 255,
-                        0,  0,  0, 1,   0
-                      ] : undefined)
-                      // 70% 透明度，降低输入的显示权重
-                      .opacity(0.7)
-                  }
-                  .width('100%')
-                  // 弹性容器靠左对齐
-                  .justifyContent(FlexAlign.Start)
-                } else {
-                  // 如果是纯文本，也使用系统的次级文本色
-                  Text(item.inputContent).fontSize(18).fontColor($r('sys.color.font_secondary'))
-                    .width('100%').textAlign(TextAlign.Start).maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis })
-                }
+              Row() {
+                // ==================== 【左侧模块图标】 ====================
+                SymbolGlyph($r('sys.symbol.calculator_fill'))
+                .fontSize(22) // 尺寸与 18vp 的字号完美匹配，精致而不突兀
+                .fontColor([$r('sys.color.icon_emphasize')]) // 使用次级图标色，保持低调优雅，不抢风头
+                .margin({ right: 14 }) // 与右侧内容区域拉开舒适的呼吸间距
+                .alignSelf(ItemAlign.Center)
 
-                // ==================== 【输出区靠右】 ====================
-                if (item.outputBase64 && item.outputBase64.length > 0) {
-                  Row() {
-                    Text('=  ').fontSize(18).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_primary'))
-                    Image(item.outputBase64)
-                      .height(this.getDynamicHeight(item.outputContent, true))
-                      .objectFit(ImageFit.Contain)
-                      .colorFilter(this.isDarkMode ? [
-                        -1,  0,  0, 0, 255,
-                        0, -1,  0, 0, 255,
-                        0,  0, -1, 0, 255,
-                        0,  0,  0, 1,   0
-                      ] : undefined)
+                // ==================== 【右侧内容区】 ====================
+                Column() {
+                  // ==================== 【输入区靠左】 ====================
+                  if (item.inputBase64 && item.inputBase64.length > 0) {
+                    Row() {
+                      Image(item.inputBase64)
+                        .height(this.getDynamicHeight(item.inputContent, false))
+                        .objectFit(ImageFit.Contain)
+                        // 反色逻辑（适配深色模式）
+                        .colorFilter(this.isDarkMode ? [
+                          -1,  0,  0, 0, 255,
+                          0, -1,  0, 0, 255,
+                          0,  0, -1, 0, 255,
+                          0,  0,  0, 1,   0
+                        ] : undefined)
+                        // 70% 透明度，降低输入的显示权重
+                        .opacity(0.7)
+                    }
+                    .width('100%')
+                    // 弹性容器靠左对齐
+                    .justifyContent(FlexAlign.Start)
+                  } else {
+                    // 如果是纯文本，也使用系统的次级文本色
+                    Text(item.inputContent).fontSize(18).fontColor($r('sys.color.font_secondary'))
+                      .width('100%').textAlign(TextAlign.Start).maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis })
                   }
-                  .width('100%')
-                  // 踢掉 Blank()，回归纯粹的靠右对齐！
-                  .justifyContent(FlexAlign.End)
-                  .margin({ top: 8 })
-                  .alignItems(VerticalAlign.Center)
-                } else {
-                  Text(`=  ${item.outputContent}`).fontSize(18).fontWeight(FontWeight.Medium)
-                    .fontColor($r('sys.color.font_primary')).width('100%').textAlign(TextAlign.End).margin({ top: 8 })
+
+                  // ==================== 【输出区靠右】 ====================
+                  if (item.outputBase64 && item.outputBase64.length > 0) {
+                    Row() {
+                      Text('=  ').fontSize(18).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_primary'))
+                      Image(item.outputBase64)
+                        .height(this.getDynamicHeight(item.outputContent, true))
+                        .objectFit(ImageFit.Contain)
+                        .colorFilter(this.isDarkMode ? [
+                          -1,  0,  0, 0, 255,
+                          0, -1,  0, 0, 255,
+                          0,  0, -1, 0, 255,
+                          0,  0,  0, 1,   0
+                        ] : undefined)
+                    }
+                    .width('100%')
+                    // 踢掉 Blank()，回归纯粹的靠右对齐！
+                    .justifyContent(FlexAlign.End)
+                    .margin({ top: 8 })
+                    .alignItems(VerticalAlign.Center)
+                  } else {
+                    Text(`=  ${item.outputContent}`).fontSize(18).fontWeight(FontWeight.Medium)
+                      .fontColor($r('sys.color.font_primary')).width('100%').textAlign(TextAlign.End).margin({ top: 8 })
+                  }
                 }
+                .layoutWeight(1)
               }
+              // 所有原本属于卡片主体的样式（边距、背景色、圆角、点击事件）全部平移升级到最外层的 Row 上
               .width('100%')
               .padding({ left: 16, right: 16, top: 12, bottom: 12 })
               .backgroundColor($r('sys.color.comp_background_primary'))
