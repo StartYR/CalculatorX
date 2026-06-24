@@ -34,12 +34,15 @@ export struct UniversalHistoryList {
 
   // 智能识别长得高的公式！
   getDynamicHeight(content: string, isOutput: boolean): number {
-    if (!content) return isOutput ? 40 : 32;
+    if (!content) return isOutput ? 24 : 24;
     // 如果文本中包含 \frac (分数)、^ (指数)、_ (下标)、\int (积分) 等复杂结构
-    if (content.includes('\\frac') || content.includes('^') || content.includes('_') || content.includes('\\int')) {
-      return isOutput ? 72 : 56; // 给予两倍的超大高度，分数绝对不会被压扁！
+    if (content.includes('\\int')) {
+      return isOutput ? 48 : 48; // 给予更高的高度
     }
-    return isOutput ? 40 : 32; // 普通单行数字，保持紧凑高度
+    if (content.includes('\\frac')) {
+      return isOutput ? 36 : 36; // 给予更高的高度
+    }
+    return isOutput ? 24 : 24; // 普通单行数字，保持紧凑高度
   }
 
   async loadData() {
