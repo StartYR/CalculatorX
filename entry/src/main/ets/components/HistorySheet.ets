@@ -58,7 +58,7 @@ export struct HistorySheet {
         }
       }
       .width('100%')
-      .padding({ left: 24, right: 24, top: 24, bottom: 12 })
+      .padding({ left: 24, right: 24, top: 24, bottom: 0 })
 
       // 2. 召唤底层引擎！
       UniversalHistoryList({

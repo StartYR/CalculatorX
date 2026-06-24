@@ -2,7 +2,7 @@
 import { HistoryRepository, HistoryRecord } from '../database/HistoryRepository';
 import { mediaquery, LengthMetrics } from '@kit.ArkUI';
 
-// 【新增】：定义分组数据的接口模型
+// 定义分组数据的接口模型
 interface HistoryGroup {
   title: string;
   records: HistoryRecord[];
@@ -41,11 +41,11 @@ export struct UniversalHistoryList {
   // 智能识别长得高的公式！
   getDynamicHeight(content: string, isOutput: boolean): number {
     if (!content) return isOutput ? 24 : 24;
-    // 如果文本中包含 \frac (分数)、^ (指数)、_ (下标)、\int (积分) 等复杂结构
+    // 如果文本中包含 \frac (分数)、\int (积分) 等复杂结构
     if (content.includes('\\int')) {
       return isOutput ? 48 : 48; // 给予更高的高度
     }
-    if (content.includes('\\frac')) {
+    else if (content.includes('\\frac')) {
       return isOutput ? 36 : 36; // 给予更高的高度
     }
     return isOutput ? 24 : 24; // 普通单行数字，保持紧凑高度
@@ -57,7 +57,7 @@ export struct UniversalHistoryList {
     this.historyList = await HistoryRepository.queryRecords(this.moduleType, limit);
   }
 
-  // 【新增核心引擎】：将扁平的记录按时间智能分组
+  // 将扁平的记录按时间智能分组
   getGroupedHistory(): HistoryGroup[] {
     const groups: Map<string, HistoryRecord[]> = new Map();
 
@@ -70,8 +70,6 @@ export struct UniversalHistoryList {
     const yesterdayStr = `${yesterday.getFullYear()}-${yesterday.getMonth()}-${yesterday.getDate()}`;
 
     this.historyList.forEach((record) => {
-      // ⚠️ 注意：这里假设你的记录有 timestamp 字段（时间戳或日期字符串）。
-      // 如果你的字段名是 createTime，请将 record.timestamp 替换为 record.createTime
       const recordDate = new Date(record.timestamp || Date.now());
       const recordStr = `${recordDate.getFullYear()}-${recordDate.getMonth()}-${recordDate.getDate()}`;
 
@@ -98,7 +96,7 @@ export struct UniversalHistoryList {
     return result;
   }
 
-  // 【新增 UI】：极具质感的吸顶时间标题栏
+  // 吸顶时间标题栏
   @Builder
   itemHead(text: string) {
     Text(text)
@@ -106,8 +104,7 @@ export struct UniversalHistoryList {
       .fontWeight(FontWeight.Medium)
       .fontColor($r('sys.color.font_secondary'))
       .width('100%')
-      .padding({ left: 16, top: 16, bottom: 8 }) // 给分组留出舒适的呼吸感
-      // 设置底色非常关键！这样吸顶悬浮时，底下的卡片滑过去就不会穿帮
+      .padding({ left: 24, top: 8, bottom: 8 }) // 给分组留出舒适的呼吸感
       .backgroundColor(Color.Transparent)
   }
 
