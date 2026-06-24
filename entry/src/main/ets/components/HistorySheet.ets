@@ -22,12 +22,10 @@ export struct HistorySheet {
   @Builder
   helpDialogBuilder() {
     TipsDialog({
-      // 注意：你需要自己在项目的 media 目录下放一张直观的示意图（比如画一条虚线把卡片切两半的图片）
       imageRes: $r('app.media.image_dialog_help'),
       imageSize: { width: '100%', height: 180 },
-      title: '如何快速插入记录？',
-      content: '为了提升计算效率，我们加入了“盲操”分区：\n\n👆 点击记录的上半部分（灰色公式），即可插入表达式。\n👇 点击记录的下半部分（黑色结果），即可插入答案。',
-      // 精简掉不再提醒的 CheckBox，因为用户是主动点击问号的
+      title: '如何插入历史记录？',
+      content: '如图，历史记录分为上下两个区域：\n\n点击表达式区，即可插入表达式；\n点击结果区，即可插入结果。',
       primaryButton: {
         value: '我知道了',
         action: () => {
@@ -44,14 +42,12 @@ export struct HistorySheet {
   }
 
   build() {
-    // 褪去所有花里胡哨的 Stack，回归最清爽的 Column！
     Column() {
       // 1. 顶部实体标题栏
       Row() {
         Text('历史记录').fontSize(20).fontWeight(FontWeight.Bold).fontColor($r('sys.color.font_primary'))
-        Blank()
 
-        // 【新增】：帮助引导按钮
+        // 帮助引导按钮
         Button({ type: ButtonType.Circle, stateEffect: true }) {
           SymbolGlyph($r('sys.symbol.questionmark_circle'))
             .fontSize(20)
@@ -60,12 +56,12 @@ export struct HistorySheet {
         .width(36)
         .height(36)
         .backgroundColor(Color.Transparent)
-        .margin({ right: 8 }) // 和右边的垃圾桶拉开一点间距
+        .margin({ left: 0 })
         .onClick(() => {
           this.helpDialogController.open(); // 召唤图文弹窗
         })
 
-
+        Blank()
 
         if (this.hasData) {
           Button({ type: ButtonType.Circle, stateEffect: true }) {
