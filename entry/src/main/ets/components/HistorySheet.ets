@@ -25,22 +25,40 @@ export struct HistorySheet {
         Text('历史记录').fontSize(20).fontWeight(FontWeight.Bold).fontColor($r('sys.color.font_primary'))
         Blank()
         if (this.hasData) {
-          Text('清空').fontSize(14).fontColor($r('sys.color.font_secondary')).padding(8)
-            .stateStyles({
-              pressed: { .backgroundColor($r('sys.color.comp_background_secondary')) },
-              normal: { .backgroundColor(Color.Transparent) }
+          Button({ type: ButtonType.Circle, stateEffect: true }) {
+            SymbolGlyph($r('sys.symbol.trash'))
+              .fontSize(20)
+              .fontColor([$r('sys.color.icon_primary')])
+          }
+          .width(40)
+          .height(40)
+          .backgroundColor($r('sys.color.background_primary')) // 透明背景，只保留点击波纹
+          .onClick(() => {
+            // 防误触弹窗
+            AlertDialog.show({
+              title: '清空历史记录',
+              message: '确定要清空此模式下的所有历史记录吗？此操作无法撤销。',
+              alignment: DialogAlignment.Bottom,
+              offset: { dx: 0, dy: -280 },
+              primaryButton: {
+                value: '取消',
+                action: () => {} // 点击取消
+              },
+              secondaryButton: {
+                value: '清空',
+                fontColor: '#FF3B30', // 毁灭性操作使用警示红
+                action: async () => {
+                  await HistoryRepository.clearHistory(this.moduleType);
+                  this.hasData = false;
+                  this.refreshSignal++;
+                }
+              }
             })
-            .borderRadius(8)
-            .onClick(async () => {
-              await HistoryRepository.clearHistory(this.moduleType);
-              this.hasData = false;
-              this.refreshSignal++;
-            })
+          })
         }
       }
       .width('100%')
-      .padding({ left: 24, right: 24, top: 20, bottom: 8 })
-      // 没有任何毛玻璃，没有任何透明背景，就是最原生的样子
+      .padding({ left: 24, right: 24, top: 24, bottom: 12 })
 
       // 2. 召唤底层引擎！
       UniversalHistoryList({
