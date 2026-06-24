@@ -78,7 +78,7 @@ export struct UniversalHistoryList {
       })
     }
     .height('100%') // 撑满当前这一条历史记录的高度
-    .padding({ left: 16, right: 8 }) // 给滑动留出舒适的阻尼空间
+    .padding({ left: 16, right: 24 }) // 给滑动留出舒适的阻尼空间
     .justifyContent(FlexAlign.Center)
   }
 
@@ -178,6 +178,7 @@ export struct UniversalHistoryList {
                 if (this.onItemClick) this.onItemClick(item);
               })
             }
+            .padding({ left: 16, right: 16 })
             .swipeAction({
               end: {
                 builder: () => { this.deleteAction(item) }, // 绑定我们上面打造的红色垃圾桶
@@ -197,7 +198,7 @@ export struct UniversalHistoryList {
         .layoutWeight(1)
         .width('100%')
         // 根据是否为全局页面调整内边距
-        .padding({ left: 16, right: 16, top: 0, bottom: 0 })
+        .padding({ top: 0, bottom: 0 })
         .scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring)
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
