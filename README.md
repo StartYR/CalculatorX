@@ -71,21 +71,20 @@ CalculatorX/
 │   │   │   │   ├── Settings.ets           # 设置主页
 │   │   │   │   ├── About.ets              # 关于页
 │   │   │   │   └── Credits.ets            # 特别鸣谢
-│   │   │   ├── history/                   # 历史记录
-│   │   │   │   └── HistoryManager.ets     # 全局历史管理页：悬浮胶囊导航与全功能历史展示
+│   │   │   ├── history/HistoryManager.ets # 全局历史页：基于 HdsNavigation 打造，支持全功能 Tab 切换与悬浮级全局清空
 │   │   │   ├── Index.ets                  # 主页面：处理按键逻辑、调用 Webview/C++，参数状态映射
 │   │   │   └── DocViewer.ets              # 文档展示页：系统级 WebView，负责加载云端协议网页
 │   │   │
 │   │   ├── components/  
-│   │   │   ├── TopBar.ets                 # 自定义组件：顶部悬浮控制栏 [新增]
-│   │   │   ├── HistorySheet.ets           # 自定义组件：局部历史记录半模态面板 [新增]
+│   │   │   ├── TopBar.ets                 # 自定义组件：顶部悬浮控制栏
+│   │   │   ├── HistorySheet.ets           # 自定义组件：局部历史半模态抽屉，内置 TipsDialog 图文引导与点击事件中转
+│   │   │   ├── UniversalHistoryList.ets   # 自定义组件：全能历史记录列表引擎。
 │   │   │   ├── TopKeyboard.ets            # 自定义组件：上方科学计算与微积分键盘
 │   │   │   ├── BottomKeyboard.ets         # 自定义组件：下方基础数字与四则运算键盘
 │   │   │   ├── SideBarMenu.ets            # 自定义组件：左侧侧边栏菜单（手势驱动、包含原生边缘渐隐效果）
 │   │   │   └── MenuComponents.ets         # UI 组件库：统一管理 MenuGroup, MenuButton, ItemDivider 等底层样式
 │   │   │
-│   │   ├── database/                      # 本地数据持久化层
-│   │   │   └── HistoryRepository.ets      # 关系型数据库 (RDB) 仓库：统一调度历史记录的增删查
+│   │   ├── database/HistoryRepository.ets # 关系型数据库 (RDB) 仓库：统一调度历史记录增删查，LIMIT 1 静默拦截防刷屏
 │   │   │
 │   │   └── utils/CalculatorConfigs.ets    # 页面配置文件
 │   │  
@@ -93,7 +92,7 @@ CalculatorX/
 │   │   ├── CMakeLists.txt                 # 构建脚本：配置 N-API，链接 SymEngine 及 Boost
 │   │   ├── engine.cpp                     # 核心引擎： AST 树解析、精度控制与 N-API 通信中枢
 │   │   ├── ErrorHandler.h                 # 核心模块：自定义异常状态机，精准拦截除零、溢出、定义域等业务错误
-│   │   ├── FastMath.cpp/h                 # 核心模块：极速数学降维模块，实现在 O(1) 时间内计算超大数（最大支持10^9000000000000000000）
+│   │   ├── FastMath.cpp/h                 # 核心模块：极速数学降维模块，实现在 O(1) 时间内计算超大数
 │   │   ├── boost_1_82_0.tar.gz            # 离线依赖：纯头文件的高性能大数库 (供 SymEngine 使用)
 │   │   ├── giac-1.9.0.tar.gz              # 离线依赖：Giac 符号计算核心
 │   │   ├── include/json.hpp               # 核心依赖：nlohmann/json，解析 MathJSON 字符串
@@ -107,7 +106,7 @@ CalculatorX/
 │   ├── resources/  
 │   │   ├── base/
 │   │   │   ├── profile/main_pages.json    # 页面注册表
-│   │   │   ├── media/                     # 静态资源：App 图标
+│   │   │   ├── media/                     # 静态资源：App 图标及弹窗引导插图 (如 image_dialog_help)
 │   │   │   └── element/string.json        # 局部字符串
 │   │   │
 │   │   └── rawfile/                       # 本地 Web 沙箱渲染与降维层  
