@@ -51,6 +51,37 @@ export struct UniversalHistoryList {
     this.historyList = await HistoryRepository.queryRecords(this.moduleType, limit);
   }
 
+  // 左滑显示红色删除按钮
+  @Builder
+  deleteAction(item: HistoryRecord) {
+    Row() {
+      Button({ type: ButtonType.Circle, stateEffect: true }) {
+        SymbolGlyph($r('sys.symbol.trash_fill'))
+          .fontSize(24)
+          .fontColor([Color.White]) // 垃圾桶图标使用纯白，视觉冲击力极强
+      }
+      .width(48)
+      .height(48)
+      .backgroundColor('#FF3B30') // 极其纯正的系统级破坏性红色（Destructive Red）
+      .shadow({ radius: 8, color: '#33FF3B30', offsetY: 4 }) // 加上一点点红色弥散阴影，质感拉满
+      .onClick(async () => {
+        // 通知底层数据库真正删除这条记录
+        if (item.id !== undefined) {
+          await HistoryRepository.deleteRecord(item.id);
+        }
+
+        // 触发原生的 UI 移除动画
+        animateTo({ duration: 350, curve: Curve.Friction }, () => {
+          // 将这条记录从当前数组中剔除，ArkUI 会自动播放一个极其完美的卡片向上收缩消散动画
+          this.historyList = this.historyList.filter(record => record.id !== item.id);
+        });
+      })
+    }
+    .height('100%') // 撑满当前这一条历史记录的高度
+    .padding({ left: 16, right: 8 }) // 给滑动留出舒适的阻尼空间
+    .justifyContent(FlexAlign.Center)
+  }
+
   build() {
     Column() {
       if (this.historyList.length === 0) {
@@ -147,6 +178,12 @@ export struct UniversalHistoryList {
                 if (this.onItemClick) this.onItemClick(item);
               })
             }
+            .swipeAction({
+              end: {
+                builder: () => { this.deleteAction(item) }, // 绑定我们上面打造的红色垃圾桶
+              },
+              edgeEffect: SwipeEdgeEffect.Spring // 注入灵魂：加上极其 Q 弹的原生果冻回弹（拉过头会弹回去）！
+            })
           }, (item: HistoryRecord) => item.id?.toString())
 
           // 如果是全局页面，底部增加占位以避开 Tab 栏
