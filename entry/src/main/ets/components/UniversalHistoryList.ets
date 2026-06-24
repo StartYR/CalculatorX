@@ -17,6 +17,7 @@ export struct UniversalHistoryList {
 
   @State historyList: HistoryRecord[] = [];
   @State isDarkMode: boolean = false;
+  @State groupVersion: number = 0;
   private darkModeListener: mediaquery.MediaQueryListener = mediaquery.matchMediaSync('(dark-mode: true)');
 
   // 暴露点击事件
@@ -91,6 +92,17 @@ export struct UniversalHistoryList {
       .backgroundColor(Color.Transparent)
   }
 
+  async deleteRecord(item: HistoryRecord) {
+    if (item.id !== undefined) {
+      await HistoryRepository.deleteRecord(item.id);
+    }
+
+    animateTo({ duration: 350, curve: Curve.Friction }, () => {
+      this.historyList = this.historyList.filter(record => record.id !== item.id);
+      this.groupVersion++;
+    });
+  }
+
   @Builder
   deleteAction(item: HistoryRecord) {
     Row() {
@@ -103,13 +115,8 @@ export struct UniversalHistoryList {
       .height(48)
       .backgroundColor('#FF3B30')
       .shadow({ radius: 8, color: '#33FF3B30', offsetY: 4 })
-      .onClick(async () => {
-        if (item.id !== undefined) {
-          await HistoryRepository.deleteRecord(item.id);
-        }
-        animateTo({ duration: 350, curve: Curve.Friction }, () => {
-          this.historyList = this.historyList.filter(record => record.id !== item.id);
-        });
+      .onClick(() => {
+        this.deleteRecord(item);  // ← 调用普通方法
       })
     }
     .height('100%')
@@ -212,7 +219,7 @@ export struct UniversalHistoryList {
               }, (item: HistoryRecord) => item.id?.toString())
 
             }
-          }, (group: HistoryGroup) => group.title)
+          }, (group: HistoryGroup) => group.title + this.groupVersion)
 
           if (this.isGlobalPage) {
             ListItem() { Row().width('100%').height(this.navBarHeight + 64) }
