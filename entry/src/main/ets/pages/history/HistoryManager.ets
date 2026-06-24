@@ -80,7 +80,7 @@ export struct HistoryManager {
     }
     .mode(NavigationMode.Stack)
     .titleBar({
-      content: { title: { mainTitle: '全局历史记录' } },
+      content: { title: { mainTitle: '历史记录' } },
       style: {
         scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: ScrollEffectType.GRADIENT_BLUR },
         systemMaterialEffect: { materialType: hdsMaterial.MaterialType.ADAPTIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE }
