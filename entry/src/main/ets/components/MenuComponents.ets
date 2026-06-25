@@ -1,4 +1,10 @@
-// entry/src/main/ets/components/MenuComponents.ets
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * * @file MenuComponents.ets
+ * @description
+* * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
 
 // ==================== UI 组件库 ====================
 

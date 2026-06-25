@@ -1,3 +1,11 @@
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * * @file .ets
+ * @description
+* * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
+
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';

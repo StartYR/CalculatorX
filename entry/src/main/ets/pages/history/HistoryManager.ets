@@ -1,4 +1,11 @@
-// entry/src/main/ets/pages/history/HistoryManager.ets
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * * @file .ets
+ * @description
+* * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
+
 import router from '@ohos.router';
 import { common, ConfigurationConstant } from '@kit.AbilityKit';
 import {

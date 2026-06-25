@@ -1,4 +1,11 @@
-// entry/src/main/ets/components/BottomKeyboard.ets
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * * @file BottomKeyboard.ets
+ * @description
+* * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
+
 import { bottomButtons, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
 import { keyContextMenuRegistry, CustomMenuItem, PreferenceConfigs } from '../utils/CalculatorConfigs';
 import { vibrator } from '@kit.SensorServiceKit'; // 新增

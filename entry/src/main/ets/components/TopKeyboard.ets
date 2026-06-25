@@ -1,4 +1,11 @@
-// entry/src/main/ets/components/TopKeyboard.ets
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * * @file .ets
+ * @description
+* * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
+
 import { topButtons, topShiftButtons, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
 import { PreferenceConfigs, CombinationOptions, PermutationOptions } from '../utils/CalculatorConfigs';
 import { keyContextMenuRegistry, CustomMenuItem } from '../utils/CalculatorConfigs';

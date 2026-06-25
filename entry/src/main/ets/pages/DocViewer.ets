@@ -1,4 +1,10 @@
-// entry/src/main/ets/pages/DocViewer.ets
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * * @file .ets
+ * @description
+* * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
 import router from '@ohos.router';
 import webview from '@ohos.web.webview';
 import {

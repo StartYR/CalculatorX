@@ -1,4 +1,11 @@
-// entry/src/main/ets/pages/Index.ets
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * * @file .ets
+ * @description
+ * * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
+
 import font from '@ohos.font';
 import router from '@ohos.router';
 import { common } from '@kit.AbilityKit';

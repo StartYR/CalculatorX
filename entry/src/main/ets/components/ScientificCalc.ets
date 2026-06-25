@@ -1,11 +1,15 @@
 /**
- * @file ScientificCalc.ets
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * * @file ScientificCalc.ets
  * @description 科学计算器核心业务面板组件。
  * 本组件作为独立的业务模块，封装了科学计算器专用的双 Webview（前端渲染与后台暗房离线渲染）以及上下键盘。
  * 负责捕获用户输入、维护计算过程的局部状态（如 Ans、Shift、纯净 AST 等），
  * 并桥接 HapticUtils 与 EngineService 进行计算，最终通过 HistoryRepository 实现历史记录图文的持久化。
  * 此组件的剥离实现了 UI 业务层与 Index 全局主入口的彻底解耦。
+ * * @author 易睿 (Yi Rui)
+ * @date 2026/6/25 17:30
  */
+
 
 import web_webview from '@ohos.web.webview';
 import { TopKeyboard } from './TopKeyboard';
