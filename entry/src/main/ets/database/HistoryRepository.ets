@@ -1,4 +1,11 @@
-// entry/src/main/ets/database/HistoryRepository.ets
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * * @file .ets
+ * @description
+* * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
+
 import { relationalStore } from '@kit.ArkData';
 import { common } from '@kit.AbilityKit';
 

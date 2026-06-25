@@ -1,4 +1,11 @@
-// entry/src/main/ets/components/SideBarMenu.ets
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * * @file SideBarMenu.ets
+ * @description
+* * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
+
 import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from './MenuComponents';
 
 @Component

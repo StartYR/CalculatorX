@@ -1,4 +1,11 @@
-// entry/src/main/ets/pages/settings/Settings.ets
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * * @file .ets
+ * @description
+* * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
+
 import { preferences } from '@kit.ArkData';
 import { PreferenceConfigs, CombinationOptions, PermutationOptions, RoutePath, MathStyleOption } from '../../utils/CalculatorConfigs';
 import router from '@ohos.router';

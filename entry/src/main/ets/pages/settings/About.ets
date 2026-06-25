@@ -1,4 +1,11 @@
-// entry/src/main/ets/pages/settings/About.ets
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * * @file .ets
+ * @description
+* * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
+
 import router from '@ohos.router';
 import common from '@ohos.app.ability.common'; // 用于获取上下文以启动外部应用
 import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from '../../components/MenuComponents';

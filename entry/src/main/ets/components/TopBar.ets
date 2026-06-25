@@ -1,4 +1,11 @@
-// entry/src/main/ets/components/TopBar.ets
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * * @file .ets
+ * @description
+* * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
+
 
 @Component
 export struct TopBar {

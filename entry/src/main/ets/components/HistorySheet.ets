@@ -1,4 +1,11 @@
-// entry/src/main/ets/components/HistorySheet.ets
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * * @file HistorySheet.ets
+ * @description
+* * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
+
 import { HistoryRepository, HistoryRecord } from '../database/HistoryRepository';
 import { UniversalHistoryList } from './UniversalHistoryList';
 import { TipsDialog } from '@kit.ArkUI';
