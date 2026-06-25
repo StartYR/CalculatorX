@@ -39,6 +39,14 @@ export struct ScientificCalc {
   @State lastValidJson: string = "";      // 供 S⇄D 重新计算的纯净 AST
   @State isTempDecimal: boolean = false;  // 当前 S⇄D 面板的显示状态
 
+  aboutToAppear() {
+    // 监听全局广播，操控内部的 webviewController
+    let eventHub = getContext(this).eventHub;
+    eventHub.on('event_math_insert', (str: string) => { this.insertToWeb(str); });
+    eventHub.on('event_math_undo', () => { this.webviewController.runJavaScript(`document.querySelector('math-field').executeCommand('undo')`); });
+    eventHub.on('event_math_redo', () => { this.webviewController.runJavaScript(`document.querySelector('math-field').executeCommand('redo')`); });
+  }
+
   build() {
     Stack() {
       // 1. 核心布局区
