@@ -17,8 +17,8 @@
 ### 🛠️ 架构重构 (Refactoring)
 * **壳与插件架构 (SPA 改造)**：将原本重达 600 行的 `Index.ets` 彻底拆分为“纯粹的导航枢纽”。将原有的科学计算器相关的双 Webview、双键盘抽象为完全独立的业务组件 `<ScientificCalc />`。
 * **逻辑层彻底剥离**：
-  * 新增 `utils/EngineService.ts`：统一接管原本写在 UI 层的极度复杂的正则清洗、MathJSON AST 提取以及与底层 C++ `libentry.so` 引擎的 N-API 通信逻辑。
-  * 新增 `utils/HapticUtils.ts`：将按键反馈从 UI 交互中解耦，形成全局统一的马达震感（Hard/Sharp/Soft）控制服务。
+  * 新增 `utils/EngineService.ets`：统一接管原本写在 UI 层的极度复杂的正则清洗、MathJSON AST 提取以及与底层 C++ `libentry.so` 引擎的 N-API 通信逻辑。
+  * 新增 `utils/HapticUtils.ets`：将按键反馈从 UI 交互中解耦，形成全局统一的马达震感（Hard/Sharp/Soft）控制服务。
 * **事件总线解耦 (EventHub)**：在 `Index.ets` 与 `<ScientificCalc />` 之间引入 `eventHub.emit` 进行无耦合广播通信，彻底隔离全局事件与局部运算状态。
 
 ### 📝 文档完善 (Documentation)
