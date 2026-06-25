@@ -6,10 +6,9 @@
 
 [![Changelog](https://img.shields.io/badge/Changelog-v1.1.0-brightgreen.svg)](CHANGELOG.md)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Platform](https://img.shields.io/badge/Platform-HarmonyOS_NEXT-black.svg?logo=harmonyos)](https://developer.harmonyos.com/)
+[![Platform](https://img.shields.io/badge/Platform-HarmonyOS_NEXT-blue.svg?logo=harmonyos)](https://developer.harmonyos.com/)
 [![Tech Stack](https://img.shields.io/badge/Tech-ArkTS_%7C_C%2B%2B_%7C_Web-blue)](#)
 [![Engine](https://img.shields.io/badge/CAS-Giac_%7C_SymEngine-red)](#)
-
 
 🌐 [访问官网](https://calcx.startyi.com) • 📖 [查看使用帮助](https://calcx.startyi.com/help) • 🐛 [提交 Issue](https://github.com/StarHeartY/CalculatorX/issues/new)
 
