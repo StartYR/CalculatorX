@@ -1,4 +1,5 @@
 // entry/src/main/ets/utils/HapticUtils.ets
+
 import { vibrator } from '@kit.SensorServiceKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 
