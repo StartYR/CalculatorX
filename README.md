@@ -50,7 +50,7 @@ CalculatorX 采用深度融合的三层架构，彻底打破了传统前端计�
 3.  **计算核心层 (C++ & N-API)**：由 Giac 处理符号逻辑，SymEngine 与自研 `FastMath` 处理极速数值运算，搭配 `ErrorHandler` 状态机实现 0 闪退拦截。
 
 > 💡 **想要深入了解我们的架构设计？**
-> 请参阅完整的 [📖 CalculatorX 核心架构设计文档](docs/ARCHITECTURE.md)，详细了解“壳与插件”模型以及跨端数据流转机制。
+> 请参阅 📖 [CalculatorX 核心架构设计文档](docs/ARCHITECTURE.md)，详细了解“壳与插件”模型以及跨端数据流转机制。
 
 
 ## 🚀 路线图 (Roadmap)
@@ -74,14 +74,14 @@ CalculatorX 采用深度融合的三层架构，彻底打破了传统前端计�
 * IDE: **DevEco Studio** (支持 HarmonyOS NEXT)
 * API Version: **21+**
 * C++ 交叉编译工具链已内置于 CMakeLists 流程中，首次编译可能需要 1-3 分钟解压 `boost` 与 `giac` 离线包。
-* 阅读 🧑‍💻 开发者协作规范，了解项目目录规范与代码解耦原则。
+
+阅读 🧑‍💻 [开发者协作规范](docs/CONTRIBUTING.md)，了解项目目录规范与代码解耦原则。
 
 **克隆与运行**：
 ```bash
 git clone https://github.com/StarHeartY/CalculatorX.git
 ```
 
-阅读 [🧑‍💻 开发者协作规范](docs/CONTRIBUTING.md)，了解项目目录规范与代码解耦原则。
 
 ## 📄 版权与许可
 
