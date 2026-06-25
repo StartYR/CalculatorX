@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
- * * @file .ets
- * @description
+ * * @file HistoryRepository.ets
+ * @description 关系型数据库 (RDB) 调度中心，负责计算图文记录的异步存取
 * * @author 易睿 (Yi Rui)
  * @date 2026
  */

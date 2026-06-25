@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
- * * @file .ets
- * @description
+ * * @file TopBar.ets
+ * @description 顶部悬浮控制栏（搭载动态状态岛）
 * * @author 易睿 (Yi Rui)
  * @date 2026
  */

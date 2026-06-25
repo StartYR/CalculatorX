@@ -1,4 +1,10 @@
-// entry/src/main/ets/utils/HapticUtils.ets
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * * @file HapticUtils.ets
+ * @description 触控震感中心：全局接管 Hard/Sharp/Soft 马达曲线
+ * * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
 
 import { vibrator } from '@kit.SensorServiceKit';
 import { BusinessError } from '@kit.BasicServicesKit';

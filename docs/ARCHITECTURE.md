@@ -86,8 +86,8 @@ entry/src/main/
 │   │   └── SideBarMenu.ets            # 手势驱动的侧边栏菜单
 │   │
 │   ├── utils/                         # 🧠 核心服务与纯逻辑层
-│   │   ├── EngineService.ts           # CAS 引擎中枢：正则清洗、AST 解析及 N-API 调度
-│   │   ├── HapticUtils.ts             # 触控震感中心：全局接管 Hard/Sharp/Soft 马达曲线
+│   │   ├── EngineService.ets           # CAS 引擎中枢：正则清洗、AST 解析及 N-API 调度
+│   │   ├── HapticUtils.ets             # 触控震感中心：全局接管 Hard/Sharp/Soft 马达曲线
 │   │   └── CalculatorConfigs.ets      # 全局配置与状态映射
 │   │
 │   └── database/HistoryRepository.ets # 关系型数据库 (RDB) 调度中心

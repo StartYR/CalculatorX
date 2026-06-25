@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
- * * @file .ets
- * @description
+ * * @file TopKeyboard.ets
+ * @description 科学计算器上键盘组件，承载高级数学符号、函数与表达式输入
 * * @author 易睿 (Yi Rui)
  * @date 2026
  */

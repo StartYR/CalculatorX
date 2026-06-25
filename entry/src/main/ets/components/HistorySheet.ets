@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
  * * @file HistorySheet.ets
- * @description
+ * @description 局部历史半模态抽屉
 * * @author 易睿 (Yi Rui)
  * @date 2026
  */

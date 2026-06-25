@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
- * * @file .ets
- * @description
+ * * @file HistoryManager.ets
+ * @description 全局全屏历史检索页，用于处理跨模块的海量计算记录检索
 * * @author 易睿 (Yi Rui)
  * @date 2026
  */

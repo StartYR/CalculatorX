@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
- * * @file .ets
- * @description
+ * * @file DocViewer.ets
+ * @description 内置文档查看器页面，基于 Webview 加载在线帮助文档与使用指南
 * * @author 易睿 (Yi Rui)
  * @date 2026
  */

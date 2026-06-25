@@ -1,4 +1,10 @@
-// entry/src/main/cpp/ErrorHandler.h
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * @file ErrorHandler.h
+ * @description 异常状态机：精准拦截除零、溢出等业务错误
+ * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
 #ifndef ERROR_HANDLER_H
 #define ERROR_HANDLER_H
 

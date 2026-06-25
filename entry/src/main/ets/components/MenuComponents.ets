@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
  * * @file MenuComponents.ets
- * @description
+ * @description 菜单组件库，提供无状态的纯 UI 积木
 * * @author 易睿 (Yi Rui)
  * @date 2026
  */
