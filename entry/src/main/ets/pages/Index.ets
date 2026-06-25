@@ -15,8 +15,8 @@ import { SideBarMenu } from '../components/SideBarMenu';
 import { HistorySheet } from '../components/HistorySheet';
 import { HistoryRepository } from '../database/HistoryRepository';
 
-// [新增] 引入我们刚刚抽离的独立科学计算器面板
-import { ScientificCalc } from '../components/ScientificCalc';
+import { ScientificCalc } from '../components/ScientificCalc'; // 科学计算器面板
+import { BasicCalc } from '../components/BasicCalc'; // 基础计算器面板
 
 @Entry
 @Component
@@ -60,6 +60,8 @@ struct Index {
       Column() {
         if (this.currentModule === 'scientific') {
           ScientificCalc() // 动态挂载科学计算器面板
+        } else if (this.currentModule === 'basic') {
+          BasicCalc() // [重构挂载] 动态挂载基础计算器面板
         } else {
           // 未来预留给 EquationSolver() 或 Graphing() 等
           Column() {
@@ -83,7 +85,8 @@ struct Index {
       TopBar({
         isShift: false, // 占位：UI已解耦，未来若需在顶栏显示Shift，可通过 AppStorage 同步
         isRad: this.isRad,
-        moduleTitle: '科学计算',
+        // 根据当前模块动态显示顶栏标题
+        moduleTitle: this.currentModule === 'scientific' ? '科学计算' : '基础计算',
         onMenuClick: () => {
           animateTo({ duration: 350, curve: Curve.Friction }, () => {
             this.isSidebarOpen = true;
@@ -113,7 +116,11 @@ struct Index {
         SideBarMenu({
           isSidebarOpen: $isSidebarOpen,
           onSettingsClick: () => { router.pushUrl({ url: RoutePath.SETTINGS }); },
-          onHistoryClick: () => { router.pushUrl({ url: RoutePath.HISTORY }); }
+          onHistoryClick: () => { router.pushUrl({ url: RoutePath.HISTORY }); },
+          // 响应侧边栏的模块切换，更新当前主板的状态
+          onModuleSelect: (module: string) => {
+            this.currentModule = module;
+          }
         })
       }
 

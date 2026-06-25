@@ -13,6 +13,7 @@ export struct SideBarMenu {
   @Link isSidebarOpen: boolean;
   onSettingsClick?: () => void;
   onHistoryClick?: () => void;
+  onModuleSelect?: (module: string) => void;
 
   // 用于实时记录手指拖拽的横向偏移量
   @State dragOffsetX: number = 0;
@@ -117,9 +118,23 @@ export struct SideBarMenu {
             Column() {
               GroupHeader({ title: '模式' })
               MenuGroup() {
-                MenuButton({ icon: $r('sys.symbol.calculator_1'), title: '基础计算', onClickAction: () => { /* TODO */ } })
+                MenuButton({
+                  icon: $r('sys.symbol.calculator_1'),
+                  title: '基础计算',
+                  onClickAction: () => {
+                    animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+                    if (this.onModuleSelect) { this.onModuleSelect('basic'); }
+                  }
+                })
                 ItemDivider()
-                MenuButton({ icon: $r('sys.symbol.calculator'), title: '科学计算', onClickAction: () => { /* TODO */ } })
+                MenuButton({
+                  icon: $r('sys.symbol.calculator'),
+                  title: '科学计算',
+                  onClickAction: () => {
+                    animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+                    if (this.onModuleSelect) { this.onModuleSelect('scientific'); }
+                  }
+                })
               }
             }
             .padding({ left: 16, right: 16, bottom: 12 })
