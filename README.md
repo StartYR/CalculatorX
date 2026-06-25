@@ -10,7 +10,7 @@
 [![Engine](https://img.shields.io/badge/CAS-Giac_%7C_SymEngine-red)](#)
 
 
-🌐 [访问官网](https://calcx.startyi.com) • 📖 [查看使用帮助](https://calcx.startyi.com/help) • 🐛 [提交 Issue](#)
+🌐 [访问官网](https://calcx.startyi.com) • 📖 [查看使用帮助](https://calcx.startyi.com/help) • 🐛 [提交 Issue](https://github.com/StarHeartY/CalculatorX/issues/new)
 
 </div>
 
