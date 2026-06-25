@@ -94,6 +94,14 @@ export const bottomButtons: Array<string | Resource> = [
   '.', '0', icon_exp, 'Ans', '=',
 ];
 
+export const basicButtons: Array<string | Resource> = [
+  '⌫', 'AC', '%', '÷',
+  '7', '8', '9', '×',
+  '4', '5', '6', '−',
+  '1', '2', '3', '+',
+  '.', '0', 'Ans', '='
+];
+
 // ========== 3. 样式映射函数 ==========
 export function getActionId(btn: string | Resource): string {
   if (typeof btn === 'string') return btn;
