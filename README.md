@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🚀 CalculatorX - 专业符号计算器
+# 🚀 [CalculatorX](https://calcx.startyi.com) - 专业符号计算器
 
 **打破移动端计算瓶颈，探索数学的无限可能**
 
