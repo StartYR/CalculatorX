@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
  * * @file BottomKeyboard.ets
- * @description
+ * @description 科学计算器下键盘组件，承载数字、基础运算符与核心功能按键
 * * @author 易睿 (Yi Rui)
  * @date 2026
  */

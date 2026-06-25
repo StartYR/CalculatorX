@@ -1,4 +1,10 @@
-// entry/src/main/ets/utils/CalculatorConfigs.ets
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * * @file CalculatorConfigs.ets
+ * @description 全局配置与状态映射
+ * * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
 
 // ========== 1. SVG 资源定义 ==========
 export const icon_sum: Resource = $rawfile('icons/math/icon_sum.svg');

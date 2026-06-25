@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
- * * @file .ets
- * @description
+ * * @file Index.ets
+ * @description 全局唯一主入口，负责处理组件的动态挂载和系统级返回逻辑
  * * @author 易睿 (Yi Rui)
  * @date 2026
  */

@@ -1,4 +1,10 @@
-// entry/src/main/ets/utils/EngineService.ets
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * * @file EngineService.ets
+ * @description CAS 引擎中枢：正则清洗、AST 解析及 N-API 调度
+ * * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
 import testNapi from 'libentry.so';
 
 export class EngineService {

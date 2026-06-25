@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * @file engine.cpp
+ * @description AST 树解析与精度控制枢纽
+ * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
 #include "napi/native_api.h"
 #include "json.hpp"
 #include "core/parser.h"
