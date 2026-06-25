@@ -4,14 +4,36 @@
 
 **打破移动端计算瓶颈，探索数学的无限可能**
 
-[![Changelog](https://img.shields.io/badge/Changelog-v1.1.0-brightgreen.svg)](CHANGELOG.md)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Platform](https://img.shields.io/badge/Platform-HarmonyOS_NEXT-blue.svg?logo=harmonyos)](https://developer.harmonyos.com/)
-[![Tech Stack](https://img.shields.io/badge/Tech-ArkTS_%7C_C%2B%2B_%7C_Web-blue)](#)
-[![Engine](https://img.shields.io/badge/CAS-Giac_%7C_SymEngine-red)](#)
+[![Changelog](https://img.shields.io/badge/Changelog-v1.1.0-2d8b4c.svg)](CHANGELOG.md)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-0052cc.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Platform](https://img.shields.io/badge/Platform-HarmonyOS_NEXT-007dff.svg?logo=harmonyos)](https://developer.harmonyos.com/)
+[![Tech Stack](https://img.shields.io/badge/Tech-ArkTS_%7C_C%2B%2B_%7C_Web-6c45a8.svg)](#)
+[![Engine](https://img.shields.io/badge/CAS-Giac_%7C_SymEngine-c73d3d.svg)](#)
+
+[![Changelog](https://img.shields.io/badge/Changelog-v1.1.0-2d8b4c?style=for-the-badge)](CHANGELOG.md)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-0052cc?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
+[![Platform](https://img.shields.io/badge/Platform-HarmonyOS_NEXT-007dff?style=for-the-badge&logo=harmonyos)](https://developer.harmonyos.com/)
+[![Tech Stack](https://img.shields.io/badge/Tech-ArkTS_%7C_C%2B%2B_%7C_Web-6c45a8?style=for-the-badge)](#)
+[![Engine](https://img.shields.io/badge/CAS-Giac_%7C_SymEngine-c73d3d?style=for-the-badge)](#)
 
 🌐 [访问官网](https://calcx.startyi.com) • 📖 [查看使用帮助](https://calcx.startyi.com/help) • 🐛 [提交 Issue](https://github.com/StarHeartY/CalculatorX/issues/new)
 
+
+[![访问官网](https://img.shields.io/badge/访问官网-calcx.startyi.com-1890ff.svg&logo=googlechrome&logoColor=white)](https://calcx.startyi.com)
+[![使用帮助](https://img.shields.io/badge/使用帮助-Documentation-00b4ab.svg&logo=readthedocs&logoColor=white)](https://calcx.startyi.com/help)
+[![提交Issue](https://img.shields.io/badge/提交Issue-Bug_Report-e34f26.svg&logo=github&logoColor=white)](https://github.com/StarHeartY/CalculatorX/issues/new)
+
+
+
+[![官网](https://img.shields.io/badge/🌐_官网-calcx.startyi.com-1890ff.svg)](https://calcx.startyi.com)
+[![使用帮助](https://img.shields.io/badge/📖_使用帮助-Documentation-00b4ab.svg)](https://calcx.startyi.com/help)
+[![提交Issue](https://img.shields.io/badge/🐛_提交_Issue-Bug_Report-e34f26.svg)](https://github.com/StarHeartY/CalculatorX/issues/new)
+
+
+
+[![访问官网](https://img.shields.io/badge/访问官网-calcx.startyi.com-1890ff?style=for-the-badge&logo=googlechrome&logoColor=white)](https://calcx.startyi.com)
+[![使用帮助](https://img.shields.io/badge/使用帮助-Documentation-00b4ab?style=for-the-badge&logo=readthedocs&logoColor=white)](https://calcx.startyi.com/help)
+[![提交Issue](https://img.shields.io/badge/提交Issue-Bug_Report-e34f26?style=for-the-badge&logo=github&logoColor=white)](https://github.com/StarHeartY/CalculatorX/issues/new)
 </div>
 
 
