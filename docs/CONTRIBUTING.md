@@ -9,7 +9,7 @@
 
 - 🚫 **`pages/` (页面层)**：**绝对禁止**在这里编写具体的计算器 UI 逻辑。这里只允许存放全屏级别的容器骨架（如 `Index.ets`, `HistoryManager.ets`）。
 - 🧩 **`components/` (业务与 UI 层)**：所有新的功能模块（如 `ScientificCalc.ets`, `BasicCalc.ets`）必须作为一个独立的组件放在这里。组件内部应实现完全闭环。
-- 🧠 **`utils/` (服务层)**：存放纯 TypeScript 逻辑。严禁在这里引入任何 UI 组件。N-API 调用、正则清洗、震动控制必须封装在这里（如 `CASBridge.ts`, `HapticUtils.ts`）。
+- 🧠 **`utils/` (服务层)**：存放纯 TypeScript 逻辑。严禁在这里引入任何 UI 组件。N-API 调用、正则清洗、震动控制必须封装在这里（如 `CASBridge.ets`, `HapticUtils.ets`）。
 
 
 ## 🛠️ 2. 新增功能模块 SOP (标准作业程序)

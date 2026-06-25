@@ -4,6 +4,7 @@
 
 **打破移动端计算瓶颈，探索数学的无限可能**
 
+[![Changelog](https://img.shields.io/badge/Changelog-v1.1.0-brightgreen.svg)](CHANGELOG.md)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Platform](https://img.shields.io/badge/Platform-HarmonyOS_NEXT-black.svg?logo=harmonyos)](https://developer.harmonyos.com/)
 [![Tech Stack](https://img.shields.io/badge/Tech-ArkTS_%7C_C%2B%2B_%7C_Web-blue)](#)
