@@ -58,7 +58,7 @@ export struct HistoryManager {
       this.createTabItem('计算', $r('sys.symbol.calculator_fill')),
       this.createTabItem('方程', $r('sys.symbol.exponentiation')),
       this.createTabItem('函数图像', $r('sys.symbol.arrow_counterclockwise_clock_fill')),
-      this.createTabItem('矩阵向量', $r('sys.symbol.exponentiation')),
+      this.createTabItem('矩阵向量', $r('sys.symbol.arrow_counterclockwise_clock')),
       this.createTabItem('统计分析', $r('sys.symbol.exponentiation'))
     ];
   }
