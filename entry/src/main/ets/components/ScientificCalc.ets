@@ -10,355 +10,373 @@
  * @date 2026/6/25 17:30
  */
 
-
-import web_webview from '@ohos.web.webview';
-import { TopKeyboard } from './TopKeyboard';
-import { BottomKeyboard } from './BottomKeyboard';
-import { getActionId, PreferenceConfigs } from '../utils/CalculatorConfigs';
-import { HistoryRepository } from '../database/HistoryRepository';
-import { EngineService } from '../utils/EngineService';
+import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
+import { vibrator } from '@kit.SensorServiceKit';
+import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
+import { keyContextMenuRegistry, CustomMenuItem, PreferenceConfigs } from '../utils/CalculatorConfigs';
+import { CombinationOptions, PermutationOptions, icon_integral, icon_indef_integral, icon_abs, icon_sqrt, icon_sqrt3, icon_sqrtx, icon_power2, icon_power, icon_fraction, icon_power3, icon_exp, icon_inverse, icon_e_power, icon_comma, icon_fact, icon_sum, icon_product } from '../utils/CalculatorConfigs';
 
+// ================= 1. 私有按键布局数组 =================
+const topShiftButtons: Array<string | Resource> = [
+  '', '', '', '', '', '',
+  'm', 'n', 'd/dx', icon_indef_integral,'GCD', 'LCM',
+  'a', 'b', 'c', 'd', icon_e_power, 'lg',
+  'mod', icon_sqrt3, '%', icon_power3, icon_comma, icon_inverse,
+  'sin⁻¹', 'cos⁻¹', 'tan⁻¹', 'x', 'y', 'z',
+];
+
+const topButtons: Array<string | Resource> = [
+  '⇧Shift', 'R/D', '⇦', '⇨', 'S⇄D', 'i',
+  '° \' \"', '∞', 'lim', icon_integral, icon_sum, icon_product,
+  icon_fact, 'nCr', 'nPr', 'e', 'ln', 'log',
+  icon_abs, icon_sqrt, icon_sqrtx, icon_power2, icon_power, icon_fraction,
+  'sin', 'cos', 'tan', 'π', '(', ')',
+];
+
+const bottomButtons: Array<string | Resource> = [
+  '7', '8', '9', '⌫', 'AC',
+  '4', '5', '6', '×', '÷',
+  '1', '2', '3', '+', '−',
+  '.', '0', icon_exp, 'Ans', '=',
+];
+
+// ================= 2. 局部私有键盘组件 =================
 @Component
-export struct ScientificCalc {
-  // 全局配置属性
-  @StorageProp('answerOutputMode') answerOutputMode: number = 0;
-  @StorageProp('isRad') isRad: boolean = false;
-  @StorageProp('navBarHeight') navBarHeight: number = 0;
-  @StorageProp('vibrationCurve') vibrationCurve: number = 0;
-  @StorageProp('decimalPrecision') decimalPrecision: number = 13;
-  @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
+struct TopKeyItem {
+  btn: string | Resource = '';
+  btnIndex: number = 0;
+  @Link isShift: boolean;
   @StorageProp(PreferenceConfigs.KEY_COMBINATION_SELECT) combSelect: number = 1;
   @StorageProp(PreferenceConfigs.KEY_PERMUTATION_SELECT) permSelect: number = 1;
-  @StorageLink('isRad') angleModeIndex: number = 0;
+  @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
+  @State isMenuShow: boolean = false;
 
-  // 内部 Webview 控制器：为了保证组件的高内聚，我们在组件内部进行实例化
-  webviewController: web_webview.WebviewController = new web_webview.WebviewController();
-  renderWebController: web_webview.WebviewController = new web_webview.WebviewController();
+  private startDelayTimer: number = -1;
+  private repeatMoveTimer: number = -1;
 
-  // ================= 科学计算器专属局部状态 =================
-  // 绝不让这些局部变量污染未来的全局环境
-  @State isShift: boolean = false;
-  @State lastAnsLatex: string = "0";      // 供 Ans 调用的上一次结果
-  @State lastValidJson: string = "";      // 供 S⇄D 重新计算的纯净 AST
-  @State isTempDecimal: boolean = false;  // 当前 S⇄D 面板的显示状态
+  onKeyPress: (btn: string | Resource) => void = () => {};
+  onMenuSelect: (actionCode: string) => void = () => {};
 
-  aboutToAppear() {
-    // 监听全局广播，操控内部的 webviewController
-    let eventHub = getContext(this).eventHub;
-    eventHub.on('event_math_insert', (str: string) => { this.insertToWeb(str); });
-    eventHub.on('event_math_undo', () => { this.webviewController.runJavaScript(`document.querySelector('math-field').executeCommand('undo')`); });
-    eventHub.on('event_math_redo', () => { this.webviewController.runJavaScript(`document.querySelector('math-field').executeCommand('redo')`); });
-  }
-
-  aboutToDisappear() {
-    let eventHub = getContext(this).eventHub;
-    eventHub.off('event_math_insert');
-    eventHub.off('event_math_undo');
-    eventHub.off('event_math_redo');
+  @Builder
+  MenuBuilder() {
+    Menu() {
+      ForEach(keyContextMenuRegistry[this.btn as string] || [], (item: CustomMenuItem) => {
+        MenuItem({ content: item.value })
+          .onClick(() => {
+            this.isMenuShow = false;
+            this.onMenuSelect(item.actionCode);
+          })
+      })
+    }
   }
 
   build() {
-    Stack() {
-      // 1. 核心布局区
-      Column() {
-        // 公式显示区
-        Web({
-          src: $rawfile('calculator.html'),
-          controller: this.webviewController
-        })
-          .darkMode(WebDarkMode.Auto)
-          .width('100%')
-          .height('30%')
-          .backgroundColor(Color.Transparent)
-
-        // 键盘区域
-        Column() {
-          TopKeyboard({
-            isShift: $isShift,
-            onKeyPress: (btn: string | Resource): void => { this.handleButtonClick(btn); },
-            onMenuSelect: (actionCode: string): void => { this.handleButtonLongPress(actionCode); }
-          })
-
-          BottomKeyboard({
-            onKeyPress: (btn: string | Resource): void => { this.handleButtonClick(btn); },
-            onMenuSelect: (actionCode: string): void => { this.handleButtonLongPress(actionCode); }
-          })
+    Column() {
+      if (this.btnIndex >= 6) {
+        Row() {
+          if (typeof topShiftButtons[this.btnIndex] === 'string') {
+            Text(topShiftButtons[this.btnIndex] as string)
+              .fontFamily(getFontFamily(topShiftButtons[this.btnIndex]))
+              .fontSize(15)
+              .fontColor('#ffac8100')
+              .textAlign(TextAlign.Center)
+              .width('100%')
+          } else {
+            Image(topShiftButtons[this.btnIndex] as Resource)
+              .width(24)
+              .height(24)
+              .fillColor('#ffac8100')
+              .objectFit(ImageFit.Contain)
+          }
         }
         .width('100%')
-        .height('70%')
-        .backgroundColor($r('sys.color.comp_background_secondary'))
-        .padding({ bottom: this.navBarHeight })
+        .height(16)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .margin({ bottom: 1 })
+      } else {
+        Row()
+          .width('100%')
+          .height(6)
       }
-      .width('100%')
-      .height('100%')
 
-      // 2. 暗房 Webview
-      Web({
-        src: $rawfile('render.html'),
-        controller: this.renderWebController
+      Button() {
+        if (this.btn === 'nCr') {
+          Image(CombinationOptions[this.combSelect].icon)
+            .width('100%')
+            .height(36)
+            .objectFit(ImageFit.Contain)
+            .fillColor($r('sys.color.font_secondary'))
+        } else if (this.btn === 'nPr') {
+          Image(PermutationOptions[this.permSelect].icon)
+            .width('100%')
+            .height(36)
+            .objectFit(ImageFit.Contain)
+            .fillColor($r('sys.color.font_secondary'))
+        } else if (typeof this.btn === 'string') {
+          Text(this.btn)
+            .fontFamily(getFontFamily(this.btn))
+            .fontSize(getFontSize(this.btn))
+            .fontWeight(FontWeight.Medium)
+            .fontColor(getFontColor(this.btn))
+        } else {
+          Image(this.btn)
+            .width(36)
+            .height(36)
+            .fillColor($r('sys.color.font_secondary'))
+        }
+      }
+      .type(ButtonType.Normal)
+      .borderRadius(12)
+      .width('100%')
+      .layoutWeight(1)
+      .padding({ left: 2, right: 2, top: 0, bottom: 0 })
+      .backgroundColor(getBgColor(this.btn, this.isShift))
+      .shadow(ShadowStyle.OUTER_DEFAULT_SM)
+      .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
+      .borderColor($r('app.color.btn_highlight'))
+      .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
+      .stateStyles({
+        pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
+        normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
       })
-        .width(1000)
-        .height(2000)
-        .position({ x: -5000, y: -5000 })
-        .backgroundColor(Color.Transparent)
-        .javaScriptAccess(true)
-        .domStorageAccess(true)
-        // 注册通信桥梁，把 ArkTS 的方法暴露给 render.html
-        .javaScriptProxy({
-          object: {
-            onImageReady: (jsonStr: string) => {
-              try {
-                let parsed = JSON.parse(jsonStr) as Record<string, string>;
-                if (parsed['error']) {
-                  console.error("暗房报错: " + parsed['error']);
-                  return;
-                }
-                // 在这里执行真正的数据库异步插入
-                HistoryRepository.insertRecord({
-                  moduleType: 'scientific',
-                  inputContent: parsed['inputLatex'],
-                  outputContent: parsed['outputLatex'],
-                  inputBase64: parsed['inputBase64'],
-                  outputBase64: parsed['outputBase64'],
-                  timestamp: Date.now(),
-                }).then((rowId: number) => {
-                  console.info(`HistoryRepository: 历史记录图文保存成功, rowId = ${rowId}`);
-                });
-              } catch (e) {
-                console.error("解析暗房回传数据失败");
-              }
+      .onClick(() => {
+        if (this.btn === '⇧Shift') {
+          this.isShift = !this.isShift;
+          return;
+        }
+
+        if (this.isShift && topShiftButtons[this.btnIndex] !== '') {
+          this.onKeyPress(topShiftButtons[this.btnIndex]);
+          this.isShift = false;
+        } else {
+          this.onKeyPress(this.btn);
+        }
+      })
+      .onTouch((event: TouchEvent) => {
+        if (this.btn === '⇦' || this.btn === '⇨') {
+          if (event.type === TouchType.Down) {
+            clearTimeout(this.startDelayTimer);
+            clearInterval(this.repeatMoveTimer);
+
+            this.startDelayTimer = setTimeout(() => {
+              this.repeatMoveTimer = setInterval(() => {
+                this.onKeyPress(this.btn as string);
+              }, 80);
+            }, 500);
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            clearTimeout(this.startDelayTimer);
+            clearInterval(this.repeatMoveTimer);
+          }
+        }
+      })
+      .bindContextMenu(this.isMenuShow, this.MenuBuilder, {
+        onDisappear: () => { this.isMenuShow = false; }
+      })
+      .gesture(
+        LongPressGesture({ repeat: false, duration: 300 }).onAction(() => {
+          if (typeof this.btn === 'string' && keyContextMenuRegistry[this.btn]) {
+            if (this.hapticFeedback) {
+              vibrator.startVibration({
+                type: 'preset',
+                effectId: 'haptic.effect.sharp',
+                count: 1
+              }, { usage: 'touch' }).catch(() => {});
             }
-          },
-          name: "arktsBridge",           // 前端通过 window.arktsBridge 访问
-          methodList: ["onImageReady"],  // 暴露给前端的方法名
-          controller: this.renderWebController
+            this.isMenuShow = true;
+          }
         })
+      )
     }
     .width('100%')
     .height('100%')
   }
+}
 
-  // ================= 核心操作逻辑 =================
+@Component
+struct BottomKeyItem {
+  btn: string | Resource = '';
+  @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
+  @State isMenuShow: boolean = false;
 
-  handleButtonClick(btn: string | Resource) {
-    // 提前解析按键类型，供计算和震动引擎共同使用
-    let action = getActionId(btn);
+  private startDelayTimer: number = -1;
+  private repeatDeleteTimer: number = -1;
 
-    // [重构] 触发系统原生震动，调用抽离的 HapticUtils
-    HapticUtils.playVibration(action, this.hapticFeedback, this.vibrationCurve);
+  onKeyPress: (btn: string | Resource) => void = () => {};
+  onMenuSelect: (actionCode: string) => void = () => {};
 
-    if (action === 'AC') {
-      this.webviewController.runJavaScript('clearMath()');
-    } else if (action === '⌫') {
-      this.webviewController.runJavaScript('deleteMath()');
-    } else if (action === 'S⇄D') {
-      if (!this.lastValidJson) return;
+  @Builder
+  MenuBuilder() {
+    Menu() {
+      ForEach(keyContextMenuRegistry[this.btn as string] || [], (item: CustomMenuItem) => {
+        MenuItem({ content: item.value })
+          .onClick(() => {
+            this.isMenuShow = false;
+            this.onMenuSelect(item.actionCode);
+          })
+      })
+    }
+  }
 
-      let cppPrecisionMode = -1;
-
-      // 拦截 Shift 状态
-      if (this.isShift) {
-        // 带分数
-        cppPrecisionMode = -4;
-        // 消费掉 Shift 状态，恢复正常键盘
-        this.isShift = false;
+  build() {
+    Button() {
+      if (typeof this.btn === 'string') {
+        Text(this.btn)
+          .fontFamily(getFontFamily(this.btn))
+          .fontSize(getFontSize(this.btn))
+          .fontWeight(FontWeight.Medium)
+          .fontColor(getFontColor(this.btn))
       } else {
-        // 假分数
-        this.isTempDecimal = !this.isTempDecimal;
-        cppPrecisionMode = this.isTempDecimal ? (this.decimalPrecision === 16 ? -2 : this.decimalPrecision) : -3;
+        Image(this.btn)
+          .width(48)
+          .height(40)
+          .fillColor(getFontColor(this.btn))
       }
+    }
+    .type(ButtonType.Normal)
+    .borderRadius(16)
+    .width('100%')
+    .height('100%')
+    .padding({ left: 4, right: 4 })
+    .backgroundColor(getBgColor(this.btn, false))
+    .shadow(ShadowStyle.OUTER_DEFAULT_SM)
+    .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
+    .borderColor($r('app.color.btn_highlight'))
+    .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
+    .stateStyles({
+      pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
+      normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
+    })
+    .onClick(() => {
+      this.onKeyPress(this.btn as string);
+    })
+    .onTouch((event: TouchEvent) => {
+      if (this.btn === '⌫') {
+        if (event.type === TouchType.Down) {
+          clearTimeout(this.startDelayTimer);
+          clearInterval(this.repeatDeleteTimer);
 
-      // [重构] 发送给 C++，调用抽离的 EngineService
-      let cppResponse: string = EngineService.calculateNative(this.lastValidJson, this.isRad, cppPrecisionMode);
-      if (cppResponse.includes("Error")) {
-        console.error("C++ 转换错误: "+ cppResponse);
+          this.startDelayTimer = setTimeout(() => {
+            this.repeatDeleteTimer = setInterval(() => {
+              this.onKeyPress(this.btn as string);
+            }, 80);
+          }, 500);
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          clearTimeout(this.startDelayTimer);
+          clearInterval(this.repeatDeleteTimer);
+        }
       }
-      this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
-    } else if (action === '=') {
-      this.webviewController.runJavaScript(
-        'window.getFormula()',
-        (error, rawLatexResult) => {
-          if (error) return;
-
-          // 1. 保留原始 LaTeX 以供图片渲染使用
-          let rawLatex = rawLatexResult.replace(/^"|"$/g, '').replace(/\\\\/g, '\\');
-
-          // 2. [重构] 调用 EngineService 进行多层防御性正则清洗
-          let cleanedLatex = EngineService.cleanRawLatex(rawLatexResult);
-
-          // 3. [重构] 调用 EngineService 生成注入 JS
-          let injectJs = EngineService.generateInjectJs(cleanedLatex);
-
-          this.webviewController.runJavaScript(injectJs, (err, jsonResult) => {
-            if (err) return;
-
-            // 4. [重构] 调用 EngineService 解析返回的 JSON
-            let cleanJsonString = EngineService.parseWebJsonResult(jsonResult);
-            this.lastValidJson = cleanJsonString;
-
-            console.info(`【清洗后传给C++的JSON】: ${cleanJsonString}`);
-
-            // ===== 将前端双状态映射为 C++ 单一控制码 =====
-            let cppPrecisionMode = -1;
-            if (this.answerOutputMode === 0) {
-              cppPrecisionMode = -1;
-            } else {
-              if (this.decimalPrecision === 16) {
-                cppPrecisionMode = -2;
-              } else {
-                cppPrecisionMode = this.decimalPrecision;
-              }
-            }
-
-            // 5. [重构] 调用 EngineService 触发 C++ 计算
-            let cppResponse: string = EngineService.calculateNative(cleanJsonString, this.isRad, cppPrecisionMode);
-
-            if (cppResponse.includes("Error")) {
-              console.error("C++ 计算错误: " + cppResponse);
-              this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
-            } else {
-              // 把成功的计算结果存入 Ans
-              this.lastAnsLatex = cppResponse;
-
-              // 发送指令给暗房
-              this.renderWebController.runJavaScript(
-                `window.exportLatexToPng(${JSON.stringify(rawLatex)}, ${JSON.stringify(cppResponse)})`
-              );
-
-              // 如果是自动模式(-1)，则通过判断结果里有没有小数点来判断是否为小数
-              if (cppPrecisionMode === -1) {
-                this.isTempDecimal = cppResponse.includes('.');
-              } else {
-                this.isTempDecimal = true;
-              }
-              this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
-            }
-          });
-        });
-    } else if (action === '⇦') {
-      this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveToPreviousChar')`);
-    } else if (action === '⇨') {
-      this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveToNextChar')`);
-    } else if (action === 'R/D') {
-      this.isRad = this.isRad === false ? true : false;// 状态翻转：0 变 1，1 变 0
-      return;
-    } else {
-      let latexChar = action;
-      switch (action) {
-        case '×':        latexChar = "\\times "; break;
-        case '÷':        latexChar = "\\div "; break;
-        case '−':        latexChar = "-"; break;
-        case 'π':        latexChar = "\\pi "; break;
-        case '∞':        latexChar = "\\infty "; break;
-        case 'i':        latexChar = "i"; break;
-        case 'comma':    latexChar = ","; break;
-        case 'fraction': latexChar = "\\frac{\\placeholder{}}{\\placeholder{}}"; break;
-        case 'sqrt':     latexChar = "\\sqrt{\\placeholder{}}"; break;
-        case 'sqrt3':    latexChar = "\\sqrt[3]{\\placeholder{}}"; break;
-        case 'sqrtx':    latexChar = "\\sqrt[\\placeholder{}]{\\placeholder{}}"; break;
-        case 'power2':   latexChar = "^2"; break;
-        case 'power3':   latexChar = "^3"; break;
-        case 'power':    latexChar = "^{\\placeholder{}}"; break;
-        case 'inverse':  latexChar = '^{-1}'; break;
-        case 'e_power':  latexChar = 'e^{\\placeholder{}}'; break;
-        case 'icon_exp': latexChar = '\\times 10^{\\placeholder{}}'; break;
-        case 'abs':      latexChar = "\\left| \\placeholder{} \\right|"; break;
-        case 'fact':     latexChar = "!"; break;
-        case 'ln':       latexChar = "\\ln\\left(\\placeholder{}\\right)"; break;
-        case 'lg':       latexChar = '\\lg\\left(\\placeholder{}\\right)'; break;
-        case 'log':      latexChar = "\\log_{\\placeholder{}}\\left(\\placeholder{}\\right)"; break;
-        case 'sin':      latexChar = "\\sin\\left(\\placeholder{}\\right)"; break;
-        case 'cos':      latexChar = "\\cos\\left(\\placeholder{}\\right)"; break;
-        case 'tan':      latexChar = "\\tan\\left(\\placeholder{}\\right)"; break;
-        case 'sin⁻¹':    latexChar = "\\arcsin\\left(\\placeholder{}\\right)"; break;
-        case 'cos⁻¹':    latexChar = "\\arccos\\left(\\placeholder{}\\right)"; break;
-        case 'tan⁻¹':    latexChar = "\\arctan\\left(\\placeholder{}\\right)"; break;
-        case 'integral': latexChar = "\\int_{\\placeholder{}}^{\\placeholder{}}\\left(\\placeholder{}\\right)dx"; break;
-        case 'indef_integral': latexChar = "\\int\\left(\\placeholder{}\\right)dx"; break;
-        case 'sum':      latexChar = "\\sum_{x=\\placeholder{}}^{\\placeholder{}}\\left(\\placeholder{}\\right)"; break;
-        case 'product':  latexChar = "\\prod_{x=\\placeholder{}}^{\\placeholder{}}\\left(\\placeholder{}\\right)"; break;
-        case 'd/dx':     latexChar = "\\frac{d}{dx}\\left(\\placeholder{}\\right)"; break;
-        case 'lim':      latexChar = "\\lim_{x \\to \\placeholder{}}\\left(\\placeholder{}\\right)"; break;
-        case '%':        latexChar = '\\%'; break;
-        case 'mod':      latexChar = '\\bmod '; break;
-        case 'GCD':      latexChar = '\\gcd\\left(\\placeholder{}, \\placeholder{}\\right)'; break;
-        case 'LCM':      latexChar = '\\operatorname{lcm}\\left(\\placeholder{}, \\placeholder{}\\right)'; break;
-
-        case '° \' \"':  this.webviewController.runJavaScript('insertDMS()'); return;
-
-        case 'Ans':
-          if (this.lastAnsLatex === "0") {
-            latexChar = "0"; // 初始状态
-          } else {
-            latexChar = "\\left(" + this.lastAnsLatex + "\\right)";
+    })
+    .bindContextMenu(this.isMenuShow, this.MenuBuilder, {
+      onDisappear: () => { this.isMenuShow = false; }
+    })
+    .gesture(
+      LongPressGesture({ repeat: false, duration: 300 }).onAction(() => {
+        if (typeof this.btn === 'string' && keyContextMenuRegistry[this.btn]) {
+          if (this.hapticFeedback) {
+            vibrator.startVibration({
+              type: 'preset',
+              effectId: 'haptic.effect.sharp',
+              count: 1
+            }, { usage: 'touch' }).catch(() => {});
           }
-          break;
+          this.isMenuShow = true;
+        }
+      })
+    )
+  }
+}
 
-        case 'nCr':
-          let combTemplates = [
-            "\\binom{\\placeholder{}}{\\placeholder{}}",                 // 0: 国际规范 \binom{n}{r}
-            "\\mathrm{C}_{\\placeholder{}}^{\\placeholder{}}",           // 1: C角标 Cₙᵏ C_n^r
-            "{}^{\\placeholder{}}\\mathrm{C}_{\\placeholder{}}",         // 2: 左上标 ⁿCᵣ ^nC_r
-            "{}_{\\placeholder{}}\\mathrm{C}_{\\placeholder{}}",         // 3: 左下标 ₙCᵣ _nC_r
-            "\\mathrm{C}\\left(\\placeholder{}, \\placeholder{}\\right)" // 4: 平铺 C(n,r)
-          ];
-          latexChar = combTemplates[this.combSelect];
-          break;
+// ================= 3. 科学计算器主外壳 =================
+@Component
+export struct ScientificCalc {
+  @StorageProp('navBarHeight') navBarHeight: number = 0;
+  @StorageProp('vibrationCurve') vibrationCurve: number = 0;
+  @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
 
-        case 'nPr':
-          let permTemplates = [
-            "\\mathrm{A}_{\\placeholder{}}^{\\placeholder{}}",           // 0: A角标 Aₙᵏ A_n^r
-            "\\mathrm{P}_{\\placeholder{}}^{\\placeholder{}}",           // 1: P角标 Pₙʳ P_n^r
-            "{}^{\\placeholder{}}\\mathrm{P}_{\\placeholder{}}",         // 2: 左上标 ⁿPᵣ ^nP_r
-            "{}_{\\placeholder{}}\\mathrm{P}_{\\placeholder{}}",         // 3: 左下标 ₙPᵣ _nP_r
-            "\\mathrm{P}\\left(\\placeholder{}, \\placeholder{}\\right)" // 4: 平铺 P(n,r)
-          ];
-          latexChar = permTemplates[this.permSelect];
-          break;
+  @State isShift: boolean = false;
+
+  aboutToAppear() {
+    getContext(this).eventHub.on('screen_shift_consumed', () => {
+      this.isShift = false;
+    });
+  }
+
+  aboutToDisappear() {
+    getContext(this).eventHub.off('screen_shift_consumed');
+  }
+
+  // 无脑向 FormulaScreen 传达按键意图
+  private handleButtonClick(btn: string | Resource) {
+    let action = getActionId(btn);
+    HapticUtils.playVibration(action, this.hapticFeedback, this.vibrationCurve);
+    getContext(this).eventHub.emit('screen_handle_action', action, this.isShift);
+  }
+
+  private handleButtonLongPress(actionCode: string) {
+    getContext(this).eventHub.emit('screen_handle_action', actionCode, this.isShift);
+  }
+
+  build() {
+    Column() {
+      // 1. 挂载万能屏幕，占位 30%
+      FormulaScreen({ moduleType: 'scientific' })
+        .height('30%')
+        .width('100%')
+
+      // 2. 挂载科学专属的上下双键盘，占位 70%
+      Column() {
+        // 顶部高级键盘
+        Grid() {
+          ForEach(topButtons, (btn: string | Resource, index: number) => {
+            GridItem() {
+              TopKeyItem({
+                btn: btn,
+                btnIndex: index,
+                isShift: $isShift,
+                onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); }, // 修复 ArkTS 类型检测
+                onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); } // 修复 ArkTS 类型检测
+              })
+            }
+          })
+        }
+        .rowsTemplate('8fr 10fr 10fr 10fr 10fr')
+        .columnsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
+        .rowsGap(4)
+        .columnsGap(5)
+        .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+        .clip(false)
+        .width('100%')
+        .height('55%')
+
+        // 底部基础键盘
+        Grid() {
+          ForEach(bottomButtons, (btn: string | Resource) => {
+            GridItem() {
+              BottomKeyItem({
+                btn: btn,
+                onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); }, // 修复 ArkTS 类型检测
+                onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); } // 修复 ArkTS 类型检测
+              })
+            }
+          })
+        }
+        .rowsTemplate('1fr 1fr 1fr 1fr')
+        .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
+        .rowsGap(12)
+        .columnsGap(8)
+        .padding({ left: 10, right: 10, top: 6, bottom: 0 })
+        .clip(false)
+        .width('100%')
+        .height('45%')
       }
-      this.insertToWeb(latexChar);
+      .width('100%')
+      .height('70%')
+      .backgroundColor($r('sys.color.comp_background_secondary'))
+      .padding({ bottom: this.navBarHeight })
     }
-  }
-
-  // 长按菜单指令分发
-  handleButtonLongPress(actionCode: string) {
-    if (!this.lastValidJson) return;
-
-    let cppPrecisionMode = -1;
-
-    switch (actionCode) {
-      case 'LONG_SD_DEC':   // 强制度分秒转回小数
-        this.isTempDecimal = true;
-        cppPrecisionMode = (this.decimalPrecision === 16 ? -2 : this.decimalPrecision);
-        break;
-      case 'LONG_SD_FRAC':  // 强制假分数
-        this.isTempDecimal = false;
-        cppPrecisionMode = -3;
-        break;
-      case 'LONG_SD_MIXED': // 强制带分数
-        this.isTempDecimal = false;
-        cppPrecisionMode = -4;
-        break;
-      case 'LONG_SD_DMS':   // 强制逆向度分秒格式化渲染！
-        cppPrecisionMode = -5; // 将全新的控制码发送给 C++
-        break;
-      default:
-        return;
-    }
-
-    // [重构] 调用 EngineService 引擎重新渲染形态
-    let cppResponse: string = EngineService.calculateNative(this.lastValidJson, this.isRad, cppPrecisionMode);
-    if (cppResponse.includes("Error")) {
-      console.error("C++ 转换错误: " + cppResponse);
-    }
-    // 让前端屏幕显示最新渲染出来的形态
-    this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
-  }
-
-  // 向 Web 插入 LaTeX 代码
-  insertToWeb(str: string) {
-    let safeString = JSON.stringify(str);
-    this.webviewController.runJavaScript(`insertMath(${safeString})`);
+    .width('100%')
+    .height('100%')
   }
 }

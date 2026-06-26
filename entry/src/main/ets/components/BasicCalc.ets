@@ -6,164 +6,125 @@
  * @date 2026/6/26 02:20
  */
 
-import web_webview from '@ohos.web.webview';
-import { HistoryRepository } from '../database/HistoryRepository';
-import { EngineService } from '../utils/EngineService';
+import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
-import { getActionId } from '../utils/CalculatorConfigs';
-import { BasicKeyboard } from './BasicKeyboard';
+import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor, PreferenceConfigs } from '../utils/CalculatorConfigs';
 
+// 1. 私有按键布局数组
+const basicButtons: Array<string | Resource> = [
+  '×', '÷', '⌫', 'AC',
+  '7', '8', '9', '%',
+  '4', '5', '6', '−',
+  '1', '2', '3', '+',
+  '.', '0', 'Ans', '='
+];
+
+// 2. 局部私有基础按键积木
+@Component
+struct BasicKeyItem {
+  btn: string | Resource = '';
+  @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
+  private startDelayTimer: number = -1;
+  private repeatDeleteTimer: number = -1;
+
+  onKeyPress: (btn: string | Resource) => void = () => {};
+
+  build() {
+    Button() {
+      if (typeof this.btn === 'string') {
+        Text(this.btn)
+          .fontFamily(getFontFamily(this.btn))
+          .fontSize(getFontSize(this.btn) + 2)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(getFontColor(this.btn))
+      } else {
+        Image(this.btn)
+          .width(48)
+          .height(40)
+          .fillColor(getFontColor(this.btn))
+      }
+    }
+    .type(ButtonType.Normal)
+    .borderRadius(20)
+    .width('100%')
+    .height('100%')
+    .padding({ left: 4, right: 4 })
+    .backgroundColor(getBgColor(this.btn, false))
+    .shadow(ShadowStyle.OUTER_DEFAULT_SM)
+    .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
+    .borderColor($r('app.color.btn_highlight'))
+    .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.92 })
+    .stateStyles({
+      pressed: { .opacity(0.75).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
+      normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
+    })
+    .onClick(() => {
+      this.onKeyPress(this.btn as string);
+    })
+    .onTouch((event: TouchEvent) => {
+      if (this.btn === '⌫') {
+        if (event.type === TouchType.Down) {
+          clearTimeout(this.startDelayTimer);
+          clearInterval(this.repeatDeleteTimer);
+
+          this.startDelayTimer = setTimeout(() => {
+            this.repeatDeleteTimer = setInterval(() => {
+              this.onKeyPress(this.btn as string);
+            }, 80);
+          }, 500);
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          clearTimeout(this.startDelayTimer);
+          clearInterval(this.repeatDeleteTimer);
+        }
+      }
+    })
+  }
+}
+
+// 3. 基础计算器外壳组件
 @Component
 export struct BasicCalc {
-  // [新增] 引入科学计算器同款的全局状态配置
-  @StorageProp('answerOutputMode') answerOutputMode: number = 0;
-  @StorageProp('isRad') isRad: boolean = false;
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
-  @StorageProp('decimalPrecision') decimalPrecision: number = 13;
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
 
-  // [新增] 双 Webview 控制器
-  webviewController: web_webview.WebviewController = new web_webview.WebviewController();
-  renderWebController: web_webview.WebviewController = new web_webview.WebviewController();
-
-  // [修改] 移除之前的 inputExpress 占位，换成 Ans 历史记录记忆
-  @State lastAnsLatex: string = "0";
-
-  aboutToAppear() {
-    let eventHub = getContext(this).eventHub;
-    eventHub.on('event_math_insert', (str: string) => { this.insertToWeb(str); });
-    eventHub.on('event_math_undo', () => { this.webviewController.runJavaScript(`document.querySelector('math-field').executeCommand('undo')`); });
-    eventHub.on('event_math_redo', () => { this.webviewController.runJavaScript(`document.querySelector('math-field').executeCommand('redo')`); });
-  }
-
-  aboutToDisappear() {
-    let eventHub = getContext(this).eventHub;
-    eventHub.off('event_math_insert');
-    eventHub.off('event_math_undo');
-    eventHub.off('event_math_redo');
-  }
-
-  // 响应按键点击的核心回调
+  // 作为传声筒，无脑呼叫 FormulaScreen
   private handleKeyPress(btn: string | Resource) {
     let action = getActionId(btn);
     HapticUtils.playVibration(action, this.hapticFeedback, this.vibrationCurve);
-
-    if (action === 'AC') {
-      this.webviewController.runJavaScript('clearMath()');
-    } else if (action === '⌫') {
-      this.webviewController.runJavaScript('deleteMath()');
-    } else if (action === '=') {
-      this.webviewController.runJavaScript('window.getFormula()', (error, rawLatexResult) => {
-        if (error) return;
-        let rawLatex = rawLatexResult.replace(/^"|"$/g, '').replace(/\\\\/g, '\\');
-        let cleanedLatex = EngineService.cleanRawLatex(rawLatexResult);
-        let injectJs = EngineService.generateInjectJs(cleanedLatex);
-
-        this.webviewController.runJavaScript(injectJs, (err, jsonResult) => {
-          if (err) return;
-          let cleanJsonString = EngineService.parseWebJsonResult(jsonResult);
-
-          let cppPrecisionMode = -1;
-          if (this.answerOutputMode === 0) {
-            cppPrecisionMode = -1;
-          } else {
-            cppPrecisionMode = this.decimalPrecision === 16 ? -2 : this.decimalPrecision;
-          }
-
-          let cppResponse: string = EngineService.calculateNative(cleanJsonString, this.isRad, cppPrecisionMode);
-
-          if (cppResponse.includes("Error")) {
-            this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
-          } else {
-            this.lastAnsLatex = cppResponse;
-            this.renderWebController.runJavaScript(`window.exportLatexToPng(${JSON.stringify(rawLatex)}, ${JSON.stringify(cppResponse)})`);
-            this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
-          }
-        });
-      });
-    } else {
-      let latexChar = action;
-      switch (action) {
-        case '×': latexChar = "\\times "; break;
-        case '÷': latexChar = "\\div "; break;
-        case '−': latexChar = "-"; break;
-        case '%': latexChar = "\\%"; break;
-        case '+/-': latexChar = "-"; break; // 基础模式的正负号，先优雅地映射为负号输入
-        case 'Ans':
-          latexChar = this.lastAnsLatex === "0" ? "0" : `\\left(${this.lastAnsLatex}\\right)`;
-          break;
-      }
-      this.insertToWeb(latexChar);
-    }
-  }
-
-  // 向 Web 插入 LaTeX 代码
-  insertToWeb(str: string) {
-    let safeString = JSON.stringify(str);
-    this.webviewController.runJavaScript(`insertMath(${safeString})`);
+    getContext(this).eventHub.emit('screen_handle_action', action, false);
   }
 
   build() {
-    Stack() {
-      Column() {
-        // ================= 1. 屏幕显示区 =================
-        Web({
-          src: $rawfile('calculator.html'),
-          controller: this.webviewController
-        })
-          .darkMode(WebDarkMode.Auto)
-          .width('100%')
-          .height('45%') // 基础模式屏幕
-          .backgroundColor(Color.Transparent)
+    Column() {
+      // 挂载万能屏幕，占位 45% (严格恢复原代码设置)
+      FormulaScreen({ moduleType: 'basic' })
+        .height('45%')
+        .width('100%')
 
-        // ================= 2. 独立基础键盘区 =================
-        BasicKeyboard({
-          onKeyPress: (btn: string | Resource) => {
-            this.handleKeyPress(btn);
+      // 组装内聚的基础键盘，占位 55% (严格恢复原代码设置)
+      Grid() {
+        ForEach(basicButtons, (btn: string | Resource) => {
+          GridItem() {
+            BasicKeyItem({
+              btn: btn,
+              onKeyPress: (b: string | Resource): void => { this.handleKeyPress(b); } // 修复 ArkTS 类型检测
+            })
           }
         })
       }
+      .rowsTemplate('1fr 1fr 1fr 1fr 1fr')
+      .columnsTemplate('1fr 1fr 1fr 1fr')
+      .rowsGap(14)
+      .columnsGap(12)
+      .padding({ left: 16, right: 16, top: 10, bottom: 16 })
+      .clip(false)
       .width('100%')
-      .height('100%')
-      // 底部安全区避让
-      .padding({ bottom: this.navBarHeight })
-
-      // ================= 3. 暗房 Webview (完全复用) =================
-      Web({
-        src: $rawfile('render.html'),
-        controller: this.renderWebController
-      })
-        .width(1000)
-        .height(2000)
-        .position({ x: -5000, y: -5000 })
-        .backgroundColor(Color.Transparent)
-        .javaScriptAccess(true)
-        .domStorageAccess(true)
-        .javaScriptProxy({
-          object: {
-            onImageReady: (jsonStr: string) => {
-              try {
-                let parsed = JSON.parse(jsonStr) as Record<string, string>;
-                if (parsed['error']) return;
-                HistoryRepository.insertRecord({
-                  moduleType: 'basic', // 基础计算的历史记录
-                  inputContent: parsed['inputLatex'],
-                  outputContent: parsed['outputLatex'],
-                  inputBase64: parsed['inputBase64'],
-                  outputBase64: parsed['outputBase64'],
-                  timestamp: Date.now(),
-                });
-              } catch (e) {}
-            }
-          },
-          name: "arktsBridge",
-          methodList: ["onImageReady"],
-          controller: this.renderWebController
-        })
+      .height('55%')
     }
     .width('100%')
     .height('100%')
+    .padding({ bottom: this.navBarHeight })
     .backgroundColor($r('sys.color.background_primary'))
   }
 }
