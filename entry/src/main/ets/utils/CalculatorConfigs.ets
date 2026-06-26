@@ -95,8 +95,8 @@ export const bottomButtons: Array<string | Resource> = [
 ];
 
 export const basicButtons: Array<string | Resource> = [
-  '⌫', 'AC', '%', '÷',
-  '7', '8', '9', '×',
+  '×', '÷', '⌫', 'AC',
+  '7', '8', '9', '%',
   '4', '5', '6', '−',
   '1', '2', '3', '+',
   '.', '0', 'Ans', '='

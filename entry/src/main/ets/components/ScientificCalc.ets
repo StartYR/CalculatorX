@@ -51,6 +51,13 @@ export struct ScientificCalc {
     eventHub.on('event_math_redo', () => { this.webviewController.runJavaScript(`document.querySelector('math-field').executeCommand('redo')`); });
   }
 
+  aboutToDisappear() {
+    let eventHub = getContext(this).eventHub;
+    eventHub.off('event_math_insert');
+    eventHub.off('event_math_undo');
+    eventHub.off('event_math_redo');
+  }
+
   build() {
     Stack() {
       // 1. 核心布局区
