@@ -37,7 +37,7 @@ export struct TopBar {
         .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
         .onClick(() => { if (this.onMenuClick) this.onMenuClick(); })
 
-        // 2. [新增] 撤销按钮
+        // 2. 撤销按钮
         Button({ type: ButtonType.Capsule, stateEffect: true }) {
           SymbolGlyph($r('sys.symbol.arrowshape_turn_up_left')) // 系统级撤销图标
             .fontSize(18)
