@@ -37,6 +37,13 @@ export struct BasicCalc {
     eventHub.on('event_math_redo', () => { this.webviewController.runJavaScript(`document.querySelector('math-field').executeCommand('redo')`); });
   }
 
+  aboutToDisappear() {
+    let eventHub = getContext(this).eventHub;
+    eventHub.off('event_math_insert');
+    eventHub.off('event_math_undo');
+    eventHub.off('event_math_redo');
+  }
+
   // 响应按键点击的核心回调
   private handleKeyPress(btn: string | Resource) {
     let action = getActionId(btn);
