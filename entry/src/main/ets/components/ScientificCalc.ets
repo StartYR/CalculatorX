@@ -314,7 +314,11 @@ export struct ScientificCalc {
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
 
-  @State isShift: boolean = false;
+  @State @Watch('onShiftChange') isShift: boolean = false; // @Watch 监听器
+
+  onShiftChange() {
+    getContext(this).eventHub.emit('event_shift_change', this.isShift);
+  }
 
   aboutToAppear() {
     getContext(this).eventHub.on('screen_shift_consumed', () => {
