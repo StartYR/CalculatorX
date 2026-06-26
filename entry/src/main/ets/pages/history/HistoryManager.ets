@@ -16,7 +16,9 @@ import {
   HdsTabs,
   HdsTabsController,
 } from '@kit.UIDesignKit';
-import { SymbolGlyphModifier } from '@kit.ArkUI';
+import { SymbolGlyphModifier, promptAction } from '@kit.ArkUI';
+
+import pasteboard from '@ohos.pasteboard'; // 剪贴板
 
 // 引擎
 import { UniversalHistoryList } from '../../components/UniversalHistoryList';
@@ -107,6 +109,42 @@ export struct HistoryManager {
     })
   }
 
+  // 构建函数
+  @Builder
+  buildHistoryList(targetModule: string) {
+    UniversalHistoryList({
+      moduleType: targetModule,
+      isGlobalPage: true,
+      refreshCounter: this.refreshSignal,
+      onItemClick: (record, insertType) => {
+
+        // 1. 智能判断需要复制的内容
+        const textToCopy = insertType === 'input' ? record.inputContent : record.outputContent;
+
+        // 2. 只有当内容不为空时才执行复制
+        if (textToCopy) {
+          // 创建纯文本的剪贴板数据对象
+          const pasteData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, textToCopy);
+          // 获取系统剪贴板
+          const systemPasteboard = pasteboard.getSystemPasteboard();
+
+          // 写入数据
+          systemPasteboard.setData(pasteData).then(() => {
+            // 3. 写入成功后，给用户一个极度舒适的反馈
+            promptAction.showToast({
+              // 根据点击的区域，动态提示文案
+              message: insertType === 'input' ? '已复制表达式' : '已复制结果',
+              duration: 2000,
+              bottom: 80 // 稍微抬高一点，避免被底部 Tab 栏挡住
+            });
+          }).catch((err: Error) => {
+            console.error(`复制失败: ${err.message}`);
+          });
+        }
+      }
+    })
+  }
+
   @Builder
   buildTabs(tabsConfig: TabItemConfig[]) {
     HdsTabs({ controller: this.controller }) {
@@ -114,11 +152,17 @@ export struct HistoryManager {
         TabContent() {
           // 把 refreshCounter 绑定进引擎，让引擎能听到主控制台的刷新指令
           if (index === 0) {
-            UniversalHistoryList({ moduleType: 'all', isGlobalPage: true, refreshCounter: this.refreshSignal })
+            this.buildHistoryList('all')
           } else if (index === 1) {
-            UniversalHistoryList({ moduleType: 'basic,scientific', isGlobalPage: true, refreshCounter: this.refreshSignal })
+            this.buildHistoryList('basic,scientific')
+          } else if (index === 2) {
+            this.buildHistoryList('equation')
+          } else if (index === 3) {
+            // TODO
+          } else if (index === 4) {
+            // TODO
           } else {
-            UniversalHistoryList({ moduleType: 'equation', isGlobalPage: true, refreshCounter: this.refreshSignal })
+            // TODO
           }
         }
         .tabBar(new BottomTabBarStyle({ normal: tab.icon, selected: tab.selectedIcon }, tab.label))
