@@ -40,38 +40,26 @@ export struct HistoryManager {
   // 全局刷新信号！当发生清空操作时，通知所有 Tab 重新加载数据
   @State refreshSignal: number = 0;
 
+  // TabItem
+  private createTabItem(label: string, symbolRes: Resource): TabItemConfig {
+    return {
+      label: label,
+      icon: new SymbolGlyphModifier(symbolRes)
+        .fontSize(24)
+        .fontColor([$r('sys.color.icon_primary')]), // 默认态颜色
+      selectedIcon: new SymbolGlyphModifier(symbolRes)
+        .fontSize(24)
+        .fontColor([$r('sys.color.icon_emphasize')]) // 选中态强调色
+    };
+  }
   private getTabItems(): TabItemConfig[] {
     return [
-      {
-        label: '全部',
-        icon: new SymbolGlyphModifier($r('sys.symbol.list_bullet_square_fill')).fontSize(24).fontColor([$r('sys.color.icon_primary')]),
-        selectedIcon: new SymbolGlyphModifier($r('sys.symbol.list_bullet_square_fill')).fontSize(24).fontColor([$r('sys.color.icon_emphasize')])
-      },
-      {
-        label: '计算',
-        icon: new SymbolGlyphModifier($r('sys.symbol.calculator_fill')).fontSize(24).fontColor([$r('sys.color.icon_primary')]),
-        selectedIcon: new SymbolGlyphModifier($r('sys.symbol.calculator_fill')).fontSize(24).fontColor([$r('sys.color.icon_emphasize')])
-      },
-      {
-        label: '方程',
-        icon: new SymbolGlyphModifier($r('sys.symbol.exponentiation')).fontSize(24).fontColor([$r('sys.color.icon_primary')]),
-        selectedIcon: new SymbolGlyphModifier($r('sys.symbol.exponentiation')).fontSize(24).fontColor([$r('sys.color.icon_emphasize')])
-      },
-      {
-        label: '函数图像',
-        icon: new SymbolGlyphModifier($r('sys.symbol.exponentiation')).fontSize(24).fontColor([$r('sys.color.icon_primary')]),
-        selectedIcon: new SymbolGlyphModifier($r('sys.symbol.exponentiation')).fontSize(24).fontColor([$r('sys.color.icon_emphasize')])
-      },
-      {
-        label: '矩阵向量',
-        icon: new SymbolGlyphModifier($r('sys.symbol.exponentiation')).fontSize(24).fontColor([$r('sys.color.icon_primary')]),
-        selectedIcon: new SymbolGlyphModifier($r('sys.symbol.exponentiation')).fontSize(24).fontColor([$r('sys.color.icon_emphasize')])
-      },
-      {
-        label: '统计分析',
-        icon: new SymbolGlyphModifier($r('sys.symbol.exponentiation')).fontSize(24).fontColor([$r('sys.color.icon_primary')]),
-        selectedIcon: new SymbolGlyphModifier($r('sys.symbol.exponentiation')).fontSize(24).fontColor([$r('sys.color.icon_emphasize')])
-      }
+      this.createTabItem('全部', $r('sys.symbol.list_bullet_square_fill')),
+      this.createTabItem('计算', $r('sys.symbol.calculator_fill')),
+      this.createTabItem('方程', $r('sys.symbol.exponentiation')),
+      this.createTabItem('函数图像', $r('sys.symbol.arrow_counterclockwise_clock_fill')),
+      this.createTabItem('矩阵向量', $r('sys.symbol.exponentiation')),
+      this.createTabItem('统计分析', $r('sys.symbol.exponentiation'))
     ];
   }
 
