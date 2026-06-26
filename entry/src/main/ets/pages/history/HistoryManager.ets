@@ -51,7 +51,22 @@ export struct HistoryManager {
         selectedIcon: new SymbolGlyphModifier($r('sys.symbol.calculator_fill')).fontSize(24).fontColor([$r('sys.color.icon_emphasize')])
       },
       {
-        label: '方程求解',
+        label: '方程',
+        icon: new SymbolGlyphModifier($r('sys.symbol.exponentiation')).fontSize(24).fontColor([$r('sys.color.icon_primary')]),
+        selectedIcon: new SymbolGlyphModifier($r('sys.symbol.exponentiation')).fontSize(24).fontColor([$r('sys.color.icon_emphasize')])
+      },
+      {
+        label: '函数图像',
+        icon: new SymbolGlyphModifier($r('sys.symbol.exponentiation')).fontSize(24).fontColor([$r('sys.color.icon_primary')]),
+        selectedIcon: new SymbolGlyphModifier($r('sys.symbol.exponentiation')).fontSize(24).fontColor([$r('sys.color.icon_emphasize')])
+      },
+      {
+        label: '矩阵向量',
+        icon: new SymbolGlyphModifier($r('sys.symbol.exponentiation')).fontSize(24).fontColor([$r('sys.color.icon_primary')]),
+        selectedIcon: new SymbolGlyphModifier($r('sys.symbol.exponentiation')).fontSize(24).fontColor([$r('sys.color.icon_emphasize')])
+      },
+      {
+        label: '统计分析',
         icon: new SymbolGlyphModifier($r('sys.symbol.exponentiation')).fontSize(24).fontColor([$r('sys.color.icon_primary')]),
         selectedIcon: new SymbolGlyphModifier($r('sys.symbol.exponentiation')).fontSize(24).fontColor([$r('sys.color.icon_emphasize')])
       }
@@ -101,7 +116,7 @@ export struct HistoryManager {
           if (index === 0) {
             UniversalHistoryList({ moduleType: 'all', isGlobalPage: true, refreshCounter: this.refreshSignal })
           } else if (index === 1) {
-            UniversalHistoryList({ moduleType: 'scientific', isGlobalPage: true, refreshCounter: this.refreshSignal })
+            UniversalHistoryList({ moduleType: 'basic,scientific', isGlobalPage: true, refreshCounter: this.refreshSignal })
           } else {
             UniversalHistoryList({ moduleType: 'equation', isGlobalPage: true, refreshCounter: this.refreshSignal })
           }
