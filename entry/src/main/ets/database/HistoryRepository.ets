@@ -139,23 +139,27 @@ export class HistoryRepository {
 
   /**
    * 查询历史记录
-   * @param moduleType 模块类型，如果传 'all' 或空则查询全部功能的混排记录
-   * @param limit 查询数量上限，默认最多 50 条
+   * @param moduleType 模块类型，传 'all' 查全部，传 'basic,scientific' 查混排
+   * @param limit 查询数量上限
    */
   public static async queryRecords(moduleType: string, limit: number = 50): Promise<HistoryRecord[]> {
     if (!HistoryRepository.rdbStore) {
-      console.error('HistoryRepository: 数据库未初始化，无法查询');
       return [];
     }
     try {
       const predicates = new relationalStore.RdbPredicates('history');
 
-      // 如果指定了具体模块且不是 'all'，则进行条件过滤
       if (moduleType && moduleType !== 'all') {
-        predicates.equalTo('module_type', moduleType);
+        // 【核心魔法】：如果检测到逗号，自动触发 IN 范围查询！
+        if (moduleType.includes(',')) {
+          const modules = moduleType.split(',');
+          predicates.in('module_type', modules);
+        } else {
+          // 否则保持原样，精确匹配单模块
+          predicates.equalTo('module_type', moduleType);
+        }
       }
 
-      // 按时间戳从新到旧进行倒序排列
       predicates.orderByDesc('timestamp');
 
       if (limit > 0) {
@@ -172,9 +176,6 @@ export class HistoryRepository {
         const output = resultSet.getString(resultSet.getColumnIndex('output_content'));
         const inputImg = resultSet.getString(resultSet.getColumnIndex('input_base64'));
         const outputImg = resultSet.getString(resultSet.getColumnIndex('output_base64'));
-
-        console.info(`【探针2】DB读出 id=${id}, inputImg 长度: ${inputImg ? inputImg.length : 'undefined/null'}`);
-
         const extra = resultSet.getString(resultSet.getColumnIndex('extra_params'));
         const time = resultSet.getLong(resultSet.getColumnIndex('timestamp'));
 
@@ -189,17 +190,17 @@ export class HistoryRepository {
           timestamp: time
         });
       }
-      resultSet.close(); // 必须手动关闭结果集，防止内存泄漏
+      resultSet.close();
       return records;
     } catch (err) {
-      console.error(`HistoryRepository: 查询历史记录失败. message: ${err.message}`);
+      let e = err as Error;
+      console.error(`HistoryRepository: 查询历史记录失败. message: ${e.message}`);
       return [];
     }
   }
 
   /**
-   * 清空指定模块的历史记录（或全量清空）
-   * @param moduleType 模块类型，传 'all' 或不传则清空全表
+   * 清空指定模块的历史记录
    */
   public static async clearHistory(moduleType?: string): Promise<number> {
     if (!HistoryRepository.rdbStore) {
@@ -208,11 +209,18 @@ export class HistoryRepository {
     try {
       const predicates = new relationalStore.RdbPredicates('history');
       if (moduleType && moduleType !== 'all') {
-        predicates.equalTo('module_type', moduleType);
+        // 清空时也支持多模块联合清空
+        if (moduleType.includes(',')) {
+          const modules = moduleType.split(',');
+          predicates.in('module_type', modules);
+        } else {
+          predicates.equalTo('module_type', moduleType);
+        }
       }
       return await HistoryRepository.rdbStore.delete(predicates);
     } catch (err) {
-      console.error(`HistoryRepository: 清空历史记录失败. message: ${err.message}`);
+      let e = err as Error;
+      console.error(`HistoryRepository: 清空历史记录失败. message: ${e.message}`);
       return 0;
     }
   }

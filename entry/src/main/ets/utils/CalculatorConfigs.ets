@@ -71,28 +71,36 @@ export const PermutationOptions: MathStyleOption[] = [
 
 // ========== 2. 键盘布局数组 ==========
 
-export const topShiftButtons: Array<string | Resource> = [
-  '', '', '', '', '', '',
-  'm', 'n', 'd/dx', icon_indef_integral,'GCD', 'LCM',
-  'a', 'b', 'c', 'd', icon_e_power, 'lg',
-  'mod', icon_sqrt3, '%', icon_power3, icon_comma, icon_inverse,
-  'sin⁻¹', 'cos⁻¹', 'tan⁻¹', 'x', 'y', 'z',
-];
-
-export const topButtons: Array<string | Resource> = [
-  '⇧Shift', 'R/D', '⇦', '⇨', 'S⇄D', 'i',
-  '° \' \"', '∞', 'lim', icon_integral, icon_sum, icon_product,
-  icon_fact, 'nCr', 'nPr', 'e', 'ln', 'log',
-  icon_abs, icon_sqrt, icon_sqrtx, icon_power2, icon_power, icon_fraction,
-  'sin', 'cos', 'tan', 'π', '(', ')',
-];
-
-export const bottomButtons: Array<string | Resource> = [
-  '7', '8', '9', '⌫', 'AC',
-  '4', '5', '6', '×', '÷',
-  '1', '2', '3', '+', '−',
-  '.', '0', icon_exp, 'Ans', '=',
-];
+// export const topShiftButtons: Array<string | Resource> = [
+//   '', '', '', '', '', '',
+//   'm', 'n', 'd/dx', icon_indef_integral,'GCD', 'LCM',
+//   'a', 'b', 'c', 'd', icon_e_power, 'lg',
+//   'mod', icon_sqrt3, '%', icon_power3, icon_comma, icon_inverse,
+//   'sin⁻¹', 'cos⁻¹', 'tan⁻¹', 'x', 'y', 'z',
+// ];
+//
+// export const topButtons: Array<string | Resource> = [
+//   '⇧Shift', 'R/D', '⇦', '⇨', 'S⇄D', 'i',
+//   '° \' \"', '∞', 'lim', icon_integral, icon_sum, icon_product,
+//   icon_fact, 'nCr', 'nPr', 'e', 'ln', 'log',
+//   icon_abs, icon_sqrt, icon_sqrtx, icon_power2, icon_power, icon_fraction,
+//   'sin', 'cos', 'tan', 'π', '(', ')',
+// ];
+//
+// export const bottomButtons: Array<string | Resource> = [
+//   '7', '8', '9', '⌫', 'AC',
+//   '4', '5', '6', '×', '÷',
+//   '1', '2', '3', '+', '−',
+//   '.', '0', icon_exp, 'Ans', '=',
+// ];
+//
+// export const basicButtons: Array<string | Resource> = [
+//   '×', '÷', '⌫', 'AC',
+//   '7', '8', '9', '%',
+//   '4', '5', '6', '−',
+//   '1', '2', '3', '+',
+//   '.', '0', 'Ans', '='
+// ];
 
 // ========== 3. 样式映射函数 ==========
 export function getActionId(btn: string | Resource): string {
@@ -174,7 +182,10 @@ export function getFontColor(btn: string | Resource): ResourceColor {
   if (['+', '−', '×', '÷'].includes(action)) return $r('sys.color.font_emphasize');
 
   // 4. 顶部高级功能区：次要文字颜色 (略微弱化，将视觉焦点让给下方数字区)
-  if (topButtons.includes(btn as string)) return $r('sys.color.font_secondary');
+  // if (topButtons.includes(btn as string)) return $r('sys.color.font_secondary');
+  let isPrimaryText = (typeof btn === 'string' && btn >= '0' && btn <= '9') ||
+    ['.', 'Ans', '%', '+/-'].includes(action);
+  if (!isPrimaryText) return $r('sys.color.font_secondary');
 
   // 5. 核心数字区：主要文字颜色
   return $r('sys.color.font_primary');
