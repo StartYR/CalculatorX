@@ -15,7 +15,26 @@ import { HapticUtils } from '../utils/HapticUtils';
 import { vibrator } from '@kit.SensorServiceKit';
 import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
 import { keyContextMenuRegistry, CustomMenuItem, PreferenceConfigs } from '../utils/CalculatorConfigs';
-import { CombinationOptions, PermutationOptions, icon_integral, icon_indef_integral, icon_abs, icon_sqrt, icon_sqrt3, icon_sqrtx, icon_power2, icon_power, icon_fraction, icon_power3, icon_exp, icon_inverse, icon_e_power, icon_comma, icon_fact, icon_sum, icon_product } from '../utils/CalculatorConfigs';
+import {
+  CombinationOptions,
+  PermutationOptions,
+  icon_integral,
+  icon_indef_integral,
+  icon_abs, icon_sqrt,
+  icon_sqrt3,
+  icon_sqrtx,
+  icon_power2,
+  icon_power,
+  icon_fraction,
+  icon_power3,
+  icon_exp,
+  icon_inverse,
+  icon_e_power,
+  icon_comma,
+  icon_fact,
+  icon_sum,
+  icon_product
+} from '../utils/CalculatorConfigs';
 
 // ================= 1. 私有按键布局数组 =================
 const topShiftButtons: Array<string | Resource> = [

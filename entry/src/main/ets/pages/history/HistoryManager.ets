@@ -18,9 +18,9 @@ import {
 } from '@kit.UIDesignKit';
 import { SymbolGlyphModifier } from '@kit.ArkUI';
 
-// 引入我们的终极引擎
+// 引擎
 import { UniversalHistoryList } from '../../components/UniversalHistoryList';
-// 【新增】：记得引入数据库操作库，用于一键清空
+// 数据库操作库，用于一键清空
 import { HistoryRepository } from '../../database/HistoryRepository';
 
 interface TabItemConfig {
@@ -46,7 +46,7 @@ export struct HistoryManager {
         selectedIcon: new SymbolGlyphModifier($r('sys.symbol.list_bullet_square_fill')).fontSize(24).fontColor([$r('sys.color.icon_emphasize')])
       },
       {
-        label: '科学计算',
+        label: '计算',
         icon: new SymbolGlyphModifier($r('sys.symbol.calculator_fill')).fontSize(24).fontColor([$r('sys.color.icon_primary')]),
         selectedIcon: new SymbolGlyphModifier($r('sys.symbol.calculator_fill')).fontSize(24).fontColor([$r('sys.color.icon_emphasize')])
       },
@@ -81,7 +81,7 @@ export struct HistoryManager {
         },
         secondaryButton: {
           value: '全部清空',
-          fontColor: '#FF3B30', // 毁灭红
+          fontColor: '#FF3B30', // 红
           action: async () => {
             await HistoryRepository.clearHistory();
             // 触发列表刷新
@@ -114,7 +114,10 @@ export struct HistoryManager {
     .barPosition(BarPosition.End)
     .barFloatingStyle({
       barBottomMargin: 24,
-      systemMaterialEffect: { materialType: hdsMaterial.MaterialType.ADAPTIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE }
+      systemMaterialEffect: {
+        materialType: hdsMaterial.MaterialType.ADAPTIVE,
+        materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+      }
     })
     .height('100%')
     .width('100%')
@@ -130,8 +133,14 @@ export struct HistoryManager {
       .titleBar({
         content: { title: { mainTitle: '全局历史记录' } },
         style: {
-          scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: ScrollEffectType.GRADIENT_BLUR },
-          systemMaterialEffect: { materialType: hdsMaterial.MaterialType.ADAPTIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE }
+          scrollEffectOpts: {
+            enableScrollEffect: true,
+            scrollEffectType: ScrollEffectType.GRADIENT_BLUR
+          },
+          systemMaterialEffect: {
+            materialType: hdsMaterial.MaterialType.ADAPTIVE,
+            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+          }
         },
         avoidLayoutSafeArea: true,
         enableComponentSafeArea: false
