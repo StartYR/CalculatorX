@@ -54,7 +54,7 @@ export struct TopBar {
 
       // ================= 中间：动态状态岛 =================
       Row() {
-        if (this.isShift && this.currentModule === 'scientific') {
+        if (this.isShift) {
           // 1. Shift 激活状态 (判断：当前模块必须支持 Shift 才可显示，霸占空间)
           Text('⇧ SHIFT')
             .fontSize(14)
