@@ -45,12 +45,27 @@ export struct UniversalHistoryList {
     return 24;
   }
 
+  // 根据模块类型动态分配图标资源
+  getIconForModule(moduleType: string): Resource {
+    switch (moduleType) {
+      case 'scientific':
+        return $r('sys.symbol.calculator_fill');
+      case 'basic':
+        return $r('sys.symbol.calculator_1');
+      case 'equation':
+        return $r('sys.symbol.exponentiation');
+      default:
+      // 兜底图标
+        return $r('sys.symbol.list_bullet_square_fill');
+    }
+  }
+
   async loadData() {
     let limit = this.isGlobalPage ? 100 : 50;
     this.historyList = await HistoryRepository.queryRecords(this.moduleType, limit);
   }
 
-  // 【新增工具 1】：智能日期转换器
+  // 智能日期转换器
   private getTitleForDate(timestamp: number): string {
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
@@ -66,7 +81,7 @@ export struct UniversalHistoryList {
     return `${recordDate.getMonth() + 1}月${recordDate.getDate()}日`;
   }
 
-  // 【新增工具 2】：动态抽取当前所有的分组标题（保持 Key 的极度纯净）
+  // 动态抽取当前所有的分组标题（保持 Key 的极度纯净）
   private getGroupedTitles(): string[] {
     const titles: string[] = [];
     this.historyList.forEach((record) => {
@@ -89,7 +104,6 @@ export struct UniversalHistoryList {
       .backgroundColor(Color.Transparent)
   }
 
-  // 【回归纯净】：不需要改 Version，直接滤除数据！
   async deleteRecord(item: HistoryRecord) {
     if (item.id !== undefined) {
       await HistoryRepository.deleteRecord(item.id);
@@ -141,22 +155,20 @@ export struct UniversalHistoryList {
           if (this.isGlobalPage) {
             ListItem() { Row().width('100%').height(96) }
           }
-          // 【核心魔法 1】：外层循环只绑定纯净的标题字符串。Key 极其稳定，绝不毁灭重建！
+          // 外层循环只绑定纯净的标题字符串
           ForEach(this.getGroupedTitles(), (title: string) => {
             ListItemGroup({ header: this.itemHead(title), space: 8 }) {
-
-              // 【核心魔法 2】：内层循环直接监听大动脉 historyList！
-              // 因为这里明确使用了 this.historyList，ArkUI 瞬间懂了它们的数据依赖。
-              // 当你删除数据时，它会精准识别出消失的那个 id，并单独为它播放消散动画！
               ForEach(this.historyList.filter(item => this.getTitleForDate(item.timestamp) === title), (item: HistoryRecord) => {
                 ListItem() {
                   Row() {
-                    SymbolGlyph($r('sys.symbol.calculator_fill'))
+                    // ==================== 【左侧模块图标】 ====================
+                    SymbolGlyph(this.getIconForModule(item.moduleType))
                       .fontSize(22)
                       .fontColor([$r('sys.color.icon_emphasize')])
                       .margin({ right: 14 })
                       .alignSelf(ItemAlign.Center)
 
+                    // ==================== 【右侧内容区】 ====================
                     Column() {
                       // 插入表达式热区
                       Column() {
@@ -171,8 +183,13 @@ export struct UniversalHistoryList {
                           .width('100%')
                           .justifyContent(FlexAlign.Start)
                         } else {
-                          Text(item.inputContent).fontSize(18).fontColor($r('sys.color.font_secondary'))
-                            .width('100%').textAlign(TextAlign.Start).maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis })
+                          Text(item.inputContent)
+                            .fontSize(18)
+                            .fontColor($r('sys.color.font_secondary'))
+                            .width('100%')
+                            .textAlign(TextAlign.Start)
+                            .maxLines(3)
+                            .textOverflow({ overflow: TextOverflow.Ellipsis })
                         }
                       }
                       .width('100%')
