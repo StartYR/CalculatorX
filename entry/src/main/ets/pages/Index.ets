@@ -28,8 +28,9 @@ struct Index {
   @State isSidebarOpen: boolean = false;
   @State isShowHistorySheet: boolean = false;
 
-  // [新增] 动态路由状态，默认为科学计算器
+  // 动态路由状态，默认为科学计算器
   @State currentModule: string = 'scientific';
+  @State topBarIsShift: boolean = false;
 
   // 历史记录面板的生成器 (作为全局遮罩，保留在主入口)
   @Builder HistorySheetBuilder() {
@@ -51,6 +52,11 @@ struct Index {
     HistoryRepository.init(getContext(this) as common.UIAbilityContext);
     font.registerFont({ familyName: 'Cambria Math', familySrc: $rawfile('fonts/Cambria Math.ttf') });
     font.registerFont({ familyName: 'Cambria Italic', familySrc: $rawfile('fonts/Cambria Italic.ttf') });
+
+    // 监听子插件内部广播的 Shift 状态
+    getContext(this).eventHub.on('event_shift_change', (isShiftActive: boolean) => {
+      this.topBarIsShift = isShiftActive;
+    });
   }
 
   build() {
@@ -83,10 +89,10 @@ struct Index {
 
       // ================= 2. 全局顶部悬浮控制栏 =================
       TopBar({
-        isShift: false, // 占位：UI已解耦，未来若需在顶栏显示Shift，可通过 AppStorage 同步
+        isShift: this.topBarIsShift, // 占位：UI已解耦，未来若需在顶栏显示Shift，可通过 AppStorage 同步
         isRad: this.isRad,
         // 根据当前模块动态显示顶栏标题
-        moduleTitle: this.currentModule === 'scientific' ? '科学计算' : '基础计算',
+        currentModule: this.currentModule,
         onMenuClick: () => {
           animateTo({ duration: 350, curve: Curve.Friction }, () => {
             this.isSidebarOpen = true;
@@ -115,11 +121,20 @@ struct Index {
       if (this.isSidebarOpen) {
         SideBarMenu({
           isSidebarOpen: $isSidebarOpen,
-          onSettingsClick: () => { router.pushUrl({ url: RoutePath.SETTINGS }); },
-          onHistoryClick: () => { router.pushUrl({ url: RoutePath.HISTORY }); },
+          onSettingsClick: () => {
+            router.pushUrl({
+              url: RoutePath.SETTINGS
+            });
+            },
+          onHistoryClick: () => {
+            router.pushUrl({
+              url: RoutePath.HISTORY
+            });
+          },
           // 响应侧边栏的模块切换，更新当前主板的状态
           onModuleSelect: (module: string) => {
             this.currentModule = module;
+            this.topBarIsShift = false; // 切换模块时，强制复位顶栏的 Shift 显示状态
           }
         })
       }

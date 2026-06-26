@@ -11,7 +11,7 @@
 export struct TopBar {
   @Prop isShift: boolean = false;
   @Prop isRad: boolean = false;
-  @Prop moduleTitle: string = '科学计算';
+  @Prop currentModule: string = 'scientific';
 
   onMenuClick?: () => void;
   onHistoryClick?: () => void;
@@ -54,37 +54,40 @@ export struct TopBar {
 
       // ================= 中间：动态状态岛 =================
       Row() {
-        if (this.isShift) {
-          // Shift 激活状态
+        if (this.isShift && this.currentModule === 'scientific') {
+          // 1. Shift 激活状态 (判断：当前模块必须支持 Shift 才可显示，霸占空间)
           Text('⇧ SHIFT')
             .fontSize(14)
             .fontWeight(FontWeight.Bold)
             .fontColor($r('sys.color.font_emphasize'))
             .transition({ type: TransitionType.All, translate: { y: 15 }, opacity: 0 })
         } else {
-          // 常规状态：模块名称 + Rad/Deg 徽章
+          // 2. 常规状态：动态提取模块名称
           Row({ space: 6 }) {
-            Text(this.moduleTitle)
+            Text(this.currentModule === 'scientific' ? '科学计算' : '基础计算')
               .fontSize(14)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('sys.color.font_primary'))
 
-            Text(this.isRad ? 'RAD' : 'DEG')
-              .fontSize(10)
-              .fontWeight(FontWeight.Bold)
-              .fontColor($r('sys.color.font_secondary'))
-              .padding({ left: 4, right: 4, top: 2, bottom: 2 })
-              .backgroundColor($r('sys.color.comp_background_tertiary'))
-              .borderRadius(4)
+            // 3. 角度制徽章权限 (判断：只有科学、图像等模块才渲染该徽章)
+            if (['scientific', 'graphing'].includes(this.currentModule)) {
+              Text(this.isRad ? 'RAD' : 'DEG')
+                .fontSize(10)
+                .fontWeight(FontWeight.Bold)
+                .fontColor($r('sys.color.font_secondary'))
+                .padding({ left: 4, right: 4, top: 2, bottom: 2 })
+                .backgroundColor($r('sys.color.comp_background_tertiary'))
+                .borderRadius(4)
+            }
           }
           .transition({ type: TransitionType.All, translate: { y: -15 }, opacity: 0 })
         }
       }
       .layoutWeight(1) // 占满中间剩余空间
       .height(32)
-      .justifyContent(FlexAlign.Center)
-      .clip(true)
-      .animation({ duration: 300, curve: Curve.Friction })
+      .justifyContent(FlexAlign.Center) // 居中
+      .clip(true)                       // 动画裁剪边界
+      .animation({ duration: 300, curve: Curve.Friction }) // 状态切换动画
 
       // ================= 右侧组合：重做 + 历史 =================
       Row({ space: 8 }) {
