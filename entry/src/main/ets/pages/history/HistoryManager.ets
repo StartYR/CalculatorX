@@ -37,8 +37,15 @@ export struct HistoryManager {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   private controller: HdsTabsController = new HdsTabsController();
 
+  @State hasData: boolean = true;
   // 全局刷新信号！当发生清空操作时，通知所有 Tab 重新加载数据
   @State refreshSignal: number = 0;
+
+  aboutToAppear() {
+    HistoryRepository.queryRecords('all').then(res => {
+      this.hasData = res.length > 0;
+    })
+  }
 
   // TabItem
   private createTabItem(label: string, symbolRes: Resource): TabItemConfig {
@@ -57,44 +64,50 @@ export struct HistoryManager {
       this.createTabItem('全部', $r('sys.symbol.list_bullet_square_fill')),
       this.createTabItem('计算', $r('sys.symbol.calculator_fill')),
       this.createTabItem('方程', $r('sys.symbol.exponentiation')),
-      this.createTabItem('函数图像', $r('sys.symbol.arrow_counterclockwise_clock_fill')),
-      this.createTabItem('矩阵向量', $r('sys.symbol.arrow_counterclockwise_clock')),
-      this.createTabItem('统计分析', $r('sys.symbol.exponentiation'))
+      this.createTabItem('图像', $r('sys.symbol.foldline_screen')),
+      this.createTabItem('转换', $r('sys.symbol.arrow_left_arrow_right')),
+      this.createTabItem('更多', $r('sys.symbol.square_fill_grid_2x2'))
     ];
   }
 
   @Builder
   TopRightMenu() {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      SymbolGlyph($r('sys.symbol.trash'))
-        .fontSize(24)
-        .fontColor([$r('sys.color.icon_primary')])
-    }
-    .width(40)
-    .height(40)
-    .backgroundColor(Color.Transparent)
-    .onClick(() => {
-      // 警告弹窗
-      AlertDialog.show({
-        title: '清空全局记录',
-        message: '确定要清空所有计算模式的历史记录吗？此操作无法撤销。',
-        alignment: DialogAlignment.Bottom,
-        offset: { dx: 0, dy: -280 },
-        primaryButton: {
-          value: '取消',
-          action: () => {}
-        },
-        secondaryButton: {
-          value: '全部清空',
-          fontColor: '#FF3B30', // 红
-          action: async () => {
-            await HistoryRepository.clearHistory();
-            // 触发列表刷新
-            this.refreshSignal++;
+    if (this.hasData) {
+      Button({ type: ButtonType.Circle, stateEffect: true }) {
+        SymbolGlyph($r('sys.symbol.trash'))
+          .fontSize(24)
+          .fontColor([$r('sys.color.icon_primary')])
+      }
+      .width(40)
+      .height(40)
+      .backgroundColor(Color.Transparent)
+      .onClick(() => {
+        // 警告弹窗
+        AlertDialog.show({
+          title: '清空全局记录',
+          message: '确定要清空所有计算模式的历史记录吗？此操作无法撤销。',
+          alignment: DialogAlignment.Bottom,
+          offset: { dx: 0, dy: -280 },
+          primaryButton: {
+            value: '取消',
+            action: () => {
+            }
+          },
+          secondaryButton: {
+            value: '全部清空',
+            fontColor: '#FF3B30',
+            action: async () => {
+              await HistoryRepository.clearHistory();
+              // 触发列表刷新
+              this.refreshSignal++;
+              // 重新查询数据库，更新按钮状态
+              const res = await HistoryRepository.queryRecords('all');
+              this.hasData = res.length > 0;
+            }
           }
-        }
+        })
       })
-    })
+    }
   }
 
   // 构建函数
