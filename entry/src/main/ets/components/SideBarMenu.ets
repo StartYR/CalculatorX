@@ -50,12 +50,12 @@ export struct SideBarMenu {
               .fontColor($r('sys.color.font_emphasize'))
           }
 
-          Blank() // 弹性空白，把设置和历史记录按钮推到最右侧
+          Blank()
 
           // 历史记录
           Button({ type: ButtonType.Circle, stateEffect: true }) {
-            SymbolGlyph($r('sys.symbol.arrow_counterclockwise_clock'))
-              .fontSize(20)
+            SymbolGlyph($r('sys.symbol.arrow_counterclockwise_clock_fill'))
+              .fontSize(24)
               .fontColor([$r('sys.color.icon_primary')])
           }
           .width(40)
@@ -195,10 +195,10 @@ export struct SideBarMenu {
       .borderRadius({ topRight: 32, bottomRight: 32 })
       .shadow({ radius: 48, color: '#25000000', offsetX: 12, offsetY: 0 })
 
-      // 👇 1. 实时绑定手势滑动的偏移量
+      // 1. 实时绑定手势滑动的偏移量
       .translate({ x: this.dragOffsetX })
       .transition({ type: TransitionType.All, translate: { x: '-100%' } })
-      // 👇 2. 挂载原生平移手势
+      // 2. 挂载原生平移手势
       .gesture(
         PanGesture({ direction: PanDirection.Horizontal })
           .onActionUpdate((event: GestureEvent) => {
