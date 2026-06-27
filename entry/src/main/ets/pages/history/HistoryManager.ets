@@ -2,7 +2,7 @@
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
  * * @file HistoryManager.ets
  * @description 全局全屏历史检索页，用于处理跨模块的海量计算记录检索
-* * @author 易睿 (Yi Rui)
+ * * @author 易睿 (Yi Rui)
  * @date 2026
  */
 
@@ -37,42 +37,67 @@ export struct HistoryManager {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   private controller: HdsTabsController = new HdsTabsController();
 
-  @State hasData: boolean = true;
-  // 全局刷新信号！当发生清空操作时，通知所有 Tab 重新加载数据
-  @State refreshSignal: number = 0;
+  // ==================== 【新增核心状态】 ====================
+  @State currentIndex: number = 0;             // 记住用户当前滑到了哪个 Tab
+  @State currentTabHasData: boolean = false;   // 当前 Tab 是否有数据（控制垃圾桶显隐）
+  @State refreshSignal: number = 0;            // 列表刷新信号
 
   aboutToAppear() {
-    HistoryRepository.queryRecords('all').then(res => {
-      this.hasData = res.length > 0;
-    })
+    // 页面加载时，静默探测第 0 个 Tab ("全部") 的数据状态
+    this.checkTabHasData(0);
   }
 
-  // TabItem
+  // ==================== 【新增核心：页面路由字典】 ====================
+  // 通过 index 瞬间翻译出数据库需要的 moduleType
+  private getModuleTypeByIndex(index: number): string {
+    switch (index) {
+      case 0: return 'all';
+      case 1: return 'basic,scientific';
+      case 2: return 'equation';
+      case 3: return 'graph';
+      case 4: return 'conversion';
+      case 5: return 'pro';
+      default: return 'all';
+    }
+  }
+
+  // ==================== 【新增核心：轻量级静默探针】 ====================
+  private async checkTabHasData(index: number) {
+    const targetModule = this.getModuleTypeByIndex(index);
+    // 极其致命的优化：limit 设为 1，只要查到哪怕 1 条数据，就说明不为空，性能消耗趋近于 0
+    const res = await HistoryRepository.queryRecords(targetModule, 1);
+    this.currentTabHasData = res.length > 0;
+  }
+
+  // TabItem 制造机
   private createTabItem(label: string, symbolRes: Resource): TabItemConfig {
     return {
       label: label,
       icon: new SymbolGlyphModifier(symbolRes)
         .fontSize(24)
-        .fontColor([$r('sys.color.icon_primary')]), // 默认态颜色
+        .fontColor([$r('sys.color.icon_primary')]),
       selectedIcon: new SymbolGlyphModifier(symbolRes)
         .fontSize(24)
-        .fontColor([$r('sys.color.icon_emphasize')]) // 选中态强调色
+        .fontColor([$r('sys.color.icon_emphasize')])
     };
   }
+
   private getTabItems(): TabItemConfig[] {
     return [
-      this.createTabItem('全部', $r('sys.symbol.list_bullet_square_fill')),
+      this.createTabItem('全部', $r('sys.symbol.list_bullet_square_fill_1')),
       this.createTabItem('计算', $r('sys.symbol.calculator_fill')),
       this.createTabItem('方程', $r('sys.symbol.exponentiation')),
-      this.createTabItem('图像', $r('sys.symbol.foldline_screen')),
+      this.createTabItem('绘图', $r('sys.symbol.foldline_screen_fill')),
       this.createTabItem('转换', $r('sys.symbol.arrow_left_arrow_right')),
       this.createTabItem('更多', $r('sys.symbol.square_fill_grid_2x2'))
     ];
   }
 
+  // ==================== 【改造：上下文感知垃圾桶】 ====================
   @Builder
   TopRightMenu() {
-    if (this.hasData) {
+    // 显隐逻辑绑定到当前 Tab 的专属状态上
+    if (this.currentTabHasData) {
       Button({ type: ButtonType.Circle, stateEffect: true }) {
         SymbolGlyph($r('sys.symbol.trash'))
           .fontSize(24)
@@ -82,27 +107,29 @@ export struct HistoryManager {
       .height(40)
       .backgroundColor(Color.Transparent)
       .onClick(() => {
-        // 警告弹窗
+        // 提取当前 Tab 的名字和模块标识符
+        const currentTitle = this.getTabItems()[this.currentIndex].label;
+        const targetModule = this.getModuleTypeByIndex(this.currentIndex);
+
+        // 智能动态警告弹窗
         AlertDialog.show({
-          title: '清空全局记录',
-          message: '确定要清空所有计算模式的历史记录吗？此操作无法撤销。',
+          title: `清空【${currentTitle}】历史记录`,
+          message: targetModule === 'all'
+            ? '确定要清空所有模式的历史记录吗？\n此操作无法撤销。'
+            : `确定要清空【${currentTitle}】历史记录吗？\n此操作无法撤销。`,
           alignment: DialogAlignment.Bottom,
           offset: { dx: 0, dy: -280 },
           primaryButton: {
             value: '取消',
-            action: () => {
-            }
+            action: () => {}
           },
           secondaryButton: {
-            value: '全部清空',
+            value: '清空',
             fontColor: '#FF3B30',
             action: async () => {
-              await HistoryRepository.clearHistory();
-              // 触发列表刷新
-              this.refreshSignal++;
-              // 重新查询数据库，更新按钮状态
-              const res = await HistoryRepository.queryRecords('all');
-              this.hasData = res.length > 0;
+              await HistoryRepository.clearHistory(targetModule);// 只清空当前 moduleType 的数据
+              this.currentTabHasData = false; // 状态断言：清空完毕后，垃圾桶原地消失
+              this.refreshSignal++; // 动画刷新：触发底层 UniversalHistoryList 的清空动画
             }
           }
         })
@@ -110,7 +137,7 @@ export struct HistoryManager {
     }
   }
 
-  // 构建函数
+  // 引擎装配流水线
   @Builder
   buildHistoryList(targetModule: string) {
     UniversalHistoryList({
@@ -118,25 +145,14 @@ export struct HistoryManager {
       isGlobalPage: true,
       refreshCounter: this.refreshSignal,
       onItemClick: (record, insertType) => {
-
-        // 1. 智能判断需要复制的内容
         const textToCopy = insertType === 'input' ? record.inputContent : record.outputContent;
-
-        // 2. 只有当内容不为空时才执行复制
         if (textToCopy) {
-          // 创建纯文本的剪贴板数据对象
           const pasteData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, textToCopy);
-          // 获取系统剪贴板
-          const systemPasteboard = pasteboard.getSystemPasteboard();
-
-          // 写入数据
-          systemPasteboard.setData(pasteData).then(() => {
-            // 3. 写入成功后，给用户一个极度舒适的反馈
+          pasteboard.getSystemPasteboard().setData(pasteData).then(() => {
             promptAction.showToast({
-              // 根据点击的区域，动态提示文案
               message: insertType === 'input' ? '已复制表达式' : '已复制结果',
               duration: 2000,
-              bottom: 80 // 稍微抬高一点，避免被底部 Tab 栏挡住
+              bottom: 80
             });
           }).catch((err: Error) => {
             console.error(`复制失败: ${err.message}`);
@@ -151,24 +167,18 @@ export struct HistoryManager {
     HdsTabs({ controller: this.controller }) {
       ForEach(tabsConfig, (tab: TabItemConfig, index: number) => {
         TabContent() {
-          // 把 refreshCounter 绑定进引擎，让引擎能听到主控制台的刷新指令
-          if (index === 0) {
-            this.buildHistoryList('all')
-          } else if (index === 1) {
-            this.buildHistoryList('basic,scientific')
-          } else if (index === 2) {
-            this.buildHistoryList('equation')
-          } else if (index === 3) {
-            // TODO
-          } else if (index === 4) {
-            // TODO
-          } else {
-            // TODO
-          }
+          // 【代码瘦身魔法】：用字典瞬间干掉几十行的 if-else 屎山！
+          this.buildHistoryList(this.getModuleTypeByIndex(index))
         }
         .tabBar(new BottomTabBarStyle({ normal: tab.icon, selected: tab.selectedIcon }, tab.label))
       })
     }
+    // ==================== 【新增核心：挂载侦听雷达】 ====================
+    .onChange((index: number) => {
+      this.currentIndex = index;           // 更新当前所在 Tab 的指针
+      this.checkTabHasData(index);         // 瞬间去查数据库，判断垃圾桶该不该出来！
+    })
+    // ================================================================
     .barOverlap(true)
     .vertical(false)
     .barPosition(BarPosition.End)
@@ -185,7 +195,6 @@ export struct HistoryManager {
 
   build() {
     Stack({ alignContent: Alignment.TopEnd }) {
-
       HdsNavigation() {
         this.buildTabs(this.getTabItems())
       }
@@ -193,26 +202,17 @@ export struct HistoryManager {
       .titleBar({
         content: { title: { mainTitle: '全局历史记录' } },
         style: {
-          scrollEffectOpts: {
-            enableScrollEffect: true,
-            scrollEffectType: ScrollEffectType.GRADIENT_BLUR
-          },
-          systemMaterialEffect: {
-            materialType: hdsMaterial.MaterialType.ADAPTIVE,
-            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
-          }
+          scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: ScrollEffectType.GRADIENT_BLUR },
+          systemMaterialEffect: { materialType: hdsMaterial.MaterialType.ADAPTIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE }
         },
         avoidLayoutSafeArea: true,
         enableComponentSafeArea: false
       })
       .hideBackButton(false)
       .titleMode(HdsNavigationTitleMode.MINI)
-      // HdsNavigation 忽略了顶部安全区（钻到了状态栏下面）
       .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
-      // .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.BOTTOM])
       .backgroundColor($r('sys.color.background_secondary'))
 
-      // 悬浮的垃圾桶菜单
       Row() {
         this.TopRightMenu()
       }
@@ -221,4 +221,5 @@ export struct HistoryManager {
     }
     .width('100%')
     .height('100%')
-  }}
+  }
+}
