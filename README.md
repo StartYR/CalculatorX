@@ -84,6 +84,13 @@ CalculatorX 采用深度融合的三层架构，彻底打破了传统前端计�
 git clone https://github.com/StarHeartY/CalculatorX.git
 ```
 
+## 📥 获取 (Get)
+
+<p align="center">
+  <a href="https://appgallery.huawei.com/" target="_blank">
+    <img src="docs/image/README/EXPLORE IT ON AppGallery.png" alt="Explore it on AppGallery" height="52" />
+  </a>
+</p>
 
 ## 📄 版权与许可
 
