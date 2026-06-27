@@ -88,7 +88,7 @@ git clone https://github.com/StarHeartY/CalculatorX.git
 
 <p align="center">
   <a href="https://appgallery.huawei.com/" target="_blank">
-    <img src="docs/image/README/EXPLORE IT ON AppGallery.png" alt="Explore it on AppGallery" height="52" />
+    <img src="docs/image/README/EXPLORE IT ON AppGallery.png" alt="Explore it on AppGallery" height="64" />
   </a>
 </p>
 
