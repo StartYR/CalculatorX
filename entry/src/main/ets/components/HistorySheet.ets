@@ -2,13 +2,14 @@
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
  * * @file HistorySheet.ets
  * @description 局部历史半模态抽屉
-* * @author 易睿 (Yi Rui)
+ * * @author 易睿 (Yi Rui)
  * @date 2026
  */
 
 import { HistoryRepository, HistoryRecord } from '../database/HistoryRepository';
 import { UniversalHistoryList } from './UniversalHistoryList';
 import { TipsDialog } from '@kit.ArkUI';
+import { router } from '@kit.ArkUI';
 
 @Component
 export struct HistorySheet {
@@ -18,6 +19,7 @@ export struct HistorySheet {
 
   onItemClick?: (item: HistoryRecord, insertType: 'input' | 'output') => void;
   onClose?: () => void;
+  onHistoryClick?: () => void;
 
   private helpDialogController: CustomDialogController = new CustomDialogController({
     builder: this.helpDialogBuilder,
@@ -57,7 +59,7 @@ export struct HistorySheet {
         // 帮助引导按钮
         Button({ type: ButtonType.Circle, stateEffect: true }) {
           SymbolGlyph($r('sys.symbol.questionmark_circle'))
-            .fontSize(20)
+            .fontSize(16)
             .fontColor([$r('sys.color.icon_primary')])
         }
         .width(36)
@@ -70,6 +72,34 @@ export struct HistorySheet {
 
         Blank()
 
+        // 全局历史记录
+        Button({ type: ButtonType.Circle, stateEffect: true }) {
+          SymbolGlyph($r('sys.symbol.arrow_counterclockwise_clock_fill'))
+            .fontSize(24)
+            .fontColor([$r('sys.color.icon_primary')])
+        }
+        .width(40)
+        .height(40)
+        .backgroundColor($r('sys.color.background_tertiary'))
+        .margin({ right: 12 })
+        .border({
+          width: 0.5,
+          color: $r('sys.color.comp_divider'),
+          radius: 16
+        })
+        .shadow({
+          radius: 32,
+          color: '#25000000',
+          offsetX: 3,
+          offsetY: 6
+        })
+        .onClick(() => {
+          router.pushUrl({
+            url: 'pages/history/HistoryManager'
+          })
+        })
+
+        // 删除
         if (this.hasData) {
           Button({ type: ButtonType.Circle, stateEffect: true }) {
             SymbolGlyph($r('sys.symbol.trash'))
@@ -78,7 +108,18 @@ export struct HistorySheet {
           }
           .width(40)
           .height(40)
-          .backgroundColor($r('sys.color.background_primary')) // 透明背景，只保留点击波纹
+          .backgroundColor($r('sys.color.background_tertiary'))
+          .border({
+            width: 0.5,
+            color: $r('sys.color.comp_divider'),
+            radius: 16
+          })
+          .shadow({
+            radius: 32,
+            color: '#25000000',
+            offsetX: 3,
+            offsetY: 6
+          })
           .onClick(() => {
             // 防误触弹窗
             AlertDialog.show({
