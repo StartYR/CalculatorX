@@ -343,12 +343,12 @@ export struct ScientificCalc {
 
   build() {
     Column() {
-      // 1. 挂载万能屏幕，占位 30%
+      // 1. 挂载万能屏幕，占位 33%
       FormulaScreen({ moduleType: 'scientific' })
-        .height('30%')
+        .height('33%')
         .width('100%')
 
-      // 2. 挂载科学专属的上下双键盘，占位 70%
+      // 2. 挂载科学专属的上下双键盘，占位 67%
       Column() {
         // 顶部高级键盘
         Grid() {
@@ -358,8 +358,8 @@ export struct ScientificCalc {
                 btn: btn,
                 btnIndex: index,
                 isShift: $isShift,
-                onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); }, // 修复 ArkTS 类型检测
-                onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); } // 修复 ArkTS 类型检测
+                onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
+                onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
               })
             }
           })
@@ -367,11 +367,11 @@ export struct ScientificCalc {
         .rowsTemplate('8fr 10fr 10fr 10fr 10fr')
         .columnsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
         .rowsGap(4)
-        .columnsGap(5)
+        .columnsGap(4)
         .padding({ left: 10, right: 10, top: 6, bottom: 6 })
         .clip(false)
         .width('100%')
-        .height('55%')
+        .height('57%')
 
         // 底部基础键盘
         Grid() {
@@ -379,23 +379,23 @@ export struct ScientificCalc {
             GridItem() {
               BottomKeyItem({
                 btn: btn,
-                onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); }, // 修复 ArkTS 类型检测
-                onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); } // 修复 ArkTS 类型检测
+                onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
+                onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
               })
             }
           })
         }
         .rowsTemplate('1fr 1fr 1fr 1fr')
         .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
-        .rowsGap(12)
-        .columnsGap(8)
+        .rowsGap(8)
+        .columnsGap(6)
         .padding({ left: 10, right: 10, top: 6, bottom: 0 })
         .clip(false)
         .width('100%')
-        .height('45%')
+        .height('43%')
       }
       .width('100%')
-      .height('70%')
+      .height('67%')
       .backgroundColor($r('sys.color.comp_background_secondary'))
       .padding({ bottom: this.navBarHeight })
     }
