@@ -5,7 +5,7 @@
 
 
 
-## [1.2.0 Beta] - 2026-06-25
+## [1.3.0 Beta] - 2026-06
 
 ### 🚀 新增特性 (Features)
 
@@ -18,6 +18,7 @@
   * 新增 `utils/EngineService.ets`：统一接管原本写在 UI 层的极度复杂的正则清洗、MathJSON AST 提取以及与底层 C++ `libentry.so` 引擎的 N-API 通信逻辑。
   * 新增 `utils/HapticUtils.ets`：将按键反馈从 UI 交互中解耦，形成全局统一的马达震感（Hard/Sharp/Soft）控制服务。
 * **事件总线解耦 (EventHub)**：在 `Index.ets` 与 `<ScientificCalc />` 之间引入 `eventHub.emit` 进行无耦合广播通信，彻底隔离全局事件与局部运算状态。
+* **历史记录**：历史记录界面的删除按钮根据当前页面是否为空来显示，并且点击以后只删除当前页面的历史记录。
 
 ### 📝 文档完善 (Documentation)
 * **重塑项目落地页**：全面升级 `README.md`，优化排版并补充快速上手指南与架构大纲，强化软著及版权声明。
