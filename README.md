@@ -11,7 +11,7 @@
 [![Engine](https://img.shields.io/badge/CAS-Giac_%7C_SymEngine-c73d3d.svg)](#)
 
 [![官网](https://img.shields.io/badge/官网-calcx.startyi.com-1890ff?style=for-the-badge&logo=googlechrome&logoColor=white)](https://calcx.startyi.com)
-[![帮助](https://img.shields.io/badge/帮助-Documentation-00b4ab?style=for-the-badge&logo=readthedocs&logoColor=white)](https://calcx.startyi.com/help)
+[![帮助](https://img.shields.io/badge/帮助-Documentation-00b4ab?style=for-the-badge&logo=readthedocs&logoColor=white)](https://calcx.startyi.com/docs)
 [![Issue](https://img.shields.io/badge/Issue-Bug_Report-e34f26?style=for-the-badge&logo=github&logoColor=white)](https://github.com/StarHeartY/CalculatorX/issues/new)
 
 </div>
