@@ -86,10 +86,11 @@ git clone https://github.com/StarHeartY/CalculatorX.git
 
 ## 📥 获取 (Get)
 
-<p align="center" style="display: flex; justify-content: center; gap: 30px;">
+<p align="center">
   <a href="https://appgallery.huawei.com/" target="_blank">
     <img src="docs/image/README/EXPLORE IT ON AppGallery.png" alt="Explore it on AppGallery" height="64" />
   </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <a href="https://github.com/StarHeartY/CalculatorX/releases" target="_blank">
     <img src="docs/image/README/GitHub Releases.png" alt="Explore it on AppGallery" height="64" />
   </a>
