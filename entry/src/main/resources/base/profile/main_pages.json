@@ -5,6 +5,7 @@
     "pages/settings/Settings",
 	"pages/settings/About",
     "pages/settings/Credits",
-    "pages/history/HistoryManager"
+    "pages/history/HistoryManager",
+	"pages/HelpDocs"
   ]
 }

@@ -7,6 +7,8 @@
  */
 
 import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from './MenuComponents';
+import router from '@ohos.router';
+import { RoutePath } from '../utils/CalculatorConfigs';
 
 @Component
 export struct SideBarMenu {
@@ -175,7 +177,20 @@ export struct SideBarMenu {
                 ItemDivider()
                 MenuButton({ icon: $r('sys.symbol.e'), title: '科学常数', onClickAction: () => { /* TODO */ } })
                 ItemDivider()
-                MenuButton({ icon: $r('sys.symbol.questionmark_circle'), title: '帮助', onClickAction: () => { /* TODO */ } })
+                MenuButton({
+                  icon: $r('sys.symbol.questionmark_circle'),
+                  title: '帮助',
+                  onClickAction: () => {
+                    // 1. 先触发侧边栏丝滑收起动画
+                    animateTo({ duration: 350, curve: Curve.Friction }, () => {
+                      this.isSidebarOpen = false;
+                    });
+                    // 2. 触发系统级路由跳转
+                    router.pushUrl({
+                      url: RoutePath.HELP
+                    });
+                  }
+                })
               }
             }
             .padding({ left: 16, right: 16, bottom: 32 })

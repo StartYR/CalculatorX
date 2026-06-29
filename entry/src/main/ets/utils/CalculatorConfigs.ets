@@ -133,6 +133,7 @@ export class RoutePath {
   static readonly ABOUT = 'pages/settings/About';
   static readonly DOC_VIEWER = 'pages/DocViewer';
   static readonly HISTORY = 'pages/history/HistoryManager';
+  static readonly HELP = 'pages/HelpDocs';
 }
 
 export function getFontFamily(btn: string | Resource): string {
