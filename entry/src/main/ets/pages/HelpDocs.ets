@@ -1,63 +1,93 @@
 /**
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
  * * @file HelpDocs.ets
- * @description 帮助文档查看器
+ * @description 帮助中心页面，基于 Webview 离线加载本地用户手册与说明书
  * * @author 易睿 (Yi Rui)
  * @date 2026/6/30 01:37
  */
 
 import router from '@ohos.router';
-import web_webview from '@ohos.web.webview';
+import webview from '@ohos.web.webview';
+import {
+  HdsNavigation,
+  HdsNavigationTitleMode,
+  ScrollEffectType,
+  hdsMaterial
+} from '@kit.UIDesignKit';
 
 @Entry
 @Component
 struct HelpDocs {
-  // 引入全局状态栏高度，保证顶部按钮不会被刘海/挖孔遮挡
   @StorageProp('navBarHeight') navBarHeight: number = 0;
 
-  // 实例化 Web 控制器
-  controller: web_webview.WebviewController = new web_webview.WebviewController();
+  // 原生滚动控制器，用于向 HdsNavigation 传递滚动视差
+  private scrollerForContent: Scroller = new Scroller();
+
+  // Web 控制器
+  controller: webview.WebviewController = new webview.WebviewController();
 
   build() {
-    Column() {
-      // ================= 1. 顶部原生返回栏 =================
-      Row() {
-        Button({ type: ButtonType.Circle, stateEffect: true }) {
-          SymbolGlyph($r('sys.symbol.chevron_left'))
-            .fontSize(24)
-            .fontColor([$r('sys.color.icon_primary')])
+    HdsNavigation() {
+      // 外层原生滚动容器
+      Scroll(this.scrollerForContent) {
+        Column() {
+          // ================= 1. 原生顶部占位块 =================
+          // 高度精确等于：安全区状态栏高度 + 原生 MINI 标题栏高度(56vp)
+          // 作用：在初始状态下将 Web 视口完美推到导航栏下方，防止文档顶端与状态栏内容重合遮挡
+          Row()
+            .width('100%')
+            .height(this.navBarHeight + 64)
+            .backgroundColor('transparent')
+
+          // ================= 2. 离线 Web 容器 =================
+          Web({ src: $rawfile('docs/index.html'), controller: this.controller })
+            .width('100%')
+            .height('100%') // 关键：高度设为 100% 视口，使整个 Column 的总高度超出外层 Scroll 恰好一个占位块的高度
+            .padding({ bottom: this.navBarHeight })
+            .darkMode(WebDarkMode.Auto)
+            .fileAccess(true)
+            .domStorageAccess(true)
+            .mixedMode(MixedMode.All)
+            .textZoomRatio(90) // 网页缩放
+            // 配置双向嵌套滚动轴，打破 Webview 的手势封锁，实现协同联动
+            .nestedScroll({
+              // 手势上滑（页面下滚）：父容器（原生Scroll）优先滚动。
+              scrollForward: NestedScrollMode.PARENT_FIRST,
+              // 手势下滑（页面上滚）：Web 内部优先滚动。
+              scrollBackward: NestedScrollMode.SELF_FIRST
+            })
         }
-        .width(40)
-        .height(40)
-        .backgroundColor('transparent')
-        .onClick(() => {
-          router.back();
-        })
-
-        Text('帮助中心')
-          .fontSize(20)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('sys.color.font_primary'))
-          .margin({ left: 16 })
-
-        Blank()
-      }
-      .width('100%')
-      .height(56)
-      .padding({ left: 16, right: 16 })
-      .margin({ top: this.navBarHeight }) // 状态栏避让
-
-      // ================= 2. 全屏离线 Web 容器 =================
-      Web({ src: $rawfile('docs/index.html'), controller: this.controller })
-        .fileAccess(true)           // 核心：允许访问 rawfile 中的本地静态文件
-        .domStorageAccess(true)     // Next.js 框架运行时通常需要 LocalStorage 支持
-        .mixedMode(MixedMode.All)   // 允许混合加载
         .width('100%')
-        .layoutWeight(1)            // 撑满下方剩余全部空间
-        .backgroundColor($r('sys.color.background_primary')) // 避免加载白屏瞬间刺眼
+      }
+      .scrollable(ScrollDirection.Vertical)
+      .scrollBar(BarState.Off)
+      .edgeEffect(EdgeEffect.Spring)
+      .width('100%')
+      .height('100%')
     }
-    .width('100%')
-    .height('100%')
+    .mode(NavigationMode.Stack)
+    .titleBar({
+      content: {
+        title: { mainTitle: '帮助中心' },
+      },
+      style: {
+        // 启用系统级高级渐变模糊与材质自适应
+        scrollEffectOpts: {
+          enableScrollEffect: true,
+          scrollEffectType: ScrollEffectType.GRADIENT_BLUR,
+        },
+        systemMaterialEffect: {
+          materialType: hdsMaterial.MaterialType.ADAPTIVE,
+          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+        },
+      },
+      avoidLayoutSafeArea: true,
+      enableComponentSafeArea: false
+    })
+    .hideBackButton(false)
+    .titleMode(HdsNavigationTitleMode.MINI)
+    .bindToScrollable([this.scrollerForContent]) // 绑定原生滚动组件
+    .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
     .backgroundColor($r('sys.color.background_primary'))
   }
 }
