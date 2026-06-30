@@ -42,25 +42,23 @@ struct HelpDocs {
       // 外层原生滚动容器
       Scroll(this.scrollerForContent) {
         Column() {
-          // ================= 1. 原生顶部占位块 =================
-          // 高度精确等于：安全区状态栏高度 + 原生 MINI 标题栏高度(56vp)
-          // 作用：在初始状态下将 Web 视口完美推到导航栏下方，防止文档顶端与状态栏内容重合遮挡
+          // ================= 顶部占位块 =================
           Row()
             .width('100%')
             .height(this.navBarHeight + 64)
             .backgroundColor('transparent')
 
-          // ================= 2. 离线 Web 容器 =================
+          // ================= 离线 Web 容器 =================
           Web({ src: $rawfile('docs/index.html'), controller: this.controller })
             .width('100%')
-            .height('100%') // 关键：高度设为 100% 视口，使整个 Column 的总高度超出外层 Scroll 恰好一个占位块的高度
+            .height('100%') // 高度设为 100% 视口
             .padding({ bottom: this.navBarHeight })
             .darkMode(WebDarkMode.Auto)
             .fileAccess(true)
             .domStorageAccess(true)
             .mixedMode(MixedMode.All)
             .textZoomRatio(90) // 网页缩放
-            // 配置双向嵌套滚动轴，打破 Webview 的手势封锁，实现协同联动
+            // 配置双向嵌套滚动轴，实现协同联动
             .nestedScroll({
               // 手势上滑（页面下滚）：父容器（原生Scroll）优先滚动。
               scrollForward: NestedScrollMode.PARENT_FIRST,
@@ -80,6 +78,12 @@ struct HelpDocs {
     .titleBar({
       content: {
         title: { mainTitle: '帮助中心' },
+        backIcon: {
+          action: () => {
+            // 直接关闭整个页面
+            router.back();
+          }
+        }
       },
       style: {
         // 启用系统级高级渐变模糊与材质自适应
