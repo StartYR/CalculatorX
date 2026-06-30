@@ -26,6 +26,17 @@ struct HelpDocs {
   // Web 控制器
   controller: webview.WebviewController = new webview.WebviewController();
 
+  onBackPress(): boolean {
+    // 是否还有“上一页”
+    if (this.controller.accessBackward()) {
+      this.controller.backward();
+      // 消耗返回事件
+      return true;
+    }
+    // 如果当前就是第一页，返回 false
+    return false;
+  }
+
   build() {
     HdsNavigation() {
       // 外层原生滚动容器
