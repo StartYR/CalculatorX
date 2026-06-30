@@ -133,6 +133,7 @@ export class RoutePath {
   static readonly ABOUT = 'pages/settings/About';
   static readonly DOC_VIEWER = 'pages/DocViewer';
   static readonly HISTORY = 'pages/history/HistoryManager';
+  static readonly HELP = 'pages/HelpDocs';
 }
 
 export function getFontFamily(btn: string | Resource): string {
@@ -144,6 +145,7 @@ export function getFontFamily(btn: string | Resource): string {
 
 export function getBgColor(btn: string | Resource, isShift: boolean): ResourceColor {
   let action = getActionId(btn);
+
 
   if (action === 'AC' || action === '⌫') return '#ffff5d3e';
   if (action === '⇧Shift') return isShift ? '#ffb87200' : '#ff9900';
