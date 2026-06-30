@@ -83,9 +83,11 @@
 
 有关本行为准则的常见问题解答，请参见 FAQ：https://www.contributor-covenant.org/faq。其他语言的翻译版本可在 https://www.contributor-covenant.org/translations 获取。
 
-
 ---
 
+<br>
+<br>
+<br>
 
 
 # Contributor Covenant Code of Conduct
