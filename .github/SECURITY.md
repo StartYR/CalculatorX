@@ -20,7 +20,6 @@
 ---
 
 <br>
-<br>
 
 # Security Policy
 
