@@ -17,6 +17,12 @@
 
 请说明报告途径、用户多久可以收到关于已报告漏洞的更新反馈，以及漏洞被接受或拒绝后的后续处理方式等。
 
+---
+
+<br>
+<br>
+<br>
+
 # Security Policy
 
 ## Supported Versions
