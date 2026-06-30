@@ -21,7 +21,6 @@
 
 <br>
 <br>
-<br>
 
 # Security Policy
 
