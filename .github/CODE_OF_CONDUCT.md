@@ -86,8 +86,6 @@
 ---
 
 <br>
-<br>
-<br>
 
 
 # Contributor Covenant Code of Conduct
