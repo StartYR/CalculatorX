@@ -17,6 +17,7 @@ import { HistoryRepository } from '../database/HistoryRepository';
 
 import { ScientificCalc } from '../components/ScientificCalc'; // 科学计算器面板
 import { BasicCalc } from '../components/BasicCalc'; // 基础计算器面板
+import { MatrixCalc } from '../components/MatrixCalc'; // 矩阵计算
 
 @Entry
 @Component
@@ -67,7 +68,9 @@ struct Index {
         if (this.currentModule === 'scientific') {
           ScientificCalc() // 动态挂载科学计算器面板
         } else if (this.currentModule === 'basic') {
-          BasicCalc() // [重构挂载] 动态挂载基础计算器面板
+          BasicCalc() // 动态挂载基础计算器面板
+        } else if (this.currentModule === 'matrix') {
+          MatrixCalc()
         } else {
           // 未来预留给 EquationSolver() 或 Graphing() 等
           Column() {
