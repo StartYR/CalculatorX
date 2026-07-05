@@ -1,7 +1,11 @@
 <div align="center">
+  <h1 align="center">
+    <a href="https://calcx.startyi.com/"><img src="https://img.startyi.com/CalcX-icon.png" width="190"></a>
 
-# 🚀 [CalculatorX](https://calcx.startyi.com) - 专业符号计算器
 
+🚀 [CalculatorX](https://calcx.startyi.com) - 专业符号计算器
+  </h1>
+  
 **打破移动端计算瓶颈，探索数学的无限可能**
 
 [![Changelog](https://img.shields.io/badge/Changelog-v1.1.0-2d8b4c.svg)](CHANGELOG.md)
