@@ -6,14 +6,6 @@
  * @date 2026/7/3 02:32
  */
 
-/**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
- * @file MatrixCalc.ets
- * @description 矩阵与线性代数核心业务面板组件
- * @author 易睿 (Yi Rui)
- * @date 2026
- */
-
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
