@@ -6,6 +6,15 @@
  * @date 2026/7/3 02:32
  */
 
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * @file MatrixCalc.ets
+ * @description 矩阵与线性代数核心业务面板组件
+ * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
+
+import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
 
@@ -14,9 +23,9 @@ const matrixButtons: Array<string> = [
   'M⁻¹', 'Mᵀ', 'det', 'rref', 'eig',
   'Dim', '↑', 'a/b', 'AC', '⌫',
   '←', '↓', '→', '(', ')',
-  '7', '8', '9', '×', '÷',
-  '4', '5', '6', '+', '−',
-  '1', '2', '3', '0', '='
+  '7', '8', '9', '÷', '(-)',
+  '4', '5', '6', '×', '−',
+  '1', '2', '3', '+', '='
 ];
 
 @Component
@@ -33,10 +42,10 @@ struct MatrixKeyItem {
         .fontColor(getFontColor(this.btn))
     }
     .type(ButtonType.Normal)
-    .borderRadius(14)
+    .borderRadius(16) // 严格照搬 BottomKeyItem 的圆角
     .width('100%')
     .height('100%')
-    // 优先使用现有的公共样式方法，矩阵特有按键可在配置中加兜底
+    .padding({ left: 4, right: 4 }) // 严格照搬 BottomKeyItem 的内边距
     .backgroundColor(getBgColor(this.btn, false))
     .shadow(ShadowStyle.OUTER_DEFAULT_SM)
     .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
@@ -54,91 +63,87 @@ struct MatrixKeyItem {
 
 @Component
 export struct MatrixCalc {
+  // 严格照搬 ScientificCalc 的全局状态注入
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
 
-  // 矩阵局部的多维状态，留待第二步填充具体数据结构
+  // 矩阵维度的局部状态 (留待下一步弹窗注入)
   @State matrixRows: number = 0;
   @State matrixCols: number = 0;
-  @State focusedCellRow: number = -1;
-  @State focusedCellCol: number = -1;
 
   private handleButtonClick(btn: string) {
     let action = getActionId(btn);
-    // 触发马达震动反馈
+    // 触发马达震动反馈，完全复用科学计算器的震感链路
     HapticUtils.playVibration(action, this.hapticFeedback, this.vibrationCurve);
 
-    // TODO: 下一步实现按键的具体分发逻辑（如输入数字、移动光标、呼出Dim弹窗、触发C++矩阵计算等）
     if (btn === 'Dim') {
-      // 触发呼出维度选择弹窗逻辑
+      // TODO: 触发呼出维度选择弹窗逻辑
+    } else {
+      // TODO: 将按键动作通过 eventHub 分发给 FormulaScreen 和底部的矩阵网格
+      // getContext(this).eventHub.emit('screen_handle_action', action, false);
     }
   }
 
   build() {
     Column() {
-      // ================= 显示区=================
+      // ================= 1. 大显示区与网格编辑区 (高度扩张至 45%) =================
       Column() {
-        // 上半部分：LaTeX 表达式显示区
-        Column() {
-          // TODO: 挂载 FormulaScreen 或自定义的矩阵公式显示组件
-          Text('矩阵表达式显示区 (TODO)')
-            .fontSize(14)
-            .fontColor($r('sys.color.font_secondary'))
-        }
-        .width('100%')
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
+        // 上半部：公式展示区
+        // 严格照搬，直接挂载万能屏幕，确保完美的顶部安全区避让与 LaTeX 渲染
+        FormulaScreen({ moduleType: 'matrix' })
+          .height('50%')
+          .width('100%')
 
-        // 下半部分：动态矩阵网格编辑区
+        // 下半部：动态矩阵网格编辑区 (目前为空状态占位)
         Column() {
           if (this.matrixRows === 0 || this.matrixCols === 0) {
-            // 空状态占位提示
-            Column() {
-              Text('点击键盘上的 \"Dim\" 按钮创建矩阵')
-                .fontSize(15)
-                .fontColor($r('sys.color.font_tertiary'))
-                .margin({ bottom: 8 })
-            }
-            .justifyContent(FlexAlign.Center)
-            .width('100%')
-            .height('100%')
+            Text('点击键盘上的 \"Dim\" 按钮创建矩阵')
+              .fontSize(15)
+              .fontColor($r('sys.color.font_tertiary'))
           } else {
-            // TODO: 根据选定维度动态渲染真实可输入的数字网格
+            // TODO: 渲染真实输入网格
             Text(`已创建 ${this.matrixRows} × ${this.matrixCols} 矩阵`)
               .fontSize(16)
               .fontColor($r('sys.color.font_primary'))
           }
         }
+        .height('50%')
         .width('100%')
-        .layoutWeight(2)
+        .justifyContent(FlexAlign.Center)
         .backgroundColor($r('sys.color.background_primary'))
         .border({ width: { top: 0.5 }, color: $r('sys.color.comp_divider') })
       }
-      .height('50%')
       .width('100%')
-      .backgroundColor($r('sys.color.background_secondary'))
+      .height('45%')
 
-      // ================= 键盘区域 =================
-      Grid() {
-        ForEach(matrixButtons, (btn: string) => {
-          GridItem() {
-            MatrixKeyItem({
-              btn: btn,
-              onKeyPress: (b: string): void => { this.handleButtonClick(b); }
-            })
-          }
-        })
+      // ================= 2. 矮键盘区域 (高度压缩至 55%) =================
+      // 严格照搬 ScientificCalc：父级 Column 负责背景色与 navBarHeight 避让
+      Column() {
+        Grid() {
+          ForEach(matrixButtons, (btn: string) => {
+            GridItem() {
+              MatrixKeyItem({
+                btn: btn,
+                onKeyPress: (b: string): void => { this.handleButtonClick(b); }
+              })
+            }
+          })
+        }
+        .rowsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
+        .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
+        // 严格照搬 ScientificCalc 的间距参数
+        .rowsGap(8)
+        .columnsGap(6)
+        .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+        .clip(false)
+        .width('100%')
+        .height('100%')
       }
-      .rowsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
-      .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
-      .rowsGap(10)
-      .columnsGap(8)
-      .padding({ left: 10, right: 10, top: 8, bottom: 0 })
       .width('100%')
-      .height('50%')
+      .height('55%')
       .backgroundColor($r('sys.color.comp_background_secondary'))
-      .padding({ bottom: this.navBarHeight }) // 避让系统底部导航条
+      .padding({ bottom: this.navBarHeight }) // 精确打在父级容器上
     }
     .width('100%')
     .height('100%')
