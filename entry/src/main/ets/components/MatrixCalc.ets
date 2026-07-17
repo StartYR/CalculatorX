@@ -72,44 +72,20 @@ export struct MatrixCalc {
     if (btn === 'Dim') {
       // TODO: 触发呼出维度选择弹窗逻辑
     } else {
-      // TODO: 将按键动作通过 eventHub 分发给 FormulaScreen 和底部的矩阵网格
-      // getContext(this).eventHub.emit('screen_handle_action', action, false);
+      // 直接将按键动作通过 eventHub 分发给 FormulaScreen 处理
+      getContext(this).eventHub.emit('screen_handle_action', action, false);
     }
   }
 
   build() {
     Column() {
-      // ================= 1. 大显示区与网格编辑区 (高度扩张至 %) =================
-      Column() {
-        // 上半部：公式展示区
-        // 严格照搬，直接挂载万能屏幕，确保完美的顶部安全区避让与 LaTeX 渲染
-        FormulaScreen({ moduleType: 'matrix' })
-          .height('50%')
-          .width('100%')
-
-        // 下半部：动态矩阵网格编辑区 (目前为空状态占位)
-        Column() {
-          if (this.matrixRows === 0 || this.matrixCols === 0) {
-            Text('点击键盘上的 \"Dim\" 按钮创建矩阵')
-              .fontSize(15)
-              .fontColor($r('sys.color.font_tertiary'))
-          } else {
-            // TODO: 渲染真实输入网格
-            Text(`已创建 ${this.matrixRows} × ${this.matrixCols} 矩阵`)
-              .fontSize(16)
-              .fontColor($r('sys.color.font_primary'))
-          }
-        }
-        .height('50%')
+      // ================= 1. 纯净公式显示区 (高度设定为 55%) =================
+      // 彻底废弃原生网格，完全复用 MathLive 进行矩阵的完美 LaTeX 渲染与光标交互
+      FormulaScreen({ moduleType: 'matrix' })
         .width('100%')
-        .justifyContent(FlexAlign.Center)
-        .backgroundColor($r('sys.color.background_primary'))
-        .border({ width: { top: 0.5 }, color: $r('sys.color.comp_divider') })
-      }
-      .width('100%')
-      .height('55%')
+        .height('55%')
 
-      // ================= 2. 矮键盘区域 (高度压缩至 55%) =================
+      // ================= 2. 专属矩阵键盘区域 (高度压缩至 45%) =================
       // 严格照搬 ScientificCalc：父级 Column 负责背景色与 navBarHeight 避让
       Column() {
         Grid() {
@@ -124,7 +100,6 @@ export struct MatrixCalc {
         }
         .rowsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
         .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
-        // 严格照搬 ScientificCalc 的间距参数
         .rowsGap(8)
         .columnsGap(6)
         .padding({ left: 10, right: 10, top: 6, bottom: 6 })
@@ -135,7 +110,7 @@ export struct MatrixCalc {
       .width('100%')
       .height('45%')
       .backgroundColor($r('sys.color.comp_background_secondary'))
-      .padding({ bottom: this.navBarHeight }) // 精确打在父级容器上
+      .padding({ bottom: this.navBarHeight })
     }
     .width('100%')
     .height('100%')
