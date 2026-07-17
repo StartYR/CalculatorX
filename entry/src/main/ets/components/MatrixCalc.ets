@@ -79,13 +79,13 @@ export struct MatrixCalc {
 
   build() {
     Column() {
-      // ================= 1. 纯净公式显示区 (高度设定为 55%) =================
+      // ================= 1. 纯净公式显示区 (高度设定为 50%) =================
       // 彻底废弃原生网格，完全复用 MathLive 进行矩阵的完美 LaTeX 渲染与光标交互
       FormulaScreen({ moduleType: 'matrix' })
         .width('100%')
-        .height('55%')
+        .height('50%')
 
-      // ================= 2. 专属矩阵键盘区域 (高度压缩至 45%) =================
+      // ================= 2. 专属矩阵键盘区域 (高度压缩至 50%) =================
       // 严格照搬 ScientificCalc：父级 Column 负责背景色与 navBarHeight 避让
       Column() {
         Grid() {
@@ -108,7 +108,7 @@ export struct MatrixCalc {
         .height('100%')
       }
       .width('100%')
-      .height('45%')
+      .height('50%')
       .backgroundColor($r('sys.color.comp_background_secondary'))
       .padding({ bottom: this.navBarHeight })
     }
