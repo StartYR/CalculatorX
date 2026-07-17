@@ -87,7 +87,7 @@ export struct MatrixCalc {
 
   build() {
     Column() {
-      // ================= 1. 大显示区与网格编辑区 (高度扩张至 45%) =================
+      // ================= 1. 大显示区与网格编辑区 (高度扩张至 %) =================
       Column() {
         // 上半部：公式展示区
         // 严格照搬，直接挂载万能屏幕，确保完美的顶部安全区避让与 LaTeX 渲染
@@ -115,7 +115,7 @@ export struct MatrixCalc {
         .border({ width: { top: 0.5 }, color: $r('sys.color.comp_divider') })
       }
       .width('100%')
-      .height('45%')
+      .height('55%')
 
       // ================= 2. 矮键盘区域 (高度压缩至 55%) =================
       // 严格照搬 ScientificCalc：父级 Column 负责背景色与 navBarHeight 避让
@@ -141,7 +141,7 @@ export struct MatrixCalc {
         .height('100%')
       }
       .width('100%')
-      .height('55%')
+      .height('45%')
       .backgroundColor($r('sys.color.comp_background_secondary'))
       .padding({ bottom: this.navBarHeight }) // 精确打在父级容器上
     }
