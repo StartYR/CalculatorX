@@ -9,7 +9,10 @@
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
-import { icon_abs, icon_M_power, icon_backspace } from '../utils/CalculatorConfigs';
+import { icon_backspace } from '../utils/CalculatorConfigs';
+
+const icon_M_power: Resource = $rawfile('icons/matrix/icon_M_power.svg');
+const icon_abs: Resource = $rawfile('icons/matrix/icon_abs.svg');
 
 // 主键盘
 const matrixButtons: Array<string | Resource> = [
@@ -26,7 +29,7 @@ const matrixShiftButtons: Array<string | Resource> = [
   '', '', 'I', 'det', 'Mᴴ',
   '', '', '', 'rref', 'eig',
   '', '', '', '', '',
-  '', '', '', '叉乘', '·',
+  '', '', '', '⨯', '•',
   '', '', '', 'rank', 'tr',
   '', '', icon_M_power, icon_abs, ''
 ];
@@ -43,9 +46,10 @@ struct MatrixKeyItem {
 
   build() {
     Button() {
+      // 使用 Stack 容器实现绝对定位，alignContent 控制副文字悬浮左上角
       Stack({ alignContent: Alignment.TopStart }) {
 
-        // ================= 主功能文字或图标 =================
+        // ================= 1. 主功能文字或图标 =================
         if (typeof this.btn === 'string') {
           Text(this.btn)
             .fontFamily(getFontFamily(this.btn))
@@ -56,14 +60,20 @@ struct MatrixKeyItem {
             .height('100%')
             .textAlign(TextAlign.Center)
         } else {
-          // 如果是 Resource，使用 Image 渲染
-          Image(this.btn)
-            .width(32)
-            .height(32)
-            .fillColor(getFontColor(this.btn))
+          Column() {
+            Image(this.btn)
+              .width(48)
+              .height(40)
+              .fillColor(getFontColor(this.btn))
+              .objectFit(ImageFit.Contain)
+          }
+          .width('100%')
+          .height('100%')
+          .justifyContent(FlexAlign.Center)
+          .alignItems(HorizontalAlign.Center)
         }
 
-        // ================= Shift 副功能文字或图标 =================
+        // ================= 2. Shift 副功能文字或图标 =================
         if (matrixShiftButtons[this.btnIndex] !== '') {
           if (typeof matrixShiftButtons[this.btnIndex] === 'string') {
             Text(matrixShiftButtons[this.btnIndex] as string)
@@ -72,12 +82,12 @@ struct MatrixKeyItem {
               .fontColor('#ffac8100')
               .padding({ left: 6, top: 4 })
           } else {
-            // 如果是 Resource，使用 Image 渲染并调整悬浮位置
             Image(matrixShiftButtons[this.btnIndex] as Resource)
               .width(14)
               .height(14)
               .fillColor('#ffac8100')
               .margin({ left: 6, top: 4 })
+              .objectFit(ImageFit.Contain) // 【修复点 3】：Shift 的 SVG 同样需要比例保护
           }
         }
       }
@@ -99,7 +109,6 @@ struct MatrixKeyItem {
       normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
     })
     .onClick(() => {
-      // 💡 顺手修复的 Bug：你数组里叫 '⇧Shift'，判断时必须对齐，否则 Shift 会失效
       if (this.btn === '⇧Shift') {
         this.isShift = !this.isShift;
         return;
@@ -136,12 +145,23 @@ export struct MatrixCalc {
     getContext(this).eventHub.off('screen_shift_consumed');
   }
 
+
   private handleButtonClick(btn: string | Resource) {
-    let action = getActionId(btn);
+    let action = '';
+
+    // 优先拦截本组件私有的资源/按键
+    if (btn === icon_M_power) action = 'M_power';
+    else if (btn === icon_abs) action = 'abs'
+    else {
+      // 通用按键交由全局统管
+      action = getActionId(btn);
+    }
+
     // 触发马达震动反馈
     HapticUtils.playVibration(action, this.hapticFeedback, this.vibrationCurve);
 
-    // TODO: 后续补充具体的按键逻辑与维度弹窗
+    // 发送动作指令
+    // getContext(this).eventHub.emit('screen_handle_action', action, false);
   }
 
   build() {

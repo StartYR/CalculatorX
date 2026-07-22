@@ -25,7 +25,6 @@ export const icon_inverse: Resource = $rawfile('icons/math/icon_inverse.svg');
 export const icon_e_power: Resource = $rawfile('icons/math/icon_e_power.svg');
 export const icon_comma: Resource = $rawfile('icons/math/icon_comma.svg');
 export const icon_fact: Resource = $rawfile('icons/math/icon_fact.svg');
-export const icon_M_power: Resource = $rawfile('icons/math/icon_M_power.svg');
 
 export class MathIcons {
   // 组合 (Combination)
@@ -93,7 +92,6 @@ export function getActionId(btn: string | Resource): string {
   if (btn === icon_e_power) return 'e_power';
   if (btn === icon_comma) return 'comma';
   if (btn === icon_fact) return 'fact';
-  if (btn === icon_M_power) return 'M_power';
   return '';
 }
 
