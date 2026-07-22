@@ -10,7 +10,6 @@
 # @date 2026-05-30
 # ============================================================================
 
-
 cmake_minimum_required(VERSION 3.14.0)
 project(CalculatorX)
 
@@ -45,19 +44,12 @@ set(Boost_INCLUDE_DIR ${boost_SOURCE_DIR} CACHE PATH "Boost include" FORCE)
 include_directories(${boost_SOURCE_DIR})
 
 
-# ================= 引入 GMP (你辛苦编译的 arm64 满血版静态库) =================
+# ================= 引入 GMP  =================
 add_library(gmp STATIC IMPORTED)
 set_target_properties(gmp PROPERTIES IMPORTED_LOCATION
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/${OHOS_ARCH}/libgmp.a)
 
-
-# ================= 引入 SymEngine (CAS 核心) =================
-#FetchContent_Declare(
-#    symengine
-#    GIT_REPOSITORY https://github.com/symengine/symengine.git
-#    GIT_TAG        v0.11.2
-#)
-
+# ================= 引入 SymEngine =================
 FetchContent_Declare(
     symengine
     URL ${CMAKE_CURRENT_SOURCE_DIR}/symengine-0.11.2.tar.gz
@@ -78,7 +70,6 @@ include_directories(
     ${symengine_BINARY_DIR}/symengine/utilities/teuchos
 )
 
-
 # ================= 引入 Giac =================
 FetchContent_Declare(
     giac
@@ -96,7 +87,7 @@ file(WRITE "${GLIBC_STUB_FILE}" "
 #include <stdio.h>
 #include <stdarg.h>
 
-/* 1. 完美平替 Linux 的安全打印符号 __fprintf_chk */
+/* 1. Linux 的安全打印符号 __fprintf_chk */
 int __fprintf_chk(FILE *stream, int flag, const char *format, ...) {
     va_list ap;
     int ret;
@@ -106,7 +97,7 @@ int __fprintf_chk(FILE *stream, int flag, const char *format, ...) {
     return ret;
 }
 
-/* 2. 完美平替 Linux 的本地化字符表符号 __ctype_b_loc */
+/* 2. Linux 的本地化字符表符号 __ctype_b_loc */
 #include <ctype.h>
 const unsigned short **__ctype_b_loc(void) {
     /* musl libc 内部有自己的字符映射，这里直接桥接或返回符合标准的通用本地化位置 */
@@ -144,7 +135,6 @@ target_include_directories(giac PUBLIC
 )
 
 target_link_libraries(giac PUBLIC gmp)
-
 
 # ================= 构建入口 ==================
 add_library(entry SHARED
