@@ -40,3 +40,4 @@ build-profile.json5
 # C++ 依赖包
 boost_*.tar.gz
 giac-*.tar.gz
+symengine-*.tar.gz
