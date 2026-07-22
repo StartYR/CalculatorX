@@ -6,7 +6,8 @@
  * @date 2026
  */
 
-// ========== 1. SVG 资源定义 ==========
+// ========== SVG 资源定义 ==========
+export const icon_backspace: Resource = $rawfile('icons/icon_backspace.svg');
 export const icon_sum: Resource = $rawfile('icons/math/icon_sum.svg');
 export const icon_product: Resource = $rawfile('icons/math/icon_product.svg');
 export const icon_integral: Resource = $rawfile('icons/math/icon_integral.svg');
@@ -24,7 +25,7 @@ export const icon_inverse: Resource = $rawfile('icons/math/icon_inverse.svg');
 export const icon_e_power: Resource = $rawfile('icons/math/icon_e_power.svg');
 export const icon_comma: Resource = $rawfile('icons/math/icon_comma.svg');
 export const icon_fact: Resource = $rawfile('icons/math/icon_fact.svg');
-
+export const icon_M_power: Resource = $rawfile('icons/math/icon_M_power.svg');
 
 export class MathIcons {
   // 组合 (Combination)
@@ -69,42 +70,12 @@ export const PermutationOptions: MathStyleOption[] = [
   { id: 4, name: '平铺函数风格', description: '计算机编程、离散数学及纯文本环境规范', icon: MathIcons.PERM_INLINE, latexTemplate: '\\mathrm{P}(n, r)' }
 ];
 
-// ========== 2. 键盘布局数组 ==========
-
-// export const topShiftButtons: Array<string | Resource> = [
-//   '', '', '', '', '', '',
-//   'm', 'n', 'd/dx', icon_indef_integral,'GCD', 'LCM',
-//   'a', 'b', 'c', 'd', icon_e_power, 'lg',
-//   'mod', icon_sqrt3, '%', icon_power3, icon_comma, icon_inverse,
-//   'sin⁻¹', 'cos⁻¹', 'tan⁻¹', 'x', 'y', 'z',
-// ];
-//
-// export const topButtons: Array<string | Resource> = [
-//   '⇧Shift', 'R/D', '⇦', '⇨', 'S⇄D', 'i',
-//   '° \' \"', '∞', 'lim', icon_integral, icon_sum, icon_product,
-//   icon_fact, 'nCr', 'nPr', 'e', 'ln', 'log',
-//   icon_abs, icon_sqrt, icon_sqrtx, icon_power2, icon_power, icon_fraction,
-//   'sin', 'cos', 'tan', 'π', '(', ')',
-// ];
-//
-// export const bottomButtons: Array<string | Resource> = [
-//   '7', '8', '9', '⌫', 'AC',
-//   '4', '5', '6', '×', '÷',
-//   '1', '2', '3', '+', '−',
-//   '.', '0', icon_exp, 'Ans', '=',
-// ];
-//
-// export const basicButtons: Array<string | Resource> = [
-//   '×', '÷', '⌫', 'AC',
-//   '7', '8', '9', '%',
-//   '4', '5', '6', '−',
-//   '1', '2', '3', '+',
-//   '.', '0', 'Ans', '='
-// ];
-
-// ========== 3. 样式映射函数 ==========
+/**
+ * 样式映射函数
+ */
 export function getActionId(btn: string | Resource): string {
   if (typeof btn === 'string') return btn;
+  if (btn === icon_backspace) return '⌫';
   if (btn === icon_fraction) return 'fraction';
   if (btn === icon_sqrt) return 'sqrt';
   if (btn === icon_sqrt3) return 'sqrt3';
@@ -117,16 +88,18 @@ export function getActionId(btn: string | Resource): string {
   if (btn === icon_product) return 'product';
   if (btn === icon_integral) return 'integral';
   if (btn === icon_indef_integral) return 'indef_integral';
-
   if (btn === icon_exp) return 'icon_exp';
   if (btn === icon_inverse) return 'inverse';
   if (btn === icon_e_power) return 'e_power';
   if (btn === icon_comma) return 'comma';
   if (btn === icon_fact) return 'fact';
+  if (btn === icon_M_power) return 'M_power';
   return '';
 }
 
-// 全局路径
+/**
+ * 全局路径
+ */
 export class RoutePath {
   static readonly INDEX = 'pages/Index';
   static readonly SETTINGS = 'pages/settings/Settings';
@@ -136,6 +109,9 @@ export class RoutePath {
   static readonly HELP = 'pages/HelpDocs';
 }
 
+/**
+ * 字体样式
+ */
 export function getFontFamily(btn: string | Resource): string {
   if (typeof btn !== 'string') return 'HarmonyOS Sans';
   if (['AC', '⌫', '='].includes(btn)) return 'HarmonyOS Sans';
@@ -143,9 +119,11 @@ export function getFontFamily(btn: string | Resource): string {
   return 'Cambria Math';
 }
 
+/**
+ * 按钮颜色
+ */
 export function getBgColor(btn: string | Resource, isShift: boolean): ResourceColor {
   let action = getActionId(btn);
-
   if (action === 'AC' || action === '⌫') return '#ffff5d3e';
   if (action === '⇧Shift') return isShift ? '#ffb87200' : '#ff9900';
   if (action === '=') return $r('sys.color.comp_background_emphasize');
@@ -157,6 +135,9 @@ export function getBgColor(btn: string | Resource, isShift: boolean): ResourceCo
   return $r('sys.color.comp_background_secondary');
 }
 
+/**
+ * 字体大小
+ */
 export function getFontSize(btn: string | Resource): number {
   if (typeof btn !== 'string') return 14;
   if ((btn >= '0' && btn <= '9') || btn === 'Ans') return 24;
@@ -171,6 +152,9 @@ export function getFontSize(btn: string | Resource): number {
   return 20;
 }
 
+/**
+ * 字体颜色
+*/
 export function getFontColor(btn: string | Resource): ResourceColor {
   let action = getActionId(btn);
 

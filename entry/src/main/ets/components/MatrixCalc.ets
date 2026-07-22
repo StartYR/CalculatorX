@@ -9,9 +9,10 @@
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
+import { icon_abs, icon_M_power } from '../utils/CalculatorConfigs';
 
 // 主键盘
-const matrixButtons: Array<string> = [
+const matrixButtons: Array<string | Resource> = [
   '⇧Shift', '⇧', 'Dim', 'M⁻¹', 'Mᵀ',
   '⇦', '⇩', '⇨', '(', ')',
   '7', '8', '9', '⌫', 'AC',
@@ -21,44 +22,63 @@ const matrixButtons: Array<string> = [
 ];
 
 // Shift 键盘
-const matrixShiftButtons: Array<string> = [
+const matrixShiftButtons: Array<string | Resource> = [
   '', '', 'I', 'det', 'Mᴴ',
   '', '', '', 'rref', 'eig',
   '', '', '', '', '',
-  '', '', '', '叉乘', '点乘',
+  '', '', '', '叉乘', '·',
   '', '', '', 'rank', 'tr',
-  '', '', '^', '绝对值', ''
+  '', '', icon_M_power, icon_abs, ''
 ];
 
 @Component
 struct MatrixKeyItem {
-  btn: string = '';
+  // 1. 放宽类型声明
+  btn: string | Resource = '';
   btnIndex: number = 0;
   @Link isShift: boolean;
 
-  onKeyPress: (btn: string) => void = () => {};
+  // 2. 放宽回调参数类型
+  onKeyPress: (btn: string | Resource) => void = () => {};
 
   build() {
     Button() {
-      // 使用 Stack 容器实现绝对定位，alignContent 控制副文字悬浮左上角
       Stack({ alignContent: Alignment.TopStart }) {
-        // 1. 主功能文字（底层绝对居中）
-        Text(this.btn)
-          .fontFamily(getFontFamily(this.btn))
-          .fontSize(getFontSize(this.btn))
-          .fontWeight(FontWeight.Medium)
-          .fontColor(getFontColor(this.btn))
-          .width('100%')
-          .height('100%')
-          .textAlign(TextAlign.Center) // 确保文字在 Stack 内部完全居中
 
-        // 2. Shift 副功能文字（顶层左上角悬浮）
+        // ================= 主功能文字或图标 =================
+        if (typeof this.btn === 'string') {
+          Text(this.btn)
+            .fontFamily(getFontFamily(this.btn))
+            .fontSize(getFontSize(this.btn))
+            .fontWeight(FontWeight.Medium)
+            .fontColor(getFontColor(this.btn))
+            .width('100%')
+            .height('100%')
+            .textAlign(TextAlign.Center)
+        } else {
+          // 如果是 Resource，使用 Image 渲染
+          Image(this.btn)
+            .width(32)
+            .height(32)
+            .fillColor(getFontColor(this.btn))
+        }
+
+        // ================= Shift 副功能文字或图标 =================
         if (matrixShiftButtons[this.btnIndex] !== '') {
-          Text(matrixShiftButtons[this.btnIndex])
-            .fontFamily(getFontFamily(matrixShiftButtons[this.btnIndex]))
-            .fontSize(12) // 字号缩小到 12，避免喧宾夺主
-            .fontColor('#ffac8100')
-            .padding({ left: 6, top: 4 }) // 精确控制左上角留白，防止贴边
+          if (typeof matrixShiftButtons[this.btnIndex] === 'string') {
+            Text(matrixShiftButtons[this.btnIndex] as string)
+              .fontFamily(getFontFamily(matrixShiftButtons[this.btnIndex] as string))
+              .fontSize(12)
+              .fontColor('#ffac8100')
+              .padding({ left: 6, top: 4 })
+          } else {
+            // 如果是 Resource，使用 Image 渲染并调整悬浮位置
+            Image(matrixShiftButtons[this.btnIndex] as Resource)
+              .width(14)
+              .height(14)
+              .fillColor('#ffac8100')
+              .margin({ left: 6, top: 4 })
+          }
         }
       }
       .width('100%')
@@ -67,8 +87,8 @@ struct MatrixKeyItem {
     .type(ButtonType.Normal)
     .borderRadius(16)
     .width('100%')
-    .height('100%') // 废弃了外部的 Column 占位，按键直接撑满整个 GridItem
-    .padding({ left: 2, right: 2 }) // 保持微小的内边距
+    .height('100%')
+    .padding({ left: 2, right: 2 })
     .backgroundColor(getBgColor(this.btn, this.isShift))
     .shadow(ShadowStyle.OUTER_DEFAULT_SM)
     .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
@@ -79,12 +99,12 @@ struct MatrixKeyItem {
       normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
     })
     .onClick(() => {
-      if (this.btn === 'Shift') {
+      // 💡 顺手修复的 Bug：你数组里叫 '⇧Shift'，判断时必须对齐，否则 Shift 会失效
+      if (this.btn === '⇧Shift') {
         this.isShift = !this.isShift;
         return;
       }
 
-      // 兜底逻辑：如果 Shift 激活但该键无 Shift 功能，执行原功能
       if (this.isShift && matrixShiftButtons[this.btnIndex] !== '') {
         this.onKeyPress(matrixShiftButtons[this.btnIndex]);
         this.isShift = false;
@@ -100,8 +120,6 @@ export struct MatrixCalc {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
-
-  // 增加 Shift 状态及事件监听 (完全照搬 ScientificCalc)
   @State @Watch('onShiftChange') isShift: boolean = false;
 
   onShiftChange() {
@@ -118,7 +136,7 @@ export struct MatrixCalc {
     getContext(this).eventHub.off('screen_shift_consumed');
   }
 
-  private handleButtonClick(btn: string) {
+  private handleButtonClick(btn: string | Resource) {
     let action = getActionId(btn);
     // 触发马达震动反馈
     HapticUtils.playVibration(action, this.hapticFeedback, this.vibrationCurve);
@@ -128,22 +146,21 @@ export struct MatrixCalc {
 
   build() {
     Column() {
-      // ================= 1. 纯净公式显示区 (高度设定为 55%) =================
       FormulaScreen({ moduleType: 'matrix' })
         .width('100%')
         .height('55%')
 
-      // ================= 2. 专属矩阵键盘区域 (高度压缩至 45%) =================
       Column() {
         Grid() {
-          // 注意这里增加了 index 用于映射 Shift 数组
-          ForEach(matrixButtons, (btn: string, index: number) => {
+          // 2. 放宽 ForEach 中 btn 的类型声明
+          ForEach(matrixButtons, (btn: string | Resource, index: number) => {
             GridItem() {
               MatrixKeyItem({
                 btn: btn,
-                btnIndex: index,       // 传入数组索引
-                isShift: $isShift,     // 双向绑定 Shift 状态
-                onKeyPress: (b: string): void => { this.handleButtonClick(b); }
+                btnIndex: index,
+                isShift: $isShift,
+                // 3. 回调函数声明同步放宽
+                onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); }
               })
             }
           })
