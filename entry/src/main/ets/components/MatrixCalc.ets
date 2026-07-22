@@ -12,7 +12,7 @@ import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } fro
 
 // 主键盘
 const matrixButtons: Array<string> = [
-  'Shift', '⇧', 'Dim', 'M⁻¹', 'Mᵀ',
+  '⇧Shift', '⇧', 'Dim', 'M⁻¹', 'Mᵀ',
   '⇦', '⇩', '⇨', '(', ')',
   '7', '8', '9', '⌫', 'AC',
   '4', '5', '6', '×', '÷',
@@ -34,67 +34,64 @@ const matrixShiftButtons: Array<string> = [
 struct MatrixKeyItem {
   btn: string = '';
   btnIndex: number = 0;
-  @Link isShift: boolean; // 接收父组件的 Shift 状态双向绑定
+  @Link isShift: boolean;
 
   onKeyPress: (btn: string) => void = () => {};
 
   build() {
-    Column() {
-      //  Shift 占位与显示逻辑
-      Row() {
-        if (matrixShiftButtons[this.btnIndex] !== '') {
-          Text(matrixShiftButtons[this.btnIndex])
-            .fontFamily(getFontFamily(matrixShiftButtons[this.btnIndex]))
-            .fontSize(15)
-            .fontColor('#ffac8100') // 严格照搬科学计算器的橘黄色
-            .textAlign(TextAlign.Center)
-            .width('100%')
-        }
-      }
-      .width('100%')
-      .height(16)
-      .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
-      .margin({ bottom: 1 })
-
-      Button() {
+    Button() {
+      // 使用 Stack 容器实现绝对定位，alignContent 控制副文字悬浮左上角
+      Stack({ alignContent: Alignment.TopStart }) {
+        // 1. 主功能文字（底层绝对居中）
         Text(this.btn)
           .fontFamily(getFontFamily(this.btn))
           .fontSize(getFontSize(this.btn))
           .fontWeight(FontWeight.Medium)
           .fontColor(getFontColor(this.btn))
-      }
-      .type(ButtonType.Normal)
-      .borderRadius(12) // 照搬 TopKeyItem 的圆角
-      .width('100%')
-      .layoutWeight(1) // 自动撑满剩余高度
-      .padding({ left: 2, right: 2, top: 0, bottom: 0 })
-      .backgroundColor(getBgColor(this.btn, this.isShift))
-      .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-      .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
-      .borderColor($r('app.color.btn_highlight'))
-      .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
-      .stateStyles({
-        pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
-        normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
-      })
-      .onClick(() => {
-        if (this.btn === 'Shift') {
-          this.isShift = !this.isShift;
-          return;
-        }
+          .width('100%')
+          .height('100%')
+          .textAlign(TextAlign.Center) // 确保文字在 Stack 内部完全居中
 
-        // 兜底逻辑：如果 Shift 激活但该键无 Shift 功能，执行原功能
-        if (this.isShift && matrixShiftButtons[this.btnIndex] !== '') {
-          this.onKeyPress(matrixShiftButtons[this.btnIndex]);
-          this.isShift = false; // 触发后自动复位
-        } else {
-          this.onKeyPress(this.btn);
+        // 2. Shift 副功能文字（顶层左上角悬浮）
+        if (matrixShiftButtons[this.btnIndex] !== '') {
+          Text(matrixShiftButtons[this.btnIndex])
+            .fontFamily(getFontFamily(matrixShiftButtons[this.btnIndex]))
+            .fontSize(12) // 字号缩小到 12，避免喧宾夺主
+            .fontColor('#ffac8100')
+            .padding({ left: 6, top: 4 }) // 精确控制左上角留白，防止贴边
         }
-      })
+      }
+      .width('100%')
+      .height('100%')
     }
+    .type(ButtonType.Normal)
+    .borderRadius(16)
     .width('100%')
-    .height('100%')
+    .height('100%') // 废弃了外部的 Column 占位，按键直接撑满整个 GridItem
+    .padding({ left: 2, right: 2 }) // 保持微小的内边距
+    .backgroundColor(getBgColor(this.btn, this.isShift))
+    .shadow(ShadowStyle.OUTER_DEFAULT_SM)
+    .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
+    .borderColor($r('app.color.btn_highlight'))
+    .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
+    .stateStyles({
+      pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
+      normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
+    })
+    .onClick(() => {
+      if (this.btn === 'Shift') {
+        this.isShift = !this.isShift;
+        return;
+      }
+
+      // 兜底逻辑：如果 Shift 激活但该键无 Shift 功能，执行原功能
+      if (this.isShift && matrixShiftButtons[this.btnIndex] !== '') {
+        this.onKeyPress(matrixShiftButtons[this.btnIndex]);
+        this.isShift = false;
+      } else {
+        this.onKeyPress(this.btn);
+      }
+    })
   }
 }
 
