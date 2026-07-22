@@ -54,7 +54,8 @@
   </defs>
   <g
      style="fill:#000000;fill-opacity:1"
-     id="g3">
+     id="g3"
+     transform="matrix(1.8412825,0,0,1.8412825,-9.7677183,-8.3072364)">
     <g
        id="use2"
        transform="translate(4.9809999,12.829)">
@@ -65,19 +66,19 @@
     </g>
   </g>
   <path
-     style="baseline-shift:baseline;display:inline;overflow:visible;opacity:1;vector-effect:none;stroke-width:1.34626;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
-     d="m 16.273642,4.6114966 v 0.446 h 4.176 v -0.446 z"
+     style="baseline-shift:baseline;display:inline;overflow:visible;opacity:1;vector-effect:none;stroke-width:2.47885;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+     d="M 20.196654,0.18383134 V 1.0050434 h 7.689195 V 0.18383134 Z"
      id="path3" />
   <path
-     style="baseline-shift:baseline;display:inline;overflow:visible;opacity:1;vector-effect:none;stroke-width:1.27101;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
-     d="m 16.273642,5.0580279 v 3.287 h 0.446 v -3.287 z"
+     style="baseline-shift:baseline;display:inline;overflow:visible;opacity:1;vector-effect:none;stroke-width:2.34028;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+     d="m 20.196654,1.0060216 v 6.0522955 h 0.821212 V 1.0060216 Z"
      id="path4" />
   <path
-     style="baseline-shift:baseline;display:inline;overflow:visible;opacity:1;vector-effect:none;stroke-width:1.27323;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
-     d="m 20.005267,5.0580279 v 3.287 h 0.444 v -3.287 z"
+     style="baseline-shift:baseline;display:inline;overflow:visible;opacity:1;vector-effect:none;stroke-width:2.34438;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+     d="m 27.06763,1.0060216 v 6.0522955 h 0.817528 V 1.0060216 Z"
      id="path5" />
   <path
-     style="baseline-shift:baseline;display:inline;overflow:visible;opacity:1;vector-effect:none;stroke-width:1.34622;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
-     d="m 16.273642,8.3450279 v 0.446 h 4.175781 v -0.446 z"
+     style="baseline-shift:baseline;display:inline;overflow:visible;opacity:1;vector-effect:none;stroke-width:2.47877;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+     d="m 20.196654,7.0583171 v 0.821212 h 7.688792 v -0.821212 z"
      id="path6" />
 </svg>
