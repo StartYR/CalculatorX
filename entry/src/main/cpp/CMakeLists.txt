@@ -14,6 +14,8 @@
 cmake_minimum_required(VERSION 3.14.0)
 project(CalculatorX)
 
+cmake_policy(SET CMP0135 NEW)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -50,11 +52,17 @@ set_target_properties(gmp PROPERTIES IMPORTED_LOCATION
 
 
 # ================= 引入 SymEngine (CAS 核心) =================
+#FetchContent_Declare(
+#    symengine
+#    GIT_REPOSITORY https://github.com/symengine/symengine.git
+#    GIT_TAG        v0.11.2
+#)
+
 FetchContent_Declare(
     symengine
-    GIT_REPOSITORY https://github.com/symengine/symengine.git
-    GIT_TAG        v0.11.2
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/symengine-0.11.2.tar.gz
 )
+
 set(WITH_GMP OFF CACHE BOOL "Disable GMP" FORCE)
 set(WITH_MPFR OFF CACHE BOOL "Disable MPFR" FORCE)
 set(WITH_MPC OFF CACHE BOOL "Disable MPC" FORCE)
