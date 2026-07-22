@@ -8,11 +8,11 @@
 
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
-import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor, PreferenceConfigs } from '../utils/CalculatorConfigs';
+import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor, PreferenceConfigs, icon_backspace } from '../utils/CalculatorConfigs';
 
 // 1. 私有按键布局数组
 const basicButtons: Array<string | Resource> = [
-  '×', '÷', '⌫', 'AC',
+  '×', '÷', icon_backspace, 'AC',
   '7', '8', '9', '%',
   '4', '5', '6', '−',
   '1', '2', '3', '+',
@@ -62,7 +62,7 @@ struct BasicKeyItem {
       this.onKeyPress(this.btn as string);
     })
     .onTouch((event: TouchEvent) => {
-      if (this.btn === '⌫') {
+      if (this.btn === icon_backspace) {
         if (event.type === TouchType.Down) {
           clearTimeout(this.startDelayTimer);
           clearInterval(this.repeatDeleteTimer);
