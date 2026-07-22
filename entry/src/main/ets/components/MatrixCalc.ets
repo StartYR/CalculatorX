@@ -9,13 +9,13 @@
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
-import { icon_abs, icon_M_power } from '../utils/CalculatorConfigs';
+import { icon_abs, icon_M_power, icon_backspace } from '../utils/CalculatorConfigs';
 
 // 主键盘
 const matrixButtons: Array<string | Resource> = [
   '⇧Shift', '⇧', 'Dim', 'M⁻¹', 'Mᵀ',
   '⇦', '⇩', '⇨', '(', ')',
-  '7', '8', '9', '⌫', 'AC',
+  '7', '8', '9', icon_backspace, 'AC',
   '4', '5', '6', '×', '÷',
   '1', '2', '3', '+', '−',
   '.', '0', 'a/b', 'Ans', '='

@@ -33,7 +33,8 @@ import {
   icon_comma,
   icon_fact,
   icon_sum,
-  icon_product
+  icon_product,
+  icon_backspace
 } from '../utils/CalculatorConfigs';
 
 // ================= 1. 私有按键布局数组 =================
@@ -54,7 +55,7 @@ const topButtons: Array<string | Resource> = [
 ];
 
 const bottomButtons: Array<string | Resource> = [
-  '7', '8', '9', '⌫', 'AC',
+  '7', '8', '9', icon_backspace, 'AC',
   '4', '5', '6', '×', '÷',
   '1', '2', '3', '+', '−',
   '.', '0', icon_exp, 'Ans', '=',
@@ -271,7 +272,7 @@ struct BottomKeyItem {
       this.onKeyPress(this.btn as string);
     })
     .onTouch((event: TouchEvent) => {
-      if (this.btn === '⌫') {
+      if (this.btn === icon_backspace) {
         if (event.type === TouchType.Down) {
           clearTimeout(this.startDelayTimer);
           clearInterval(this.repeatDeleteTimer);
