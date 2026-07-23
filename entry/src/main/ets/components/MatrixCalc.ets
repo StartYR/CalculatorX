@@ -31,7 +31,7 @@ const matrixShiftButtons: Array<string | Resource> = [
   '', '', '', '', '',
   '', '', '', '⨯', '•',
   '', '', '', 'rank', 'tr',
-  '', '', 'I', icon_abs, ''
+  '', 'i', 'I', icon_abs, ''
 ];
 
 @Component
