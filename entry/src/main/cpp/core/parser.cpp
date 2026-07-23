@@ -43,6 +43,23 @@ static std::string parseListToGiacString(const json& listNode, bool isRad, bool 
     return result;
 }
 
+// ================= 提取矩阵维度的通用解析器 =================
+static std::pair<int, int> getMatrixDim(const json& node) {
+    if (node.is_array() && node.size() >= 2 && node[0] == "MWrap") {
+        if (node[1].is_array() && node[1].size() >= 2 && node[1][0] == "Matrix") {
+            json listNode = node[1][1];
+            if (listNode.is_array() && !listNode.empty() && listNode[0] == "List") {
+                int r = listNode.size() - 1;
+                int c = (r > 0 && listNode[1].is_array() && listNode[1][0] == "List") ? listNode[1].size() - 1 : 0;
+                return {r, c}; // 返回 {行数, 列数}
+            }
+        }
+    }
+    return {0, 0}; // 返回 0,0 代表非矩阵节点
+}
+// ================================================================
+
+
 Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS) {
     if (ast.is_number()) {
         double val = ast.get<double>();
@@ -204,46 +221,66 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
         }
         
         if (op == "Add") {
+            // 矩阵加法
+            if (ast.dump().find("Matrix") != std::string::npos) { 
+                std::pair<int, int> targetDim = {-1, -1};
+                std::string res = "";
+                for (size_t i = 1; i < ast.size(); ++i) { 
+                    // 严格校验矩阵的行列是否一致
+                    auto dim = getMatrixDim(ast[i]);
+                    if (dim.first != 0 && dim.second != 0) {
+                        if (targetDim.first == -1) targetDim = dim;
+                        else if (targetDim != dim) throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Matrix dimension mismatch");
+                    }
+                    
+                    bool dummy = false;
+                    std::string s = parseAST(ast[i], isRad, preferExact, dummy).get_basic()->__str__();
+                    replaceAll(s, "MAGICMAT", ""); res += s; 
+                    if (i < ast.size() - 1) res += " + "; 
+                }
+                return Expression(SymEngine::symbol("MAGICMAT(" + res + ")"));
+            }
+            
+            // 普通加法
             Expression sum(0);
             for (size_t i = 1; i < ast.size(); ++i) sum += parseAST(ast[i], isRad, preferExact, hasDMS);
             return sum;
         }
         if (op == "Subtract" || op == "Negate") {
+            // 矩阵减法
+            if (ast.dump().find("Matrix") != std::string::npos && ast.size() == 3) {
+                // 严格校验矩阵的行列是否一致
+                auto dim1 = getMatrixDim(ast[1]); auto dim2 = getMatrixDim(ast[2]);
+                if (dim1.first != 0 && dim2.first != 0 && dim1 != dim2) {
+                    throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Matrix dimension mismatch");
+                }
+                bool dummy = false;
+                std::string s1 = parseAST(ast[1], isRad, preferExact, dummy).get_basic()->__str__();
+                std::string s2 = parseAST(ast[2], isRad, preferExact, dummy).get_basic()->__str__();
+                replaceAll(s1, "MAGICMAT", ""); replaceAll(s2, "MAGICMAT", "");
+                return Expression(SymEngine::symbol("MAGICMAT(" + s1 + " - " + s2 + ")"));
+            }
+            
+            // 普通减法
             if (ast.size() == 2) return -parseAST(ast[1], isRad, preferExact, hasDMS);
             return parseAST(ast[1], isRad, preferExact, hasDMS) - parseAST(ast[2], isRad, preferExact, hasDMS);
         }
         
         if (op == "Multiply") {
-            // 拦截 MathLive 新版 AST 中的叉乘与点乘: ["Multiply", "cross", Arg1, Arg2]
+            // 拦截 MathLive 的叉乘与点乘: ["Multiply", "cross", Arg1, Arg2]
             if (ast.size() == 4 && ast[1].is_string()) {
                 std::string midStr = ast[1].get<std::string>();
                 if (midStr == "cross" || midStr == "dot") {
                     
-                    // ================= 1. 智能维度侦测 (X光扫描) =================
-                    auto getDim = [](const json& node) -> std::pair<int, int> {
-                        // 深入解析 AST，寻找形如 ["MWrap", ["Matrix", ["List", ["List", ...]]]] 的结构
-                        if (node.is_array() && node.size() >= 2 && node[0] == "MWrap") {
-                            if (node[1].is_array() && node[1].size() >= 2 && node[1][0] == "Matrix") {
-                                json listNode = node[1][1];
-                                if (listNode.is_array() && !listNode.empty() && listNode[0] == "List") {
-                                    int r = listNode.size() - 1;
-                                    int c = (r > 0 && listNode[1].is_array() && listNode[1][0] == "List") ? listNode[1].size() - 1 : 0;
-                                    return {r, c}; // 返回行数和列数
-                                }
-                            }
-                        }
-                        return {0, 0};
-                    };
                     
-                    auto dim1 = getDim(ast[2]);
-                    auto dim2 = getDim(ast[3]);
+                    auto dim1 = getMatrixDim(ast[2]);
+                    auto dim2 = getMatrixDim(ast[3]);
                     
                     // 判断是否为 3D 向量 (1x3 或 3x1)
                     bool isVec1 = (dim1.first == 1 && dim1.second == 3) || (dim1.first == 3 && dim1.second == 1);
                     bool isVec2 = (dim2.first == 1 && dim2.second == 3) || (dim2.first == 3 && dim2.second == 1);
                     
-                    // ================= 2. 优雅报错拦截 =================
-                    // 非法维度的叉乘直接拦截，抛出领域异常，前端将显示优雅的错误提示
+                    // 非法维度的叉乘，抛出异常
                     if (midStr == "cross" && (!isVec1 || !isVec2)) {
                         throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Invalid dimension for cross product");
                     }
