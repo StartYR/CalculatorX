@@ -71,10 +71,12 @@ export class EngineService {
       .replace(/⨯/g, '\\operatorname{cross}')
       .replace(/\\bullet\s?/g, '\\operatorname{dot}')
       // 矩阵上标防摧毁拦截！将转置、共轭、求逆伪装成平级算子
-      .replace(/\\end\{bmatrix\}\^\{\\mathrm\{T\}\}/g, '\\end{bmatrix}\\operatorname{TranOp}')
-      .replace(/\\end\{bmatrix\}\^\{\\mathrm\{H\}\}/g, '\\end{bmatrix}\\operatorname{ConjTranOp}')
-      .replace(/\\end\{bmatrix\}\^\{-1\}/g, '\\end{bmatrix}\\operatorname{InvOp}');
-
+      // .replace(/\\end\{bmatrix\}\^\{\\mathrm\{T\}\}/g, '\\end{bmatrix}\\operatorname{TranOp}')
+      // .replace(/\\end\{bmatrix\}\^\{\\mathrm\{H\}\}/g, '\\end{bmatrix}\\operatorname{ConjTranOp}')
+      // .replace(/\\end\{bmatrix\}\^\{-1\}/g, '\\end{bmatrix}\\operatorname{InvOp}');
+      // 给矩阵套上自定义参数，绕过 MathLive 的类型识别
+      .replace(/\\begin\{bmatrix\}/g, '\\operatorname{MWrap}\\left(\\begin{bmatrix}')
+      .replace(/\\end\{bmatrix\}/g, '\\end{bmatrix}\\right)')
     return cleanedLatex;
   }
 
