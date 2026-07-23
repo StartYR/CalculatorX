@@ -1,11 +1,10 @@
 /**
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
- * * @file TopBar.ets
+ * @file TopBar.ets
  * @description 顶部悬浮控制栏（搭载动态状态岛）
-* * @author 易睿 (Yi Rui)
+ * @author 易睿 (Yi Rui)
  * @date 2026
  */
-
 
 @Component
 export struct TopBar {
@@ -15,7 +14,7 @@ export struct TopBar {
 
   onMenuClick?: () => void;
   onHistoryClick?: () => void;
-  onUndoClick?: () => void; //  暴露撤销事件
+  onUndoClick?: () => void; // 暴露撤销事件
   onRedoClick?: () => void; // 暴露重做事件
 
   build() {
@@ -29,7 +28,7 @@ export struct TopBar {
             .fontSize(18)
             .fontColor([$r('sys.color.icon_primary')])
         }
-        .width(44) // 稍微缩小一点宽度，给中间留出更多呼吸空间
+        .width(44)
         .height(32)
         .backgroundColor('#54ffffff')
         .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
@@ -64,7 +63,11 @@ export struct TopBar {
         } else {
           // 2. 常规状态：动态提取模块名称
           Row({ space: 6 }) {
-            Text(this.currentModule === 'scientific' ? '科学计算' : '基础计算')
+            Text(
+              this.currentModule === 'scientific' ? '科学计算'
+                : this.currentModule === 'matrix' ? '矩阵与向量'
+                : '基础计算'
+            )
               .fontSize(14)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('sys.color.font_primary'))
