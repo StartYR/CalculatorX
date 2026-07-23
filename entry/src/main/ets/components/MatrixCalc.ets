@@ -163,6 +163,19 @@ export struct MatrixCalc {
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
   @State @Watch('onShiftChange') isShift: boolean = false;
 
+  // 弹窗控制器
+  dialogController: CustomDialogController = new CustomDialogController({
+    builder: DimDialog({
+      onConfirm: (rows: number, cols: number) => {
+        // TODO (Step 3 & 4): 在这里拿到维度后，动态拼接 LaTeX 并插入 MathLive
+        console.info(`[MatrixCalc] 用户确认创建矩阵，维度: ${rows} x ${cols}`);
+      }
+    }),
+    alignment: DialogAlignment.Center, // 居中弹出
+    customStyle: true,                 // 开启自定义样式以去除系统默认白底
+    autoCancel: true                   // 允许点击遮罩层关闭
+  })
+
   onShiftChange() {
     getContext(this).eventHub.emit('event_shift_change', this.isShift);
   }
@@ -193,7 +206,7 @@ export struct MatrixCalc {
 
     // 3. 核心逻辑分流
     if (action === 'dim') {
-      // TODO: 触发呼出维度选择弹窗 (Dim Sheet) 的逻辑
+      this.dialogController.open();
       console.info("[MatrixCalc] Triggered Dim popup.");
     } else if (action !== '') {
       // 绝大多数按键发送给 FormulaScreen 的 MathLive 进行渲染
@@ -240,5 +253,77 @@ export struct MatrixCalc {
     }
     .width('100%')
     .height('100%')
+  }
+}
+
+@CustomDialog
+struct DimDialog {
+  controller: CustomDialogController
+  onConfirm: (rows: number, cols: number) => void = () => {}
+
+  @State selRow: number = 3;
+  @State selCol: number = 3;
+
+  private dimArray: number[] = [1, 2, 3, 4, 5, 6];
+
+  build() {
+    Column({ space: 20 }) {
+      Text(`矩阵维度: ${this.selRow} × ${this.selCol}`)
+        .fontSize(22)
+        .fontWeight(FontWeight.Bold)
+        .fontFamily('sans-serif')
+        .margin({ top: 10 })
+
+      Grid() {
+        ForEach(this.dimArray, (r: number) => {
+          ForEach(this.dimArray, (c: number) => {
+            GridItem() {
+              Row()
+                .width('100%')
+                .aspectRatio(1)
+                .backgroundColor(r <= this.selRow && c <= this.selCol ? '#ae007dff' : $r('sys.color.comp_background_secondary'))
+                .borderRadius(6)
+                .animation({ duration: 150, curve: Curve.EaseOut })
+                .onClick(() => {
+                  this.selRow = r;
+                  this.selCol = c;
+                })
+            }
+          })
+        })
+      }
+      .columnsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
+      .rowsGap(6)
+      .columnsGap(6)
+      .width(260)
+      .height(260)
+      .padding(10)
+
+      Row() {
+        Button('取消')
+          .type(ButtonType.Capsule)
+          .backgroundColor(Color.Transparent)
+          .fontColor($r('sys.color.font_secondary'))
+          .layoutWeight(1)
+          .onClick(() => this.controller.close())
+
+        Button('创建矩阵')
+          .type(ButtonType.Capsule)
+          // 优化 2：底色换成系统强调色
+          .backgroundColor($r('sys.color.comp_background_emphasize'))
+          .fontColor(Color.White)
+          .layoutWeight(1)
+          .onClick(() => {
+            this.onConfirm(this.selRow, this.selCol);
+            this.controller.close();
+          })
+      }
+      .width('100%')
+      .padding({ left: 10, right: 10, bottom: 10 })
+    }
+    .padding(16)
+    .backgroundColor($r('sys.color.comp_background_primary'))
+    .borderRadius(24)
+    .width(320)
   }
 }
