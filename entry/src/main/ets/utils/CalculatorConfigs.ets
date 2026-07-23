@@ -127,7 +127,7 @@ export function getBgColor(btn: string | Resource, isShift: boolean): ResourceCo
   if (action === '=') return $r('sys.color.comp_background_emphasize');
   if (['+', '−', '×', '÷'].includes(action)) return $r('sys.color.comp_background_tertiary');
 
-  let isNumberOrCore = (typeof btn === 'string' && btn >= '0' && btn <= '9') || action === '.' || action === 'Ans'|| action === '⇦'|| action === '⇨' || btn === '⇧'|| btn === '⇩';
+  let isNumberOrCore = (typeof btn === 'string' && btn >= '0' && btn <= '9') || action === '.' || action === 'Dim'|| action === '⇦'|| action === '⇨' || btn === '⇧'|| btn === '⇩';
   if (isNumberOrCore || action === 'icon_exp') return $r('sys.color.comp_background_primary');
 
   return $r('sys.color.comp_background_secondary');
@@ -138,8 +138,8 @@ export function getBgColor(btn: string | Resource, isShift: boolean): ResourceCo
  */
 export function getFontSize(btn: string | Resource): number {
   if (typeof btn !== 'string') return 14;
-  if ((btn >= '0' && btn <= '9') || btn === 'Ans') return 24;
-  if (btn === 'e') return 22;
+  if (btn >= '0' && btn <= '9') return 24;
+  if (btn === 'e' || btn === 'Ans' || btn === 'Dim') return 22;
   if (btn === '+' || btn === '×' || btn === '÷' || btn === '=' || btn === '−' || btn === '.') return 28;
   if (['d/dx', 'lim'].includes(btn)) return 20;
   if (['sin', 'cos', 'tan', 'log', 'ln'].includes(btn)) return 20;
@@ -168,7 +168,7 @@ export function getFontColor(btn: string | Resource): ResourceColor {
   // 4. 顶部高级功能区：次要文字颜色 (略微弱化，将视觉焦点让给下方数字区)
   // if (topButtons.includes(btn as string)) return $r('sys.color.font_secondary');
   let isPrimaryText = (typeof btn === 'string' && btn >= '0' && btn <= '9') ||
-    ['.', 'Ans', '%', '+/-'].includes(action);
+    ['.', '%', 'Dim'].includes(action);
   if (!isPrimaryText) return $r('sys.color.font_secondary');
 
   // 5. 核心数字区：主要文字颜色
