@@ -25,6 +25,7 @@ export const icon_inverse: Resource = $rawfile('icons/math/icon_inverse.svg');
 export const icon_e_power: Resource = $rawfile('icons/math/icon_e_power.svg');
 export const icon_comma: Resource = $rawfile('icons/math/icon_comma.svg');
 export const icon_fact: Resource = $rawfile('icons/math/icon_fact.svg');
+export const icon_dim: Resource = $rawfile('icons/matrix/icon_dim.svg');
 
 export class MathIcons {
   // 组合 (Combination)
@@ -92,6 +93,7 @@ export function getActionId(btn: string | Resource): string {
   if (btn === icon_e_power) return 'e_power';
   if (btn === icon_comma) return 'comma';
   if (btn === icon_fact) return 'fact';
+  if (btn === icon_dim) return 'dim';
   return '';
 }
 
@@ -127,7 +129,7 @@ export function getBgColor(btn: string | Resource, isShift: boolean): ResourceCo
   if (action === '=') return $r('sys.color.comp_background_emphasize');
   if (['+', '−', '×', '÷'].includes(action)) return $r('sys.color.comp_background_tertiary');
 
-  let isNumberOrCore = (typeof btn === 'string' && btn >= '0' && btn <= '9') || action === '.' || action === 'Dim'|| action === '⇦'|| action === '⇨' || btn === '⇧'|| btn === '⇩';
+  let isNumberOrCore = (typeof btn === 'string' && btn >= '0' && btn <= '9') || action === '.' || action === 'dim' || action === '⇦'|| action === '⇨' || btn === '⇧'|| btn === '⇩';
   if (isNumberOrCore || action === 'icon_exp') return $r('sys.color.comp_background_primary');
 
   return $r('sys.color.comp_background_secondary');
