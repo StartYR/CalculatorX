@@ -19,6 +19,29 @@
 using json = nlohmann::json;
 using SymEngine::Expression;
 
+// 矩阵与数组转 Giac 字符串的核心解析器
+static std::string parseListToGiacString(const json& listNode, bool isRad, bool preferExact, bool& hasDMS) {
+    if (!listNode.is_array() || listNode.empty() || listNode[0] != "List") return "";
+    
+    std::string result = "[";
+    for (size_t i = 1; i < listNode.size(); ++i) {
+        if (i > 1) result += ","; // 元素之间用逗号隔开
+        
+        if (listNode[i].is_array() && listNode[i][0] == "List") {
+            // 遇到嵌套数组（比如矩阵的行），递归深扒
+            result += parseListToGiacString(listNode[i], isRad, preferExact, hasDMS);
+        } else {
+            // 遇到具体的数字或公式（叶子节点），交回给 parseAST 解析，然后转成字符串
+            Expression elementExpr = parseAST(listNode[i], isRad, preferExact, hasDMS);
+            std::string elemStr = elementExpr.get_basic()->__str__();
+            replaceAll(elemStr, "**", "^"); // 顺手做个符号适配
+            result += elemStr;
+        }
+    }
+    result += "]";
+    return result;
+}
+
 Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS) {
     if (ast.is_number()) {
         double val = ast.get<double>();
@@ -119,6 +142,26 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
         if (op == "Delimiter") {
             if (ast.size() > 1) return parseAST(ast[1], isRad, preferExact, hasDMS);
             return Expression(0);
+        }
+        
+        // 矩阵
+        if (op == "Matrix") {
+            if (ast.size() >= 2) { // ast[1] 里包裹的就是 ["List", ["List", ...], ...]
+                // 1. 调用辅助函数，把 JSON 扒成 Giac 认识的 [[1,2],[3,4]] 字符串
+                std::string giacMatrixStr = parseListToGiacString(ast[1], isRad, preferExact, hasDMS);
+                
+                // 2. 组装成 Giac 命令：利用 latex(simplify(...)) 让它自动返回渲染好的 LaTeX
+                std::string giacCmd = "latex(simplify(" + giacMatrixStr + "))";
+                std::string rawResult = evaluateWithGiac(giacCmd);
+                
+                // 3. 剥离 Giac 输出两端的双引号
+                if (rawResult.size() >= 2 && rawResult.front() == '"' && rawResult.back() == '"') {
+                    rawResult = rawResult.substr(1, rawResult.size() - 2);
+                }
+                
+                // 4. 装进魔法盒，强势穿透 SymEngine 的类型检查直接返回！
+                return Expression(SymEngine::symbol("MAGICGIACRESULT" + rawResult));
+            }
         }
         
         // 复数 (Complex)

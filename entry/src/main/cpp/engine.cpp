@@ -18,6 +18,7 @@
 #include <sstream>
 #include <iomanip>
 #include <cmath>
+#include <regex>
 
 using json = nlohmann::json;
 using SymEngine::Expression;
@@ -238,10 +239,19 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
     // Giac 返回格式的 UI 美化，统一成前端样式
     replaceAll(result_msg, "infinity", "\\infty");
     replaceAll(result_msg, "undef", "\\text{undefined}");
-    // 将 \log 翻译为 \ln
-    replaceAll(result_msg, "\\log", "\\ln");
+    replaceAll(result_msg, "\\log", "\\ln"); // 将 \log 翻译为 \ln
+    replaceAll(result_msg, "j", "i"); // 将虚数单位替换成 i
     
-    replaceAll(result_msg, "j", "i");
+    // 矩阵格式替换
+    try {
+        // 匹配 \left[\begin{array}{c...} 并替换为 \begin{bmatrix}
+        std::regex array_start(R"(\\left\[\\begin\{array\}\{[clr]+\})");
+        result_msg = std::regex_replace(result_msg, array_start, "\\begin{bmatrix}");
+        // 替换尾部的 \end{array}\right]
+        replaceAll(result_msg, "\\end{array}\\right]", "\\end{bmatrix}");
+    } catch (...) {
+        // 正则保护：若失败则原样输出，防止引擎崩溃
+    }
     
     napi_value result;
     napi_create_string_utf8(env, result_msg.c_str(), NAPI_AUTO_LENGTH, &result);
