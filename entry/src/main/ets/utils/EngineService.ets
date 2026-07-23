@@ -124,6 +124,13 @@ export class EngineService {
    */
   public static calculateNative(jsonStr: string, isRad: boolean, cppPrecisionMode: number): string {
     console.info(`[EngineService] 清洗后传递给 C++ 的 JSON: ${jsonStr}`);
+
+    // 拦截 C++ 的返回值
+    let cppResult = testNapi.calculate(jsonStr, isRad, cppPrecisionMode);
+
+    // 打印 Giac 生成的原始 LaTeX
+    console.info(`[EngineService] C++ 返回的 LaTeX: ${cppResult}`);
+
     return testNapi.calculate(jsonStr, isRad, cppPrecisionMode);
   }
 }
