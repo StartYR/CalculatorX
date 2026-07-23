@@ -9,29 +9,29 @@
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
-import { icon_backspace } from '../utils/CalculatorConfigs';
+import { icon_backspace, icon_fraction } from '../utils/CalculatorConfigs';
 
 const icon_M_power: Resource = $rawfile('icons/matrix/icon_M_power.svg');
 const icon_abs: Resource = $rawfile('icons/matrix/icon_abs.svg');
 
 // 主键盘
 const matrixButtons: Array<string | Resource> = [
-  '⇧Shift', '⇧', 'Dim', 'M⁻¹', 'Mᵀ',
+  '⇧Shift', '⇧', icon_fraction, 'M⁻¹', 'Mᵀ',
   '⇦', '⇩', '⇨', '(', ')',
   '7', '8', '9', icon_backspace, 'AC',
   '4', '5', '6', '×', '÷',
   '1', '2', '3', '+', '−',
-  '.', '0', 'a/b', 'Ans', '='
+  '.', '0', 'Dim', 'Ans', '='
 ];
 
 // Shift 键盘
 const matrixShiftButtons: Array<string | Resource> = [
-  '', '', 'I', 'det', 'Mᴴ',
+  '', '', icon_M_power, 'det', 'Mᴴ',
   '', '', '', 'rref', 'eig',
   '', '', '', '', '',
   '', '', '', '⨯', '•',
   '', '', '', 'rank', 'tr',
-  '', '', icon_M_power, icon_abs, ''
+  '', '', 'I', icon_abs, ''
 ];
 
 @Component
