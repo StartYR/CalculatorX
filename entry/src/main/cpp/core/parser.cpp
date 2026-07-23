@@ -45,6 +45,18 @@ static std::string parseListToGiacString(const json& listNode, bool isRad, bool 
 
 // ================= 提取矩阵维度的通用解析器 =================
 static std::pair<int, int> getMatrixDim(const json& node) {
+    // 识别单位矩阵并提取其维度
+    if (node.is_string()) {
+        std::string s = node.get<std::string>();
+        if (s.find("I_upright_") == 0) {
+            try {
+                int n = std::stoi(s.substr(10)); // 截取下划线后面的数字
+                return {n, n}; // 单位矩阵一定是 n 行 n 列
+            } catch (...) {}
+        }
+    }
+    
+    // 识别普通矩阵并提取维度
     if (node.is_array() && node.size() >= 2 && node[0] == "MWrap") {
         if (node[1].is_array() && node[1].size() >= 2 && node[1][0] == "Matrix") {
             json listNode = node[1][1];
@@ -88,6 +100,12 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
     
     if (ast.is_string()) {
         std::string s = ast.get<std::string>();
+        if (s.find("I_upright_") == 0) {
+            try {
+                int n = std::stoi(s.substr(10));
+                return Expression(SymEngine::symbol("MAGICMATidn(" + std::to_string(n) + ")"));
+            } catch (...) {}
+        }
         if (s == "Pi") return Expression(SymEngine::pi);
         if (s == "ExponentialE" || s == "e") return Expression(SymEngine::E);
         if (s == "NaN") throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Frontend folded to NaN");
@@ -222,7 +240,7 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
         
         if (op == "Add") {
             // 矩阵加法
-            if (ast.dump().find("Matrix") != std::string::npos) { 
+            if (ast.dump().find("Matrix") != std::string::npos || ast.dump().find("I_upright_") != std::string::npos) { 
                 std::pair<int, int> targetDim = {-1, -1};
                 std::string res = "";
                 for (size_t i = 1; i < ast.size(); ++i) { 
@@ -248,7 +266,7 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
         }
         if (op == "Subtract" || op == "Negate") {
             // 矩阵减法
-            if (ast.dump().find("Matrix") != std::string::npos && ast.size() == 3) {
+            if ((ast.dump().find("Matrix") != std::string::npos || ast.dump().find("I_upright_") != std::string::npos) && ast.size() == 3) {
                 // 严格校验矩阵的行列是否一致
                 auto dim1 = getMatrixDim(ast[1]); auto dim2 = getMatrixDim(ast[2]);
                 if (dim1.first != 0 && dim2.first != 0 && dim1 != dim2) {
@@ -307,6 +325,19 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                         return Expression(SymEngine::symbol("MAGICMAT" + midStr + "(" + arg1 + ", " + arg2 + ")"));
                     }
                 }
+            }
+            
+            // 矩阵与单位矩阵的普通乘法旁路
+            if (ast.dump().find("Matrix") != std::string::npos || ast.dump().find("I_upright_") != std::string::npos) {
+                std::string res = "";
+                for (size_t i = 1; i < ast.size(); ++i) {
+                    bool dummy = false;
+                    std::string s = parseAST(ast[i], isRad, preferExact, dummy).get_basic()->__str__();
+                    replaceAll(s, "MAGICMAT", ""); // 剥离内层伪装
+                    res += s;
+                    if (i < ast.size() - 1) res += " * ";
+                }
+                return Expression(SymEngine::symbol("MAGICMAT(" + res + ")"));
             }
             
             // 普通乘法
