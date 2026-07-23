@@ -170,7 +170,7 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                 // 映射 Giac 的原生函数名
                 std::string giacFunc = op;
                 if (op == "Det") giacFunc = "det";
-                else if (op == "Tr") giacFunc = "trace";
+                else if (op == "Tr" || op == "Trace") giacFunc = "trace";
                 else if (op == "eig") giacFunc = "eigenvals"; 
 
                 std::string argStr = "";
@@ -257,6 +257,19 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                     return Expression(SymEngine::symbol("MAGICGIACRESULT" + rawResult));
                 }
             }
+            // 3. 拦截隐式的纯矩阵乘法: ["Tuple", Matrix1, Matrix2]
+            if (ast.size() == 3 && ast[1].is_array() && ast[1][0] == "Matrix" && ast[2].is_array() && ast[2][0] == "Matrix") {
+            std::string arg1Str = parseListToGiacString(ast[1][1], isRad, preferExact, hasDMS);
+            std::string arg2Str = parseListToGiacString(ast[2][1], isRad, preferExact, hasDMS);
+
+            // 直接用星号相乘交由 Giac 处理
+            std::string giacCmd = "latex(simplify(" + arg1Str + " * " + arg2Str + "))";
+            std::string rawResult = evaluateWithGiac(giacCmd);
+            if (rawResult.size() >= 2 && rawResult.front() == '"' && rawResult.back() == '"') {
+                rawResult = rawResult.substr(1, rawResult.size() - 2);
+            }
+            return Expression(SymEngine::symbol("MAGICGIACRESULT" + rawResult));
+        }
         }
         if (op == "Multiply") {
             // 隐式向量叉乘与点乘
