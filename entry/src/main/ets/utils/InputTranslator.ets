@@ -93,7 +93,7 @@ export class InputTranslator {
       case '•':        latexChar = "\\bullet "; break;
 
       // 4. 特殊常量
-      case 'I':        latexChar = "I"; break; // 单位矩阵常量
+      // case 'I':        latexChar = "\\operatorname{IdMat}"; break; // 转换为 Identity Matrix 专属标记，避开 SymEngine 虚数 I
     }
     return latexChar;
   }

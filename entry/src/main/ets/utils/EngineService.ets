@@ -61,7 +61,15 @@ export class EngineService {
       // 匹配缺分的 12°56"
       .replace(/([0-9.]+)\^\{\\circ\}\s*([0-9.]+)\^\{\\prime\s*\\prime\}/g, repDMS_DS)
       // 匹配只有度的 12°
-      .replace(/([0-9.]+)\^\{\\circ\}/g, repDMS1);
+      .replace(/([0-9.]+)\^\{\\circ\}/g, repDMS1)
+
+      // ================= 矩阵与向量 =================
+      // 伪装行列式与迹，绕过 MathLive 的严格语法与类型检查
+      .replace(/\\det/g, '\\operatorname{Det}')
+      .replace(/\\operatorname\{tr\}/g, '\\operatorname{Tr}')
+      // 利用 MathLive 的隐式乘法，降维叉乘和点乘（匹配 \bullet 及其可能自带的空格）
+      .replace(/⨯/g, '\\operatorname{cross}')
+      .replace(/\\bullet\s?/g, '\\operatorname{dot}');
 
     return cleanedLatex;
   }
