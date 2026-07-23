@@ -115,6 +115,7 @@ export class EngineService {
    * 4. 封装 C++ 底层代数引擎的直接调用
    */
   public static calculateNative(jsonStr: string, isRad: boolean, cppPrecisionMode: number): string {
+    console.info(`[EngineService] 清洗后传递给 C++ 的 JSON: ${jsonStr}`);
     return testNapi.calculate(jsonStr, isRad, cppPrecisionMode);
   }
 }
