@@ -34,7 +34,8 @@ static std::string parseListToGiacString(const json& listNode, bool isRad, bool 
             // 遇到具体的数字或公式（叶子节点），交回给 parseAST 解析，然后转成字符串
             Expression elementExpr = parseAST(listNode[i], isRad, preferExact, hasDMS);
             std::string elemStr = elementExpr.get_basic()->__str__();
-            replaceAll(elemStr, "**", "^"); // 个符号适配
+            replaceAll(elemStr, "**", "^"); // 符号适配
+            replaceAll(elemStr, "I", "i");
             result += elemStr;
         }
     }
@@ -158,11 +159,11 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
         }
 
         // 单参数算子：直接映射为 Giac 命令字符串符号
-        if (op == "MyDet") return Expression(SymEngine::symbol("det(" + getGiacStr(ast[1]) + ")"));
-        if (op == "MyTrace") return Expression(SymEngine::symbol("trace(" + getGiacStr(ast[1]) + ")"));
-        if (op == "MyRref") return Expression(SymEngine::symbol("rref(" + getGiacStr(ast[1]) + ")"));
-        if (op == "MyEig") return Expression(SymEngine::symbol("eigenvals(" + getGiacStr(ast[1]) + ")"));
-        if (op == "MyRank") return Expression(SymEngine::symbol("rank(" + getGiacStr(ast[1]) + ")"));
+        if (op == "MyDet" || op == "Det") return Expression(SymEngine::symbol("det(" + getGiacStr(ast[1]) + ")"));
+        if (op == "MyTrace" || op == "Trace") return Expression(SymEngine::symbol("trace(" + getGiacStr(ast[1]) + ")"));
+        if (op == "MyRref" || op == "rref") return Expression(SymEngine::symbol("rref(" + getGiacStr(ast[1]) + ")"));
+        if (op == "MyEig" || op == "eig") return Expression(SymEngine::symbol("eigenvals(" + getGiacStr(ast[1]) + ")"));
+        if (op == "MyRank" || op == "rank") return Expression(SymEngine::symbol("rank(" + getGiacStr(ast[1]) + ")"));
 
         // 拦截 Tuple：解决隐式乘法和向量降维
         if (op == "Tuple") {
@@ -213,6 +214,28 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
         }
         
         if (op == "Multiply") {
+            // 拦截 MathLive 新版 AST 中的叉乘与点乘: ["Multiply", "cross", Arg1, Arg2]
+            if (ast.size() == 4 && ast[1].is_string()) {
+                std::string midStr = ast[1].get<std::string>();
+                if (midStr == "cross" || midStr == "dot") {
+                    // 借用上面定义好的 getGiacStr lambda 函数脱去 MWrap 外衣
+                    auto getGiacStrLocal = [&](const json& node) {
+                        bool dummy = false;
+                        std::string s = parseAST(node, isRad, preferExact, dummy).get_basic()->__str__();
+                        replaceAll(s, "MAGICMAT", ""); return s;
+                    };
+                    std::string arg1 = getGiacStrLocal(ast[2]);
+                    std::string arg2 = getGiacStrLocal(ast[3]);
+                    
+                    // 降维打击：将矩阵强行拍平为一维向量，解决 Giac 维度报错
+                    replaceAll(arg1, "[", ""); replaceAll(arg1, "]", ""); arg1 = "[" + arg1 + "]";
+                    replaceAll(arg2, "[", ""); replaceAll(arg2, "]", ""); arg2 = "[" + arg2 + "]";
+                    
+                    return Expression(SymEngine::symbol(midStr + "(" + arg1 + ", " + arg2 + ")"));
+                }
+            }
+            
+            // 普通乘法
             Expression prod(1);
             for (size_t i = 1; i < ast.size(); ++i) prod *= parseAST(ast[i], isRad, preferExact, hasDMS);
             return prod;
