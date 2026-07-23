@@ -36,17 +36,20 @@ const matrixShiftButtons: Array<string | Resource> = [
 
 @Component
 struct MatrixKeyItem {
-  // 1. 放宽类型声明
   btn: string | Resource = '';
   btnIndex: number = 0;
   @Link isShift: boolean;
 
-  // 2. 放宽回调参数类型
+  // 长按连发的定时器状态
+  private startDelayTimer: number = -1;
+  private repeatTimer: number = -1;
+
+  // 回调参数
   onKeyPress: (btn: string | Resource) => void = () => {};
 
   build() {
     Button() {
-      // 使用 Stack 容器实现绝对定位，alignContent 控制副文字悬浮左上角
+      // 副文字悬浮左上角
       Stack({ alignContent: Alignment.TopStart }) {
 
         // ================= 1. 主功能文字或图标 =================
@@ -87,7 +90,7 @@ struct MatrixKeyItem {
               .height(14)
               .fillColor('#ffac8100')
               .margin({ left: 6, top: 4 })
-              .objectFit(ImageFit.Contain) // 【修复点 3】：Shift 的 SVG 同样需要比例保护
+              .objectFit(ImageFit.Contain)
           }
         }
       }
@@ -119,6 +122,35 @@ struct MatrixKeyItem {
         this.isShift = false;
       } else {
         this.onKeyPress(this.btn);
+      }
+    })
+
+    // 挂载触摸事件，实现四个方向键与删除键的长按连发
+    .onTouch((event: TouchEvent) => {
+      // 识别需要连发的按键（四个方向键以及退格键）
+      if (this.btn === '⇦' || this.btn === '⇨' || this.btn === '⇧' || this.btn === '⇩' || this.btn === icon_backspace) {
+        if (event.type === TouchType.Down) {
+          clearTimeout(this.startDelayTimer);
+          clearInterval(this.repeatTimer);
+
+          // 按下 500ms 后开始连发
+          this.startDelayTimer = setTimeout(() => {
+            // 每 80ms 触发一次
+            this.repeatTimer = setInterval(() => {
+              // 兜底逻辑：处理连发时的 Shift 状态
+              if (this.isShift && matrixShiftButtons[this.btnIndex] !== '') {
+                this.onKeyPress(matrixShiftButtons[this.btnIndex]);
+                this.isShift = false;
+              } else {
+                this.onKeyPress(this.btn);
+              }
+            }, 80);
+          }, 500);
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          // 手指松开或滑出时，清空定时器
+          clearTimeout(this.startDelayTimer);
+          clearInterval(this.repeatTimer);
+        }
       }
     })
   }
@@ -158,6 +190,16 @@ export struct MatrixCalc {
 
     // 触发马达震动反馈
     HapticUtils.playVibration(action, this.hapticFeedback, this.vibrationCurve);
+
+    // 3. 核心逻辑分流
+    if (action === 'dim') {
+      // TODO: 触发呼出维度选择弹窗 (Dim Sheet) 的逻辑
+      console.info("[MatrixCalc] Triggered Dim popup.");
+    } else if (action !== '') {
+      // 绝大多数按键发送给 FormulaScreen 的 MathLive 进行渲染
+      // 注意：这里的 Shift 传 false，因为 MatrixKeyItem 的 onClick 中已经把 Shift 翻译成了最终算子
+      getContext(this).eventHub.emit('screen_handle_action', action, false);
+    }
 
     // 发送动作指令
     // getContext(this).eventHub.emit('screen_handle_action', action, false);
