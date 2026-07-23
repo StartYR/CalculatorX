@@ -218,7 +218,37 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
             if (ast.size() == 4 && ast[1].is_string()) {
                 std::string midStr = ast[1].get<std::string>();
                 if (midStr == "cross" || midStr == "dot") {
-                    // 借用上面定义好的 getGiacStr lambda 函数脱去 MWrap 外衣
+                    
+                    // ================= 1. 智能维度侦测 (X光扫描) =================
+                    auto getDim = [](const json& node) -> std::pair<int, int> {
+                        // 深入解析 AST，寻找形如 ["MWrap", ["Matrix", ["List", ["List", ...]]]] 的结构
+                        if (node.is_array() && node.size() >= 2 && node[0] == "MWrap") {
+                            if (node[1].is_array() && node[1].size() >= 2 && node[1][0] == "Matrix") {
+                                json listNode = node[1][1];
+                                if (listNode.is_array() && !listNode.empty() && listNode[0] == "List") {
+                                    int r = listNode.size() - 1;
+                                    int c = (r > 0 && listNode[1].is_array() && listNode[1][0] == "List") ? listNode[1].size() - 1 : 0;
+                                    return {r, c}; // 返回行数和列数
+                                }
+                            }
+                        }
+                        return {0, 0};
+                    };
+                    
+                    auto dim1 = getDim(ast[2]);
+                    auto dim2 = getDim(ast[3]);
+                    
+                    // 判断是否为 3D 向量 (1x3 或 3x1)
+                    bool isVec1 = (dim1.first == 1 && dim1.second == 3) || (dim1.first == 3 && dim1.second == 1);
+                    bool isVec2 = (dim2.first == 1 && dim2.second == 3) || (dim2.first == 3 && dim2.second == 1);
+                    
+                    // ================= 2. 优雅报错拦截 =================
+                    // 非法维度的叉乘直接拦截，抛出领域异常，前端将显示优雅的错误提示
+                    if (midStr == "cross" && (!isVec1 || !isVec2)) {
+                        throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Invalid dimension for cross product");
+                    }
+                    
+                    // 提取计算字符串
                     auto getGiacStrLocal = [&](const json& node) {
                         bool dummy = false;
                         std::string s = parseAST(node, isRad, preferExact, dummy).get_basic()->__str__();
@@ -227,11 +257,18 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                     std::string arg1 = getGiacStrLocal(ast[2]);
                     std::string arg2 = getGiacStrLocal(ast[3]);
                     
-                    // 降维打击：将矩阵强行拍平为一维向量，解决 Giac 维度报错
+                    // 暴力降维：拍平矩阵，提取纯元素数组供底层计算
                     replaceAll(arg1, "[", ""); replaceAll(arg1, "]", ""); arg1 = "[" + arg1 + "]";
                     replaceAll(arg2, "[", ""); replaceAll(arg2, "]", ""); arg2 = "[" + arg2 + "]";
                     
-                    return Expression(SymEngine::symbol(midStr + "(" + arg1 + ", " + arg2 + ")"));
+                    // ================= 3. 升维渲染输出 =================
+                    if (midStr == "cross") {
+                        // 叉乘结果套上转置 tran([...])，强制变回 3x1 列向量
+                        return Expression(SymEngine::symbol("MAGICMATtran([" + midStr + "(" + arg1 + ", " + arg2 + ")])"));
+                    } else { 
+                        // dot 点乘返回标量，直接放行
+                        return Expression(SymEngine::symbol("MAGICMAT" + midStr + "(" + arg1 + ", " + arg2 + ")"));
+                    }
                 }
             }
             
