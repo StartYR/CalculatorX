@@ -9,7 +9,7 @@
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
-import { icon_backspace, icon_fraction } from '../utils/CalculatorConfigs';
+import { icon_backspace, icon_fraction, icon_dim } from '../utils/CalculatorConfigs';
 
 const icon_M_power: Resource = $rawfile('icons/matrix/icon_M_power.svg');
 const icon_abs: Resource = $rawfile('icons/matrix/icon_abs.svg');
@@ -21,7 +21,7 @@ const matrixButtons: Array<string | Resource> = [
   '7', '8', '9', icon_backspace, 'AC',
   '4', '5', '6', '×', '÷',
   '1', '2', '3', '+', '−',
-  '.', '0', 'Dim', 'Ans', '='
+  '.', '0', icon_dim, 'Ans', '='
 ];
 
 // Shift 键盘
@@ -145,7 +145,6 @@ export struct MatrixCalc {
     getContext(this).eventHub.off('screen_shift_consumed');
   }
 
-
   private handleButtonClick(btn: string | Resource) {
     let action = '';
 
@@ -172,14 +171,12 @@ export struct MatrixCalc {
 
       Column() {
         Grid() {
-          // 2. 放宽 ForEach 中 btn 的类型声明
           ForEach(matrixButtons, (btn: string | Resource, index: number) => {
             GridItem() {
               MatrixKeyItem({
                 btn: btn,
                 btnIndex: index,
                 isShift: $isShift,
-                // 3. 回调函数声明同步放宽
                 onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); }
               })
             }
