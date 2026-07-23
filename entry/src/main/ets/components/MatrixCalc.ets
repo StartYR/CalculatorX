@@ -167,8 +167,26 @@ export struct MatrixCalc {
   dialogController: CustomDialogController = new CustomDialogController({
     builder: DimDialog({
       onConfirm: (rows: number, cols: number) => {
-        // TODO (Step 3 & 4): 在这里拿到维度后，动态拼接 LaTeX 并插入 MathLive
-        console.info(`[MatrixCalc] 用户确认创建矩阵，维度: ${rows} x ${cols}`);
+        // 核心步骤：根据动态获取的行列数，组装 LaTeX 矩阵字符串
+        let matrixLatex = '\\begin{bmatrix} ';
+
+        for (let i = 0; i < rows; i++) {
+          for (let j = 0; j < cols; j++) {
+            matrixLatex += '\\placeholder{}'; // 填入 MathLive 专属占位符
+            if (j < cols - 1) {
+              matrixLatex += ' & '; // 同行元素用 & 隔开
+            }
+          }
+
+          if (i < rows - 1) {
+            matrixLatex += ' \\\\ '; // 不同行之间用 \\ 换行
+          }
+        }
+
+        matrixLatex += ' \\end{bmatrix}';
+
+        // 将组装好的史诗级巨型 LaTeX 字符串，直接扔给 FormulaScreen 进行渲染
+        getContext(this).eventHub.emit('screen_handle_action', matrixLatex, false);
       }
     }),
     alignment: DialogAlignment.Center, // 居中弹出
@@ -309,7 +327,6 @@ struct DimDialog {
 
         Button('创建矩阵')
           .type(ButtonType.Capsule)
-          // 优化 2：底色换成系统强调色
           .backgroundColor($r('sys.color.comp_background_emphasize'))
           .fontColor(Color.White)
           .layoutWeight(1)
