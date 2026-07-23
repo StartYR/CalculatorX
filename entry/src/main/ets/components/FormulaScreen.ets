@@ -69,6 +69,10 @@ export struct FormulaScreen {
       this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveToPreviousChar')`);
     } else if (action === '⇨') {
       this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveToNextChar')`);
+    } else if (action === '⇧') {
+      this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveUp')`);
+    } else if (action === '⇩') {
+      this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveDown')`);
     } else if (action === 'R/D') {
       AppStorage.setOrCreate('isRad', !this.isRad); // 改变全局状态
     } else if (action === '° \' \"') {

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="26.368pt"
+   height="17.81pt"
+   viewBox="0 0 26.368 17.81"
+   version="1.1"
+   id="svg6"
+   sodipodi:docname="icon_M_power.svg"
+   inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview6"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="pt"
+     inkscape:zoom="37.370257"
+     inkscape:cx="15.279531"
+     inkscape:cy="10.904394"
+     inkscape:window-width="2560"
+     inkscape:window-height="1511"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg6" />
+  <defs
+     id="defs2">
+    <g
+       id="g2">
+      <symbol
+         overflow="visible"
+         id="glyph0-0">
+        <path
+           style="stroke:none;"
+           d=""
+           id="path1" />
+      </symbol>
+      <symbol
+         overflow="visible"
+         id="glyph0-1">
+        <path
+           style="stroke:none;"
+           d="M 2.40625 -6.59375 C 2.3125 -6.8125 2.28125 -6.8125 2.046875 -6.8125 L 0.375 -6.8125 L 0.375 -6.5 L 0.609375 -6.5 C 1.375 -6.5 1.390625 -6.390625 1.390625 -6.03125 L 1.390625 -1.046875 C 1.390625 -0.78125 1.390625 -0.3125 0.375 -0.3125 L 0.375 0 C 0.71875 -0.015625 1.203125 -0.03125 1.53125 -0.03125 C 1.859375 -0.03125 2.359375 -0.015625 2.703125 0 L 2.703125 -0.3125 C 1.671875 -0.3125 1.671875 -0.78125 1.671875 -1.046875 L 1.671875 -6.421875 L 1.6875 -6.421875 L 4.09375 -0.21875 C 4.140625 -0.09375 4.1875 0 4.28125 0 C 4.390625 0 4.421875 -0.078125 4.46875 -0.1875 L 6.921875 -6.5 L 6.921875 -0.78125 C 6.921875 -0.421875 6.90625 -0.3125 6.140625 -0.3125 L 5.90625 -0.3125 L 5.90625 0 C 6.265625 -0.03125 6.953125 -0.03125 7.34375 -0.03125 C 7.71875 -0.03125 8.390625 -0.03125 8.765625 0 L 8.765625 -0.3125 L 8.515625 -0.3125 C 7.75 -0.3125 7.734375 -0.421875 7.734375 -0.78125 L 7.734375 -6.03125 C 7.734375 -6.390625 7.75 -6.5 8.515625 -6.5 L 8.765625 -6.5 L 8.765625 -6.8125 L 7.078125 -6.8125 C 6.8125 -6.8125 6.8125 -6.796875 6.75 -6.625 L 4.5625 -1 Z M 2.40625 -6.59375 "
+           id="path2" />
+      </symbol>
+    </g>
+  </defs>
+  <g
+     style="fill:#000000;fill-opacity:1"
+     id="g3"
+     transform="matrix(1.8348031,0,0,1.8348031,-9.7881788,-8.7428837)">
+    <g
+       id="use2"
+       transform="translate(4.9809999,12.829)">
+      <path
+         style="stroke:none"
+         d="M 2.40625,-6.59375 C 2.3125,-6.8125 2.28125,-6.8125 2.046875,-6.8125 H 0.375 V -6.5 h 0.234375 c 0.765625,0 0.78125,0.109375 0.78125,0.46875 v 4.984375 c 0,0.265625 0,0.734375 -1.015625,0.734375 V 0 c 0.34375,-0.015625 0.828125,-0.03125 1.15625,-0.03125 0.328125,0 0.828125,0.015625 1.171875,0.03125 v -0.3125 c -1.03125,0 -1.03125,-0.46875 -1.03125,-0.734375 v -5.375 H 1.6875 L 4.09375,-0.21875 C 4.140625,-0.09375 4.1875,0 4.28125,0 4.390625,0 4.421875,-0.078125 4.46875,-0.1875 L 6.921875,-6.5 v 5.71875 c 0,0.359375 -0.015625,0.46875 -0.78125,0.46875 H 5.90625 V 0 c 0.359375,-0.03125 1.046875,-0.03125 1.4375,-0.03125 0.375,0 1.046875,0 1.421875,0.03125 v -0.3125 h -0.25 c -0.765625,0 -0.78125,-0.109375 -0.78125,-0.46875 v -5.25 C 7.734375,-6.390625 7.75,-6.5 8.515625,-6.5 h 0.25 v -0.3125 h -1.6875 C 6.8125,-6.8125 6.8125,-6.796875 6.75,-6.625 L 4.5625,-1 Z m 0,0"
+         id="path7" />
+    </g>
+  </g>
+  <path
+     style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;stroke-width:3.01664;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000"
+     d="M 16.53207,0.17020942 V 1.1695819 h 9.357352 V 0.17020942 Z"
+     id="path3-5" />
+  <path
+     style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;stroke-width:2.84801;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000"
+     d="M 16.53207,1.1707724 V 8.536102 h 0.999374 V 1.1707724 Z"
+     id="path4-2" />
+  <path
+     style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;stroke-width:2.85298;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000"
+     d="M 24.893691,1.1707724 V 8.536102 H 25.88858 V 1.1707724 Z"
+     id="path5-7" />
+  <path
+     style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;stroke-width:3.01654;stroke-miterlimit:10;enable-background:accumulate;stop-color:#000000"
+     d="m 16.53207,8.536102 v 0.999373 h 9.356861 V 8.536102 Z"
+     id="path6-6" />
+</svg>

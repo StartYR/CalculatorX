@@ -75,6 +75,25 @@ export class InputTranslator {
         ];
         latexChar = permTemplates[permSelect];
         break;
+
+      // ================= 矩阵与向量专属算子 =================
+      // 1. 矩阵属性与变换
+      case 'M⁻¹':      latexChar = "^{-1}"; break;
+      case 'Mᵀ':       latexChar = "^{\\mathrm{T}}"; break;
+      case 'Mᴴ':       latexChar = "^{\\mathrm{H}}"; break;
+      case 'M_power':  latexChar = "^{\\placeholder{}}"; break; // 和普通的 power 一样，触发上标输入
+      // 2. 高级线性代数运算
+      case 'det':      latexChar = "\\det\\left(\\placeholder{}\\right)"; break;
+      case 'rref':     latexChar = "\\operatorname{rref}\\left(\\placeholder{}\\right)"; break;
+      case 'eig':      latexChar = "\\operatorname{eig}\\left(\\placeholder{}\\right)"; break;
+      case 'rank':     latexChar = "\\operatorname{rank}\\left(\\placeholder{}\\right)"; break;
+      case 'tr':       latexChar = "\\operatorname{tr}\\left(\\placeholder{}\\right)"; break;
+      // 3. 向量代数
+      // case '⨯':        latexChar = "\\boldsymbol{\\times}"; break;
+      case '•':        latexChar = "\\bullet "; break;
+
+      // 4. 特殊常量
+      case 'I':        latexChar = "\\operatorname{I}_{\\placeholder{}}"; break;
     }
     return latexChar;
   }

@@ -149,7 +149,14 @@ export struct SideBarMenu {
                 ItemDivider()
                 MenuButton({ icon: $r('sys.symbol.exponentiation'), title: '方程求解', onClickAction: () => { /* TODO */ } })
                 ItemDivider()
-                MenuButton({ icon: $r('sys.symbol.square_grid_2x2'), title: '矩阵与向量', onClickAction: () => { /* TODO */ } })
+                MenuButton({
+                  icon: $r('sys.symbol.square_grid_2x2'),
+                  title: '矩阵与向量',
+                  onClickAction: () => {
+                    animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+                    if (this.onModuleSelect) { this.onModuleSelect('matrix'); } // 激活挂载指令
+                  }
+                })
                 ItemDivider()
                 MenuButton({ icon: $r('sys.symbol.data'), title: '统计分析', onClickAction: () => { /* TODO */ } })
               }

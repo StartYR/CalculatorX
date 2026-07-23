@@ -61,8 +61,22 @@ export class EngineService {
       // 匹配缺分的 12°56"
       .replace(/([0-9.]+)\^\{\\circ\}\s*([0-9.]+)\^\{\\prime\s*\\prime\}/g, repDMS_DS)
       // 匹配只有度的 12°
-      .replace(/([0-9.]+)\^\{\\circ\}/g, repDMS1);
+      .replace(/([0-9.]+)\^\{\\circ\}/g, repDMS1)
 
+      // ================= 矩阵与向量 =================
+      // 伪装行列式与迹，绕过 MathLive 的严格语法与类型检查
+      .replace(/\\det/g, '\\operatorname{Det}')
+      .replace(/\\operatorname\{tr\}/g, '\\operatorname{Tr}')
+      // 利用 MathLive 的隐式乘法，降维叉乘和点乘（匹配 \bullet 及其可能自带的空格）
+      .replace(/⨯/g, '\\operatorname{cross}')
+      .replace(/\\bullet\s?/g, '\\operatorname{dot}')
+      // 矩阵上标防摧毁拦截！将转置、共轭、求逆伪装成平级算子
+      // .replace(/\\end\{bmatrix\}\^\{\\mathrm\{T\}\}/g, '\\end{bmatrix}\\operatorname{TranOp}')
+      // .replace(/\\end\{bmatrix\}\^\{\\mathrm\{H\}\}/g, '\\end{bmatrix}\\operatorname{ConjTranOp}')
+      // .replace(/\\end\{bmatrix\}\^\{-1\}/g, '\\end{bmatrix}\\operatorname{InvOp}');
+      // 给矩阵套上自定义参数，绕过 MathLive 的类型识别
+      .replace(/\\begin\{bmatrix\}/g, '\\operatorname{MWrap}\\left(\\begin{bmatrix}')
+      .replace(/\\end\{bmatrix\}/g, '\\end{bmatrix}\\right)')
     return cleanedLatex;
   }
 
@@ -115,6 +129,14 @@ export class EngineService {
    * 4. 封装 C++ 底层代数引擎的直接调用
    */
   public static calculateNative(jsonStr: string, isRad: boolean, cppPrecisionMode: number): string {
+    console.info(`[EngineService] 清洗后传递给 C++ 的 JSON: ${jsonStr}`);
+
+    // 拦截 C++ 的返回值
+    let cppResult = testNapi.calculate(jsonStr, isRad, cppPrecisionMode);
+
+    // 打印 Giac 生成的原始 LaTeX
+    console.info(`[EngineService] C++ 返回的 LaTeX: ${cppResult}`);
+
     return testNapi.calculate(jsonStr, isRad, cppPrecisionMode);
   }
 }

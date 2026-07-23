@@ -10,6 +10,7 @@
 #include "core/parser.h"
 #include "core/formatter.h"
 #include "core/string_utils.h"
+#include "core/giac_bridge.h"
 #include "ErrorHandler.h"
 #include <symengine/expression.h>
 #include <symengine/printers.h>
@@ -18,6 +19,7 @@
 #include <sstream>
 #include <iomanip>
 #include <cmath>
+#include <regex>
 
 using json = nlohmann::json;
 using SymEngine::Expression;
@@ -70,8 +72,33 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         bool isGlobalExact = (precision == -3 || precision == -4);
         bool autoDMS = false; 
         Expression expr = parseAST(ast, isRad, isGlobalExact, autoDMS);
-        
         std::string expr_str = expr.get_basic()->__str__();
+        
+        // 全局矩阵运算
+        bool isMatrixOp = (expr_str.find("MAGICMAT") != std::string::npos || 
+                           expr_str.find("tran(") != std::string::npos || expr_str.find("trn(") != std::string::npos ||
+                           expr_str.find("det(") != std::string::npos || expr_str.find("trace(") != std::string::npos ||
+                           expr_str.find("cross(") != std::string::npos || expr_str.find("dot(") != std::string::npos ||
+                           expr_str.find("eigenvals(") != std::string::npos || expr_str.find("rank(") != std::string::npos ||
+                           expr_str.find("rref(") != std::string::npos);
+
+        if (isMatrixOp) {
+            // 清理并直接将完整公式丢给 Giac 计算
+            replaceAll(expr_str, "MAGICMAT", "");
+            replaceAll(expr_str, "**", "^");
+            
+            std::string giacCmd = "latex(simplify(" + expr_str + "))";
+            std::string rawResult = evaluateWithGiac(giacCmd);
+            
+            if (rawResult.size() >= 2 && rawResult.front() == '"' && rawResult.back() == '"') {
+                rawResult = rawResult.substr(1, rawResult.size() - 2);
+            }
+            result_msg = rawResult;
+        } else {
+            
+        
+        
+        
         if (expr_str.find("MAGICBASETEN") == std::string::npos) {
             expr = Expression(SymEngine::expand(expr.get_basic()));
         }
@@ -129,7 +156,8 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
                 result_msg = SymEngine::latex(*expr.get_basic());
             }
             
-        } else if (precision == -4) {
+        }
+        else if (precision == -4) {
             std::string s = expr.get_basic()->__str__();
             bool is_simple_frac = true;
             for (char c : s) {
@@ -155,7 +183,8 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
                 } catch (...) { result_msg = SymEngine::latex(*expr.get_basic()); }
             } else { result_msg = SymEngine::latex(*expr.get_basic()); }
             
-        } else {
+        } 
+        else {
             bool handled = false;
             if (SymEngine::is_a<SymEngine::Integer>(*expr.get_basic())) {
                 std::string rawStr = expr.get_basic()->__str__();
@@ -211,6 +240,8 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
                 }
             }
         }
+        
+    }
     } catch (const CalcException& e) {
         result_msg = e.getFrontEndMessage();
     } catch (const std::exception& e) {
@@ -238,10 +269,23 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
     // Giac 返回格式的 UI 美化，统一成前端样式
     replaceAll(result_msg, "infinity", "\\infty");
     replaceAll(result_msg, "undef", "\\text{undefined}");
-    // 将 \log 翻译为 \ln
-    replaceAll(result_msg, "\\log", "\\ln");
+    replaceAll(result_msg, "\\log", "\\ln"); // 将 \log 翻译为 \ln
+    replaceAll(result_msg, "j", "i"); // 将虚数单位替换成 i
     
-    replaceAll(result_msg, "j", "i");
+    // 矩阵格式清洗
+    try {
+        // 匹配 \left[ 或 \left(，紧接着 \begin{array} 或 \begin{matrix}，以及可选的对齐参数 {cc}
+        std::regex array_start(R"(\\left[\[\(]\\begin\{(array|matrix)\}(\{[clr]+\})?)");
+        result_msg = std::regex_replace(result_msg, array_start, "\\begin{bmatrix}");
+        
+        // 替换所有可能的尾部闭合组合
+        replaceAll(result_msg, "\\end{array}\\right]", "\\end{bmatrix}");
+        replaceAll(result_msg, "\\end{array}\\right)", "\\end{bmatrix}");
+        replaceAll(result_msg, "\\end{matrix}\\right]", "\\end{bmatrix}");
+        replaceAll(result_msg, "\\end{matrix}\\right)", "\\end{bmatrix}");
+    } catch (...) {
+        // 正则保护：若失败则原样输出，防止引擎崩溃
+    }
     
     napi_value result;
     napi_create_string_utf8(env, result_msg.c_str(), NAPI_AUTO_LENGTH, &result);
