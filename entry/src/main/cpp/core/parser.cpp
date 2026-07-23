@@ -164,6 +164,34 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
             }
         }
         
+        // 线性代数与矩阵单参数函数
+        if (op == "Det" || op == "Tr" || op == "rref" || op == "eig" || op == "rank") {
+            if (ast.size() >= 2) {
+                // 映射 Giac 的原生函数名
+                std::string giacFunc = op;
+                if (op == "Det") giacFunc = "det";
+                else if (op == "Tr") giacFunc = "trace";
+                else if (op == "eig") giacFunc = "eigenvals"; 
+
+                std::string argStr = "";
+                if (ast[1].is_array() && ast[1][0] == "Matrix" && ast[1].size() >= 2) {
+                    argStr = parseListToGiacString(ast[1][1], isRad, preferExact, hasDMS);
+                } else {
+                    // 否则当作普通表达式解析（兼容符号变量）
+                    argStr = parseAST(ast[1], isRad, preferExact, hasDMS).get_basic()->__str__();
+                }
+
+                // 生成 Giac 计算指令并求值
+                std::string giacCmd = "latex(simplify(" + giacFunc + "(" + argStr + ")))";
+                std::string rawResult = evaluateWithGiac(giacCmd);
+                
+                if (rawResult.size() >= 2 && rawResult.front() == '"' && rawResult.back() == '"') {
+                    rawResult = rawResult.substr(1, rawResult.size() - 2);
+                }
+                return Expression(SymEngine::symbol("MAGICGIACRESULT" + rawResult));
+            }
+        }
+        
         // 复数 (Complex)
         if (op == "Complex") {
             if (ast.size() == 3) {
@@ -185,7 +213,98 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
             if (ast.size() == 2) return -parseAST(ast[1], isRad, preferExact, hasDMS);
             return parseAST(ast[1], isRad, preferExact, hasDMS) - parseAST(ast[2], isRad, preferExact, hasDMS);
         }
+        
+        // ================= Tuple (处理矩阵叉乘与降维算子) =================
+        if (op == "Tuple") {
+            // 1. 拦截矩阵的叉乘与点乘: ["Tuple", Matrix1, "cross", Matrix2]
+            if (ast.size() == 4 && ast[2].is_string()) {
+                std::string midElem = ast[2].get<std::string>();
+                if (midElem == "cross" || midElem == "dot") {
+                    std::string arg1Str = (ast[1].is_array() && ast[1][0] == "Matrix") ? 
+                        parseListToGiacString(ast[1][1], isRad, preferExact, hasDMS) : 
+                        parseAST(ast[1], isRad, preferExact, hasDMS).get_basic()->__str__();
+                        
+                    std::string arg2Str = (ast[3].is_array() && ast[3][0] == "Matrix") ? 
+                        parseListToGiacString(ast[3][1], isRad, preferExact, hasDMS) : 
+                        parseAST(ast[3], isRad, preferExact, hasDMS).get_basic()->__str__();
+
+                    std::string giacCmd = "latex(simplify(" + midElem + "(" + arg1Str + ", " + arg2Str + ")))";
+                    std::string rawResult = evaluateWithGiac(giacCmd);
+                    if (rawResult.size() >= 2 && rawResult.front() == '"' && rawResult.back() == '"') {
+                        rawResult = rawResult.substr(1, rawResult.size() - 2);
+                    }
+                    return Expression(SymEngine::symbol("MAGICGIACRESULT" + rawResult));
+                }
+            }
+            
+            // 2. 拦截降维后的矩阵后缀操作: ["Tuple", Matrix, "TranOp"]
+            if (ast.size() == 3 && ast.back().is_string()) {
+                std::string lastElem = ast.back().get<std::string>();
+                if (lastElem == "TranOp" || lastElem == "ConjTranOp" || lastElem == "InvOp") {
+                    std::string giacFunc = "tran";
+                    if (lastElem == "ConjTranOp") giacFunc = "trn";
+                    if (lastElem == "InvOp") giacFunc = "inv";
+                    
+                    std::string baseStr = (ast[1].is_array() && ast[1][0] == "Matrix") ? 
+                        parseListToGiacString(ast[1][1], isRad, preferExact, hasDMS) : 
+                        parseAST(ast[1], isRad, preferExact, hasDMS).get_basic()->__str__();
+                        
+                    std::string giacCmd = "latex(simplify(" + giacFunc + "(" + baseStr + ")))";
+                    std::string rawResult = evaluateWithGiac(giacCmd);
+                    if (rawResult.size() >= 2 && rawResult.front() == '"' && rawResult.back() == '"') {
+                        rawResult = rawResult.substr(1, rawResult.size() - 2);
+                    }
+                    return Expression(SymEngine::symbol("MAGICGIACRESULT" + rawResult));
+                }
+            }
+        }
         if (op == "Multiply") {
+            // 隐式向量叉乘与点乘
+            if (ast.size() >= 4 && ast.back().is_string()) {
+                std::string lastElem = ast.back().get<std::string>();
+                if (lastElem == "cross" || lastElem == "dot") {
+                    std::string arg1Str = (ast[1].is_array() && ast[1][0] == "Matrix") ? 
+                        parseListToGiacString(ast[1][1], isRad, preferExact, hasDMS) : 
+                        parseAST(ast[1], isRad, preferExact, hasDMS).get_basic()->__str__();
+                        
+                    std::string arg2Str = (ast[2].is_array() && ast[2][0] == "Matrix") ? 
+                        parseListToGiacString(ast[2][1], isRad, preferExact, hasDMS) : 
+                        parseAST(ast[2], isRad, preferExact, hasDMS).get_basic()->__str__();
+
+                    // 直接使用 cross(A, B) 或 dot(A, B)
+                    std::string giacCmd = "latex(simplify(" + lastElem + "(" + arg1Str + ", " + arg2Str + ")))";
+                    std::string rawResult = evaluateWithGiac(giacCmd);
+                    
+                    if (rawResult.size() >= 2 && rawResult.front() == '"' && rawResult.back() == '"') {
+                        rawResult = rawResult.substr(1, rawResult.size() - 2);
+                    }
+                    return Expression(SymEngine::symbol("MAGICGIACRESULT" + rawResult));
+                }
+            }
+            
+            // 双保险：拦截可能被解析为 Multiply 的后缀算子
+            if (ast.size() >= 3 && ast.back().is_string()) {
+                std::string lastElem = ast.back().get<std::string>();
+                if (lastElem == "TranOp" || lastElem == "ConjTranOp" || lastElem == "InvOp") {
+                    std::string giacFunc = "tran";
+                    if (lastElem == "ConjTranOp") giacFunc = "trn";
+                    if (lastElem == "InvOp") giacFunc = "inv";
+                    
+                    // 乘法数组的倒数第二个元素就是矩阵
+                    std::string baseStr = (ast[ast.size()-2].is_array() && ast[ast.size()-2][0] == "Matrix") ? 
+                        parseListToGiacString(ast[ast.size()-2][1], isRad, preferExact, hasDMS) : 
+                        parseAST(ast[ast.size()-2], isRad, preferExact, hasDMS).get_basic()->__str__();
+                        
+                    std::string giacCmd = "latex(simplify(" + giacFunc + "(" + baseStr + ")))";
+                    std::string rawResult = evaluateWithGiac(giacCmd);
+                    if (rawResult.size() >= 2 && rawResult.front() == '"' && rawResult.back() == '"') {
+                        rawResult = rawResult.substr(1, rawResult.size() - 2);
+                    }
+                    return Expression(SymEngine::symbol("MAGICGIACRESULT" + rawResult));
+                }
+            }
+            
+            // 普通乘法
             Expression prod(1);
             for (size_t i = 1; i < ast.size(); ++i) prod *= parseAST(ast[i], isRad, preferExact, hasDMS);
             return prod;
@@ -198,6 +317,28 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
         if (op == "Root") return SymEngine::pow(parseAST(ast[1], isRad, true, hasDMS), Expression(1) / parseAST(ast[2], isRad, true, hasDMS));
         if (op == "Abs") return SymEngine::abs(parseAST(ast[1], isRad, true, hasDMS));
         if (op == "Power") {
+            // 拦截矩阵转置 (T) 与共轭转置 (H)
+            if (ast.size() == 3 && ast[2].is_string()) {
+                std::string expStr = ast[2].get<std::string>();
+                if (expStr == "T_upright" || expStr == "H_upright") {
+                    // tran 是转置，trn 是共轭转置
+                    std::string giacFunc = (expStr == "T_upright") ? "tran" : "trn";
+                    
+                    std::string baseStr = (ast[1].is_array() && ast[1][0] == "Matrix") ? 
+                        parseListToGiacString(ast[1][1], isRad, preferExact, hasDMS) : 
+                        parseAST(ast[1], isRad, preferExact, hasDMS).get_basic()->__str__();
+                        
+                    std::string giacCmd = "latex(simplify(" + giacFunc + "(" + baseStr + ")))";
+                    std::string rawResult = evaluateWithGiac(giacCmd);
+                    
+                    if (rawResult.size() >= 2 && rawResult.front() == '"' && rawResult.back() == '"') {
+                        rawResult = rawResult.substr(1, rawResult.size() - 2);
+                    }
+                    return Expression(SymEngine::symbol("MAGICGIACRESULT" + rawResult));
+                }
+            }
+            
+            // 普通 Power
             Expression base = parseAST(ast[1], isRad, true, hasDMS);
             Expression exp = parseAST(ast[2], isRad, true, hasDMS);
             try {

@@ -242,13 +242,17 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
     replaceAll(result_msg, "\\log", "\\ln"); // 将 \log 翻译为 \ln
     replaceAll(result_msg, "j", "i"); // 将虚数单位替换成 i
     
-    // 矩阵格式替换
+    // 矩阵格式清洗
     try {
-        // 匹配 \left[\begin{array}{c...} 并替换为 \begin{bmatrix}
-        std::regex array_start(R"(\\left\[\\begin\{array\}\{[clr]+\})");
+        // 匹配 \left[ 或 \left(，紧接着 \begin{array} 或 \begin{matrix}，以及可选的对齐参数 {cc}
+        std::regex array_start(R"(\\left[\[\(]\\begin\{(array|matrix)\}(\{[clr]+\})?)");
         result_msg = std::regex_replace(result_msg, array_start, "\\begin{bmatrix}");
-        // 替换尾部的 \end{array}\right]
+        
+        // 替换所有可能的尾部闭合组合
         replaceAll(result_msg, "\\end{array}\\right]", "\\end{bmatrix}");
+        replaceAll(result_msg, "\\end{array}\\right)", "\\end{bmatrix}");
+        replaceAll(result_msg, "\\end{matrix}\\right]", "\\end{bmatrix}");
+        replaceAll(result_msg, "\\end{matrix}\\right)", "\\end{bmatrix}");
     } catch (...) {
         // 正则保护：若失败则原样输出，防止引擎崩溃
     }

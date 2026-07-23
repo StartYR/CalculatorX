@@ -69,7 +69,11 @@ export class EngineService {
       .replace(/\\operatorname\{tr\}/g, '\\operatorname{Tr}')
       // 利用 MathLive 的隐式乘法，降维叉乘和点乘（匹配 \bullet 及其可能自带的空格）
       .replace(/⨯/g, '\\operatorname{cross}')
-      .replace(/\\bullet\s?/g, '\\operatorname{dot}');
+      .replace(/\\bullet\s?/g, '\\operatorname{dot}')
+      // 矩阵上标防摧毁拦截！将转置、共轭、求逆伪装成平级算子
+      .replace(/\\end\{bmatrix\}\^\{\\mathrm\{T\}\}/g, '\\end{bmatrix}\\operatorname{TranOp}')
+      .replace(/\\end\{bmatrix\}\^\{\\mathrm\{H\}\}/g, '\\end{bmatrix}\\operatorname{ConjTranOp}')
+      .replace(/\\end\{bmatrix\}\^\{-1\}/g, '\\end{bmatrix}\\operatorname{InvOp}');
 
     return cleanedLatex;
   }
