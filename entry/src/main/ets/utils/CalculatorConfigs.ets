@@ -187,6 +187,10 @@ export class PreferenceConfigs {
   static readonly KEY_COMBINATION_SELECT = 'combinationSelectIndex';
   static readonly KEY_PERMUTATION_SELECT = 'permutationSelectIndex';
   static readonly KEY_HAPTIC_FEEDBACK = 'hapticFeedback';
+
+  // 启动页面配置
+  static readonly KEY_STARTUP_PAGE = 'startupPageMode';
+  static readonly KEY_LAST_USED_MODULE = 'lastUsedModule';
 }
 
 // 长按菜单
