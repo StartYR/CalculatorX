@@ -9,28 +9,27 @@
 import font from '@ohos.font';
 import router from '@ohos.router';
 import { common } from '@kit.AbilityKit';
-import { RoutePath } from '../utils/CalculatorConfigs';
+import { RoutePath, PreferenceConfigs } from '../utils/CalculatorConfigs';
+import { PreferenceManager } from '../utils/PreferenceManager'; // 引入全新的单例工具
 import { TopBar } from '../components/TopBar';
 import { SideBarMenu } from '../components/SideBarMenu';
 import { HistorySheet } from '../components/HistorySheet';
 import { HistoryRepository } from '../database/HistoryRepository';
 
-import { ScientificCalc } from '../components/ScientificCalc'; // 科学计算器面板
-import { BasicCalc } from '../components/BasicCalc'; // 基础计算器面板
-import { MatrixCalc } from '../components/MatrixCalc'; // 矩阵计算
+import { ScientificCalc } from '../components/ScientificCalc';
+import { BasicCalc } from '../components/BasicCalc';
+import { MatrixCalc } from '../components/MatrixCalc';
 
 @Entry
 @Component
 struct Index {
-  // 只保留全局共用的状态
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageProp('isRad') isRad: boolean = false;
 
   @State isSidebarOpen: boolean = false;
   @State isShowHistorySheet: boolean = false;
 
-  // 动态路由状态，默认为科学计算器
-  @State currentModule: string = 'scientific';
+  @State currentModule: string = 'scientific'; // 默认值，将在 aboutToAppear 中被接管
   @State topBarIsShift: boolean = false;
 
   // 历史记录面板的生成器 (作为全局遮罩，保留在主入口)
@@ -38,7 +37,6 @@ struct Index {
     HistorySheet({
       moduleType: this.currentModule, // 根据当前模块动态拉取历史记录
       onItemClick: (record, insertType: 'input' | 'output') => {
-        // [重构解耦] Webview已在子组件，通过 EventHub 将点击的字符串发给子组件
         let insertStr = insertType === 'input' ? record.inputContent : record.outputContent;
         getContext(this).eventHub.emit('event_math_insert', insertStr);
       },
@@ -49,12 +47,23 @@ struct Index {
   }
 
   aboutToAppear() {
-    // 数据库与字体依然在 App 启动入口进行初始化
     HistoryRepository.init(getContext(this) as common.UIAbilityContext);
     font.registerFont({ familyName: 'Cambria Math', familySrc: $rawfile('fonts/Cambria Math.ttf') });
     font.registerFont({ familyName: 'Cambria Italic', familySrc: $rawfile('fonts/Cambria Italic.ttf') });
 
-    // 监听子插件内部广播的 Shift 状态
+    // 读取并接管启动页面路由
+    let startupMode = PreferenceManager.get(PreferenceConfigs.KEY_STARTUP_PAGE, 0) as number;
+
+    if (startupMode === 0) { // 记忆上次
+      this.currentModule = PreferenceManager.get(PreferenceConfigs.KEY_LAST_USED_MODULE, 'scientific') as string;
+    } else if (startupMode === 1) { // 固定：科学计算器
+      this.currentModule = 'scientific';
+    } else if (startupMode === 2) { // 固定：基础计算器
+      this.currentModule = 'basic';
+    } else if (startupMode === 3) { // 固定：矩阵计算器
+      this.currentModule = 'matrix';
+    }
+
     getContext(this).eventHub.on('event_shift_change', (isShiftActive: boolean) => {
       this.topBarIsShift = isShiftActive;
     });
@@ -62,13 +71,12 @@ struct Index {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-
-      // ================= 1. 动态内容区 (插槽) =================
+      // 1. 动态内容区
       Column() {
         if (this.currentModule === 'scientific') {
-          ScientificCalc() // 动态挂载科学计算器面板
+          ScientificCalc()
         } else if (this.currentModule === 'basic') {
-          BasicCalc() // 动态挂载基础计算器面板
+          BasicCalc()
         } else if (this.currentModule === 'matrix') {
           MatrixCalc()
         } else {
@@ -90,9 +98,9 @@ struct Index {
       .borderRadius(this.isSidebarOpen ? 32 : 0)
       .backgroundColor($r('sys.color.background_primary'))
 
-      // ================= 2. 全局顶部悬浮控制栏 =================
+      // 2. 全局顶部悬浮控制栏
       TopBar({
-        isShift: this.topBarIsShift, // 占位：UI已解耦，未来若需在顶栏显示Shift，可通过 AppStorage 同步
+        isShift: this.topBarIsShift,
         isRad: this.isRad,
         // 根据当前模块动态显示顶栏标题
         currentModule: this.currentModule,
@@ -120,28 +128,26 @@ struct Index {
           showClose: false
         })
 
-      // ================= 3. 全局左侧侧边栏 =================
+      // 3. 全局左侧侧边栏
       if (this.isSidebarOpen) {
         SideBarMenu({
           isSidebarOpen: $isSidebarOpen,
           onSettingsClick: () => {
-            router.pushUrl({
-              url: RoutePath.SETTINGS
-            });
-            },
+            router.pushUrl({ url: RoutePath.SETTINGS });
+          },
           onHistoryClick: () => {
-            router.pushUrl({
-              url: RoutePath.HISTORY
-            });
+            router.pushUrl({ url: RoutePath.HISTORY });
           },
           // 响应侧边栏的模块切换，更新当前主板的状态
           onModuleSelect: (module: string) => {
             this.currentModule = module;
-            this.topBarIsShift = false; // 切换模块时，强制复位顶栏的 Shift 显示状态
+            this.topBarIsShift = false;
+
+            // 每次切换时，静默记忆当前模块
+            PreferenceManager.set(PreferenceConfigs.KEY_LAST_USED_MODULE, module);
           }
         })
       }
-
     }
     .width('100%')
     .height('100%')
