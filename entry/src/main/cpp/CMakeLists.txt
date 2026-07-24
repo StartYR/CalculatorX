@@ -30,10 +30,10 @@ include_directories(${NATIVERENDER_ROOT_PATH}
 
 include(FetchContent)
 
-# ================= 引入 Boost (本地) =================
+# ================= 引入 Boost =================
 FetchContent_Declare(
     boost
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/boost_1_82_0.tar.gz
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boost_1_82_0.tar.gz
 )
 FetchContent_GetProperties(boost)
 if(NOT boost_POPULATED)
@@ -44,7 +44,7 @@ set(Boost_INCLUDE_DIR ${boost_SOURCE_DIR} CACHE PATH "Boost include" FORCE)
 include_directories(${boost_SOURCE_DIR})
 
 
-# ================= 引入 GMP  =================
+# ================= 引入 GMP  ==================
 add_library(gmp STATIC IMPORTED)
 set_target_properties(gmp PROPERTIES IMPORTED_LOCATION
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/${OHOS_ARCH}/libgmp.a)
@@ -52,7 +52,7 @@ set_target_properties(gmp PROPERTIES IMPORTED_LOCATION
 # ================= 引入 SymEngine =================
 FetchContent_Declare(
     symengine
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/symengine-0.11.2.tar.gz
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/symengine-0.11.2.tar.gz
 )
 
 set(WITH_GMP OFF CACHE BOOL "Disable GMP" FORCE)
@@ -73,7 +73,7 @@ include_directories(
 # ================= 引入 Giac =================
 FetchContent_Declare(
     giac
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/giac-1.9.0.tar.gz
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/giac-1.9.0.tar.gz
 )
 FetchContent_GetProperties(giac)
 if(NOT giac_POPULATED)
@@ -139,11 +139,10 @@ target_link_libraries(giac PUBLIC gmp)
 # ================= 构建入口 ==================
 add_library(entry SHARED
     engine.cpp
-    FastMath.cpp
+    utils/FastMath.cpp
+    utils/FormatUtils.cpp
     core/parser.cpp
-    core/formatter.cpp
     core/giac_bridge.cpp
-    core/string_utils.cpp
 )
 
 # 将 N-API、SymEngine、Giac 和 arm64 版 GMP 一并链接

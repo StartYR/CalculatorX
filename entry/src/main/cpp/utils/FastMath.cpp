@@ -6,7 +6,7 @@
  * @date 2026
  */
 #include "FastMath.h"
-#include "ErrorHandler.h"
+#include "../core/ErrorHandler.h"
 #include <cmath>
 
 namespace FastMath {
