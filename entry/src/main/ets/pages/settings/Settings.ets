@@ -128,6 +128,13 @@ export struct Settings {
   @StorageLink('colorModeIndex') colorModeIndex: number = 2;
   @StorageLink('answerOutputMode') answerOutputMode: number = 0;
 
+  // 读取启动偏好的状态 (默认值为0: 记忆上次)
+  @State startupPageMode: number = 0;
+  aboutToAppear() {
+    // 页面加载时，通过 PreferenceManager 拿到最新数据赋值给 UI
+    this.startupPageMode = PreferenceManager.get(PreferenceConfigs.KEY_STARTUP_PAGE, 0) as number;
+  }
+
   @StorageProp(PreferenceConfigs.KEY_COMBINATION_SELECT) combSelect: number = 1;
   @StorageProp(PreferenceConfigs.KEY_PERMUTATION_SELECT) permSelect: number = 1;
 
@@ -373,6 +380,38 @@ export struct Settings {
           // ============================= 外观与体验 =====================================
           Column() {
             GroupHeader({ title: '外观与体验' })
+
+            // 0. 启动时打开
+            Row() {
+              SymbolGlyph($r('sys.symbol.house')) // 选个顺眼的房子图标
+                .fontSize(20)
+                .fontColor([$r('sys.color.icon_secondary')])
+                .margin({ right: 12 })
+              Text('启动时打开')
+                .fontSize(16)
+                .fontColor($r('sys.color.font_primary'))
+              Blank()
+              Select([
+                { value: '记忆上次' },
+                { value: '科学计算器' },
+                { value: '基础计算器' },
+                { value: '矩阵计算器' }
+              ])
+                .selected(this.startupPageMode)
+                .value(this.startupPageMode === 0 ? '记忆上次' : this.startupPageMode === 1 ? '科学计算器' : this.startupPageMode === 2 ? '基础计算器' : '矩阵计算器')
+                .font({ size: 14 })
+                .fontColor($r('sys.color.font_primary'))
+                .onSelect((index: number) => {
+                  // 改变 UI 状态
+                  this.startupPageMode = index;
+                  // 落盘保存
+                  PreferenceManager.set(PreferenceConfigs.KEY_STARTUP_PAGE, index);
+                })
+            }
+            .width('100%')
+            .padding({ left: 16, right: 12, top: 8, bottom: 8 })
+
+            ItemDivider()
 
             MenuGroup() {
               // 颜色模式
