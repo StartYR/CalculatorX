@@ -171,6 +171,10 @@ void applyGlobalUIFormatting(std::string& result_msg) {
     replaceAll(result_msg, "\\log", "\\ln");
     replaceAll(result_msg, "j", "i");
     
+    // 处理不定积分
+    replaceAll(result_msg, "MAGIC\\_CONST\\_C", "\\mathbf{C}");
+    replaceAll(result_msg, "MAGIC_CONST_C", "\\mathbf{C}");
+    
     try {
         std::regex array_start(R"(\\left[\[\(]\\begin\{(array|matrix)\}(\{[clr]+\})?)");
         result_msg = std::regex_replace(result_msg, array_start, "\\begin{bmatrix}");

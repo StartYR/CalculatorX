@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
  * @file engine.cpp
- * @description AST 树解析与精度控制枢纽 (极致瘦身版)
+ * @description AST 树解析与精度控制枢纽 (指挥官全局路由版)
  * @author 易睿 (Yi Rui)
  * @date 2026
  */
@@ -67,21 +67,82 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         Expression expr = parseAST(ast, isRad, isGlobalExact, autoDMS);
         std::string expr_str = expr.get_basic()->__str__();
         
-        bool isMatrixOp = (expr_str.find("MAGICMAT") != std::string::npos || 
+        // 全局接管需要调用 Giac 的计算
+        bool isGlobalGiacOp = (expr_str.find("MAGICMAT") != std::string::npos || 
                            expr_str.find("tran(") != std::string::npos || expr_str.find("trn(") != std::string::npos ||
                            expr_str.find("det(") != std::string::npos || expr_str.find("trace(") != std::string::npos ||
                            expr_str.find("cross(") != std::string::npos || expr_str.find("dot(") != std::string::npos ||
                            expr_str.find("eigenvals(") != std::string::npos || expr_str.find("rank(") != std::string::npos ||
-                           expr_str.find("rref(") != std::string::npos);
+                           expr_str.find("rref(") != std::string::npos ||
+                           expr_str.find("integrate(") != std::string::npos ||
+                           expr_str.find("limit(") != std::string::npos ||
+                           expr_str.find("sum(") != std::string::npos ||
+                           expr_str.find("product(") != std::string::npos ||
+                           expr_str.find("gcd(") != std::string::npos ||
+                           expr_str.find("lcm(") != std::string::npos ||
+                           expr_str.find("irem(") != std::string::npos);
 
-        if (isMatrixOp) {
+        if (isGlobalGiacOp) {
             replaceAll(expr_str, "MAGICMAT", "");
             replaceAll(expr_str, "**", "^");
+            
+            // 判断是否为不定积分
+            bool isIndefinite = (expr_str.find("MAGICINDEFintegrate") != std::string::npos);
+            replaceAll(expr_str, "MAGICINDEFintegrate", "integrate");
+            
             std::string giacCmd = "latex(simplify(" + expr_str + "))";
             std::string rawResult = evaluateWithGiac(giacCmd);
+            
             if (rawResult.size() >= 2 && rawResult.front() == '"' && rawResult.back() == '"') {
                 rawResult = rawResult.substr(1, rawResult.size() - 2);
             }
+            
+            // Romberg 数值积分全局降级兜底
+            if (expr_str.find("integrate(") != std::string::npos && 
+                (rawResult.find("undef") != std::string::npos || 
+                 rawResult.find("\\int") != std::string::npos || 
+                 rawResult.find("integrate") != std::string::npos ||
+                 rawResult.find("?") != std::string::npos ||
+                 rawResult.find("Ci") != std::string::npos || 
+                 rawResult.find("Si") != std::string::npos || 
+                 rawResult.find("igamma") != std::string::npos || 
+                 rawResult.find("erf") != std::string::npos || 
+                 rawResult.empty())) {
+                
+                std::string fallback_str = expr_str;
+                // 全局将所有的 integrate( 替换为 romberg(，依然保留外层的结构
+                replaceAll(fallback_str, "integrate(", "romberg(");
+                std::string fallbackCmd = "latex(" + fallback_str + ")"; 
+                rawResult = evaluateWithGiac(fallbackCmd);
+                
+                if (rawResult.size() >= 2 && rawResult.front() == '"' && rawResult.back() == '"') {
+                    rawResult = rawResult.substr(1, rawResult.size() - 2);
+                }
+                
+                // 清洗 Romberg 返回的误差区间 [min, max]
+                if (rawResult.find(',') != std::string::npos && 
+                   (rawResult.find('[') != std::string::npos || rawResult.find("left[") != std::string::npos)) {
+                    std::string cleanStr = rawResult;
+                    replaceAll(cleanStr, "\\left", ""); replaceAll(cleanStr, "\\right", "");
+                    replaceAll(cleanStr, "[", ""); replaceAll(cleanStr, "]", "");
+                    replaceAll(cleanStr, " ", "");
+                    size_t commaPos = cleanStr.find(',');
+                    if (commaPos != std::string::npos) {
+                        try {
+                            double num1 = std::stod(cleanStr.substr(0, commaPos));
+                            double num2 = std::stod(cleanStr.substr(commaPos + 1));
+                            double mid = (num1 + num2) / 2.0; 
+                            rawResult = std::to_string(mid);
+                        } catch (...) {}
+                    }
+                }
+            }
+            
+            // 拼接积分常数
+            if (isIndefinite) {
+                rawResult += " + \\mathbf{C}";
+            }
+            
             result_msg = rawResult;
         } else {
             if (expr_str.find("MAGICBASETEN") == std::string::npos) {

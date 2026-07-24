@@ -6,7 +6,6 @@
  * @date 2026
  */
 
-
 import { HistoryRepository, HistoryRecord } from '../../database/HistoryRepository';
 import { mediaquery, LengthMetrics } from '@kit.ArkUI';
 
@@ -18,7 +17,6 @@ export struct UniversalHistoryList {
   @Prop isGlobalPage: boolean = false;
   @Prop @Watch('loadData') refreshCounter: number = 0;
 
-  // 【核心 1】：回归最纯粹的单一状态数据源，彻底抛弃嵌套状态对象！
   @State historyList: HistoryRecord[] = [];
 
   @State isDarkMode: boolean = false;
@@ -38,9 +36,23 @@ export struct UniversalHistoryList {
     this.darkModeListener.off('change');
   }
 
+  // 判断单条历史记录所需的高度
   getDynamicHeight(content: string, isOutput: boolean): number {
     if (!content) return 24;
-    if (content.includes('\\int')) return 48;
+    if (content.includes('bmatrix')) return 48;
+    if (content.includes('\\int')) {
+      if (content.includes('\\frac')) {
+        return 48
+      }
+      return 36;
+    }
+    if (content.includes('\\sum') || content.includes('\\prod')) return 48;
+    if (content.includes('\\lim')) {
+      if (content.includes('\\frac')) {
+        return 48;
+      }
+      return 30;
+    }
     if (content.includes('\\frac')) return 36;
     return 24;
   }

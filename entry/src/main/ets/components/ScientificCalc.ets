@@ -398,7 +398,7 @@ export struct ScientificCalc {
       .width('100%')
       .height('67%')
       .backgroundColor($r('sys.color.comp_background_secondary'))
-      .padding({ bottom: this.navBarHeight })
+      .padding({ bottom: this.navBarHeight - 8 })
     }
     .width('100%')
     .height('100%')
