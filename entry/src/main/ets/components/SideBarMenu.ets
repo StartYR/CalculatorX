@@ -1,8 +1,8 @@
 /**
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
- * * @file SideBarMenu.ets
+ * @file SideBarMenu.ets
  * @description 手势驱动的侧边栏菜单
-* * @author 易睿 (Yi Rui)
+ * @author 易睿 (Yi Rui)
  * @date 2026
  */
 
@@ -29,7 +29,7 @@ export struct SideBarMenu {
         .backgroundColor('rgba(0, 0, 0, 0.2)') // 稍微调低透明度，让底层的模糊更透亮
         .backgroundBlurStyle(BlurStyle.Thin)
         .onClick(() => {
-          // 【动效优化】：使用原生的阻尼减速曲线，收起更丝滑
+          // 收起动效
           animateTo({ duration: 350, curve: Curve.Friction }, () => {
             this.isSidebarOpen = false;
           });

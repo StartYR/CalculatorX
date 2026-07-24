@@ -37,7 +37,7 @@ export struct HistoryManager {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   private controller: HdsTabsController = new HdsTabsController();
 
-  // ==================== 【新增核心状态】 ====================
+  // ==================== 核心状态 ====================
   @State currentIndex: number = 0;             // 记住用户当前滑到了哪个 Tab
   @State currentTabHasData: boolean = false;   // 当前 Tab 是否有数据（控制垃圾桶显隐）
   @State refreshSignal: number = 0;            // 列表刷新信号
@@ -47,24 +47,25 @@ export struct HistoryManager {
     this.checkTabHasData(0);
   }
 
-  // ==================== 【新增核心：页面路由字典】 ====================
-  // 通过 index 瞬间翻译出数据库需要的 moduleType
+  // ==================== 页面路由字典 ====================
+  // 通过 index 翻译出数据库需要的 moduleType
   private getModuleTypeByIndex(index: number): string {
     switch (index) {
       case 0: return 'all';
       case 1: return 'basic,scientific';
       case 2: return 'equation';
       case 3: return 'graph';
-      case 4: return 'conversion';
-      case 5: return 'pro';
+      case 4: return 'matrix';
+      case 5: return 'conversion';
+      case 6: return 'pro';
       default: return 'all';
     }
   }
 
-  // ==================== 【新增核心：轻量级静默探针】 ====================
+  // ==================== 轻量级静默探针 ====================
   private async checkTabHasData(index: number) {
     const targetModule = this.getModuleTypeByIndex(index);
-    // 极其致命的优化：limit 设为 1，只要查到哪怕 1 条数据，就说明不为空，性能消耗趋近于 0
+    // limit 设为 1，只要查到 1 条数据，就说明不为空
     const res = await HistoryRepository.queryRecords(targetModule, 1);
     this.currentTabHasData = res.length > 0;
   }
@@ -88,12 +89,13 @@ export struct HistoryManager {
       this.createTabItem('计算', $r('sys.symbol.calculator_fill')),
       this.createTabItem('方程', $r('sys.symbol.exponentiation')),
       this.createTabItem('绘图', $r('sys.symbol.foldline_screen_fill')),
+      this.createTabItem('矩阵', $r('sys.symbol.square_fill_grid_2x2')),
       this.createTabItem('转换', $r('sys.symbol.arrow_left_arrow_right')),
-      this.createTabItem('更多', $r('sys.symbol.square_fill_grid_2x2'))
+      this.createTabItem('更多', $r('sys.symbol.more_fill'))
     ];
   }
 
-  // ==================== 【改造：上下文感知垃圾桶】 ====================
+  // ==================== 上下文感知垃圾桶 ====================
   @Builder
   TopRightMenu() {
     // 显隐逻辑绑定到当前 Tab 的专属状态上
@@ -173,12 +175,10 @@ export struct HistoryManager {
         .tabBar(new BottomTabBarStyle({ normal: tab.icon, selected: tab.selectedIcon }, tab.label))
       })
     }
-    // ==================== 【新增核心：挂载侦听雷达】 ====================
     .onChange((index: number) => {
       this.currentIndex = index;           // 更新当前所在 Tab 的指针
       this.checkTabHasData(index);         // 瞬间去查数据库，判断垃圾桶该不该出来！
     })
-    // ================================================================
     .barOverlap(true)
     .vertical(false)
     .barPosition(BarPosition.End)
