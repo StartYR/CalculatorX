@@ -67,7 +67,7 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         Expression expr = parseAST(ast, isRad, isGlobalExact, autoDMS);
         std::string expr_str = expr.get_basic()->__str__();
         
-        // 🚀 【战役二核心】：扩大拦截网，指挥官全局接管！
+        // 全局接管需要调用 Giac 的计算
         bool isGlobalGiacOp = (expr_str.find("MAGICMAT") != std::string::npos || 
                            expr_str.find("tran(") != std::string::npos || expr_str.find("trn(") != std::string::npos ||
                            expr_str.find("det(") != std::string::npos || expr_str.find("trace(") != std::string::npos ||
@@ -86,6 +86,10 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
             replaceAll(expr_str, "MAGICMAT", "");
             replaceAll(expr_str, "**", "^");
             
+            // 判断是否为不定积分
+            bool isIndefinite = (expr_str.find("MAGICINDEFintegrate") != std::string::npos);
+            replaceAll(expr_str, "MAGICINDEFintegrate", "integrate");
+            
             std::string giacCmd = "latex(simplify(" + expr_str + "))";
             std::string rawResult = evaluateWithGiac(giacCmd);
             
@@ -93,7 +97,7 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
                 rawResult = rawResult.substr(1, rawResult.size() - 2);
             }
             
-            // 💡 完美融合：Romberg 数值积分全局降级兜底
+            // Romberg 数值积分全局降级兜底
             if (expr_str.find("integrate(") != std::string::npos && 
                 (rawResult.find("undef") != std::string::npos || 
                  rawResult.find("\\int") != std::string::npos || 
@@ -132,6 +136,11 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
                         } catch (...) {}
                     }
                 }
+            }
+            
+            // 拼接积分常数
+            if (isIndefinite) {
+                rawResult += " + \\mathbf{C}";
             }
             
             result_msg = rawResult;
