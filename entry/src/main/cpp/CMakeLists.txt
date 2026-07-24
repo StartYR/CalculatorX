@@ -30,10 +30,10 @@ include_directories(${NATIVERENDER_ROOT_PATH}
 
 include(FetchContent)
 
-# ================= 引入 Boost (本地) =================
+# ================= 引入 Boost =================
 FetchContent_Declare(
     boost
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/boost_1_82_0.tar.gz
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boost_1_82_0.tar.gz
 )
 FetchContent_GetProperties(boost)
 if(NOT boost_POPULATED)
@@ -52,7 +52,7 @@ set_target_properties(gmp PROPERTIES IMPORTED_LOCATION
 # ================= 引入 SymEngine =================
 FetchContent_Declare(
     symengine
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/symengine-0.11.2.tar.gz
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/symengine-0.11.2.tar.gz
 )
 
 set(WITH_GMP OFF CACHE BOOL "Disable GMP" FORCE)
@@ -73,7 +73,7 @@ include_directories(
 # ================= 引入 Giac =================
 FetchContent_Declare(
     giac
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/giac-1.9.0.tar.gz
+    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/giac-1.9.0.tar.gz
 )
 FetchContent_GetProperties(giac)
 if(NOT giac_POPULATED)
