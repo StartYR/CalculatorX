@@ -6,7 +6,7 @@
  * @date 2026
  */
 
-import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from './MenuComponents';
+import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from './common/MenuComponents';
 import router from '@ohos.router';
 import { RoutePath } from '../utils/CalculatorConfigs';
 

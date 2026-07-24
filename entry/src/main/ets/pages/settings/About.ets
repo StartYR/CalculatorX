@@ -8,7 +8,7 @@
 
 import router from '@ohos.router';
 import common from '@ohos.app.ability.common'; // 用于获取上下文以启动外部应用
-import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from '../../components/MenuComponents';
+import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from '../../components/common/MenuComponents';
 import {
   HdsNavigation,
   HdsNavigationTitleMode,
