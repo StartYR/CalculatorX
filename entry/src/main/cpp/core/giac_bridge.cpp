@@ -5,9 +5,10 @@
  * @author 易睿 (Yi Rui)
  * @date 2026
  */
+
 #include "giac_bridge.h"
-#include "parser.h"         // 需要调用 parseAST
-#include "string_utils.h"   // 需要调用 replaceAll
+#include "parser.h"
+#include "../utils/FormatUtils.h"
 #include "giac.h"
 
 using json = nlohmann::json;

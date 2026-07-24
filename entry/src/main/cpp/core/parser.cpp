@@ -7,7 +7,7 @@
  */
 #include "parser.h"
 #include "giac_bridge.h"
-#include "string_utils.h"
+#include "../utils/FormatUtils.h"
 #include "../utils/FastMath.h"
 #include "ErrorHandler.h"
 #include <symengine/functions.h>
