@@ -97,12 +97,12 @@ export struct BasicCalc {
 
   build() {
     Column() {
-      // 挂载万能屏幕，占位 45% (严格恢复原代码设置)
+      // 屏幕，占位 45%
       FormulaScreen({ moduleType: 'basic' })
         .height('45%')
         .width('100%')
 
-      // 组装内聚的基础键盘，占位 55% (严格恢复原代码设置)
+      // 基础键盘，占位 55%
       Grid() {
         ForEach(basicButtons, (btn: string | Resource) => {
           GridItem() {
