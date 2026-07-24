@@ -17,6 +17,7 @@ import {
   hdsMaterial
 } from '@kit.UIDesignKit';
 import { ConfigurationConstant, common } from '@kit.AbilityKit';
+import { PreferenceManager } from '../../utils/PreferenceManager';
 
 // 引入全局菜单组件库
 import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from '../../components/common/MenuComponents';
@@ -85,15 +86,8 @@ struct MathStyleSheet {
           .padding({ left: 16, right: 16, top: 16, bottom: 16 })
           .onClick(() => {
             // 1. 保存落盘
-            let context = getContext(this) as common.UIAbilityContext;
-            let prefs = preferences.getPreferencesSync(context, { name: PreferenceConfigs.STORE_NAME });
-
-            if (this.styleType === 'comb') {
-              prefs.putSync(PreferenceConfigs.KEY_COMBINATION_SELECT, item.id);
-            } else {
-              prefs.putSync(PreferenceConfigs.KEY_PERMUTATION_SELECT, item.id);
-            }
-            prefs.flush();
+            let key = this.styleType === 'comb' ? PreferenceConfigs.KEY_COMBINATION_SELECT : PreferenceConfigs.KEY_PERMUTATION_SELECT;
+            PreferenceManager.set(key, item.id);
 
             // 2. 更新内存
             if (this.styleType === 'comb') {
@@ -133,6 +127,13 @@ export struct Settings {
   @StorageLink('decimalPrecision') decimalPrecision: number = 6;
   @StorageLink('colorModeIndex') colorModeIndex: number = 2;
   @StorageLink('answerOutputMode') answerOutputMode: number = 0;
+
+  // 读取启动偏好的状态 (默认值为0: 记忆上次)
+  @State startupPageMode: number = 0;
+  aboutToAppear() {
+    // 页面加载时，通过 PreferenceManager 拿到最新数据赋值给 UI
+    this.startupPageMode = PreferenceManager.get(PreferenceConfigs.KEY_STARTUP_PAGE, 0) as number;
+  }
 
   @StorageProp(PreferenceConfigs.KEY_COMBINATION_SELECT) combSelect: number = 1;
   @StorageProp(PreferenceConfigs.KEY_PERMUTATION_SELECT) permSelect: number = 1;
@@ -196,10 +197,7 @@ export struct Settings {
                     // 改变 UI 状态
                     this.isRad = (index === 1);
                     // 保存
-                    let context = getContext(this) as common.UIAbilityContext;
-                    let prefs = preferences.getPreferencesSync(context, { name: PreferenceConfigs.STORE_NAME });
-                    prefs.putSync(PreferenceConfigs.KEY_IS_RAD, this.isRad);
-                    prefs.flush();
+                    PreferenceManager.set(PreferenceConfigs.KEY_IS_RAD, this.isRad);
                   })
               }
               .width('100%')
@@ -229,10 +227,7 @@ export struct Settings {
                     // 改变 UI 状态
                     this.answerOutputMode = index;
                     // 保存
-                    let context = getContext(this) as common.UIAbilityContext;
-                    let prefs = preferences.getPreferencesSync(context, { name: PreferenceConfigs.STORE_NAME });
-                    prefs.putSync(PreferenceConfigs.KEY_ANSWER_OUTPUT_MODE, index);
-                    prefs.flush();
+                    PreferenceManager.set(PreferenceConfigs.KEY_ANSWER_OUTPUT_MODE, index);
                   })
               }
               .width('100%')
@@ -279,10 +274,7 @@ export struct Settings {
                       this.decimalPrecision = value;
 
                       // 保存
-                      let context = getContext(this) as common.UIAbilityContext;
-                      let prefs = preferences.getPreferencesSync(context, { name: PreferenceConfigs.STORE_NAME });
-                      prefs.putSync(PreferenceConfigs.KEY_DECIMAL_PRECISION, value);
-                      prefs.flush();
+                      PreferenceManager.set(PreferenceConfigs.KEY_DECIMAL_PRECISION, value);
                     })
                 }
                 .width('100%')
@@ -388,8 +380,44 @@ export struct Settings {
           // ============================= 外观与体验 =====================================
           Column() {
             GroupHeader({ title: '外观与体验' })
-
             MenuGroup() {
+              // 启动时打开
+              Row() {
+                SymbolGlyph($r('sys.symbol.house'))
+                  .fontSize(20)
+                  .fontColor([$r('sys.color.icon_secondary')])
+                  .margin({ right: 12 })
+                Text('启动时打开')
+                  .fontSize(16)
+                  .fontColor($r('sys.color.font_primary'))
+                Blank()
+
+                Select([
+                  { value: '记忆上次' },
+                  { value: '基础计算' },
+                  { value: '科学计算' },
+                  { value: '矩阵与向量' },
+                  { value: '函数图像' },
+                  { value: '方程求解' },
+                  { value: '统计分析' },
+                  { value: '单位转换' },
+                  { value: '进制转换' },
+                  { value: '汇率' }
+                ])
+                  .selected(this.startupPageMode)
+                  .value(['记忆上次', '基础计算', '科学计算', '矩阵与向量', '函数图像', '方程求解', '统计分析', '单位转换', '进制转换', '汇率'][this.startupPageMode] || '记忆上次')
+                  .font({ size: 14 })
+                  .fontColor($r('sys.color.font_primary'))
+                  .onSelect((index: number) => {
+                    this.startupPageMode = index;
+                    PreferenceManager.set(PreferenceConfigs.KEY_STARTUP_PAGE, index);
+                  })
+              }
+              .width('100%')
+              .padding({ left: 16, right: 12, top: 8, bottom: 8 })
+
+              ItemDivider()
+
               // 颜色模式
               Row() {
                 SymbolGlyph($r('sys.symbol.paintbrush'))
@@ -413,15 +441,9 @@ export struct Settings {
 
                     // 改变 UI 状态
                     this.colorModeIndex = index;
+                    PreferenceManager.set('colorModeIndex', index);
+
                     let context = getContext(this) as common.UIAbilityContext;
-
-                    // 获取同名首选项实例
-                    let options: preferences.Options = { name: 'CalcX_Preferences' };
-                    let prefs = preferences.getPreferencesSync(context, options);
-
-                    // 保存
-                    prefs.putSync('colorModeIndex', index);
-                    prefs.flush();
 
                     // 切换当前颜色
                     let targetColorMode = ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET;
@@ -454,10 +476,7 @@ export struct Settings {
                     this.hapticFeedback = isOn;
 
                     // 保存
-                    let context = getContext(this) as common.UIAbilityContext;
-                    let prefs = preferences.getPreferencesSync(context, { name: PreferenceConfigs.STORE_NAME });
-                    prefs.putSync(PreferenceConfigs.KEY_HAPTIC_FEEDBACK, isOn);
-                    prefs.flush();
+                    PreferenceManager.set(PreferenceConfigs.KEY_HAPTIC_FEEDBACK, isOn);
                   })
               }
               .width('100%')
@@ -501,10 +520,7 @@ export struct Settings {
                       // 改变 UI 状态
                       this.vibrationCurve = index;
                       // 保存
-                      let context = getContext(this) as common.UIAbilityContext;
-                      let prefs = preferences.getPreferencesSync(context, { name: PreferenceConfigs.STORE_NAME });
-                      prefs.putSync(PreferenceConfigs.KEY_VIBRATION_CURVE, index);
-                      prefs.flush();
+                      PreferenceManager.set(PreferenceConfigs.KEY_VIBRATION_CURVE, index);
                     })
                 }
                 .width('100%')

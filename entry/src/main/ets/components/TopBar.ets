@@ -6,6 +6,19 @@
  * @date 2026
  */
 
+// 定义模块名称映射
+const MODULE_TITLES: Record<string, string> = {
+  'scientific': '科学计算',
+  'basic': '基础计算',
+  'matrix': '矩阵与向量',
+  'graphing': '函数图像',
+  'equation': '方程求解',
+  'statistics': '统计分析',
+  'unit': '单位转换',
+  'base': '进制转换',
+  'exchange': '汇率'
+};
+
 @Component
 export struct TopBar {
   @Prop isShift: boolean = false;
@@ -14,8 +27,8 @@ export struct TopBar {
 
   onMenuClick?: () => void;
   onHistoryClick?: () => void;
-  onUndoClick?: () => void; // 暴露撤销事件
-  onRedoClick?: () => void; // 暴露重做事件
+  onUndoClick?: () => void;
+  onRedoClick?: () => void;
 
   build() {
     // 顶部悬浮控制栏
@@ -38,7 +51,7 @@ export struct TopBar {
 
         // 2. 撤销按钮
         Button({ type: ButtonType.Capsule, stateEffect: true }) {
-          SymbolGlyph($r('sys.symbol.arrowshape_turn_up_left')) // 系统级撤销图标
+          SymbolGlyph($r('sys.symbol.arrowshape_turn_up_left'))
             .fontSize(18)
             .fontColor([$r('sys.color.icon_primary')])
         }
@@ -54,7 +67,7 @@ export struct TopBar {
       // ================= 中间：动态状态岛 =================
       Row() {
         if (this.isShift) {
-          // 1. Shift 激活状态 (判断：当前模块必须支持 Shift 才可显示，霸占空间)
+          // 1. Shift 激活状态 (当前模块必须支持 Shift 才可显示)
           Text('⇧ SHIFT')
             .fontSize(14)
             .fontWeight(FontWeight.Bold)
@@ -63,16 +76,13 @@ export struct TopBar {
         } else {
           // 2. 常规状态：动态提取模块名称
           Row({ space: 6 }) {
-            Text(
-              this.currentModule === 'scientific' ? '科学计算'
-                : this.currentModule === 'matrix' ? '矩阵与向量'
-                : '基础计算'
-            )
+            // 通过字典派发对应的中文标题
+            Text(MODULE_TITLES[this.currentModule] || 'CalcX')
               .fontSize(14)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('sys.color.font_primary'))
 
-            // 3. 角度制徽章权限 (判断：只有科学、图像等模块才渲染该徽章)
+            // 角度制徽章
             if (['scientific', 'graphing'].includes(this.currentModule)) {
               Text(this.isRad ? 'RAD' : 'DEG')
                 .fontSize(10)
@@ -96,7 +106,7 @@ export struct TopBar {
       Row({ space: 8 }) {
         // 3. 重做按钮
         Button({ type: ButtonType.Capsule, stateEffect: true }) {
-          SymbolGlyph($r('sys.symbol.arrowshape_turn_up_right')) // 系统级重做图标
+          SymbolGlyph($r('sys.symbol.arrowshape_turn_up_right'))
             .fontSize(18)
             .fontColor([$r('sys.color.icon_primary')])
         }

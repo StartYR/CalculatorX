@@ -26,7 +26,7 @@ const matrixButtons: Array<string | Resource> = [
 
 // Shift 键盘
 const matrixShiftButtons: Array<string | Resource> = [
-  '', '', icon_M_power, 'det', 'Mᴴ',
+  '', '', 'det', icon_M_power, 'Mᴴ',
   '', '', '', 'rref', 'eig',
   '', '', '', '', '',
   '', '', '', '⨯', '•',
