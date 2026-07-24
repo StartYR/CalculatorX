@@ -82,6 +82,7 @@ entry/src/main/
 │   │   ├── FormulaScreen.ets          # 全能公式屏幕：负责 Webview 渲染、引擎通信及入库闭环
 │   │   ├── ScientificCalc.ets         # 科学计算器UI外壳
 │   │   ├── BasicCalc.ets              # 基础计算器UI外壳
+│   │   ├── MatrixCalc.ets             # 矩阵与向量UI外壳
 │   │   ├── TopBar.ets                 # 顶部悬浮控制栏 (自适应上下文状态岛)
 │   │   ├── HistorySheet.ets           # 局部历史半模态抽屉
 │   │   └── SideBarMenu.ets            # 手势驱动的侧边栏菜单
@@ -90,7 +91,7 @@ entry/src/main/
 │   │   ├── InputTranslator.ets        # 翻译中枢 (后厨)：将按键指令无状态翻译为标准 LaTeX
 │   │   ├── EngineService.ets          # CAS 引擎中枢：正则清洗、AST 解析及 N-API 调度
 │   │   ├── HapticUtils.ets            # 触控震感中心：全局接管 Hard/Sharp/Soft 马达曲线
-│   │   └── CalculatorConfigs.ets      # 全局视觉规范与配置中心 (已剥离私有按键数组)
+│   │   └── CalculatorConfigs.ets      # 全局视觉规范与配置中心
 │   │
 │   └── database/HistoryRepository.ets # 关系型数据库 (RDB) 调度中心
 │  
@@ -100,7 +101,7 @@ entry/src/main/
 │   ├── FastMath.cpp/h                 # 极速降维模块：O(1) 时间计算宇宙级超大数
 │   ├── ErrorHandler.h                 # 异常状态机：精准拦截除零、溢出等业务错误
 │   ├── core/                          # AST 递归下降解析与 Giac 上下文桥接
-│   └── ... (boost / giac / nlohmann)  # 静态链接的工业级纯离线依赖
+│   └── ... (boost / giac / nlohmann)  # 静态链接的离线依赖
 │  
 └── resources/rawfile/                 # 🌐 本地 Web 沙箱渲染与降维层  
     ├── calculator.html                # MathLive 容器：LaTeX 高清排版及 MathJSON 降维
