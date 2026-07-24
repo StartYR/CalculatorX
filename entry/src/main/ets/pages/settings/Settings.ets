@@ -380,14 +380,8 @@ export struct Settings {
           // ============================= 外观与体验 =====================================
           Column() {
             GroupHeader({ title: '外观与体验' })
-
-
-
-
-
             MenuGroup() {
-
-              // 0. 启动时打开
+              // 启动时打开
               Row() {
                 SymbolGlyph($r('sys.symbol.house'))
                   .fontSize(20)
@@ -397,20 +391,25 @@ export struct Settings {
                   .fontSize(16)
                   .fontColor($r('sys.color.font_primary'))
                 Blank()
+
                 Select([
                   { value: '记忆上次' },
-                  { value: '科学计算器' },
-                  { value: '基础计算器' },
-                  { value: '矩阵计算器' }
+                  { value: '基础计算' },
+                  { value: '科学计算' },
+                  { value: '矩阵与向量' },
+                  { value: '函数图像' },
+                  { value: '方程求解' },
+                  { value: '统计分析' },
+                  { value: '单位转换' },
+                  { value: '进制转换' },
+                  { value: '汇率' }
                 ])
                   .selected(this.startupPageMode)
-                  .value(this.startupPageMode === 0 ? '记忆上次' : this.startupPageMode === 1 ? '科学计算器' : this.startupPageMode === 2 ? '基础计算器' : '矩阵计算器')
+                  .value(['记忆上次', '基础计算', '科学计算', '矩阵与向量', '函数图像', '方程求解', '统计分析', '单位转换', '进制转换', '汇率'][this.startupPageMode] || '记忆上次')
                   .font({ size: 14 })
                   .fontColor($r('sys.color.font_primary'))
                   .onSelect((index: number) => {
-                    // 改变 UI 状态
                     this.startupPageMode = index;
-                    // 落盘保存
                     PreferenceManager.set(PreferenceConfigs.KEY_STARTUP_PAGE, index);
                   })
               }

@@ -58,16 +58,31 @@ struct Index {
     PreferenceManager.loadAllToAppStorage();
 
     // 读取并接管启动页面路由
+    PreferenceManager.init(getContext(this) as common.UIAbilityContext);
+    PreferenceManager.loadAllToAppStorage();
+
+    // 🌟 使用路由字典，告别无限的 if-else
+    const MODULE_MAP: string[] = [
+      '', // 0 对应记忆上次，特殊处理
+      'scientific', // 1: 科学计算
+      'basic',      // 2: 基础计算
+      'matrix',     // 3: 矩阵与向量
+      'graphing',   // 4: 函数图像
+      'equation',   // 5: 方程求解
+      'statistics', // 6: 统计分析
+      'unit',       // 7: 单位转换
+      'base',       // 8: 进制转换
+      'exchange'    // 9: 汇率
+    ];
+
     let startupMode = PreferenceManager.get(PreferenceConfigs.KEY_STARTUP_PAGE, 0) as number;
 
     if (startupMode === 0) { // 记忆上次
       this.currentModule = PreferenceManager.get(PreferenceConfigs.KEY_LAST_USED_MODULE, 'scientific') as string;
-    } else if (startupMode === 1) { // 科学计算
-      this.currentModule = 'scientific';
-    } else if (startupMode === 2) { // 基础计算
-      this.currentModule = 'basic';
-    } else if (startupMode === 3) { // 矩阵计算
-      this.currentModule = 'matrix';
+    } else if (startupMode > 0 && startupMode < MODULE_MAP.length) {
+      this.currentModule = MODULE_MAP[startupMode]; // 直接通过字典派发路由
+    } else {
+      this.currentModule = 'scientific'; // 兜底保护
     }
 
     getContext(this).eventHub.on('event_shift_change', (isShiftActive: boolean) => {
