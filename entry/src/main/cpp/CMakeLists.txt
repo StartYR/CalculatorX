@@ -44,7 +44,7 @@ set(Boost_INCLUDE_DIR ${boost_SOURCE_DIR} CACHE PATH "Boost include" FORCE)
 include_directories(${boost_SOURCE_DIR})
 
 
-# ================= 引入 GMP  =================
+# ================= 引入 GMP  ==================
 add_library(gmp STATIC IMPORTED)
 set_target_properties(gmp PROPERTIES IMPORTED_LOCATION
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/${OHOS_ARCH}/libgmp.a)
