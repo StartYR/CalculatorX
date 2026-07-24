@@ -117,14 +117,14 @@ export struct BasicCalc {
       .columnsTemplate('1fr 1fr 1fr 1fr')
       .rowsGap(14)
       .columnsGap(12)
-      .padding({ left: 16, right: 16, top: 10, bottom: 16 })
+      .padding({ left: 16, right: 16, top: 10, bottom: 5 })
       .clip(false)
       .width('100%')
       .height('55%')
     }
     .width('100%')
     .height('100%')
-    .padding({ bottom: this.navBarHeight })
+    .padding({ bottom: this.navBarHeight - 8 })
     .backgroundColor($r('sys.color.background_primary'))
   }
 }

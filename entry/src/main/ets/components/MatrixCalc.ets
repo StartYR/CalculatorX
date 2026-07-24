@@ -259,7 +259,7 @@ export struct MatrixCalc {
         .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
         .rowsGap(8)
         .columnsGap(6)
-        .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+        .padding({ left: 10, right: 10, top: 6, bottom: 0 })
         .clip(false)
         .width('100%')
         .height('100%')
@@ -267,7 +267,7 @@ export struct MatrixCalc {
       .width('100%')
       .height('45%')
       .backgroundColor($r('sys.color.comp_background_secondary'))
-      .padding({ bottom: this.navBarHeight })
+      .padding({ bottom: this.navBarHeight - 8 })
     }
     .width('100%')
     .height('100%')
