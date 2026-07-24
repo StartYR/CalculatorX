@@ -7,7 +7,7 @@
  */
 
 @Component
-export struct GraphingCalc {
+export struct BaseConverter {
   build() {
     Column() {
       Text('当前模块正在开发中...')

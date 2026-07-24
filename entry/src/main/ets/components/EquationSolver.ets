@@ -7,7 +7,7 @@
  */
 
 @Component
-export struct GraphingCalc {
+export struct EquationSolver {
   build() {
     Column() {
       Text('当前模块正在开发中...')

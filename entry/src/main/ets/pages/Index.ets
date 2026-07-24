@@ -10,15 +10,22 @@ import font from '@ohos.font';
 import router from '@ohos.router';
 import { common } from '@kit.AbilityKit';
 import { RoutePath, PreferenceConfigs } from '../utils/CalculatorConfigs';
-import { PreferenceManager } from '../utils/PreferenceManager'; // 引入全新的单例工具
+import { PreferenceManager } from '../utils/PreferenceManager';
 import { TopBar } from '../components/TopBar';
 import { SideBarMenu } from '../components/SideBarMenu';
 import { HistorySheet } from '../components/HistorySheet';
 import { HistoryRepository } from '../database/HistoryRepository';
 
+// ================= [引入所有功能模块组件] =================
 import { ScientificCalc } from '../components/ScientificCalc';
 import { BasicCalc } from '../components/BasicCalc';
 import { MatrixCalc } from '../components/MatrixCalc';
+import { GraphingCalc } from '../components/GraphingCalc';
+import { EquationSolver } from '../components/EquationSolver';
+import { StatisticsCalc } from '../components/StatisticsCalc';
+import { UnitConverter } from '../components/UnitConverter';
+import { BaseConverter } from '../components/BaseConverter';
+import { ExchangeRate } from '../components/ExchangeRate';
 
 @Entry
 @Component
@@ -51,38 +58,30 @@ struct Index {
     font.registerFont({ familyName: 'Cambria Math', familySrc: $rawfile('fonts/Cambria Math.ttf') });
     font.registerFont({ familyName: 'Cambria Italic', familySrc: $rawfile('fonts/Cambria Italic.ttf') });
 
-    // 1. 初始化偏好设置
-    PreferenceManager.init(getContext(this) as common.UIAbilityContext);
-
-    // 2. 将磁盘里的设置全部加载到 AppStorage
-    PreferenceManager.loadAllToAppStorage();
-
-    // 读取并接管启动页面路由
     PreferenceManager.init(getContext(this) as common.UIAbilityContext);
     PreferenceManager.loadAllToAppStorage();
 
-    // 🌟 使用路由字典，告别无限的 if-else
     const MODULE_MAP: string[] = [
-      '', // 0 对应记忆上次，特殊处理
-      'scientific', // 1: 科学计算
-      'basic',      // 2: 基础计算
-      'matrix',     // 3: 矩阵与向量
-      'graphing',   // 4: 函数图像
-      'equation',   // 5: 方程求解
-      'statistics', // 6: 统计分析
-      'unit',       // 7: 单位转换
-      'base',       // 8: 进制转换
-      'exchange'    // 9: 汇率
+      '',
+      'scientific',
+      'basic',
+      'matrix',
+      'graphing',
+      'equation',
+      'statistics',
+      'unit',
+      'base',
+      'exchange'
     ];
 
     let startupMode = PreferenceManager.get(PreferenceConfigs.KEY_STARTUP_PAGE, 0) as number;
 
-    if (startupMode === 0) { // 记忆上次
+    if (startupMode === 0) {
       this.currentModule = PreferenceManager.get(PreferenceConfigs.KEY_LAST_USED_MODULE, 'scientific') as string;
     } else if (startupMode > 0 && startupMode < MODULE_MAP.length) {
-      this.currentModule = MODULE_MAP[startupMode]; // 直接通过字典派发路由
+      this.currentModule = MODULE_MAP[startupMode];
     } else {
-      this.currentModule = 'scientific'; // 兜底保护
+      this.currentModule = 'scientific';
     }
 
     getContext(this).eventHub.on('event_shift_change', (isShiftActive: boolean) => {
@@ -92,7 +91,7 @@ struct Index {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      // 1. 动态内容区
+      // ================= 1. 动态内容区 =================
       Column() {
         if (this.currentModule === 'scientific') {
           ScientificCalc()
@@ -100,8 +99,20 @@ struct Index {
           BasicCalc()
         } else if (this.currentModule === 'matrix') {
           MatrixCalc()
+        } else if (this.currentModule === 'graphing') {
+          GraphingCalc()
+        } else if (this.currentModule === 'equation') {
+          EquationSolver()
+        } else if (this.currentModule === 'statistics') {
+          StatisticsCalc()
+        } else if (this.currentModule === 'unit') {
+          UnitConverter()
+        } else if (this.currentModule === 'base') {
+          BaseConverter()
+        } else if (this.currentModule === 'exchange') {
+          ExchangeRate()
         } else {
-          // 未来预留给 EquationSolver() 或 Graphing() 等
+          // 兜底保护，防止出现白屏
           Column() {
             Text('模块正在开发中...')
               .fontSize(18)
@@ -119,7 +130,7 @@ struct Index {
       .borderRadius(this.isSidebarOpen ? 32 : 0)
       .backgroundColor($r('sys.color.background_primary'))
 
-      // 2. 全局顶部悬浮控制栏
+      // ================= 2. 全局顶部悬浮控制栏 =================
       TopBar({
         isShift: this.topBarIsShift,
         isRad: this.isRad,
@@ -149,7 +160,7 @@ struct Index {
           showClose: false
         })
 
-      // 3. 全局左侧侧边栏
+      // ================= 3. 全局左侧侧边栏 =================
       if (this.isSidebarOpen) {
         SideBarMenu({
           isSidebarOpen: $isSidebarOpen,
