@@ -145,20 +145,41 @@ export struct SideBarMenu {
             Column() {
               GroupHeader({ title: '进阶' })
               MenuGroup() {
-                MenuButton({ icon: $r('sys.symbol.foldline_screen'), title: '函数图像', onClickAction: () => { /* TODO */ } })
+                MenuButton({
+                  icon: $r('sys.symbol.foldline_screen'),
+                  title: '函数图像',
+                  onClickAction: () => {
+                    animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+                    if (this.onModuleSelect) { this.onModuleSelect('graphing'); }
+                  }
+                })
                 ItemDivider()
-                MenuButton({ icon: $r('sys.symbol.exponentiation'), title: '方程求解', onClickAction: () => { /* TODO */ } })
+                MenuButton({
+                  icon: $r('sys.symbol.exponentiation'),
+                  title: '方程求解',
+                  onClickAction: () => {
+                    animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+                    if (this.onModuleSelect) { this.onModuleSelect('equation'); }
+                  }
+                })
                 ItemDivider()
                 MenuButton({
                   icon: $r('sys.symbol.square_grid_2x2'),
                   title: '矩阵与向量',
                   onClickAction: () => {
                     animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
-                    if (this.onModuleSelect) { this.onModuleSelect('matrix'); } // 激活挂载指令
+                    if (this.onModuleSelect) { this.onModuleSelect('matrix'); }
                   }
                 })
                 ItemDivider()
-                MenuButton({ icon: $r('sys.symbol.data'), title: '统计分析', onClickAction: () => { /* TODO */ } })
+                MenuButton({
+                  icon: $r('sys.symbol.data'),
+                  title: '统计分析',
+                  onClickAction: () => {
+                    animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+                    if (this.onModuleSelect) { this.onModuleSelect('statistics'); }
+                  }
+                })
               }
             }
             .padding({ left: 16, right: 16, bottom: 12 })
@@ -167,11 +188,32 @@ export struct SideBarMenu {
             Column() {
               GroupHeader({ title: '转换' })
               MenuGroup() {
-                MenuButton({ icon: $r('sys.symbol.arrow_left_arrow_right'), title: '单位转换', onClickAction: () => { /* TODO */ } })
+                MenuButton({
+                  icon: $r('sys.symbol.arrow_left_arrow_right'),
+                  title: '单位转换',
+                  onClickAction: () => {
+                    animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+                    if (this.onModuleSelect) { this.onModuleSelect('unit'); }
+                  }
+                })
                 ItemDivider()
-                MenuButton({ icon: $r('sys.symbol.gobackward_10'), title: '进制转换', onClickAction: () => { /* TODO */ } })
+                MenuButton({
+                  icon: $r('sys.symbol.gobackward_10'),
+                  title: '进制转换',
+                  onClickAction: () => {
+                    animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+                    if (this.onModuleSelect) { this.onModuleSelect('base'); }
+                  }
+                })
                 ItemDivider()
-                MenuButton({ icon: $r('sys.symbol.yuansign_arrow_2_circlepath'), title: '汇率', onClickAction: () => { /* TODO */ } })
+                MenuButton({
+                  icon: $r('sys.symbol.yuansign_arrow_2_circlepath'),
+                  title: '汇率',
+                  onClickAction: () => {
+                    animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+                    if (this.onModuleSelect) { this.onModuleSelect('exchange'); }
+                  }
+                })
               }
             }
             .padding({ left: 16, right: 16, bottom: 12 })
