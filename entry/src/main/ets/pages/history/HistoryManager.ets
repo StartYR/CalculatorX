@@ -21,7 +21,7 @@ import { SymbolGlyphModifier, promptAction } from '@kit.ArkUI';
 import pasteboard from '@ohos.pasteboard'; // 剪贴板
 
 // 引擎
-import { UniversalHistoryList } from '../../components/UniversalHistoryList';
+import { UniversalHistoryList } from '../../components/common/UniversalHistoryList';
 // 数据库操作库，用于一键清空
 import { HistoryRepository } from '../../database/HistoryRepository';
 

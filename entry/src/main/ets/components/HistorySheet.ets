@@ -7,7 +7,7 @@
  */
 
 import { HistoryRepository, HistoryRecord } from '../database/HistoryRepository';
-import { UniversalHistoryList } from './UniversalHistoryList';
+import { UniversalHistoryList } from './common/UniversalHistoryList';
 import { TipsDialog } from '@kit.ArkUI';
 import { router } from '@kit.ArkUI';
 

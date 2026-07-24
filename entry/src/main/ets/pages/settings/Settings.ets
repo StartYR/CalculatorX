@@ -19,7 +19,7 @@ import {
 import { ConfigurationConstant, common } from '@kit.AbilityKit';
 
 // 引入全局菜单组件库
-import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from '../../components/MenuComponents';
+import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from '../../components/common/MenuComponents';
 
 // ==================== 底部半模态面板内容：数学公式样式选择 ====================
 @Component
