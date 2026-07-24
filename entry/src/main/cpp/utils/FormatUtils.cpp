@@ -175,19 +175,6 @@ void applyGlobalUIFormatting(std::string& result_msg) {
     replaceAll(result_msg, "MAGIC\\_CONST\\_C", "\\mathbf{C}");
     replaceAll(result_msg, "MAGIC_CONST_C", "\\mathbf{C}");
     
-    // 积分常数排版优化，处理常数 C 被代数引擎排在最前面的情况，将其移到末尾
-    if (result_msg.find("\\mathbf{C}") == 0) {
-        if (result_msg.find("\\mathbf{C} + ") == 0) {
-            result_msg = result_msg.substr(13) + " + \\mathbf{C}";
-        } else if (result_msg.find("\\mathbf{C}+") == 0) {
-            result_msg = result_msg.substr(11) + " + \\mathbf{C}";
-        } else if (result_msg.find("\\mathbf{C} - ") == 0) {
-            result_msg = "-" + result_msg.substr(13) + " + \\mathbf{C}";
-        } else if (result_msg.find("\\mathbf{C}-") == 0) {
-            result_msg = "-" + result_msg.substr(11) + " + \\mathbf{C}";
-        }
-    }
-    
     try {
         std::regex array_start(R"(\\left[\[\(]\\begin\{(array|matrix)\}(\{[clr]+\})?)");
         result_msg = std::regex_replace(result_msg, array_start, "\\begin{bmatrix}");

@@ -559,8 +559,8 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                         std::string exprStr = body.get_basic()->__str__();
                         replaceAll(exprStr, "**", "^");
                         
-                        // 【重构战役一】：直接组装不定积分符号，并加上常数项 MAGIC_CONST_C 供全局渲染
-                        return Expression(SymEngine::symbol("integrate(" + exprStr + ", " + var_name + ")")) + Expression(SymEngine::symbol("MAGIC_CONST_C"));
+                        // 组装不定积分符号
+                        return Expression(SymEngine::symbol("MAGICINDEFintegrate(" + exprStr + ", " + var_name + ")"));
                         
                     } catch (...) {
                         throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Error:NoIntegralAlg");
