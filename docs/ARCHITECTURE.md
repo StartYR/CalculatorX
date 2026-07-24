@@ -79,16 +79,18 @@ entry/src/main/
 │   │   └── settings/                  # 设置模块
 │   │
 │   ├── components/                    # 🧩 独立业务插件与 UI 积木层
-│   │   ├── FormulaScreen.ets          # 全能公式屏幕：负责 Webview 渲染、引擎通信及入库闭环
-│   │   ├── ScientificCalc.ets         # 科学计算器UI外壳
 │   │   ├── BasicCalc.ets              # 基础计算器UI外壳
-│   │   ├── MatrixCalc.ets             # 矩阵与向量UI外壳
-│   │   ├── TopBar.ets                 # 顶部悬浮控制栏 (自适应上下文状态岛)
+│   │   ├── FormulaScreen.ets          # 全能公式屏幕：负责 Webview 渲染、引擎通信及入库闭环
 │   │   ├── HistorySheet.ets           # 局部历史半模态抽屉
-│   │   └── SideBarMenu.ets            # 手势驱动的侧边栏菜单
+│   │   ├── MatrixCalc.ets             # 矩阵与向量UI外壳
+│   │   ├── MenuComponents.ets         # 菜单组件
+│   │   ├── ScientificCalc.ets         # 科学计算器UI外壳
+│   │   ├── SideBarMenu.ets            # 侧边栏菜单
+│   │   ├── TopBar.ets                 # 顶部悬浮控制栏
+│   │   └── UniversalHistoryList.ets   # 历史记录通用组件
 │   │
 │   ├── utils/                         # 🧠 核心服务与纯逻辑层
-│   │   ├── InputTranslator.ets        # 翻译中枢 (后厨)：将按键指令无状态翻译为标准 LaTeX
+│   │   ├── InputTranslator.ets        # 翻译中枢：将按键指令无状态翻译为标准 LaTeX
 │   │   ├── EngineService.ets          # CAS 引擎中枢：正则清洗、AST 解析及 N-API 调度
 │   │   ├── HapticUtils.ets            # 触控震感中心：全局接管 Hard/Sharp/Soft 马达曲线
 │   │   └── CalculatorConfigs.ets      # 全局视觉规范与配置中心
