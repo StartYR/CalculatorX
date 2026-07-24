@@ -39,6 +39,7 @@ export struct UniversalHistoryList {
   // 判断单条历史记录所需的高度
   getDynamicHeight(content: string, isOutput: boolean): number {
     if (!content) return 24;
+    if (content.includes('bmatrix')) return 48;
     if (content.includes('\\int')) {
       if (content.includes('\\frac')) {
         return 48
