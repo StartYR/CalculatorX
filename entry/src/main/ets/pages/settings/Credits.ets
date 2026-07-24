@@ -8,7 +8,7 @@
 
 import router from '@ohos.router';
 import common from '@ohos.app.ability.common';
-import { MenuGroup, MenuButton, ItemDivider } from '../../components/MenuComponents';
+import { MenuGroup, MenuButton, ItemDivider } from '../../components/common/MenuComponents';
 import {
   HdsNavigation,
   HdsNavigationTitleMode,
