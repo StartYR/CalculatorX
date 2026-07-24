@@ -41,3 +41,6 @@ build-profile.json5
 boost_*.tar.gz
 giac-*.tar.gz
 symengine-*.tar.gz
+
+# 帮助文档
+/entry/src/main/resources/rawfile/docs/
