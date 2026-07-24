@@ -60,10 +60,12 @@ export struct UniversalHistoryList {
   // 根据模块类型动态分配图标资源
   getIconForModule(moduleType: string): Resource {
     switch (moduleType) {
-      case 'scientific':
-        return $r('sys.symbol.calculator_fill');
       case 'basic':
         return $r('sys.symbol.calculator_1');
+      case 'scientific':
+        return $r('sys.symbol.calculator_fill');
+      case 'matrix':
+        return $r('sys.symbol.square_fill_grid_2x2');
       case 'equation':
         return $r('sys.symbol.exponentiation');
       default:

@@ -33,7 +33,7 @@ local.properties
 /local.properties
 .devco/
 
-# 构建签名与本地敏感配置（严禁提交密钥/密码）
+# 构建签名与本地敏感配置
 build-profile.json5
 /build-profile.json5
 
@@ -41,3 +41,6 @@ build-profile.json5
 boost_*.tar.gz
 giac-*.tar.gz
 symengine-*.tar.gz
+
+# 帮助文档
+/entry/src/main/resources/rawfile/docs/
