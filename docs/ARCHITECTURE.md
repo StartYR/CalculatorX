@@ -111,7 +111,7 @@ entry/src/main/
 │   │   ├── FastMath.cpp/.h            # 极速降维模块：O(1) 时间计算宇宙级超大数
 │   │   └── FormatUtils.cpp/.h         # 统一格式化中枢：UI 排版、精度截断与正则清理
 │   │
-│   └── ... (boost / giac / nlohmann)  # 静态链接的离线依赖
+│   └── third_party/                   # 静态链接的离线依赖
 │  
 └── resources/rawfile/                 # 🌐 本地 Web 沙箱渲染与降维层  
     ├── calculator.html                # MathLive 容器：LaTeX 高清排版及 MathJSON 降维
