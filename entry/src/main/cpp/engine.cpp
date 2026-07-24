@@ -8,10 +8,9 @@
 #include "napi/native_api.h"
 #include "json.hpp"
 #include "core/parser.h"
-#include "core/formatter.h"
-#include "core/string_utils.h"
 #include "core/giac_bridge.h"
-#include "ErrorHandler.h"
+#include "utils/FormatUtils.h"
+#include "core/ErrorHandler.h"
 #include <symengine/expression.h>
 #include <symengine/printers.h>
 #include <symengine/eval_double.h>
