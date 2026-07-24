@@ -7,7 +7,7 @@
  */
 
 
-import { HistoryRepository, HistoryRecord } from '../database/HistoryRepository';
+import { HistoryRepository, HistoryRecord } from '../../database/HistoryRepository';
 import { mediaquery, LengthMetrics } from '@kit.ArkUI';
 
 @Component
