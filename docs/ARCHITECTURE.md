@@ -82,6 +82,12 @@ entry/src/main/
 │   │   ├── BasicCalc.ets              # 基础计算器UI外壳
 │   │   ├── ScientificCalc.ets         # 科学计算器UI外壳
 │   │   ├── MatrixCalc.ets             # 矩阵与向量UI外壳
+│   │   ├── GraphingCalc.ets           # 函数图像UI外壳
+│   │   ├── EquationSolver.ets         # 方程求解UI外壳
+│   │   ├── StatisticsCalc.ets         # 统计分析UI外壳
+│   │   ├── UnitConverter.ets          # 单位转换UI外壳
+│   │   ├── BaseConverter.ets          # 进制转换UI外壳
+│   │   ├── ExchangeRate.ets           # 汇率UI外壳
 │   │   ├── FormulaScreen.ets          # 全能公式屏幕：负责 Webview 渲染、引擎通信及入库闭环
 │   │   ├── HistorySheet.ets           # 局部历史半模态抽屉
 │   │   ├── SideBarMenu.ets            # 侧边栏菜单
@@ -94,7 +100,8 @@ entry/src/main/
 │   │   ├── InputTranslator.ets        # 翻译中枢：将按键指令无状态翻译为标准 LaTeX
 │   │   ├── EngineService.ets          # CAS 引擎中枢：正则清洗、AST 解析及 N-API 调度
 │   │   ├── HapticUtils.ets            # 触控震感中心：全局接管 Hard/Sharp/Soft 马达曲线
-│   │   └── CalculatorConfigs.ets      # 全局视觉规范与配置中心
+│   │   ├── CalculatorConfigs.ets      # 全局视觉规范与配置中心
+│   │   └── PreferenceManager.ets      # 全局偏好中枢：单例接管存储落盘与内存同步
 │   │
 │   └── database/HistoryRepository.ets # 关系型数据库 (RDB) 调度中心
 │  
