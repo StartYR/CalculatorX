@@ -100,10 +100,17 @@ entry/src/main/
 │  
 ├── cpp/                               # ⚙️ C++ 计算机代数系统 (CAS) 引擎层
 │   ├── CMakeLists.txt                 # N-API 构建与静态链接脚本
-│   ├── engine.cpp                     # AST 树解析与精度控制枢纽
-│   ├── FastMath.cpp/h                 # 极速降维模块：O(1) 时间计算宇宙级超大数
-│   ├── ErrorHandler.h                 # 异常状态机：精准拦截除零、溢出等业务错误
-│   ├── core/                          # AST 递归下降解析与 Giac 上下文桥接
+│   ├── engine.cpp                     # N-API 调度与异常捕获入口
+│   │
+│   ├── core/                          # 🧠 引擎大脑与通信核心
+│   │   ├── parser.cpp/.h              # AST 深度递归解析引擎 (搭载维度扫描仪与矩阵旁路)
+│   │   ├── giac_bridge.cpp/.h         # Giac CAS 引擎初始化与黑盒求值通道
+│   │   └── ErrorHandler.h             # 全局异常状态机与细粒度错误码字典
+│   │
+│   ├── utils/                         # 🧰 基础设施与通用工具层
+│   │   ├── FastMath.cpp/.h            # 极速降维模块：O(1) 时间计算宇宙级超大数
+│   │   └── FormatUtils.cpp/.h         # 统一格式化中枢：UI 排版、精度截断与正则清理
+│   │
 │   └── ... (boost / giac / nlohmann)  # 静态链接的离线依赖
 │  
 └── resources/rawfile/                 # 🌐 本地 Web 沙箱渲染与降维层  
