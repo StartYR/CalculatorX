@@ -17,6 +17,7 @@ import {
   hdsMaterial
 } from '@kit.UIDesignKit';
 import { ConfigurationConstant, common } from '@kit.AbilityKit';
+import { PreferenceManager } from '../../utils/PreferenceManager';
 
 // 引入全局菜单组件库
 import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from '../../components/common/MenuComponents';
@@ -85,15 +86,8 @@ struct MathStyleSheet {
           .padding({ left: 16, right: 16, top: 16, bottom: 16 })
           .onClick(() => {
             // 1. 保存落盘
-            let context = getContext(this) as common.UIAbilityContext;
-            let prefs = preferences.getPreferencesSync(context, { name: PreferenceConfigs.STORE_NAME });
-
-            if (this.styleType === 'comb') {
-              prefs.putSync(PreferenceConfigs.KEY_COMBINATION_SELECT, item.id);
-            } else {
-              prefs.putSync(PreferenceConfigs.KEY_PERMUTATION_SELECT, item.id);
-            }
-            prefs.flush();
+            let key = this.styleType === 'comb' ? PreferenceConfigs.KEY_COMBINATION_SELECT : PreferenceConfigs.KEY_PERMUTATION_SELECT;
+            PreferenceManager.set(key, item.id);
 
             // 2. 更新内存
             if (this.styleType === 'comb') {
@@ -196,10 +190,7 @@ export struct Settings {
                     // 改变 UI 状态
                     this.isRad = (index === 1);
                     // 保存
-                    let context = getContext(this) as common.UIAbilityContext;
-                    let prefs = preferences.getPreferencesSync(context, { name: PreferenceConfigs.STORE_NAME });
-                    prefs.putSync(PreferenceConfigs.KEY_IS_RAD, this.isRad);
-                    prefs.flush();
+                    PreferenceManager.set(PreferenceConfigs.KEY_IS_RAD, this.isRad);
                   })
               }
               .width('100%')
@@ -229,10 +220,7 @@ export struct Settings {
                     // 改变 UI 状态
                     this.answerOutputMode = index;
                     // 保存
-                    let context = getContext(this) as common.UIAbilityContext;
-                    let prefs = preferences.getPreferencesSync(context, { name: PreferenceConfigs.STORE_NAME });
-                    prefs.putSync(PreferenceConfigs.KEY_ANSWER_OUTPUT_MODE, index);
-                    prefs.flush();
+                    PreferenceManager.set(PreferenceConfigs.KEY_ANSWER_OUTPUT_MODE, index);
                   })
               }
               .width('100%')
@@ -279,10 +267,7 @@ export struct Settings {
                       this.decimalPrecision = value;
 
                       // 保存
-                      let context = getContext(this) as common.UIAbilityContext;
-                      let prefs = preferences.getPreferencesSync(context, { name: PreferenceConfigs.STORE_NAME });
-                      prefs.putSync(PreferenceConfigs.KEY_DECIMAL_PRECISION, value);
-                      prefs.flush();
+                      PreferenceManager.set(PreferenceConfigs.KEY_DECIMAL_PRECISION, value);
                     })
                 }
                 .width('100%')
@@ -413,15 +398,9 @@ export struct Settings {
 
                     // 改变 UI 状态
                     this.colorModeIndex = index;
+                    PreferenceManager.set('colorModeIndex', index);
+
                     let context = getContext(this) as common.UIAbilityContext;
-
-                    // 获取同名首选项实例
-                    let options: preferences.Options = { name: 'CalcX_Preferences' };
-                    let prefs = preferences.getPreferencesSync(context, options);
-
-                    // 保存
-                    prefs.putSync('colorModeIndex', index);
-                    prefs.flush();
 
                     // 切换当前颜色
                     let targetColorMode = ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET;
@@ -454,10 +433,7 @@ export struct Settings {
                     this.hapticFeedback = isOn;
 
                     // 保存
-                    let context = getContext(this) as common.UIAbilityContext;
-                    let prefs = preferences.getPreferencesSync(context, { name: PreferenceConfigs.STORE_NAME });
-                    prefs.putSync(PreferenceConfigs.KEY_HAPTIC_FEEDBACK, isOn);
-                    prefs.flush();
+                    PreferenceManager.set(PreferenceConfigs.KEY_HAPTIC_FEEDBACK, isOn);
                   })
               }
               .width('100%')
@@ -501,10 +477,7 @@ export struct Settings {
                       // 改变 UI 状态
                       this.vibrationCurve = index;
                       // 保存
-                      let context = getContext(this) as common.UIAbilityContext;
-                      let prefs = preferences.getPreferencesSync(context, { name: PreferenceConfigs.STORE_NAME });
-                      prefs.putSync(PreferenceConfigs.KEY_VIBRATION_CURVE, index);
-                      prefs.flush();
+                      PreferenceManager.set(PreferenceConfigs.KEY_VIBRATION_CURVE, index);
                     })
                 }
                 .width('100%')
