@@ -47,4 +47,24 @@ export class PreferenceManager {
     if (!PreferenceManager.instance) return defaultValue;
     return PreferenceManager.instance.getSync(key, defaultValue);
   }
+
+  /**
+   * 4. 启动时调用：将磁盘中的数据全部同步到内存 (AppStorage)
+   */
+  public static loadAllToAppStorage(): void {
+    if (!PreferenceManager.instance) {
+      console.error('[PreferenceManager] 无法同步到 AppStorage，未初始化！');
+      return;
+    }
+    AppStorage.setOrCreate('isRad', PreferenceManager.get(PreferenceConfigs.KEY_IS_RAD, false));
+    AppStorage.setOrCreate('hapticFeedback', PreferenceManager.get(PreferenceConfigs.KEY_HAPTIC_FEEDBACK, true));
+    AppStorage.setOrCreate('vibrationCurve', PreferenceManager.get(PreferenceConfigs.KEY_VIBRATION_CURVE, 0));
+    AppStorage.setOrCreate('decimalPrecision', PreferenceManager.get(PreferenceConfigs.KEY_DECIMAL_PRECISION, 6));
+    AppStorage.setOrCreate('colorModeIndex', PreferenceManager.get(PreferenceConfigs.KEY_COLOR_MODE, 2));
+    AppStorage.setOrCreate('answerOutputMode', PreferenceManager.get(PreferenceConfigs.KEY_ANSWER_OUTPUT_MODE, 0));
+    AppStorage.setOrCreate(PreferenceConfigs.KEY_COMBINATION_SELECT, PreferenceManager.get(PreferenceConfigs.KEY_COMBINATION_SELECT, 1));
+    AppStorage.setOrCreate(PreferenceConfigs.KEY_PERMUTATION_SELECT, PreferenceManager.get(PreferenceConfigs.KEY_PERMUTATION_SELECT, 1));
+
+    console.info('[PreferenceManager] 所有配置已成功加载到 AppStorage');
+  }
 }

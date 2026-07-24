@@ -381,39 +381,44 @@ export struct Settings {
           Column() {
             GroupHeader({ title: '外观与体验' })
 
-            // 0. 启动时打开
-            Row() {
-              SymbolGlyph($r('sys.symbol.house')) // 选个顺眼的房子图标
-                .fontSize(20)
-                .fontColor([$r('sys.color.icon_secondary')])
-                .margin({ right: 12 })
-              Text('启动时打开')
-                .fontSize(16)
-                .fontColor($r('sys.color.font_primary'))
-              Blank()
-              Select([
-                { value: '记忆上次' },
-                { value: '科学计算器' },
-                { value: '基础计算器' },
-                { value: '矩阵计算器' }
-              ])
-                .selected(this.startupPageMode)
-                .value(this.startupPageMode === 0 ? '记忆上次' : this.startupPageMode === 1 ? '科学计算器' : this.startupPageMode === 2 ? '基础计算器' : '矩阵计算器')
-                .font({ size: 14 })
-                .fontColor($r('sys.color.font_primary'))
-                .onSelect((index: number) => {
-                  // 改变 UI 状态
-                  this.startupPageMode = index;
-                  // 落盘保存
-                  PreferenceManager.set(PreferenceConfigs.KEY_STARTUP_PAGE, index);
-                })
-            }
-            .width('100%')
-            .padding({ left: 16, right: 12, top: 8, bottom: 8 })
 
-            ItemDivider()
+
+
 
             MenuGroup() {
+
+              // 0. 启动时打开
+              Row() {
+                SymbolGlyph($r('sys.symbol.house'))
+                  .fontSize(20)
+                  .fontColor([$r('sys.color.icon_secondary')])
+                  .margin({ right: 12 })
+                Text('启动时打开')
+                  .fontSize(16)
+                  .fontColor($r('sys.color.font_primary'))
+                Blank()
+                Select([
+                  { value: '记忆上次' },
+                  { value: '科学计算器' },
+                  { value: '基础计算器' },
+                  { value: '矩阵计算器' }
+                ])
+                  .selected(this.startupPageMode)
+                  .value(this.startupPageMode === 0 ? '记忆上次' : this.startupPageMode === 1 ? '科学计算器' : this.startupPageMode === 2 ? '基础计算器' : '矩阵计算器')
+                  .font({ size: 14 })
+                  .fontColor($r('sys.color.font_primary'))
+                  .onSelect((index: number) => {
+                    // 改变 UI 状态
+                    this.startupPageMode = index;
+                    // 落盘保存
+                    PreferenceManager.set(PreferenceConfigs.KEY_STARTUP_PAGE, index);
+                  })
+              }
+              .width('100%')
+              .padding({ left: 16, right: 12, top: 8, bottom: 8 })
+
+              ItemDivider()
+
               // 颜色模式
               Row() {
                 SymbolGlyph($r('sys.symbol.paintbrush'))

@@ -51,16 +51,22 @@ struct Index {
     font.registerFont({ familyName: 'Cambria Math', familySrc: $rawfile('fonts/Cambria Math.ttf') });
     font.registerFont({ familyName: 'Cambria Italic', familySrc: $rawfile('fonts/Cambria Italic.ttf') });
 
+    // 1. 初始化偏好设置
+    PreferenceManager.init(getContext(this) as common.UIAbilityContext);
+
+    // 2. 将磁盘里的设置全部加载到 AppStorage
+    PreferenceManager.loadAllToAppStorage();
+
     // 读取并接管启动页面路由
     let startupMode = PreferenceManager.get(PreferenceConfigs.KEY_STARTUP_PAGE, 0) as number;
 
     if (startupMode === 0) { // 记忆上次
       this.currentModule = PreferenceManager.get(PreferenceConfigs.KEY_LAST_USED_MODULE, 'scientific') as string;
-    } else if (startupMode === 1) { // 固定：科学计算器
+    } else if (startupMode === 1) { // 科学计算
       this.currentModule = 'scientific';
-    } else if (startupMode === 2) { // 固定：基础计算器
+    } else if (startupMode === 2) { // 基础计算
       this.currentModule = 'basic';
-    } else if (startupMode === 3) { // 固定：矩阵计算器
+    } else if (startupMode === 3) { // 矩阵计算
       this.currentModule = 'matrix';
     }
 
