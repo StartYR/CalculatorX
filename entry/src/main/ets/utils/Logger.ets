@@ -11,34 +11,32 @@ import hilog from '@ohos.hilog';
 class Logger {
   private domain: number;
   private prefix: string;
-  // 生产环境总开关：打包 Release 前，把 isDebug 设为 false
   private isDebug: boolean = true;
 
   constructor(prefix: string) {
     this.prefix = prefix;
-    this.domain = 0x0000; // 官方建议的默认 Domain
+    this.domain = 0x0000;
   }
 
-  debug(...args: Object[]) {
+  debug(msg: string) {
     if (this.isDebug) {
-      hilog.debug(this.domain, this.prefix, '%{public}s', args.map(String).join(' '));
+      hilog.debug(this.domain, this.prefix, '%{public}s', msg);
     }
   }
 
-  info(...args: Object[]) {
+  info(msg: string) {
     if (this.isDebug) {
-      hilog.info(this.domain, this.prefix, '%{public}s', args.map(String).join(' '));
+      hilog.info(this.domain, this.prefix, '%{public}s', msg);
     }
   }
 
-  warn(...args: Object[]) {
-    hilog.warn(this.domain, this.prefix, '%{public}s', args.map(String).join(' '));
+  warn(msg: string) {
+    hilog.warn(this.domain, this.prefix, '%{public}s', msg);
   }
 
-  error(...args: Object[]) {
-    hilog.error(this.domain, this.prefix, '%{public}s', args.map(String).join(' '));
+  error(msg: string) {
+    hilog.error(this.domain, this.prefix, '%{public}s', msg);
   }
 }
 
-// 导出单例，方便全局使用
 export default new Logger('CalcX_ArkTS');
