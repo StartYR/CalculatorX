@@ -57,14 +57,12 @@ static std::pair<int, int> getMatrixDim(const json& node) {
     }
     
     // 识别普通矩阵并提取维度
-    if (node.is_array() && node.size() >= 2 && node[0] == "MWrap") {
-        if (node[1].is_array() && node[1].size() >= 2 && node[1][0] == "Matrix") {
-            json listNode = node[1][1];
-            if (listNode.is_array() && !listNode.empty() && listNode[0] == "List") {
-                int r = listNode.size() - 1;
-                int c = (r > 0 && listNode[1].is_array() && listNode[1][0] == "List") ? listNode[1].size() - 1 : 0;
-                return {r, c}; // 返回 {行数, 列数}
-            }
+    if (node.is_array() && node.size() >= 2 && node[0] == "Matrix") {
+        json listNode = node[1];
+        if (listNode.is_array() && !listNode.empty() && listNode[0] == "List") {
+            int r = listNode.size() - 1;
+            int c = (r > 0 && listNode[1].is_array() && listNode[1][0] == "List") ? listNode[1].size() - 1 : 0;
+            return {r, c}; // 返回 {行数, 列数}
         }
     }
     return {0, 0}; // 返回 0,0 代表非矩阵节点
@@ -179,7 +177,7 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
         }
         
         // 矩阵
-        if (op == "MWrap") return parseAST(ast[1], isRad, preferExact, hasDMS);
+//        if (op == "MWrap") return parseAST(ast[1], isRad, preferExact, hasDMS);
         auto getGiacStr = [&](const json& node) {
             bool dummy = false;
             std::string s = parseAST(node, isRad, preferExact, dummy).get_basic()->__str__();
@@ -205,7 +203,7 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                 if (mid == "cross" || mid == "dot") {
                     std::string arg1 = getGiacStr(ast[1]);
                     std::string arg2 = getGiacStr(ast[3]);
-                    // 🚀 降维打击：将矩阵强行拍平为一维向量，解决测试 9 点乘报错
+                    // 哈达玛积？
                     replaceAll(arg1, "[", ""); replaceAll(arg1, "]", ""); arg1 = "[" + arg1 + "]";
                     replaceAll(arg2, "[", ""); replaceAll(arg2, "]", ""); arg2 = "[" + arg2 + "]";
                     return Expression(SymEngine::symbol(mid + "(" + arg1 + ", " + arg2 + ")"));

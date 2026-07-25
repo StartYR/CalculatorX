@@ -130,14 +130,51 @@ export class EngineService {
    * 4. 封装 C++ 底层代数引擎的直接调用
    */
   public static calculateNative(jsonStr: string, isRad: boolean, cppPrecisionMode: number): string {
-    Logger.info(`[EngineService] 清洗后传递给 C++ 的 JSON: ${jsonStr}`);
+    let astObj = JSON.parse(jsonStr) as Object;
 
-    // 拦截 C++ 的返回值
-    let cppResult = testNapi.calculate(jsonStr, isRad, cppPrecisionMode);
+    let cleanedAstObj = EngineService.unwrapMWrap(astObj);
+    let finalJsonStr = JSON.stringify(cleanedAstObj);
 
-    // 打印 Giac 生成的原始 LaTeX
+    Logger.info(`[EngineService] 剥离 MWrap 壳后传递给 C++ 的 JSON: ${finalJsonStr}`);
+
+    // 仅调用一次 C++ 引擎
+    let cppResult = testNapi.calculate(finalJsonStr, isRad, cppPrecisionMode);
+
     Logger.info(`[EngineService] C++ 返回的 LaTeX: ${cppResult}`);
 
     return cppResult;
+  }
+
+  /**
+   * AST 树修剪器，负责去掉 MWrap 的外壳
+   */
+  private static unwrapMWrap(astNode: Object): Object {
+    // 检查是否为数组
+    if (Array.isArray(astNode)) {
+      let arr = astNode as Object[];
+
+      // 情况 1：["Tuple", "MWrap", ["Matrix", ...]]
+      if (arr.length === 3 && arr[0] === 'Tuple' && arr[1] === 'MWrap' &&
+        Array.isArray(arr[2]) && arr[2][0] === 'Matrix') {
+        // 直接抛弃 Tuple 和 MWrap，递归返回里面的 Matrix
+        return EngineService.unwrapMWrap(arr[2]);
+      }
+
+      // 情况 2：孤立的 ["MWrap", ["Matrix", ...]]
+      if (arr.length === 2 && arr[0] === 'MWrap' &&
+        Array.isArray(arr[1]) && arr[1][0] === 'Matrix') {
+        // 直接抛弃 MWrap，递归返回里面的 Matrix
+        return EngineService.unwrapMWrap(arr[1]);
+      }
+
+      // 递归处理普通数组的每一个子节点
+      let newArr: Object[] = [];
+      for (let i = 0; i < arr.length; i++) {
+        newArr.push(EngineService.unwrapMWrap(arr[i]));
+      }
+      return newArr;
+    }
+    // 如果是数字或字符串，直接返回
+    return astNode;
   }
 }
