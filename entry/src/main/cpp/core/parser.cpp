@@ -69,8 +69,6 @@ static std::pair<int, int> getMatrixDim(const json& node) {
     }
     return {0, 0}; // 返回 0,0 代表非矩阵节点
 }
-// ================================================================
-
 
 Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS) {
     if (ast.is_number()) {
