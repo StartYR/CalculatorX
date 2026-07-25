@@ -8,6 +8,7 @@
 
 import { relationalStore } from '@kit.ArkData';
 import { common } from '@kit.AbilityKit';
+import Logger from '../utils/Logger'
 
 /**
  * 历史记录数据模型
@@ -64,10 +65,10 @@ export class HistoryRepository {
       await store.executeSql('CREATE INDEX IF NOT EXISTS idx_module_timestamp ON history (module_type, timestamp DESC);');
 
       HistoryRepository.rdbStore = store;
-      console.info('HistoryRepository: 数据库及索引初始化成功');
+      Logger.info('HistoryRepository: 数据库及索引初始化成功');
     } catch (err) {
       let e = err as Error;
-      console.error(`HistoryRepository: 数据库初始化失败. message: ${e.message}`);
+      Logger.error(`HistoryRepository: 数据库初始化失败. message: ${e.message}`);
       throw new Error(e.message);
     }
   }
@@ -80,7 +81,7 @@ export class HistoryRepository {
    */
   public static async insertRecord(record: HistoryRecord): Promise<number> {
     if (!HistoryRepository.rdbStore) {
-      console.error('HistoryRepository: 数据库未初始化，无法插入数据');
+      Logger.error('HistoryRepository: 数据库未初始化，无法插入数据');
       return -1;
     }
     try {
@@ -102,7 +103,7 @@ export class HistoryRepository {
 
         // 如果用户刚刚算过的公式，和现在企图插入的公式完全一样
         if (lastInput === record.inputContent) {
-          console.info('HistoryRepository: 拦截到连续重复计算，已执行静默去重');
+          Logger.info('HistoryRepository: 拦截到连续重复计算，已执行静默去重');
           resultSet.close();
           // 极其致命的细节：返回上一条记录的 ID，骗过外部 UI，完成静默拦截！
           return lastId;
@@ -132,7 +133,7 @@ export class HistoryRepository {
     } catch (err) {
       // 增加类型断言，解决你之前的 err.message 隐式 any 报错风险
       let e = err as Error;
-      console.error(`HistoryRepository: 插入记录失败. message: ${e.message}`);
+      Logger.error(`HistoryRepository: 插入记录失败. message: ${e.message}`);
       return -1;
     }
   }
@@ -194,7 +195,7 @@ export class HistoryRepository {
       return records;
     } catch (err) {
       let e = err as Error;
-      console.error(`HistoryRepository: 查询历史记录失败. message: ${e.message}`);
+      Logger.error(`HistoryRepository: 查询历史记录失败. message: ${e.message}`);
       return [];
     }
   }
@@ -220,7 +221,7 @@ export class HistoryRepository {
       return await HistoryRepository.rdbStore.delete(predicates);
     } catch (err) {
       let e = err as Error;
-      console.error(`HistoryRepository: 清空历史记录失败. message: ${e.message}`);
+      Logger.error(`HistoryRepository: 清空历史记录失败. message: ${e.message}`);
       return 0;
     }
   }
@@ -238,7 +239,7 @@ export class HistoryRepository {
       predicates.equalTo('id', id);
       return await HistoryRepository.rdbStore.delete(predicates);
     } catch (err) {
-      console.error(`HistoryRepository: 删除单条记录失败. message: ${err.message}`);
+      Logger.error(`HistoryRepository: 删除单条记录失败. message: ${err.message}`);
       return 0;
     }
   }

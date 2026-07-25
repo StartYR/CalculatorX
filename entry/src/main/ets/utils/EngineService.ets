@@ -6,6 +6,7 @@
  * @date 2026
  */
 import testNapi from 'libentry.so';
+import Logger from './Logger'
 
 export class EngineService {
   /**
@@ -129,13 +130,13 @@ export class EngineService {
    * 4. 封装 C++ 底层代数引擎的直接调用
    */
   public static calculateNative(jsonStr: string, isRad: boolean, cppPrecisionMode: number): string {
-    console.info(`[EngineService] 清洗后传递给 C++ 的 JSON: ${jsonStr}`);
+    Logger.info(`[EngineService] 清洗后传递给 C++ 的 JSON: ${jsonStr}`);
 
     // 拦截 C++ 的返回值
     let cppResult = testNapi.calculate(jsonStr, isRad, cppPrecisionMode);
 
     // 打印 Giac 生成的原始 LaTeX
-    console.info(`[EngineService] C++ 返回的 LaTeX: ${cppResult}`);
+    Logger.info(`[EngineService] C++ 返回的 LaTeX: ${cppResult}`);
 
     return testNapi.calculate(jsonStr, isRad, cppPrecisionMode);
   }

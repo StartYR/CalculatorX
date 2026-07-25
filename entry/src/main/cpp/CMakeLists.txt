@@ -147,6 +147,7 @@ add_library(entry SHARED
 
 # 将 N-API、SymEngine、Giac 和 arm64 版 GMP 一并链接
 target_link_libraries(entry PUBLIC
+    libhilog_ndk.z.so
     libace_napi.z.so
     symengine
     giac

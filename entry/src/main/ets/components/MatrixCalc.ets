@@ -10,6 +10,7 @@ import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
 import { icon_backspace, icon_fraction, icon_dim } from '../utils/CalculatorConfigs';
+import Logger from '../utils/Logger'
 
 const icon_M_power: Resource = $rawfile('icons/matrix/icon_M_power.svg');
 const icon_abs: Resource = $rawfile('icons/matrix/icon_abs.svg');
@@ -225,7 +226,7 @@ export struct MatrixCalc {
     // 3. 核心逻辑分流
     if (action === 'dim') {
       this.dialogController.open();
-      console.info("[MatrixCalc] Triggered Dim popup.");
+      Logger.info("[MatrixCalc] 触发矩阵选择窗口");
     } else if (action !== '') {
       // 绝大多数按键发送给 FormulaScreen 的 MathLive 进行渲染
       // 注意：这里的 Shift 传 false，因为 MatrixKeyItem 的 onClick 中已经把 Shift 翻译成了最终算子
