@@ -49,7 +49,7 @@ export struct UniversalHistoryList {
     if (content.includes('\\sum') || content.includes('\\prod')) return 48;
     if (content.includes('\\lim')) {
       if (content.includes('\\frac')) {
-        return 48;
+        return 40;
       }
       return 30;
     }

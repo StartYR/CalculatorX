@@ -69,8 +69,9 @@ export class EngineService {
       .replace(/\\det/g, '\\operatorname{Det}')
       .replace(/\\operatorname\{tr\}/g, '\\operatorname{Tr}')
       // 利用 MathLive 的隐式乘法，降维叉乘和点乘（匹配 \bullet 及其可能自带的空格）
-      .replace(/⨯/g, '\\operatorname{cross}')
-      .replace(/\\bullet\s?/g, '\\operatorname{dot}')
+      // .replace(/⨯/g, '\\operatorname{cross}')
+      // .replace(/\\bullet\s?/g, '\\operatorname{dot}')
+      .replace(/\\otimes/g, '\\operatorname{Kronecker}')
       // 矩阵上标防摧毁拦截！将转置、共轭、求逆伪装成平级算子
       // .replace(/\\end\{bmatrix\}\^\{\\mathrm\{T\}\}/g, '\\end{bmatrix}\\operatorname{TranOp}')
       // .replace(/\\end\{bmatrix\}\^\{\\mathrm\{H\}\}/g, '\\end{bmatrix}\\operatorname{ConjTranOp}')
@@ -135,7 +136,7 @@ export class EngineService {
     let cleanedAstObj = EngineService.unwrapMWrap(astObj);
     let finalJsonStr = JSON.stringify(cleanedAstObj);
 
-    Logger.info(`[EngineService] 剥离 MWrap 壳后传递给 C++ 的 JSON: ${finalJsonStr}`);
+    Logger.info(`[EngineService] 清洗后传递给 C++ 的 JSON: ${finalJsonStr}`);
 
     // 仅调用一次 C++ 引擎
     let cppResult = testNapi.calculate(finalJsonStr, isRad, cppPrecisionMode);
@@ -146,31 +147,30 @@ export class EngineService {
   }
 
   /**
-   * AST 树修剪器，负责去掉 MWrap 的外壳
+   * AST 树修剪器：无差别过滤 MWrap 外壳
    */
   private static unwrapMWrap(astNode: Object): Object {
-    // 检查是否为数组
     if (Array.isArray(astNode)) {
       let arr = astNode as Object[];
 
-      // 情况 1：["Tuple", "MWrap", ["Matrix", ...]]
-      if (arr.length === 3 && arr[0] === 'Tuple' && arr[1] === 'MWrap' &&
-        Array.isArray(arr[2]) && arr[2][0] === 'Matrix') {
-        // 直接抛弃 Tuple 和 MWrap，递归返回里面的 Matrix
-        return EngineService.unwrapMWrap(arr[2]);
-      }
-
-      // 情况 2：孤立的 ["MWrap", ["Matrix", ...]]
-      if (arr.length === 2 && arr[0] === 'MWrap' &&
-        Array.isArray(arr[1]) && arr[1][0] === 'Matrix') {
-        // 直接抛弃 MWrap，递归返回里面的 Matrix
+      // 1. 拦截孤立的 ["MWrap", ["Matrix", ...]]
+      if (arr.length === 2 && arr[0] === 'MWrap' && Array.isArray(arr[1]) && arr[1][0] === 'Matrix') {
         return EngineService.unwrapMWrap(arr[1]);
       }
 
-      // 递归处理普通数组的每一个子节点
+      // 无差别过滤掉当前层级所有的 'MWrap' 字符串
+      let filteredArr = arr.filter(item => item !== 'MWrap');
+
+      // 3. 如果过滤后变成了 ["Tuple", ["Matrix", ...]]，直接剥离多余的 Tuple 保护层
+      if (filteredArr.length === 2 && filteredArr[0] === 'Tuple' &&
+        Array.isArray(filteredArr[1]) && filteredArr[1][0] === 'Matrix') {
+        return EngineService.unwrapMWrap(filteredArr[1]);
+      }
+
+      // 4. 递归处理其余干净的子节点
       let newArr: Object[] = [];
-      for (let i = 0; i < arr.length; i++) {
-        newArr.push(EngineService.unwrapMWrap(arr[i]));
+      for (let i = 0; i < filteredArr.length; i++) {
+        newArr.push(EngineService.unwrapMWrap(filteredArr[i]));
       }
       return newArr;
     }

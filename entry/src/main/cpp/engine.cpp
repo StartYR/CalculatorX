@@ -38,7 +38,7 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
     std::string json_str(str_len, '\0');
     napi_get_value_string_utf8(env, args[0], &json_str[0], str_len + 1, &str_len);
 
-    LOGI("[输入通信] 成功接收原始 JSON 负载: %{public}s", json_str.c_str());
+    LOGI("[engine.cpp][输入通信] 成功接收原始 JSON 负载: %{public}s", json_str.c_str());
 //    LOGI("[IPC_RX] Received raw JSON payload: %{public}s", json_str.c_str());
     
     bool isRad = false;
@@ -67,7 +67,7 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
             }
         }
         
-        LOGI("[AST构建] JSON 树结构解析完毕: %{public}s", ast.dump().c_str());
+        LOGI("[engine.cpp][AST构建] JSON 树结构解析完毕: %{public}s", ast.dump().c_str());
 //        LOGI("[AST_Parser] Successfully built JSON tree: %{public}s", ast.dump().c_str());
         
         bool isGlobalExact = (precision == -3 || precision == -4);
@@ -75,7 +75,7 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         Expression expr = parseAST(ast, isRad, isGlobalExact, autoDMS);
         std::string expr_str = expr.get_basic()->__str__();
         
-        LOGI("[引擎路由] 预处理表达式已生成: %{public}s", expr_str.c_str());
+        LOGI("[engine.cpp][引擎路由] 预处理表达式已生成: %{public}s", expr_str.c_str());
 //        LOGI("[SymEngine] Expression ready for evaluation: %{public}s", expr_str.c_str());
         
         // 全局接管需要调用 Giac 的计算
