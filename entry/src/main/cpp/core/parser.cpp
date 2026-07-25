@@ -176,6 +176,29 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
             return Expression(0);
         }
         
+        
+        // === 矩阵哈达玛积 (Hadamard Product) 严格同形校验 ===
+        if (op == "Ring") {
+            if (ast.size() == 3) {
+                // 严格校验矩阵形状必须完全一致
+                auto dim1 = getMatrixDim(ast[1]); 
+                auto dim2 = getMatrixDim(ast[2]);
+                if (dim1.first != 0 && dim2.first != 0 && dim1 != dim2) {
+                    throw CalcException(CalcErrorCode::DOMAIN_ERROR, "哈达玛积要求矩阵维度必须完全一致");
+                }
+                
+                bool dummy = false;
+                std::string s1 = parseAST(ast[1], isRad, preferExact, dummy).get_basic()->__str__();
+                std::string s2 = parseAST(ast[2], isRad, preferExact, dummy).get_basic()->__str__();
+                replaceAll(s1, "MAGICMAT", ""); 
+                replaceAll(s2, "MAGICMAT", "");
+                
+                // 组装 Giac 的 hadamard 指令
+                return Expression(SymEngine::symbol("MAGICMAThadamard(" + s1 + ", " + s2 + ")"));
+            }
+        }
+        
+        
         // 矩阵
 //        if (op == "MWrap") return parseAST(ast[1], isRad, preferExact, hasDMS);
         auto getGiacStr = [&](const json& node) {
@@ -196,17 +219,15 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
         if (op == "MyEig" || op == "eig") return Expression(SymEngine::symbol("eigenvals(" + getGiacStr(ast[1]) + ")"));
         if (op == "MyRank" || op == "rank") return Expression(SymEngine::symbol("rank(" + getGiacStr(ast[1]) + ")"));
 
-        // 拦截 Tuple：解决隐式乘法和向量降维
+        // 拦截 Tuple：解决隐式乘法和特殊算子
         if (op == "Tuple") {
             if (ast.size() == 4 && ast[2].is_string()) {
                 std::string mid = ast[2].get<std::string>();
-                if (mid == "cross" || mid == "dot") {
+                if (mid == "Kronecker") { 
                     std::string arg1 = getGiacStr(ast[1]);
                     std::string arg2 = getGiacStr(ast[3]);
-                    // 哈达玛积？
-                    replaceAll(arg1, "[", ""); replaceAll(arg1, "]", ""); arg1 = "[" + arg1 + "]";
-                    replaceAll(arg2, "[", ""); replaceAll(arg2, "]", ""); arg2 = "[" + arg2 + "]";
-                    return Expression(SymEngine::symbol(mid + "(" + arg1 + ", " + arg2 + ")"));
+                    // 组装 Giac 的 kronecker 指令，不需要降维！
+                    return Expression(SymEngine::symbol("MAGICMATkron(" + arg1 + ", " + arg2 + ")"));
                 }
             }
             // 隐式矩阵乘法 (Matrix1 Matrix2) -> 强制转为星号相乘并保序
@@ -281,24 +302,10 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
         }
         
         if (op == "Multiply") {
-            // 拦截 MathLive 的叉乘与点乘: ["Multiply", "cross", Arg1, Arg2]
+            // 拦截 MathLive 识别的算子: ["Multiply", "Kronecker", Arg1, Arg2]
             if (ast.size() == 4 && ast[1].is_string()) {
                 std::string midStr = ast[1].get<std::string>();
-                if (midStr == "cross" || midStr == "dot") {
-                    
-                    auto dim1 = getMatrixDim(ast[2]);
-                    auto dim2 = getMatrixDim(ast[3]);
-                    
-                    // 判断是否为 3D 向量 (1x3 或 3x1)
-                    bool isVec1 = (dim1.first == 1 && dim1.second == 3) || (dim1.first == 3 && dim1.second == 1);
-                    bool isVec2 = (dim2.first == 1 && dim2.second == 3) || (dim2.first == 3 && dim2.second == 1);
-                    
-                    // 非法维度的叉乘，抛出异常
-                    if (midStr == "cross" && (!isVec1 || !isVec2)) {
-                        throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Invalid dimension for cross product");
-                    }
-                    
-                    // 提取计算字符串
+                if (midStr == "Kronecker") {
                     auto getGiacStrLocal = [&](const json& node) {
                         bool dummy = false;
                         std::string s = parseAST(node, isRad, preferExact, dummy).get_basic()->__str__();
@@ -307,18 +314,7 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                     std::string arg1 = getGiacStrLocal(ast[2]);
                     std::string arg2 = getGiacStrLocal(ast[3]);
                     
-                    // 暴力降维：拍平矩阵，提取纯元素数组供底层计算
-                    replaceAll(arg1, "[", ""); replaceAll(arg1, "]", ""); arg1 = "[" + arg1 + "]";
-                    replaceAll(arg2, "[", ""); replaceAll(arg2, "]", ""); arg2 = "[" + arg2 + "]";
-                    
-                    // ================= 3. 升维渲染输出 =================
-                    if (midStr == "cross") {
-                        // 叉乘结果套上转置 tran([...])，强制变回 3x1 列向量
-                        return Expression(SymEngine::symbol("MAGICMATtran([" + midStr + "(" + arg1 + ", " + arg2 + ")])"));
-                    } else { 
-                        // dot 点乘返回标量，直接放行
-                        return Expression(SymEngine::symbol("MAGICMAT" + midStr + "(" + arg1 + ", " + arg2 + ")"));
-                    }
+                    return Expression(SymEngine::symbol("MAGICMATkron(" + arg1 + ", " + arg2 + ")"));
                 }
             }
             
