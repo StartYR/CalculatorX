@@ -8,6 +8,7 @@
 
 import { vibrator } from '@kit.SensorServiceKit';
 import { BusinessError } from '@kit.BasicServicesKit';
+import Logger from './Logger'
 
 export class HapticUtils {
   /**
@@ -52,7 +53,7 @@ export class HapticUtils {
       effectId: effectId,
       count: 1
     }, { usage: 'touch' }).catch((err: BusinessError) => {
-      console.warn(`震动拦截: ${err.message}`);
+      Logger.warn(`震动拦截: ${err.message}`);
     });
   }
 }

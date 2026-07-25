@@ -15,6 +15,7 @@ import {
   ScrollEffectType,
   hdsMaterial
 } from '@kit.UIDesignKit';
+import Logger from '../../utils/Logger'
 
 interface CreditItem {
   name: string;
@@ -44,7 +45,7 @@ struct Credits {
       entities: ["entity.system.browsable"],
       uri: url
     }).catch((err: Error) => {
-      console.error(`拉起浏览器失败: ${err.message}`);
+      Logger.error(`拉起浏览器失败: ${err.message}`);
     });
   }
 

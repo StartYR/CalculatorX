@@ -15,6 +15,7 @@ import {
   ScrollEffectType,
   hdsMaterial
 } from '@kit.UIDesignKit';
+import Logger from '../../utils/Logger'
 
 // 定义鸣谢数据结构
 interface CreditItem {
@@ -108,7 +109,7 @@ struct About {
       entities: ["entity.system.browsable"],
       uri: url
     }).catch((err: Error) => {
-      console.error(`拉起浏览器失败: ${err.message}`);
+      Logger.error(`拉起浏览器失败: ${err.message}`);
     });
   }
 
@@ -118,7 +119,7 @@ struct About {
       action: "ohos.want.action.sendData",
       uri: `mailto:${email}`
     }).catch((err: Error) => {
-      console.error(`拉起邮件客户端失败: ${err.message}`);
+      Logger.error(`拉起邮件客户端失败: ${err.message}`);
     });
   }
 
@@ -164,7 +165,7 @@ struct About {
                 icon: $r('sys.symbol.gift'),
                 title: '特别鸣谢',
                 onClickAction: (): void => {
-                  console.info('点击：特别鸣谢');
+                  Logger.info('点击：特别鸣谢');
                   // this.creditsDialogController.open();
                   router.pushUrl({
                     url: 'pages/settings/Credits',
@@ -183,7 +184,7 @@ struct About {
                 icon: $r('sys.symbol.house'),
                 title: '官方主页',
                 onClickAction: (): void => {
-                  console.info('点击：官方主页');
+                  Logger.info('点击：官方主页');
                   this.openUrlInBrowser('https://calcx.startyi.com');
                 }
               })
@@ -195,7 +196,7 @@ struct About {
                 icon: $r('sys.symbol.share'),
                 title: '开源地址',
                 onClickAction: (): void => {
-                  console.info('点击：开源地址');
+                  Logger.info('点击：开源地址');
                   this.openUrlInBrowser('https://github.com/StarHeartY/CalculatorX');
                 }
               })
@@ -207,7 +208,7 @@ struct About {
                 icon: $r('sys.symbol.envelope'),
                 title: '联系开发者',
                 onClickAction: (): void => {
-                  console.info('点击：联系开发者');
+                  Logger.info('点击：联系开发者');
                   this.sendEmail('support@startyi.com');
                 }
               })

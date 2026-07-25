@@ -18,6 +18,7 @@ import {
 } from '@kit.UIDesignKit';
 import { ConfigurationConstant, common } from '@kit.AbilityKit';
 import { PreferenceManager } from '../../utils/PreferenceManager';
+import Logger from '../../utils/Logger'
 
 // 引入全局菜单组件库
 import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from '../../components/common/MenuComponents';
@@ -540,7 +541,7 @@ export struct Settings {
                 icon: $r('sys.symbol.checkmark_lightbulb_max'),
                 title: '使用帮助',
                 onClickAction: () => {
-                  console.info('点击：使用帮助');
+                  Logger.info('点击：使用帮助');
                   router.pushUrl({
                     url: RoutePath.DOC_VIEWER,
                     params: {
@@ -558,7 +559,7 @@ export struct Settings {
                 icon: $r('sys.symbol.private_browsing_mode'),
                 title: '隐私政策',
                 onClickAction: () => {
-                  console.info('点击：隐私政策');
+                  Logger.info('点击：隐私政策');
                   router.pushUrl({
                     url: RoutePath.DOC_VIEWER,
                     params: {
@@ -576,7 +577,7 @@ export struct Settings {
                 icon: $r('sys.symbol.doc_plaintext'),
                 title: '用户协议',
                 onClickAction: () => {
-                  console.info('点击：用户协议');
+                  Logger.info('点击：用户协议');
                   router.pushUrl({
                     url: RoutePath.DOC_VIEWER,
                     params: {
@@ -594,7 +595,7 @@ export struct Settings {
                 icon: $r('sys.symbol.info_circle'),
                 title: '关于此应用',
                 onClickAction: () => {
-                  console.info('点击：关于此应用');
+                  Logger.info('点击：关于此应用');
                   router.pushUrl({ url: RoutePath.ABOUT });
                 }
               })
