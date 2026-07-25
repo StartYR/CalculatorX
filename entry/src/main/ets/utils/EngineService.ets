@@ -138,6 +138,6 @@ export class EngineService {
     // 打印 Giac 生成的原始 LaTeX
     Logger.info(`[EngineService] C++ 返回的 LaTeX: ${cppResult}`);
 
-    return testNapi.calculate(jsonStr, isRad, cppPrecisionMode);
+    return cppResult;
   }
 }
