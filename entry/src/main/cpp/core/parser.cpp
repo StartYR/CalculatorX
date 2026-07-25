@@ -496,15 +496,9 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                 std::string lowerStr = lower_expr.get_basic()->__str__();
                 std::string upperStr = upper_expr.get_basic()->__str__();
                 
-                // 将 SymEngine 的乘方符号替换为 Giac 的乘方符号
-                replaceAll(exprStr, "**", "^");
-                replaceAll(lowerStr, "**", "^");
-                replaceAll(upperStr, "**", "^");
-                
-                // 防止 Giac 把 Euler 常数当成未知变量
-                replaceAll(exprStr, "E", "e");
-                replaceAll(lowerStr, "E", "e");
-                replaceAll(upperStr, "E", "e");
+                adaptSymEngineToGiac(exprStr);
+                adaptSymEngineToGiac(lowerStr);
+                adaptSymEngineToGiac(upperStr);
                 
                 // 根据操作符选择对应的 Giac 函数
                 std::string giacFuncName = (op == "Sum") ? "sum" : "product";
@@ -523,9 +517,7 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                 Expression raw_diff = Expression(body.get_basic()->diff(SymEngine::symbol("x")));
                 
                 std::string exprStr = body.get_basic()->__str__();
-                replaceAll(exprStr, "**", "^");
-                replaceAll(exprStr, "E", "e"); 
-                replaceAll(exprStr, "log", "ln");
+                adaptSymEngineToGiac(exprStr);
                 
                 // 将求导(diff)与化简(simplify)指令给顶层 Giac 处理
                 return Expression(SymEngine::symbol("diff(" + exprStr + ", x)"));
