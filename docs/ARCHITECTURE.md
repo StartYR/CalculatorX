@@ -12,7 +12,6 @@
 * **插件 (Plugins) - `components/*Calc.ets`**：
   科学计算 (`ScientificCalc`)、基础计算 (`BasicCalc`) 等具体业务面板被设计为完全独立的组件（即“插件”）。它们就像插在主板上的独立显卡，当用户在侧边栏切换功能时，`Index.ets` 只是在插槽中动态替换这些组件，从而实现了零路由延迟的无缝切换。
 
-
 ## 2. 模块职责地图
 
 在 `entry/src/main/ets/` 目录下，我们的代码被严格划分为三个层级：
@@ -68,8 +67,6 @@ sequenceDiagram
 
 ## 5. 核心目录结构
 
-本项目严格遵循“壳与插件 (Shell & Plugin)”设计模式，UI 视图、纯逻辑服务与底层引擎实现了完美解耦：
-
 ```text  
 entry/src/main/  
 ├── ets/                               # 📱 ArkTS 前端逻辑与视图层  
@@ -101,7 +98,8 @@ entry/src/main/
 │   │   ├── EngineService.ets          # CAS 引擎中枢：正则清洗、AST 解析及 N-API 调度
 │   │   ├── HapticUtils.ets            # 触控震感中心：全局接管 Hard/Sharp/Soft 马达曲线
 │   │   ├── CalculatorConfigs.ets      # 全局视觉规范与配置中心
-│   │   └── PreferenceManager.ets      # 全局偏好中枢：单例接管存储落盘与内存同步
+│   │   ├── PreferenceManager.ets      # 全局偏好中枢：单例接管存储落盘与内存同步
+│   │   └── Logger.h                   # 日志模板
 │   │
 │   └── database/HistoryRepository.ets # 关系型数据库 (RDB) 调度中心
 │  
@@ -116,7 +114,8 @@ entry/src/main/
 │   │
 │   ├── utils/                         # 🧰 基础设施与通用工具层
 │   │   ├── FastMath.cpp/.h            # 极速降维模块：O(1) 时间计算宇宙级超大数
-│   │   └── FormatUtils.cpp/.h         # 统一格式化中枢：UI 排版、精度截断与正则清理
+│   │   ├── FormatUtils.cpp/.h         # 统一格式化中枢：UI 排版、精度截断与正则清理
+│   │   └── Logger.h                   # 日志模板
 │   │
 │   └── third_party/                   # 静态链接的离线依赖
 │  
