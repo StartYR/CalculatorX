@@ -17,6 +17,7 @@ import {
   HdsTabsController,
 } from '@kit.UIDesignKit';
 import { SymbolGlyphModifier, promptAction } from '@kit.ArkUI';
+import Logger from '../../utils/Logger'
 
 import pasteboard from '@ohos.pasteboard'; // 剪贴板
 
@@ -157,7 +158,7 @@ export struct HistoryManager {
               bottom: 80
             });
           }).catch((err: Error) => {
-            console.error(`复制失败: ${err.message}`);
+            Logger.error(`复制失败: ${err.message}`);
           });
         }
       }
