@@ -166,7 +166,7 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
                 } else {
                     std::string rawStr = expr.get_basic()->__str__();
                     
-                    // 只有检测到包含根号 (sqrt) 时，才触发 Giac 的重度化简
+                    // 检测到包含根号 (sqrt) 触发 Giac 化简
                     if (rawStr.find("sqrt") != std::string::npos || rawStr.find("** (1/") != std::string::npos) {
                         replaceAll(rawStr, "**", "^");
                         replaceAll(rawStr, "E", "e");
