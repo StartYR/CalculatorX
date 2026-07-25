@@ -109,8 +109,8 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
         if (s == "Pi") return Expression(SymEngine::pi);
         if (s == "ExponentialE" || s == "e") return Expression(SymEngine::E);
         if (s == "NaN") throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Frontend folded to NaN");
-        if (s == "PositiveInfinity" || s == "Infinity") return Expression(SymEngine::symbol("infinity"));
-        if (s == "NegativeInfinity") return -Expression(SymEngine::symbol("infinity"));
+        if (s == "PositiveInfinity" || s == "Infinity" || s == "infty" || s == "\\infty") return Expression(SymEngine::symbol("inf"));
+        if (s == "NegativeInfinity" || s == "-infty" || s == "-\\infty") return -Expression(SymEngine::symbol("inf"));
         return Expression(SymEngine::symbol(s));
     }
     
@@ -496,10 +496,15 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                 std::string lowerStr = lower_expr.get_basic()->__str__();
                 std::string upperStr = upper_expr.get_basic()->__str__();
                 
-                // 语法适配：将 SymEngine 的乘方符号替换为 Giac 的乘方符号
+                // 将 SymEngine 的乘方符号替换为 Giac 的乘方符号
                 replaceAll(exprStr, "**", "^");
                 replaceAll(lowerStr, "**", "^");
                 replaceAll(upperStr, "**", "^");
+                
+                // 防止 Giac 把 Euler 常数当成未知变量
+                replaceAll(exprStr, "E", "e");
+                replaceAll(lowerStr, "E", "e");
+                replaceAll(upperStr, "E", "e");
                 
                 // 根据操作符选择对应的 Giac 函数
                 std::string giacFuncName = (op == "Sum") ? "sum" : "product";
@@ -514,7 +519,16 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
             if (ast.size() == 2) {
                 bool dummy = false;
                 Expression body = parseAST(ast[1], isRad, true, dummy);
-                return Expression(body.get_basic()->diff(SymEngine::symbol("x")));
+                
+                Expression raw_diff = Expression(body.get_basic()->diff(SymEngine::symbol("x")));
+                
+                std::string exprStr = body.get_basic()->__str__();
+                replaceAll(exprStr, "**", "^");
+                replaceAll(exprStr, "E", "e"); 
+                replaceAll(exprStr, "log", "ln");
+                
+                // 将求导(diff)与化简(simplify)指令给顶层 Giac 处理
+                return Expression(SymEngine::symbol("diff(" + exprStr + ", x)"));
             }
         }
         
@@ -537,7 +551,10 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                     replaceAll(exprStr, "**", "^");
                     replaceAll(targetStr, "**", "^");
                     
-                    // 【重构战役一】：不调 Giac，直接组装符号
+                    replaceAll(exprStr, "E", "e");
+                    replaceAll(targetStr, "E", "e");
+                    
+                    // 不调 Giac，直接组装符号
                     return Expression(SymEngine::symbol("limit(" + exprStr + ", " + varStr + ", " + targetStr + ")"));
                 }
             }
@@ -558,6 +575,7 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
                         // 1. 将 SymEngine 被积函数转为字符串，并进行语法适配
                         std::string exprStr = body.get_basic()->__str__();
                         replaceAll(exprStr, "**", "^");
+                        replaceAll(exprStr, "E", "e");
                         
                         // 组装不定积分符号
                         return Expression(SymEngine::symbol("MAGICINDEFintegrate(" + exprStr + ", " + var_name + ")"));

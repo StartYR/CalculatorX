@@ -80,7 +80,10 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
                            expr_str.find("product(") != std::string::npos ||
                            expr_str.find("gcd(") != std::string::npos ||
                            expr_str.find("lcm(") != std::string::npos ||
-                           expr_str.find("irem(") != std::string::npos);
+                           expr_str.find("irem(") != std::string::npos ||
+                           expr_str.find("simplify(") != std::string::npos ||
+                           expr_str.find("diff(") != std::string::npos
+        );
 
         if (isGlobalGiacOp) {
             replaceAll(expr_str, "MAGICMAT", "");
@@ -161,7 +164,28 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
                     std::string rawStr = expr.get_basic()->__str__();
                     result_msg = (rawStr.length() > 15) ? formatLargeIntegerToScientific(rawStr) : SymEngine::latex(*expr.get_basic());
                 } else {
-                    result_msg = SymEngine::latex(*expr.get_basic());
+                    std::string rawStr = expr.get_basic()->__str__();
+                    
+                    // 只有检测到包含根号 (sqrt) 时，才触发 Giac 的重度化简
+                    if (rawStr.find("sqrt") != std::string::npos || rawStr.find("** (1/") != std::string::npos) {
+                        replaceAll(rawStr, "**", "^");
+                        replaceAll(rawStr, "E", "e");
+                        
+                        std::string giacCmd = "latex(simplify(" + rawStr + "))";
+                        std::string formattedResult = evaluateWithGiac(giacCmd);
+                        
+                        if (formattedResult.empty() || formattedResult.find("undef") != std::string::npos || formattedResult.find("Error") != std::string::npos) {
+                            result_msg = SymEngine::latex(*expr.get_basic()); 
+                        } else {
+                            if (formattedResult.size() >= 2 && formattedResult.front() == '"' && formattedResult.back() == '"') {
+                                formattedResult = formattedResult.substr(1, formattedResult.size() - 2);
+                            }
+                            result_msg = formattedResult;
+                        }
+                    } else {
+                        // 没有根号的普通分数、符号计算，直接走极速原生输出！
+                        result_msg = SymEngine::latex(*expr.get_basic());
+                    }
                 }
             }
             else if (precision == -4) {
