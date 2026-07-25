@@ -25,3 +25,6 @@ std::string formatFloat(double float_val, int precision);
 
 // 全局 UI 统一美化（正则清理、伪符号剥离）
 void applyGlobalUIFormatting(std::string& result_msg);
+
+// 适配 SymEngine 传递到 Giac 的语法差异
+void adaptSymEngineToGiac(std::string& str);

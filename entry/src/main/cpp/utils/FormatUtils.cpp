@@ -184,3 +184,9 @@ void applyGlobalUIFormatting(std::string& result_msg) {
         replaceAll(result_msg, "\\end{matrix}\\right)", "\\end{bmatrix}");
     } catch (...) {}
 }
+
+void adaptSymEngineToGiac(std::string& str) {
+    replaceAll(str, "**", "^");        // 乘方符号转换、
+    replaceAll(str, "E", "e");         // 保护自然常数 E
+    replaceAll(str, "log", "ln");      // 对数函数名称转换
+}

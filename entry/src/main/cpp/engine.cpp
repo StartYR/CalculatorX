@@ -86,8 +86,7 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         );
 
         if (isGlobalGiacOp) {
-            replaceAll(expr_str, "MAGICMAT", "");
-            replaceAll(expr_str, "**", "^");
+            adaptSymEngineToGiac(expr_str);
             
             // 判断是否为不定积分
             bool isIndefinite = (expr_str.find("MAGICINDEFintegrate") != std::string::npos);
@@ -168,8 +167,7 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
                     
                     // 检测到包含根号 (sqrt) 触发 Giac 化简
                     if (rawStr.find("sqrt") != std::string::npos || rawStr.find("** (1/") != std::string::npos) {
-                        replaceAll(rawStr, "**", "^");
-                        replaceAll(rawStr, "E", "e");
+                        adaptSymEngineToGiac(expr_str);
                         
                         std::string giacCmd = "latex(simplify(" + rawStr + "))";
                         std::string formattedResult = evaluateWithGiac(giacCmd);
