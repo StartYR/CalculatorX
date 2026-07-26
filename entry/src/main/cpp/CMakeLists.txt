@@ -142,6 +142,7 @@ add_library(entry SHARED
     utils/FastMath.cpp
     utils/FormatUtils.cpp
     core/parser.cpp
+    core/MatrixParser.cpp
     core/giac_bridge.cpp
 )
 

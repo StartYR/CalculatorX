@@ -127,7 +127,7 @@ export function getBgColor(btn: string | Resource, isShift: boolean): ResourceCo
   if (action === 'AC' || action === '⌫') return '#ffff5d3e';
   if (action === '⇧Shift') return isShift ? '#ffb87200' : '#ff9900';
   if (action === '=') return $r('sys.color.comp_background_emphasize');
-  if (['+', '−', '×', '÷'].includes(action)) return $r('sys.color.comp_background_tertiary');
+  if (['+', '−', '×', '÷', '∘', 'Ans'].includes(action)) return $r('sys.color.comp_background_tertiary');
 
   let isNumberOrCore = (typeof btn === 'string' && btn >= '0' && btn <= '9') || action === '.' || action === 'dim' || action === '⇦'|| action === '⇨' || btn === '⇧'|| btn === '⇩';
   if (isNumberOrCore || action === 'icon_exp') return $r('sys.color.comp_background_primary');
@@ -143,6 +143,7 @@ export function getFontSize(btn: string | Resource): number {
   if (btn >= '0' && btn <= '9') return 24;
   if (btn === 'e' || btn === 'Ans' || btn === 'Dim') return 22;
   if (btn === '+' || btn === '×' || btn === '÷' || btn === '=' || btn === '−' || btn === '.') return 28;
+  if (btn === '∘') return 36;
   if (['d/dx', 'lim'].includes(btn)) return 20;
   if (['sin', 'cos', 'tan', 'log', 'ln'].includes(btn)) return 20;
   if (btn === 'AC' || btn === '⌫') return 20;
@@ -165,7 +166,7 @@ export function getFontColor(btn: string | Resource): ResourceColor {
   if (typeof btn !== 'string') return $r('sys.color.font_primary');
 
   // 3. 右侧运算符：在灰色背景上使用系统强调色 (蓝色文字)
-  if (['+', '−', '×', '÷'].includes(action)) return $r('sys.color.font_emphasize');
+  if (['+', '−', '×', '÷', '∘'].includes(action)) return $r('sys.color.font_emphasize');
 
   // 4. 顶部高级功能区：次要文字颜色 (略微弱化，将视觉焦点让给下方数字区)
   // if (topButtons.includes(btn as string)) return $r('sys.color.font_secondary');
