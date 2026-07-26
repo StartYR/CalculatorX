@@ -68,13 +68,24 @@ export class EngineService {
       // 伪装行列式与迹，绕过 MathLive 的严格语法与类型检查
       .replace(/\\det/g, '\\operatorname{Det}')
       .replace(/\\operatorname\{tr\}/g, '\\operatorname{Tr}')
+
+      // 绕过 MathLive 严格的 \times 类型检查，只要乘号挨着矩阵（包括带上标的矩阵），就将其隐形为隐式乘法
+      .replace(/\\times\s*(?=\\begin\{bmatrix\})/g, ' ')
+      .replace(/(\\end\{bmatrix\}(?:\^(?:\{[^}]+\}|[a-zA-Z0-9]))?)\s*\\times/g, '$1 ')
+
       // 利用 MathLive 的隐式乘法，降维叉乘和点乘（匹配 \bullet 及其可能自带的空格）
-      .replace(/⨯/g, '\\operatorname{cross}')
-      .replace(/\\bullet\s?/g, '\\operatorname{dot}')
-      // 矩阵上标防摧毁拦截！将转置、共轭、求逆伪装成平级算子
-      // .replace(/\\end\{bmatrix\}\^\{\\mathrm\{T\}\}/g, '\\end{bmatrix}\\operatorname{TranOp}')
-      // .replace(/\\end\{bmatrix\}\^\{\\mathrm\{H\}\}/g, '\\end{bmatrix}\\operatorname{ConjTranOp}')
-      // .replace(/\\end\{bmatrix\}\^\{-1\}/g, '\\end{bmatrix}\\operatorname{InvOp}');
+      // .replace(/⨯/g, '\\operatorname{cross}')
+      // .replace(/\\bullet\s?/g, '\\operatorname{dot}')
+      // .replace(/\\otimes/g, '\\operatorname{Kronecker}')
+
+      // 矩阵上标（转置、共轭、求逆、乘方）
+      .replace(/\\end\{bmatrix\}\^\{\\mathrm\{T\}\}/g, '\\end{bmatrix}\\operatorname{TranOp}')
+      .replace(/\\end\{bmatrix\}\^\{\\mathrm\{H\}\}/g, '\\end{bmatrix}\\operatorname{ConjTranOp}')
+      .replace(/\\end\{bmatrix\}\^\{-1\}/g, '\\end{bmatrix}\\operatorname{InvOp}')
+      // .replace(/\\end\{bmatrix\}\s*\^/g, '\\end{bmatrix}\\operatorname{MatPowOp}^')
+      .replace(/\\end\{bmatrix\}\s*\^\{([^}]+)\}/g, '\\end{bmatrix}\\operatorname{MatPowOp}\\left($1\\right)')
+      .replace(/\\end\{bmatrix\}\s*\^([a-zA-Z0-9.-]+)/g, '\\end{bmatrix}\\operatorname{MatPowOp}\\left($1\\right)')
+
       // 给矩阵套上自定义参数，绕过 MathLive 的类型识别
       .replace(/\\begin\{bmatrix\}/g, '\\operatorname{MWrap}\\left(\\begin{bmatrix}')
       .replace(/\\end\{bmatrix\}/g, '\\end{bmatrix}\\right)')
@@ -130,14 +141,50 @@ export class EngineService {
    * 4. 封装 C++ 底层代数引擎的直接调用
    */
   public static calculateNative(jsonStr: string, isRad: boolean, cppPrecisionMode: number): string {
-    Logger.info(`[EngineService] 清洗后传递给 C++ 的 JSON: ${jsonStr}`);
+    let astObj = JSON.parse(jsonStr) as Object;
 
-    // 拦截 C++ 的返回值
-    let cppResult = testNapi.calculate(jsonStr, isRad, cppPrecisionMode);
+    let cleanedAstObj = EngineService.unwrapMWrap(astObj);
+    let finalJsonStr = JSON.stringify(cleanedAstObj);
 
-    // 打印 Giac 生成的原始 LaTeX
+    Logger.info(`[EngineService] 清洗后传递给 C++ 的 JSON: ${finalJsonStr}`);
+
+    // 仅调用一次 C++ 引擎
+    let cppResult = testNapi.calculate(finalJsonStr, isRad, cppPrecisionMode);
+
     Logger.info(`[EngineService] C++ 返回的 LaTeX: ${cppResult}`);
 
-    return testNapi.calculate(jsonStr, isRad, cppPrecisionMode);
+    return cppResult;
+  }
+
+  /**
+   * AST 树修剪器：无差别过滤 MWrap 外壳
+   */
+  private static unwrapMWrap(astNode: Object): Object {
+    if (Array.isArray(astNode)) {
+      let arr = astNode as Object[];
+
+      // 1. 拦截孤立的 ["MWrap", ["Matrix", ...]]
+      if (arr.length === 2 && arr[0] === 'MWrap' && Array.isArray(arr[1]) && arr[1][0] === 'Matrix') {
+        return EngineService.unwrapMWrap(arr[1]);
+      }
+
+      // 无差别过滤掉当前层级所有的 'MWrap' 字符串
+      let filteredArr = arr.filter(item => item !== 'MWrap');
+
+      // 3. 如果过滤后变成了 ["Tuple", ["Matrix", ...]]，直接剥离多余的 Tuple 保护层
+      if (filteredArr.length === 2 && filteredArr[0] === 'Tuple' &&
+        Array.isArray(filteredArr[1]) && filteredArr[1][0] === 'Matrix') {
+        return EngineService.unwrapMWrap(filteredArr[1]);
+      }
+
+      // 4. 递归处理其余干净的子节点
+      let newArr: Object[] = [];
+      for (let i = 0; i < filteredArr.length; i++) {
+        newArr.push(EngineService.unwrapMWrap(filteredArr[i]));
+      }
+      return newArr;
+    }
+    // 如果是数字或字符串，直接返回
+    return astNode;
   }
 }

@@ -20,7 +20,7 @@ const matrixButtons: Array<string | Resource> = [
   '⇧Shift', '⇧', icon_fraction, 'M⁻¹', 'Mᵀ',
   '⇦', '⇩', '⇨', '(', ')',
   '7', '8', '9', icon_backspace, 'AC',
-  '4', '5', '6', '×', '÷',
+  '4', '5', '6', '×', '∘',
   '1', '2', '3', '+', '−',
   '.', '0', icon_dim, 'Ans', '='
 ];
@@ -30,7 +30,7 @@ const matrixShiftButtons: Array<string | Resource> = [
   '', '', 'det', icon_M_power, 'Mᴴ',
   '', '', '', 'rref', 'eig',
   '', '', '', '', '',
-  '', '', '', '⨯', '•',
+  '', '', '', '', '', // ⊗
   '', '', '', 'rank', 'tr',
   '', 'i', 'I', icon_abs, ''
 ];
