@@ -15,7 +15,6 @@
 
 namespace MatrixParser {
 
-// 1. 海关安检机 (Sniffer)
 bool isMatrixExpression(const nlohmann::json& ast) {
     if (!ast.is_array() || ast.empty() || !ast[0].is_string()) return false;
     
@@ -35,7 +34,7 @@ bool isMatrixExpression(const nlohmann::json& ast) {
     return false;
 }
 
-// 2. 辅助函数：集中提取矩阵维度
+// 辅助函数：提取矩阵维度
 static std::pair<int, int> getMatrixDim(const nlohmann::json& node) {
     if (node.is_string()) {
         std::string s = node.get<std::string>();
@@ -54,35 +53,51 @@ static std::pair<int, int> getMatrixDim(const nlohmann::json& node) {
     return {0, 0};
 }
 
-// 3. 辅助函数：净化流水线 (拦截伪装的平级算子，完成上标缝合)
+// 辅助函数：拦截自定义的算子符号
 static std::vector<std::string> getCleanArgs(const nlohmann::json& ast, bool isRad, bool preferExact, bool& hasDMS) {
     std::vector<std::string> args;
     for (size_t i = 1; i < ast.size(); ++i) {
         
-        // 1. 拦截你之前设计的平级伪装算子 (TranOp, InvOp 等)
+        // 识别自定义符号
         if (ast[i].is_string()) {
             std::string s = ast[i].get<std::string>();
-            if (!args.empty()) { // 确保前面有矩阵
+            if (!args.empty()) {
                 if (s == "TranOp") { args.back() = "tran(" + args.back() + ")"; continue; }
                 if (s == "ConjTranOp") { args.back() = "trn(" + args.back() + ")"; continue; }
                 if (s == "InvOp") { args.back() = "inv(" + args.back() + ")"; continue; }
-            }
-        }
-        
-        // 2. 拦截我们新增的泛型乘方替身 (MatPowOp)
-        if (ast[i].is_array() && ast[i].size() >= 3 && ast[i][0] == "Power" && 
-            ast[i][1].is_string() && ast[i][1].get<std::string>() == "MatPowOp") {
-            if (!args.empty()) {
-                bool dummy = false;
-                std::string expStr = parseAST(ast[i][2], isRad, preferExact, dummy).get_basic()->__str__();
-                replaceAll(expStr, "**", "^");
                 
-                args.back() = "(" + args.back() + ") ^ (" + expStr + ")";
-                continue; // 缝合成功，跳过当前循环
+                // 识别 MatPowOp 以及它后面的指数
+                if (s == "MatPowOp") {
+                    // 确保是否包含指数
+                    if (i + 1 < ast.size()) {
+                        bool dummy = false;
+                        
+                        std::string expStr = parseAST(ast[i + 1], isRad, preferExact, dummy).get_basic()->__str__();
+                        replaceAll(expStr, "**", "^");
+                        
+                        // 乘方表达式
+                        args.back() = "(" + args.back() + ") ^ (" + expStr + ")";
+                        
+                        // 跳过下一个节点
+                        ++i; 
+                    }
+                    continue; 
+                }
             }
         }
         
-        // 3. 常规节点净化
+        // 兜底：如果 MathLive 把它解析成了函数数组 ["MatPowOp", 2]
+        if (ast[i].is_array() && !ast[i].empty() && ast[i][0] == "MatPowOp") {
+             if (ast[i].size() >= 2 && !args.empty()) {
+                  bool dummy = false;
+                  std::string expStr = parseAST(ast[i][1], isRad, preferExact, dummy).get_basic()->__str__();
+                  replaceAll(expStr, "**", "^");
+                  args.back() = "(" + args.back() + ") ^ (" + expStr + ")";
+                  continue;
+             }
+        }
+
+        // 常规节点净化
         bool dummy = false;
         std::string s = parseAST(ast[i], isRad, preferExact, dummy).get_basic()->__str__();
         replaceAll(s, "MAGICMAT", ""); 
@@ -91,11 +106,11 @@ static std::vector<std::string> getCleanArgs(const nlohmann::json& ast, bool isR
     return args;
 }
 
-// 4. 矩阵核心调度中心 (Dispatcher)
+// 矩阵核心调度中心
 SymEngine::Expression handle(const nlohmann::json& ast, bool isRad, bool preferExact, bool& hasDMS) {
     std::string op = ast[0].get<std::string>();
     
-    // 一键获取所有彻底净化好的参数字符串！
+    // 一键获取所有彻底净化好的参数字符串
     auto args = getCleanArgs(ast, isRad, preferExact, hasDMS);
 
     // 单参数算子
