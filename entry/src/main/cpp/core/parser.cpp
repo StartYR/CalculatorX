@@ -221,18 +221,24 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
 
         // 拦截 Tuple：解决隐式乘法和特殊算子
         if (op == "Tuple") {
-            if (ast.size() == 4 && ast[2].is_string()) {
-                std::string mid = ast[2].get<std::string>();
-                if (mid == "Kronecker") { 
-                    std::string arg1 = getGiacStr(ast[1]);
-                    std::string arg2 = getGiacStr(ast[3]);
-                    // 组装 Giac 的 kronecker 指令，不需要降维！
-                    return Expression(SymEngine::symbol("MAGICMATkron(" + arg1 + ", " + arg2 + ")"));
-                }
-            }
+//            if (ast.size() == 4 && ast[2].is_string()) {
+//                std::string mid = ast[2].get<std::string>();
+//                if (mid == "Kronecker") { 
+//                    std::string arg1 = getGiacStr(ast[1]);
+//                    std::string arg2 = getGiacStr(ast[3]);
+//                    // 组装 Giac 的 kronecker 指令，不需要降维！
+//                    return Expression(SymEngine::symbol("MAGICMATkron(" + arg1 + ", " + arg2 + ")"));
+//                }
+//            }
             // 隐式矩阵乘法 (Matrix1 Matrix2) -> 强制转为星号相乘并保序
             if (ast.size() == 3) {
-                return Expression(SymEngine::symbol("(" + getGiacStr(ast[1]) + " * " + getGiacStr(ast[2]) + ")"));
+                // 1. 如果是矩阵隐式相乘：强制转为星号相乘，并套上 MAGICMAT 触发引擎计算与渲染
+                if (ast.dump().find("Matrix") != std::string::npos || ast.dump().find("I_upright_") != std::string::npos) {
+                    return Expression(SymEngine::symbol("MAGICMAT(" + getGiacStr(ast[1]) + " * " + getGiacStr(ast[2]) + ")"));
+                }
+                
+                // 2. 如果是普通数字或代数变量的隐式乘法（如 2x）：直接走 SymEngine 原生乘法运算
+                return parseAST(ast[1], isRad, preferExact, hasDMS) * parseAST(ast[2], isRad, preferExact, hasDMS);
             }
         }
         // 拦截上标：转置与共轭转置
@@ -302,21 +308,21 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
         }
         
         if (op == "Multiply") {
-            // 拦截 MathLive 识别的算子: ["Multiply", "Kronecker", Arg1, Arg2]
-            if (ast.size() == 4 && ast[1].is_string()) {
-                std::string midStr = ast[1].get<std::string>();
-                if (midStr == "Kronecker") {
-                    auto getGiacStrLocal = [&](const json& node) {
-                        bool dummy = false;
-                        std::string s = parseAST(node, isRad, preferExact, dummy).get_basic()->__str__();
-                        replaceAll(s, "MAGICMAT", ""); return s;
-                    };
-                    std::string arg1 = getGiacStrLocal(ast[2]);
-                    std::string arg2 = getGiacStrLocal(ast[3]);
-                    
-                    return Expression(SymEngine::symbol("MAGICMATkron(" + arg1 + ", " + arg2 + ")"));
-                }
-            }
+//            // 拦截 MathLive 识别的算子: ["Multiply", "Kronecker", Arg1, Arg2]
+//            if (ast.size() == 4 && ast[1].is_string()) {
+//                std::string midStr = ast[1].get<std::string>();
+//                if (midStr == "Kronecker") {
+//                    auto getGiacStrLocal = [&](const json& node) {
+//                        bool dummy = false;
+//                        std::string s = parseAST(node, isRad, preferExact, dummy).get_basic()->__str__();
+//                        replaceAll(s, "MAGICMAT", ""); return s;
+//                    };
+//                    std::string arg1 = getGiacStrLocal(ast[2]);
+//                    std::string arg2 = getGiacStrLocal(ast[3]);
+//                    
+//                    return Expression(SymEngine::symbol("MAGICMATkron(" + arg1 + ", " + arg2 + ")"));
+//                }
+//            }
             
             // 矩阵与单位矩阵的普通乘法旁路
             if (ast.dump().find("Matrix") != std::string::npos || ast.dump().find("I_upright_") != std::string::npos) {
