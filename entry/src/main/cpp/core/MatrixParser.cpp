@@ -54,10 +54,35 @@ static std::pair<int, int> getMatrixDim(const nlohmann::json& node) {
     return {0, 0};
 }
 
-// 3. 辅助函数：净化流水线 (递归解析子节点并剥离 MAGICMAT 壳)
+// 3. 辅助函数：净化流水线 (拦截伪装的平级算子，完成上标缝合)
 static std::vector<std::string> getCleanArgs(const nlohmann::json& ast, bool isRad, bool preferExact, bool& hasDMS) {
     std::vector<std::string> args;
     for (size_t i = 1; i < ast.size(); ++i) {
+        
+        // 1. 拦截你之前设计的平级伪装算子 (TranOp, InvOp 等)
+        if (ast[i].is_string()) {
+            std::string s = ast[i].get<std::string>();
+            if (!args.empty()) { // 确保前面有矩阵
+                if (s == "TranOp") { args.back() = "tran(" + args.back() + ")"; continue; }
+                if (s == "ConjTranOp") { args.back() = "trn(" + args.back() + ")"; continue; }
+                if (s == "InvOp") { args.back() = "inv(" + args.back() + ")"; continue; }
+            }
+        }
+        
+        // 2. 拦截我们新增的泛型乘方替身 (MatPowOp)
+        if (ast[i].is_array() && ast[i].size() >= 3 && ast[i][0] == "Power" && 
+            ast[i][1].is_string() && ast[i][1].get<std::string>() == "MatPowOp") {
+            if (!args.empty()) {
+                bool dummy = false;
+                std::string expStr = parseAST(ast[i][2], isRad, preferExact, dummy).get_basic()->__str__();
+                replaceAll(expStr, "**", "^");
+                
+                args.back() = "(" + args.back() + ") ^ (" + expStr + ")";
+                continue; // 缝合成功，跳过当前循环
+            }
+        }
+        
+        // 3. 常规节点净化
         bool dummy = false;
         std::string s = parseAST(ast[i], isRad, preferExact, dummy).get_basic()->__str__();
         replaceAll(s, "MAGICMAT", ""); 
@@ -125,7 +150,7 @@ SymEngine::Expression handle(const nlohmann::json& ast, bool isRad, bool preferE
     }
 
     // 乘法 (包括普通 Multiply 和隐式 Tuple)
-    if (op == "Multiply" || (op == "Tuple" && ast.size() == 3)) {
+    if (op == "Multiply" || op == "Tuple")  {
         std::string res = "";
         for (size_t i = 0; i < args.size(); ++i) {
             res += args[i];
