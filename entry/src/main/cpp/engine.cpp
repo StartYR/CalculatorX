@@ -104,7 +104,7 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
             bool isIndefinite = (expr_str.find("MAGICINDEFintegrate") != std::string::npos);
             replaceAll(expr_str, "MAGICINDEFintegrate", "integrate");
             
-            std::string giacCmd = "latex(simplify(" + expr_str + "))";
+            std::string giacCmd = "latex(factor(" + expr_str + "))";
             std::string rawResult = evaluateWithGiac(giacCmd);
             
             if (rawResult.size() >= 2 && rawResult.front() == '"' && rawResult.back() == '"') {
