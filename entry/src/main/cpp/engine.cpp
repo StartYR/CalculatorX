@@ -98,11 +98,12 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
 
         if (isGlobalGiacOp) {
             replaceAll(expr_str, "MAGICMAT", "");
-            adaptSymEngineToGiac(expr_str);
             
             // 判断是否为不定积分
             bool isIndefinite = (expr_str.find("MAGICINDEFintegrate") != std::string::npos);
             replaceAll(expr_str, "MAGICINDEFintegrate", "integrate");
+            
+            adaptSymEngineToGiac(expr_str);
             
             std::string giacCmd = "latex(factor(" + expr_str + "))";
             std::string rawResult = evaluateWithGiac(giacCmd);
