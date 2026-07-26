@@ -77,11 +77,14 @@ export class EngineService {
       // .replace(/⨯/g, '\\operatorname{cross}')
       // .replace(/\\bullet\s?/g, '\\operatorname{dot}')
       // .replace(/\\otimes/g, '\\operatorname{Kronecker}')
+
       // 矩阵上标（转置、共轭、求逆、乘方）
       .replace(/\\end\{bmatrix\}\^\{\\mathrm\{T\}\}/g, '\\end{bmatrix}\\operatorname{TranOp}')
       .replace(/\\end\{bmatrix\}\^\{\\mathrm\{H\}\}/g, '\\end{bmatrix}\\operatorname{ConjTranOp}')
       .replace(/\\end\{bmatrix\}\^\{-1\}/g, '\\end{bmatrix}\\operatorname{InvOp}')
-      .replace(/\\end\{bmatrix\}\s*\^/g, '\\end{bmatrix}\\operatorname{MatPowOp}^')
+      // .replace(/\\end\{bmatrix\}\s*\^/g, '\\end{bmatrix}\\operatorname{MatPowOp}^')
+      .replace(/\\end\{bmatrix\}\s*\^\{([^}]+)\}/g, '\\end{bmatrix}\\operatorname{MatPowOp}\\left($1\\right)')
+      .replace(/\\end\{bmatrix\}\s*\^([a-zA-Z0-9.-]+)/g, '\\end{bmatrix}\\operatorname{MatPowOp}\\left($1\\right)')
 
       // 给矩阵套上自定义参数，绕过 MathLive 的类型识别
       .replace(/\\begin\{bmatrix\}/g, '\\operatorname{MWrap}\\left(\\begin{bmatrix}')
