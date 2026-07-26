@@ -36,9 +36,9 @@
 ## 🖼️ 视觉效果
 
 <div align="center">
-  <img src="docs/image/README/file-20260611144436467.webp" width="22%" />
-  <img src="docs/image/README/file-20260611144436443.webp" width="33%" />
-  <img src="docs/image/README/file-20260611152708145.webp" width="33%" />
+  <img src="https://img.startyi.com/CalcX/Home.webp" width="33%" />
+  <img src="https://img.startyi.com/CalcX/Advanced%20Math.webp" width="33%" />
+  <img src="https://img.startyi.com/CalcX/Matrix.webp" width="33%" />
   <p><em>（深浅模式切换 | 高等数学微积分计算 | 矩阵与向量运算）</em></p>
 </div>
 
