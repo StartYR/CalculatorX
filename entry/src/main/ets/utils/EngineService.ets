@@ -68,10 +68,15 @@ export class EngineService {
       // 伪装行列式与迹，绕过 MathLive 的严格语法与类型检查
       .replace(/\\det/g, '\\operatorname{Det}')
       .replace(/\\operatorname\{tr\}/g, '\\operatorname{Tr}')
+
+      // 绕过 MathLive 严格的 \times 类型检查，只要乘号挨着矩阵（包括带上标的矩阵），就将其隐形为隐式乘法
+      .replace(/\\times\s*(?=\\begin\{bmatrix\})/g, ' ')
+      .replace(/(\\end\{bmatrix\}(?:\^(?:\{[^}]+\}|[a-zA-Z0-9]))?)\s*\\times/g, '$1 ')
+
       // 利用 MathLive 的隐式乘法，降维叉乘和点乘（匹配 \bullet 及其可能自带的空格）
       // .replace(/⨯/g, '\\operatorname{cross}')
       // .replace(/\\bullet\s?/g, '\\operatorname{dot}')
-      .replace(/\\otimes/g, '\\operatorname{Kronecker}')
+      // .replace(/\\otimes/g, '\\operatorname{Kronecker}')
       // 矩阵上标防摧毁拦截！将转置、共轭、求逆伪装成平级算子
       // .replace(/\\end\{bmatrix\}\^\{\\mathrm\{T\}\}/g, '\\end{bmatrix}\\operatorname{TranOp}')
       // .replace(/\\end\{bmatrix\}\^\{\\mathrm\{H\}\}/g, '\\end{bmatrix}\\operatorname{ConjTranOp}')
