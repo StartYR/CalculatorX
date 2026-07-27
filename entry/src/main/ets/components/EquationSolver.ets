@@ -390,9 +390,11 @@ export struct EquationSolver {
       .width('100%')
       .height('55%') // 键盘总高度
       .backgroundColor($r('sys.color.comp_background_primary'))
+      .borderRadius(24)
       .padding({ bottom: this.navBarHeight - 8 })
     }
     .width('100%')
     .height('100%')
+    .backgroundColor($r('sys.color.comp_background_tertiary'))
   }
 }
