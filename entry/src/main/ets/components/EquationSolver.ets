@@ -28,14 +28,14 @@ import {
 // Shift
 const topShiftButtons: Array<string | Resource> = [
   '', '', '', '', '', '',
-  icon_abs, icon_sqrtx, icon_power, 'e', 'm', 'n',
+  icon_abs, icon_sqrtx, icon_power, 'i', 'm', 'n',
    'sin⁻¹', 'cos⁻¹', 'tan⁻¹', 'a', 'b', 'c'
 ];
 
 // 顶部功能区
 const topButtons: Array<string | Resource> = [
   '⇧Shift', 'R/D', '⇦', '⇨', '(', ')',
-  icon_fraction, icon_sqrt, icon_power2, 'π','log', 'ln',
+  icon_fraction, icon_sqrt, icon_power2, 'e','log', 'ln',
    'sin', 'cos', 'tan', 'x', 'y', 'z'
 ];
 
@@ -44,8 +44,29 @@ const bottomButtons: Array<string | Resource> = [
   '7', '8', '9', icon_backspace, 'AC',
   '4', '5', '6', '×', '÷',
   '1', '2', '3', '+', '−',
-  '.', '0', icon_exp, '=', 'EXE',
+  '.', '0', 'π', '=', 'EXE',
 ];
+
+// ================= 按键特征处理 =================
+// 字体颜色
+function getLocalFontColor(btn: string | Resource): ResourceColor {
+  if (btn === 'π') return getFontColor('0');
+  if (btn === '=') return getFontColor('+');
+  return getFontColor(btn);
+}
+
+// 背景颜色
+function getLocalBgColor(btn: string | Resource, isShift: boolean): ResourceColor {
+  if (btn === 'π') return getBgColor('0', false);
+  if (btn === '=') return getBgColor('+', false);
+  return getBgColor(btn, isShift);
+}
+
+// 字体大小
+function getLocalFontSize(btn: string | Resource): ResourceColor {
+  if (btn === 'π') return getFontSize('0');
+  return getFontSize(btn);
+}
 
 // ================= 键盘组件 =================
 @Component
@@ -82,14 +103,14 @@ struct TopKeyItem {
           if (typeof topShiftButtons[this.btnIndex] === 'string') {
             Text(topShiftButtons[this.btnIndex] as string)
               .fontFamily(getFontFamily(topShiftButtons[this.btnIndex]))
-              .fontSize(15)
+              .fontSize(17)
               .fontColor('#ffac8100')
               .textAlign(TextAlign.Center)
               .width('100%')
           } else {
             Image(topShiftButtons[this.btnIndex] as Resource)
-              .width(24)
-              .height(24)
+              .width(30)
+              .height(30)
               .fillColor('#ffac8100')
               .objectFit(ImageFit.Contain)
           }
@@ -109,9 +130,9 @@ struct TopKeyItem {
         if (typeof this.btn === 'string') {
           Text(this.btn)
             .fontFamily(getFontFamily(this.btn))
-            .fontSize(getFontSize(this.btn))
+            .fontSize(getLocalFontSize(this.btn))
             .fontWeight(FontWeight.Medium)
-            .fontColor(getFontColor(this.btn))
+            .fontColor(getLocalFontColor(this.btn))
         } else {
           Image(this.btn)
             .width(36)
@@ -124,7 +145,7 @@ struct TopKeyItem {
       .width('100%')
       .layoutWeight(1)
       .padding({ left: 2, right: 2, top: 0, bottom: 0 })
-      .backgroundColor(getBgColor(this.btn, this.isShift))
+      .backgroundColor(getLocalBgColor(this.btn, this.isShift))
       .shadow(ShadowStyle.OUTER_DEFAULT_SM)
       .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
       .borderColor($r('app.color.btn_highlight'))
@@ -216,9 +237,9 @@ struct BottomKeyItem {
       if (typeof this.btn === 'string') {
         Text(this.btn)
           .fontFamily(getFontFamily(this.btn))
-          .fontSize(getFontSize(this.btn))
+          .fontSize(getLocalFontSize(this.btn))
           .fontWeight(FontWeight.Medium)
-          .fontColor(getFontColor(this.btn))
+          .fontColor(getLocalFontColor(this.btn))
       } else {
         Image(this.btn)
           .width(48)
@@ -231,7 +252,7 @@ struct BottomKeyItem {
     .width('100%')
     .height('100%')
     .padding({ left: 4, right: 4 })
-    .backgroundColor(getBgColor(this.btn, false))
+    .backgroundColor(getLocalBgColor(this.btn, false))
     .shadow(ShadowStyle.OUTER_DEFAULT_SM)
     .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
     .borderColor($r('app.color.btn_highlight'))
@@ -338,7 +359,7 @@ export struct EquationSolver {
         }
         .rowsTemplate('33fr 40fr 40fr')
         .columnsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
-        .rowsGap(4)
+        .rowsGap(6)
         .columnsGap(4)
         .padding({ left: 10, right: 10, top: 6, bottom: 6 })
         .clip(false)
