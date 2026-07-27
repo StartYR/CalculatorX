@@ -55,7 +55,7 @@ function getLocalFontColor(btn: string | Resource): ResourceColor {
   return getFontColor(btn);
 }
 
-// 背景颜色
+// 按钮颜色
 function getLocalBgColor(btn: string | Resource, isShift: boolean): ResourceColor {
   if (btn === 'π') return getBgColor('0', false);
   if (btn === '=') return getBgColor('+', false);
@@ -63,7 +63,7 @@ function getLocalBgColor(btn: string | Resource, isShift: boolean): ResourceColo
 }
 
 // 字体大小
-function getLocalFontSize(btn: string | Resource): ResourceColor {
+function getLocalFontSize(btn: string | Resource): number {
   if (btn === 'π') return getFontSize('0');
   return getFontSize(btn);
 }
