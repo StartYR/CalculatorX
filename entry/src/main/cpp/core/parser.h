@@ -5,11 +5,12 @@
  * @author 易睿 (Yi Rui)
  * @date 2026
  */
+
 #pragma once
 #include "json.hpp"
 #include <symengine/expression.h>
 
-// 1. 定义计算模式枚举
+// 1. 计算模式枚举
 enum class CalcMode {
     STANDARD = 0,
     MATRIX = 1,
@@ -17,7 +18,7 @@ enum class CalcMode {
     GRAPHING = 3
 };
 
-// 2. 状态上下文结构体
+// 2. 全局状态上下文结构体 (指令下发 + 状态收集)
 struct CalcContext {
     bool isRad = false;
     bool preferExact = false;
@@ -25,7 +26,5 @@ struct CalcContext {
     CalcMode mode = CalcMode::STANDARD;
 };
 
-// 3. 全局入口 (engine.cpp 调用)
+// 3. 全局解析器入口
 SymEngine::Expression parseAST(const nlohmann::json& ast, CalcContext& ctx);
-
-SymEngine::Expression parseAST(const nlohmann::json& ast, bool isRad, bool preferExact, bool& hasDMS);

@@ -20,8 +20,8 @@
 using json = nlohmann::json;
 using SymEngine::Expression;
 
-// 矩阵与数组转 Giac 字符串的核心解析器
-static std::string parseListToGiacString(const json& listNode, bool isRad, bool preferExact, bool& hasDMS) {
+// 矩阵与数组转 Giac 字符串的核心解析器 (统一接收 ctx)
+static std::string parseListToGiacString(const json& listNode, CalcContext& ctx) {
     if (!listNode.is_array() || listNode.empty() || listNode[0] != "List") return "";
     
     std::string result = "[";
@@ -30,10 +30,10 @@ static std::string parseListToGiacString(const json& listNode, bool isRad, bool 
         
         if (listNode[i].is_array() && listNode[i][0] == "List") {
             // 遇到嵌套数组（比如矩阵的行），递归深扒
-            result += parseListToGiacString(listNode[i], isRad, preferExact, hasDMS);
+            result += parseListToGiacString(listNode[i], ctx);
         } else {
             // 遇到具体的数字或公式（叶子节点），交回给 parseAST 解析，然后转成字符串
-            Expression elementExpr = parseAST(listNode[i], isRad, preferExact, hasDMS);
+            Expression elementExpr = parseAST(listNode[i], ctx);
             std::string elemStr = elementExpr.get_basic()->__str__();
             replaceAll(elemStr, "**", "^"); // 符号适配
             replaceAll(elemStr, "I", "i");
@@ -44,12 +44,36 @@ static std::string parseListToGiacString(const json& listNode, bool isRad, bool 
     return result;
 }
 
+Expression parseAST(const json& ast, CalcContext& ctx) {
+    
+    // 1. 强制精确求值，并允许向下级传播 DMS 副作用 (如 Sqrt, Power)
+    auto parseExact = [&](const json& node) {
+        bool oldExact = ctx.preferExact;
+        ctx.preferExact = true;
+        Expression res = parseAST(node, ctx);
+        ctx.preferExact = oldExact; // 恢复之前的精确状态
+        return res;
+    };
 
-static SymEngine::Expression parseASTInternal(const json& ast, bool isRad, bool preferExact, bool& hasDMS, CalcMode mode) {
+    // 2. 强制精确求值，但物理隔离（忽略）子节点的 DMS 污染 (如 Complex, Integrate)
+    auto parseExactIsolateDMS = [&](const json& node) {
+        bool oldExact = ctx.preferExact;
+        bool oldDMS = ctx.hasDMS;
+        ctx.preferExact = true;
+        Expression res = parseAST(node, ctx);
+        ctx.preferExact = oldExact;
+        ctx.hasDMS = oldDMS; // 屏蔽下层的 DMS 举旗行为，恢复原来的状态
+        return res;
+    };
+
+    // ==========================================
+    // 常数与基础数字解析
+    // ==========================================
     if (ast.is_number()) {
         double val = ast.get<double>();
         if (std::floor(val) == val) return Expression(static_cast<long>(val));
-        if (preferExact) {
+        
+        if (ctx.preferExact) { // 👈 统一使用上下文配置
             std::string s = ast.dump(); 
             size_t dot = s.find('.');
             if (dot != std::string::npos && s.find('e') == std::string::npos && s.find('E') == std::string::npos) {
@@ -124,25 +148,33 @@ static SymEngine::Expression parseASTInternal(const json& ast, bool isRad, bool 
         } catch (...) { throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid num object format"); }
     }
     
+    // ==========================================
+    // AST 数组节点解析与路由分发
+    // ==========================================
     if (ast.is_array() && !ast.empty() && ast[0].is_string()) {
         
-        // 检测是否为矩阵
-        if (mode == CalcMode::MATRIX && MatrixParser::isMatrixExpression(ast)) {
-            return MatrixParser::handle(ast, isRad, preferExact, hasDMS);
+        // 🚨 终极拦截：只有前端明确是矩阵模式时，才允许进行矩阵判断！
+        if (ctx.mode == CalcMode::MATRIX && MatrixParser::isMatrixExpression(ast)) {
+            return MatrixParser::handle(ast, ctx);
         }
         
         std::string op = ast[0].get<std::string>();
 
+        // --- 度分秒 (DMS) 拦截锁 ---
         if (op == "dms" || op == "Dms") {
+            // 矩阵、解方程等非标准模式下，彻底封杀 DMS
+            if (ctx.mode != CalcMode::STANDARD) {
+                throw CalcException(CalcErrorCode::SYNTAX_ERROR, "DMS is only available in Standard Mode");
+            }
+            
             if (ast.size() == 4) {
-                bool dummy = false; 
-                Expression d = parseAST(ast[1], isRad, true, dummy);
-                Expression m = parseAST(ast[2], isRad, true, dummy);
-                Expression s = parseAST(ast[3], isRad, true, dummy);
+                Expression d = parseExactIsolateDMS(ast[1]);
+                Expression m = parseExactIsolateDMS(ast[2]);
+                Expression s = parseExactIsolateDMS(ast[3]);
                 try {
                     Expression total_deg = d + m / Expression(60) + s / Expression(3600);
-                    hasDMS = true;
-                    if (isRad) {
+                    ctx.hasDMS = true; // 👈 举起 DMS 小红旗
+                    if (ctx.isRad) {
                         return total_deg * Expression(SymEngine::pi) / Expression(180);
                     } else {
                         return total_deg;
@@ -155,69 +187,59 @@ static SymEngine::Expression parseASTInternal(const json& ast, bool isRad, bool 
         }
 
         if (op == "Delimiter") {
-            if (ast.size() > 1) return parseAST(ast[1], isRad, preferExact, hasDMS);
+            if (ast.size() > 1) return parseAST(ast[1], ctx);
             return Expression(0);
         }
         
-        
-        // 矩阵
-        auto getGiacStr = [&](const json& node) {
-            bool dummy = false;
-            std::string s = parseAST(node, isRad, preferExact, dummy).get_basic()->__str__();
-            replaceAll(s, "MAGICMAT", ""); return s;
-        };
-        // 遇到矩阵，不再立刻计算，而是变成一个带有 MAGICMAT 标记的特殊符号
+        // 带有 MAGICMAT 标记的特殊矩阵符号交由 Giac
         if (op == "Matrix" && ast.size() >= 2) {
-            std::string giacMatrixStr = parseListToGiacString(ast[1], isRad, preferExact, hasDMS);
+            std::string giacMatrixStr = parseListToGiacString(ast[1], ctx);
             return Expression(SymEngine::symbol("MAGICMAT" + giacMatrixStr));
         }
 
         // 拦截 Tuple：解决隐式乘法和特殊算子
         if (op == "Tuple") {
-            // 隐式乘法 (Matrix1 Matrix2) -> 强制转为星号相乘并保序
             if (ast.size() == 3) {
-                return parseAST(ast[1], isRad, preferExact, hasDMS) * parseAST(ast[2], isRad, preferExact, hasDMS);
+                return parseAST(ast[1], ctx) * parseAST(ast[2], ctx);
             }
         }
-        
         
         // 复数 (Complex)
         if (op == "Complex") {
             if (ast.size() == 3) {
-                bool dummy = false;
-                Expression real_part = parseAST(ast[1], isRad, true, dummy);
-                Expression imag_part = parseAST(ast[2], isRad, true, dummy);
-                // 实部 + 虚部 * i
+                Expression real_part = parseExactIsolateDMS(ast[1]);
+                Expression imag_part = parseExactIsolateDMS(ast[2]);
                 return real_part + imag_part * Expression(SymEngine::I);
             }
             throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid Complex format");
         }
         
+        // 四则运算
         if (op == "Add") {
             Expression sum(0);
-            for (size_t i = 1; i < ast.size(); ++i) sum += parseAST(ast[i], isRad, preferExact, hasDMS);
+            for (size_t i = 1; i < ast.size(); ++i) sum += parseAST(ast[i], ctx);
             return sum;
         }
         if (op == "Subtract" || op == "Negate") {
-            if (ast.size() == 2) return -parseAST(ast[1], isRad, preferExact, hasDMS);
-            return parseAST(ast[1], isRad, preferExact, hasDMS) - parseAST(ast[2], isRad, preferExact, hasDMS);
+            if (ast.size() == 2) return -parseAST(ast[1], ctx);
+            return parseAST(ast[1], ctx) - parseAST(ast[2], ctx);
         }
-        
         if (op == "Multiply") {
             Expression prod(1);
-            for (size_t i = 1; i < ast.size(); ++i) prod *= parseAST(ast[i], isRad, preferExact, hasDMS);
+            for (size_t i = 1; i < ast.size(); ++i) prod *= parseAST(ast[i], ctx);
             return prod;
         }
         if (op == "Divide" || op == "Rational") {
-            return parseAST(ast[1], isRad, preferExact, hasDMS) / parseAST(ast[2], isRad, preferExact, hasDMS);
+            return parseAST(ast[1], ctx) / parseAST(ast[2], ctx);
         }
 
-        if (op == "Sqrt") return SymEngine::sqrt(parseAST(ast[1], isRad, true, hasDMS));
-        if (op == "Root") return SymEngine::pow(parseAST(ast[1], isRad, true, hasDMS), Expression(1) / parseAST(ast[2], isRad, true, hasDMS));
-        if (op == "Abs") return SymEngine::abs(parseAST(ast[1], isRad, true, hasDMS));
+        // 基础数学函数
+        if (op == "Sqrt") return SymEngine::sqrt(parseExact(ast[1]));
+        if (op == "Root") return SymEngine::pow(parseExact(ast[1]), Expression(1) / parseExact(ast[2]));
+        if (op == "Abs") return SymEngine::abs(parseExact(ast[1]));
         if (op == "Power") {
-            Expression base = parseAST(ast[1], isRad, true, hasDMS);
-            Expression exp = parseAST(ast[2], isRad, true, hasDMS);
+            Expression base = parseExact(ast[1]);
+            Expression exp = parseExact(ast[2]);
             try {
                 if (SymEngine::is_a<SymEngine::Integer>(*base.get_basic()) && 
                     SymEngine::is_a<SymEngine::Integer>(*exp.get_basic())) {
@@ -238,9 +260,8 @@ static SymEngine::Expression parseASTInternal(const json& ast, bool isRad, bool 
         // === 代数与数论：最大公约数、最小公倍数、求余数 ===
         if (op == "GCD" || op == "LCM" || op == "Lcm" || op == "lcm" || op == "Mod" || op == "Modulo") {
             if (ast.size() == 3) {
-                bool dummy = false;
-                Expression a = parseAST(ast[1], isRad, true, dummy);
-                Expression b = parseAST(ast[2], isRad, true, dummy);
+                Expression a = parseExactIsolateDMS(ast[1]);
+                Expression b = parseExactIsolateDMS(ast[2]);
                 
                 std::string aStr = a.get_basic()->__str__();
                 std::string bStr = b.get_basic()->__str__();
@@ -251,19 +272,20 @@ static SymEngine::Expression parseASTInternal(const json& ast, bool isRad, bool 
                 std::string giacFunc;
                 if (op == "GCD") giacFunc = "gcd";
                 else if (op == "LCM" || op == "Lcm" || op == "lcm") giacFunc = "lcm";
-                else giacFunc = "irem"; // Giac 的多态求余指令，支持数字和多项式
+                else giacFunc = "irem";
 
-                // 【重构战役一】：只做翻译，不当场计算。组装为符号节点交由顶层处理。
                 return Expression(SymEngine::symbol(giacFunc + "(" + aStr + ", " + bStr + ")"));
             }
             throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid format for GCD/LCM/Mod");
         }
+        
         if (op == "Percent") {
-             return parseAST(ast[1], isRad, true, hasDMS) / Expression(100);
+             return parseExact(ast[1]) / Expression(100);
         }
+        
         if (op == "Factorial") {
             if (ast.size() == 2) {
-                Expression arg = parseAST(ast[1], isRad, true, hasDMS);
+                Expression arg = parseExact(ast[1]);
                 try {
                     double val = SymEngine::eval_double(arg);
                     if (val < 0 && std::floor(val) == val) throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Negative Factorial");
@@ -277,10 +299,11 @@ static SymEngine::Expression parseASTInternal(const json& ast, bool isRad, bool 
             }
             throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid Factorial length.");
         }
+        
         if (op == "nCr") {
             if (ast.size() == 3) {
-                Expression n = parseAST(ast[1], isRad, true, hasDMS);
-                Expression r = parseAST(ast[2], isRad, true, hasDMS);
+                Expression n = parseExact(ast[1]);
+                Expression r = parseExact(ast[2]);
                 try {
                     double n_val = SymEngine::eval_double(n), r_val = SymEngine::eval_double(r);
                     if (n_val < 0 || r_val < 0 || r_val > n_val || std::floor(n_val) != n_val || std::floor(r_val) != r_val) throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Invalid args");
@@ -293,10 +316,11 @@ static SymEngine::Expression parseASTInternal(const json& ast, bool isRad, bool 
                 return Expression(SymEngine::gamma((n + Expression(1)).get_basic())) / (Expression(SymEngine::gamma((r + Expression(1)).get_basic())) * Expression(SymEngine::gamma((n - r + Expression(1)).get_basic())));
             }
         }
+        
         if (op == "nPr") {
             if (ast.size() == 3) {
-                Expression n = parseAST(ast[1], isRad, true, hasDMS);
-                Expression r = parseAST(ast[2], isRad, true, hasDMS);
+                Expression n = parseExact(ast[1]);
+                Expression r = parseExact(ast[2]);
                 try {
                     double n_val = SymEngine::eval_double(n), r_val = SymEngine::eval_double(r);
                     if (n_val < 0 || r_val < 0 || r_val > n_val || std::floor(n_val) != n_val || std::floor(r_val) != r_val) throw CalcException(CalcErrorCode::DOMAIN_ERROR, "Invalid args");
@@ -310,11 +334,11 @@ static SymEngine::Expression parseASTInternal(const json& ast, bool isRad, bool 
             }
         }
 
+        // === 三角函数 ===
         if (op == "Sin" || op == "Cos" || op == "Tan") {
             if (ast.size() < 2) return Expression(SymEngine::symbol("Error"));
-            bool childDMS = false; 
-            Expression arg = parseAST(ast[1], isRad, true, childDMS); 
-            if (!isRad) arg = arg * Expression(SymEngine::pi) / Expression(180);
+            Expression arg = parseExactIsolateDMS(ast[1]); 
+            if (!ctx.isRad) arg = arg * Expression(SymEngine::pi) / Expression(180);
             if (op == "Sin") return SymEngine::sin(arg);
             if (op == "Cos") return SymEngine::cos(arg);
             if (op == "Tan") return SymEngine::tan(arg);
@@ -322,40 +346,39 @@ static SymEngine::Expression parseASTInternal(const json& ast, bool isRad, bool 
 
         if (op == "Arcsin" || op == "Arccos" || op == "Arctan") {
             if (ast.size() < 2) return Expression(SymEngine::symbol("Error"));
-            bool childDMS = false; 
-            Expression arg = parseAST(ast[1], isRad, true, childDMS); 
+            Expression arg = parseExactIsolateDMS(ast[1]); 
             Expression res;
             if (op == "Arcsin") res = SymEngine::asin(arg);
             else if (op == "Arccos") res = SymEngine::acos(arg);
             else if (op == "Arctan") res = SymEngine::atan(arg);
             
-            if (!isRad) res = res * Expression(180) / Expression(SymEngine::pi);
-            hasDMS = true; 
+            if (!ctx.isRad) res = res * Expression(180) / Expression(SymEngine::pi);
+            ctx.hasDMS = true; 
             return res;
         }
         
-        if (op == "Ln") return SymEngine::log(parseAST(ast[1], isRad, true, hasDMS));
+        // === 对数函数 ===
+        if (op == "Ln") return SymEngine::log(parseExact(ast[1]));
         if (op == "Log") {
-            if (ast.size() == 3) return SymEngine::log(parseAST(ast[1], isRad, true, hasDMS), parseAST(ast[2], isRad, true, hasDMS));
-            return SymEngine::log(parseAST(ast[1], isRad, true, hasDMS), Expression(10));
+            if (ast.size() == 3) return SymEngine::log(parseExact(ast[1]), parseExact(ast[2]));
+            return SymEngine::log(parseExact(ast[1]), Expression(10));
         }
         if (op == "Log10" || op == "Lg") {
-            Expression num(SymEngine::log(parseAST(ast[1], isRad, true, hasDMS).get_basic()));
+            Expression num(SymEngine::log(parseExact(ast[1]).get_basic()));
             Expression den(SymEngine::log(Expression(10).get_basic()));
             return num / den;
         }
         
+        // === 求和与连乘 ===
         if (op == "Sum" || op == "Product") {
             if (ast.size() == 3 && ast[2].is_array() && ast[2].size() >= 4 && ast[2][0] == "Tuple") {
                 std::string var_name = "x";
                 if (ast[2][1].is_string()) var_name = ast[2][1].get<std::string>();
                 
-                // 解析表达式与上下限
-                Expression body = parseAST(ast[1], isRad, true, hasDMS);
-                Expression lower_expr = parseAST(ast[2][2], isRad, true, hasDMS);
-                Expression upper_expr = parseAST(ast[2][3], isRad, true, hasDMS);
+                Expression body = parseExactIsolateDMS(ast[1]);
+                Expression lower_expr = parseExactIsolateDMS(ast[2][2]);
+                Expression upper_expr = parseExactIsolateDMS(ast[2][3]);
                 
-                // 转换为字符串，供 Giac 识别
                 std::string exprStr = body.get_basic()->__str__();
                 std::string lowerStr = lower_expr.get_basic()->__str__();
                 std::string upperStr = upper_expr.get_basic()->__str__();
@@ -364,26 +387,20 @@ static SymEngine::Expression parseASTInternal(const json& ast, bool isRad, bool 
                 adaptSymEngineToGiac(lowerStr);
                 adaptSymEngineToGiac(upperStr);
                 
-                // 根据操作符选择对应的 Giac 函数
                 std::string giacFuncName = (op == "Sum") ? "sum" : "product";
                 
-                // 【重构战役一】：直接装箱返回，绕过局部计算
                 return Expression(SymEngine::symbol(giacFuncName + "(" + exprStr + ", " + var_name + ", " + lowerStr + ", " + upperStr + ")"));
             }
             throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid Sum/Product format");
         }
         
+        // === 求导 ===
         if (op == "diff" || op == "Diff") {
             if (ast.size() == 2) {
-                bool dummy = false;
-                Expression body = parseAST(ast[1], isRad, true, dummy);
-                
+                Expression body = parseExactIsolateDMS(ast[1]);
                 Expression raw_diff = Expression(body.get_basic()->diff(SymEngine::symbol("x")));
-                
                 std::string exprStr = body.get_basic()->__str__();
                 adaptSymEngineToGiac(exprStr);
-                
-                // 将求导(diff)与化简(simplify)指令给顶层 Giac 处理
                 return Expression(SymEngine::symbol("diff(" + exprStr + ", x)"));
             }
         }
@@ -396,10 +413,9 @@ static SymEngine::Expression parseASTInternal(const json& ast, bool isRad, bool 
                 std::string varStr = "x";
                 
                 if (funcNode.is_array() && funcNode.size() >= 3 && funcNode[0] == "Function") {
-                    bool dummy = false;
-                    Expression body = parseAST(funcNode[1], isRad, true, dummy);
+                    Expression body = parseExactIsolateDMS(funcNode[1]);
                     if (funcNode[2].is_string()) varStr = funcNode[2].get<std::string>();
-                    Expression targetExpr = parseAST(targetNode, isRad, true, dummy);
+                    Expression targetExpr = parseExactIsolateDMS(targetNode);
                     
                     std::string exprStr = body.get_basic()->__str__();
                     std::string targetStr = targetExpr.get_basic()->__str__();
@@ -410,7 +426,6 @@ static SymEngine::Expression parseASTInternal(const json& ast, bool isRad, bool 
                     replaceAll(exprStr, "E", "e");
                     replaceAll(targetStr, "E", "e");
                     
-                    // 不调 Giac，直接组装符号
                     return Expression(SymEngine::symbol("limit(" + exprStr + ", " + varStr + ", " + targetStr + ")"));
                 }
             }
@@ -421,19 +436,16 @@ static SymEngine::Expression parseASTInternal(const json& ast, bool isRad, bool 
         if (op == "Integrate") {
             if (ast.size() == 3) {
                 
-                // 路线 A：不定积分 (Indefinite Integration)
+                // 路线 A：不定积分
                 if (ast[2].is_string()) {
                     std::string var_name = ast[2].get<std::string>();
-                    bool dummy = false;
-                    Expression body = parseAST(ast[1], isRad, true, dummy);
+                    Expression body = parseExactIsolateDMS(ast[1]);
                     
                     try {
-                        // 1. 将 SymEngine 被积函数转为字符串，并进行语法适配
                         std::string exprStr = body.get_basic()->__str__();
                         replaceAll(exprStr, "**", "^");
                         replaceAll(exprStr, "E", "e");
                         
-                        // 组装不定积分符号
                         return Expression(SymEngine::symbol("MAGICINDEFintegrate(" + exprStr + ", " + var_name + ")"));
                         
                     } catch (...) {
@@ -441,17 +453,15 @@ static SymEngine::Expression parseASTInternal(const json& ast, bool isRad, bool 
                     }
                 }
                 
-                // 路线 B：定积分 (Definite Integration)
+                // 路线 B：定积分
                 else if (ast[2].is_array() && ast[2][0] == "Tuple") {
                     std::string var_name = "x";
                     if (ast[2].size() > 1 && ast[2][1].is_string()) var_name = ast[2][1].get<std::string>();
 
-                    bool dummy = false;
-                    Expression body = parseAST(ast[1], isRad, true, dummy);
-                    Expression lower_expr = parseAST(ast[2][2], isRad, true, dummy);
-                    Expression upper_expr = parseAST(ast[2][3], isRad, true, dummy);
+                    Expression body = parseExactIsolateDMS(ast[1]);
+                    Expression lower_expr = parseExactIsolateDMS(ast[2][2]);
+                    Expression upper_expr = parseExactIsolateDMS(ast[2][3]);
 
-                    // 💡 优化：将字符串解析提到 try 块外面，让双轨制引擎共享参数
                     std::string exprStr = body.get_basic()->__str__();
                     std::string lowerStr = lower_expr.get_basic()->__str__();
                     std::string upperStr = upper_expr.get_basic()->__str__();
@@ -460,7 +470,6 @@ static SymEngine::Expression parseASTInternal(const json& ast, bool isRad, bool 
                     replaceAll(lowerStr, "**", "^");
                     replaceAll(upperStr, "**", "^");
 
-                    // 【重构战役一】：里施算法与数值积分兜底已移交至 engine，这里仅作翻译！
                     return Expression(SymEngine::symbol("integrate(" + exprStr + ", " + var_name + ", " + lowerStr + ", " + upperStr + ")"));
                 }
             }
@@ -470,17 +479,4 @@ static SymEngine::Expression parseASTInternal(const json& ast, bool isRad, bool 
         return Expression(SymEngine::symbol("Unknown\\_" + op));
     }
     return Expression(SymEngine::symbol("Invalid\\_Node"));
-}
-
-// 暴露给 engine.cpp 的接口
-Expression parseAST(const json& ast, CalcContext& ctx) {
-    // 将结构体拆包传递给内部
-    Expression res = parseASTInternal(ast, ctx.isRad, ctx.preferExact, ctx.hasDMS, ctx.mode);
-    return res;
-}
-
-// 旧版递归的适配器接口
-Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS) {
-    // 递归子节点不再需要模式路由，直接按标准模式解析
-    return parseASTInternal(ast, isRad, preferExact, hasDMS, CalcMode::STANDARD);
 }

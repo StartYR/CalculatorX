@@ -54,7 +54,7 @@ static std::pair<int, int> getMatrixDim(const nlohmann::json& node) {
 }
 
 // 辅助函数：拦截自定义的算子符号
-static std::vector<std::string> getCleanArgs(const nlohmann::json& ast, bool isRad, bool preferExact, bool& hasDMS) {
+static std::vector<std::string> getCleanArgs(const nlohmann::json& ast, CalcContext& ctx) {
     std::vector<std::string> args;
     for (size_t i = 1; i < ast.size(); ++i) {
         
@@ -70,9 +70,7 @@ static std::vector<std::string> getCleanArgs(const nlohmann::json& ast, bool isR
                 if (s == "MatPowOp") {
                     // 确保是否包含指数
                     if (i + 1 < ast.size()) {
-                        bool dummy = false;
-                        
-                        std::string expStr = parseAST(ast[i + 1], isRad, preferExact, dummy).get_basic()->__str__();
+                        std::string expStr = parseAST(ast[i + 1], ctx).get_basic()->__str__();
                         replaceAll(expStr, "**", "^");
                         
                         // 乘方表达式
@@ -89,8 +87,7 @@ static std::vector<std::string> getCleanArgs(const nlohmann::json& ast, bool isR
         // 兜底：如果 MathLive 把它解析成了函数数组 ["MatPowOp", 2]
         if (ast[i].is_array() && !ast[i].empty() && ast[i][0] == "MatPowOp") {
              if (ast[i].size() >= 2 && !args.empty()) {
-                  bool dummy = false;
-                  std::string expStr = parseAST(ast[i][1], isRad, preferExact, dummy).get_basic()->__str__();
+                  std::string expStr = parseAST(ast[i][1], ctx).get_basic()->__str__();
                   replaceAll(expStr, "**", "^");
                   args.back() = "(" + args.back() + ") ^ (" + expStr + ")";
                   continue;
@@ -98,8 +95,7 @@ static std::vector<std::string> getCleanArgs(const nlohmann::json& ast, bool isR
         }
 
         // 常规节点净化
-        bool dummy = false;
-        std::string s = parseAST(ast[i], isRad, preferExact, dummy).get_basic()->__str__();
+        std::string s = parseAST(ast[i], ctx).get_basic()->__str__();
         replaceAll(s, "MAGICMAT", ""); 
         args.push_back(s);
     }
@@ -107,11 +103,11 @@ static std::vector<std::string> getCleanArgs(const nlohmann::json& ast, bool isR
 }
 
 // 矩阵核心调度中心
-SymEngine::Expression handle(const nlohmann::json& ast, bool isRad, bool preferExact, bool& hasDMS) {
+SymEngine::Expression handle(const nlohmann::json& ast, CalcContext& ctx) {
     std::string op = ast[0].get<std::string>();
     
     // 一键获取所有彻底净化好的参数字符串
-    auto args = getCleanArgs(ast, isRad, preferExact, hasDMS);
+    auto args = getCleanArgs(ast, ctx);
 
     // 单参数算子
     if (op == "MyDet" || op == "Det") return SymEngine::Expression(SymEngine::symbol("MAGICMATdet(" + args[0] + ")"));

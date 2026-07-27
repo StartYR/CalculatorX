@@ -11,6 +11,7 @@
 
 #include <../include/json.hpp>
 #include <symengine/expression.h>
+#include "parser.h"
 
 namespace MatrixParser {
 
@@ -24,7 +25,7 @@ namespace MatrixParser {
     /**
      * @brief 矩阵专属处理器：集中处理加减乘及哈达玛积
      */
-    SymEngine::Expression handle(const nlohmann::json& ast, bool isRad, bool preferExact, bool& hasDMS);
+    SymEngine::Expression handle(const nlohmann::json& ast, CalcContext& ctx);
 
 } // namespace MatrixParser
 
