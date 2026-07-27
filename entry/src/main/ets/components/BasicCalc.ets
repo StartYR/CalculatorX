@@ -108,29 +108,34 @@ export struct BasicCalc {
         .height('45%')
         .width('100%')
 
-      // 基础键盘，占位 55%
-      Grid() {
-        ForEach(basicButtons, (btn: string | Resource) => {
-          GridItem() {
-            BasicKeyItem({
-              btn: btn,
-              onKeyPress: (b: string | Resource): void => { this.handleKeyPress(b); } // 修复 ArkTS 类型检测
-            })
-          }
-        })
+      Column() {
+        Grid() {
+          ForEach(basicButtons, (btn: string | Resource) => {
+            GridItem() {
+              BasicKeyItem({
+                btn: btn,
+                onKeyPress: (b: string | Resource): void => { this.handleKeyPress(b); }
+              })
+            }
+          })
+        }
+        .rowsTemplate('1fr 1fr 1fr 1fr 1fr')
+        .columnsTemplate('1fr 1fr 1fr 1fr')
+        .rowsGap(12)
+        .columnsGap(16)
+        .padding({ left: 16, right: 16, top: 16, bottom: 5 })
+        .clip(false)
+        .width('100%')
+        .height('100%')
       }
-      .rowsTemplate('1fr 1fr 1fr 1fr 1fr')
-      .columnsTemplate('1fr 1fr 1fr 1fr')
-      .rowsGap(14)
-      .columnsGap(12)
-      .padding({ left: 16, right: 16, top: 10, bottom: 5 })
-      .clip(false)
       .width('100%')
       .height('55%')
+      .backgroundColor($r('sys.color.comp_background_primary')) // 主背景色
+      .borderRadius(36)
+      .padding({ bottom: this.navBarHeight - 8 })
     }
     .width('100%')
     .height('100%')
-    .padding({ bottom: this.navBarHeight - 8 })
-    .backgroundColor($r('sys.color.comp_background_primary'))
+    .backgroundColor($r('sys.color.comp_background_tertiary'))
   }
 }
