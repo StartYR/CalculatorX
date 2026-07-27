@@ -45,7 +45,7 @@ static std::string parseListToGiacString(const json& listNode, bool isRad, bool 
 }
 
 
-Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS) {
+static SymEngine::Expression parseASTInternal(const json& ast, bool isRad, bool preferExact, bool& hasDMS, CalcMode mode) {
     if (ast.is_number()) {
         double val = ast.get<double>();
         if (std::floor(val) == val) return Expression(static_cast<long>(val));
@@ -127,7 +127,7 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
     if (ast.is_array() && !ast.empty() && ast[0].is_string()) {
         
         // 检测是否为矩阵
-        if (MatrixParser::isMatrixExpression(ast)) {
+        if (mode == CalcMode::MATRIX && MatrixParser::isMatrixExpression(ast)) {
             return MatrixParser::handle(ast, isRad, preferExact, hasDMS);
         }
         
@@ -470,4 +470,17 @@ Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS)
         return Expression(SymEngine::symbol("Unknown\\_" + op));
     }
     return Expression(SymEngine::symbol("Invalid\\_Node"));
+}
+
+// 暴露给 engine.cpp 的接口
+Expression parseAST(const json& ast, CalcContext& ctx) {
+    // 将结构体拆包传递给内部
+    Expression res = parseASTInternal(ast, ctx.isRad, ctx.preferExact, ctx.hasDMS, ctx.mode);
+    return res;
+}
+
+// 旧版递归的适配器接口
+Expression parseAST(const json& ast, bool isRad, bool preferExact, bool& hasDMS) {
+    // 递归子节点不再需要模式路由，直接按标准模式解析
+    return parseASTInternal(ast, isRad, preferExact, hasDMS, CalcMode::STANDARD);
 }

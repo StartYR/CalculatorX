@@ -22,8 +22,8 @@ using json = nlohmann::json;
 using SymEngine::Expression;
 
 static napi_value Calculate(napi_env env, napi_callback_info info) {
-    size_t argc = 3;
-    napi_value args[3] = {nullptr};
+    size_t argc = 2; // 0：算式，1：配置
+    napi_value args[2] = {nullptr};
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
 
     napi_valuetype valuetype0;
@@ -41,19 +41,23 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
     LOGI("[engine.cpp][输入通信] 成功接收原始 JSON 负载: %{public}s", json_str.c_str());
 //    LOGI("[IPC_RX] Received raw JSON payload: %{public}s", json_str.c_str());
     
+    // 获取对象属性
     bool isRad = false;
+    int32_t precision = 13; 
+    uint32_t mode = 0; // 默认 STANDARD
+
     if (argc >= 2) {
         napi_valuetype valuetype1;
-        if (napi_typeof(env, args[1], &valuetype1) == napi_ok && valuetype1 == napi_boolean) {
-            napi_get_value_bool(env, args[1], &isRad);
-        }
-    }
-
-    int32_t precision = 13; 
-    if (argc >= 3) {
-        napi_valuetype valuetype2;
-        if (napi_typeof(env, args[2], &valuetype2) == napi_ok && valuetype2 == napi_number) {
-            napi_get_value_int32(env, args[2], &precision);
+        if (napi_typeof(env, args[1], &valuetype1) == napi_ok && valuetype1 == napi_object) {
+            napi_value prop;
+            if (napi_get_named_property(env, args[1], "isRad", &prop) == napi_ok)
+                napi_get_value_bool(env, prop, &isRad);
+                
+            if (napi_get_named_property(env, args[1], "precision", &prop) == napi_ok)
+                napi_get_value_int32(env, prop, &precision);
+                
+            if (napi_get_named_property(env, args[1], "mode", &prop) == napi_ok)
+                napi_get_value_uint32(env, prop, &mode);
         }
     }
 
@@ -70,9 +74,17 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         LOGI("[engine.cpp][AST构建] JSON 树结构解析完毕: %{public}s", ast.dump().c_str());
 //        LOGI("[AST_Parser] Successfully built JSON tree: %{public}s", ast.dump().c_str());
         
-        bool isGlobalExact = (precision == -3 || precision == -4);
-        bool autoDMS = false; 
-        Expression expr = parseAST(ast, isRad, isGlobalExact, autoDMS);
+        // 打包状态上下文实体
+        CalcContext ctx;
+        ctx.isRad = isRad;
+        ctx.preferExact = (precision == -3 || precision == -4);
+        ctx.hasDMS = false;
+        ctx.mode = static_cast<CalcMode>(mode);
+        
+        Expression expr = parseAST(ast, ctx);
+        
+        // 提取底层的 DMS 标志位以便兼容后续流程
+        bool autoDMS = ctx.hasDMS;
         std::string expr_str = expr.get_basic()->__str__();
         
         LOGI("[engine.cpp][引擎路由] 预处理表达式已生成: %{public}s", expr_str.c_str());
