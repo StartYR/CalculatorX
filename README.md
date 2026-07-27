@@ -39,7 +39,7 @@
   <img src="https://img.startyi.com/CalcX/Home.webp" width="30%" />
   <img src="https://img.startyi.com/CalcX/Advanced%20Math.webp" width="30%" />
   <img src="https://img.startyi.com/CalcX/Matrix.webp" width="30%" />
-  <p><em>（深浅模式切换        |        高等数学微积分计算        |        矩阵与向量运算）</em></p>
+  <p><em>（深浅模式切换 | 高等数学微积分计算 | 矩阵与向量运算）</em></p>
 </div>
 
 
@@ -49,7 +49,7 @@ CalculatorX 采用深度融合的三层架构，彻底打破了传统前端计�
 
 1.  **UI 调度层 (ArkTS)**：声明式构建原生悬浮面板与手势驱动的侧边栏，通过 N-API 统一调度底层资源。
 2.  **渲染降维层 (Web SandBox)**：基于离线 MathLive 库，负责高清 LaTeX 渲染，并将二维公式“降维”为结构化 MathJSON 交由底层处理。
-3.  **计算核心层 (C++ & N-API)**：由 Giac 处理符号逻辑，SymEngine 与自研 `FastMath` 处理极速数值运算，搭配 `ErrorHandler` 状态机实现 0 闪退拦截。
+3.  **计算核心层 (C++ & N-API)**：由 Giac 处理符号逻辑，SymEngine 与自研 `FastMath` 处理极速数值运算，`ErrorHandler` 状态机实现错误拦截机制。
 
 > 💡 **想要深入了解我们的架构设计？**
 > 请参阅 📖 [CalculatorX 核心架构设计文档](docs/ARCHITECTURE.md)，详细了解“壳与插件”模型以及跨端数据流转机制。
@@ -75,7 +75,6 @@ CalculatorX 采用深度融合的三层架构，彻底打破了传统前端计�
 **开发环境要求**：
 * IDE: **DevEco Studio** (支持 HarmonyOS NEXT)
 * API Version: **21+**
-* C++ 交叉编译工具链已内置于 CMakeLists 流程中，首次编译可能需要 1-3 分钟解压 `boost` 与 `giac` 离线包。
 
 阅读 🧑‍💻 [开发者协作规范](docs/CONTRIBUTING.md)，了解项目目录规范与代码解耦原则。
 
