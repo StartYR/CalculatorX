@@ -131,6 +131,6 @@ export struct BasicCalc {
     .width('100%')
     .height('100%')
     .padding({ bottom: this.navBarHeight - 8 })
-    .backgroundColor($r('sys.color.background_primary'))
+    .backgroundColor($r('sys.color.comp_background_primary'))
   }
 }
