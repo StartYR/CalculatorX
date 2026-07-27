@@ -8,7 +8,7 @@
 
 import web_webview from '@ohos.web.webview';
 import { HistoryRepository } from '../database/HistoryRepository';
-import { EngineService } from '../utils/EngineService';
+import { EngineService, CalcConfig } from '../utils/EngineService';
 import { InputTranslator } from '../utils/InputTranslator';
 import { PreferenceConfigs } from '../utils/CalculatorConfigs';
 
@@ -121,6 +121,16 @@ export struct FormulaScreen {
     }
   }
 
+  // 根据当前 UI 面板的类型，动态映射为 C++ 的底层解析模式
+  private getCalcMode(): number {
+    switch (this.moduleType) {
+      case 'matrix': return 1;
+      case 'equation': return 2;
+      case 'graphing': return 3;
+      default: return 0; // 'scientific', 'basic' 等默认走标准通道
+    }
+  }
+
   // 执行核心计算过程
   private executeCalculation() {
     this.webviewController.runJavaScript('window.getFormula()', (error, rawLatexResult) => {
@@ -143,7 +153,13 @@ export struct FormulaScreen {
           cppPrecisionMode = this.decimalPrecision === 16 ? -2 : this.decimalPrecision;
         }
 
-        let cppResponse: string = EngineService.calculateNative(cleanJsonString, this.isRad, cppPrecisionMode);
+        // 将参数打包成配置对象，并动态获取当前模式
+        let config: CalcConfig = {
+          isRad: this.isRad,
+          precision: cppPrecisionMode,
+          mode: this.getCalcMode()
+        };
+        let cppResponse: string = EngineService.calculateNative(cleanJsonString, config);
 
         if (cppResponse.includes("Error")) {
           this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
@@ -163,10 +179,16 @@ export struct FormulaScreen {
   }
 
   // 通过特定控制码重新请求 C++ 渲染
-  private recalculateWithPrecision(cppPrecisionMode: number) {
-    let cppResponse: string = EngineService.calculateNative(this.lastValidJson, this.isRad, cppPrecisionMode);
-    this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
-  }
+    private recalculateWithPrecision(cppPrecisionMode: number) {
+      // 确保 S⇄D 重新计算时，也带上正确的面板模式
+      let config: CalcConfig = {
+        isRad: this.isRad,
+        precision: cppPrecisionMode,
+        mode: this.getCalcMode()
+      };
+      let cppResponse: string = EngineService.calculateNative(this.lastValidJson, config);
+      this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
+    }
 
   // 向 Web 插入 LaTeX 代码
   private insertToWeb(str: string) {
