@@ -8,6 +8,15 @@
 import testNapi from 'libentry.so';
 import Logger from './Logger'
 
+/**
+ * 全局计算配置
+ */
+export interface CalcConfig {
+  isRad: boolean;
+  precision: number;
+  mode: number; // 0:标准(微积分/常规), 1:矩阵, 2:方程等
+}
+
 export class EngineService {
   /**
    * 1. 还原最纯净的 LaTeX，执行多层防御性正则清洗
@@ -140,7 +149,7 @@ export class EngineService {
   /**
    * 4. 封装 C++ 底层代数引擎的直接调用
    */
-  public static calculateNative(jsonStr: string, isRad: boolean, cppPrecisionMode: number): string {
+  public static calculateNative(jsonStr: string, config: CalcConfig): string {
     let astObj = JSON.parse(jsonStr) as Object;
 
     let cleanedAstObj = EngineService.unwrapMWrap(astObj);
@@ -149,7 +158,7 @@ export class EngineService {
     Logger.info(`[EngineService] 清洗后传递给 C++ 的 JSON: ${finalJsonStr}`);
 
     // 仅调用一次 C++ 引擎
-    let cppResult = testNapi.calculate(finalJsonStr, isRad, cppPrecisionMode);
+    let cppResult = testNapi.calculate(finalJsonStr, config);
 
     Logger.info(`[EngineService] C++ 返回的 LaTeX: ${cppResult}`);
 
