@@ -108,7 +108,8 @@ entry/src/main/
 │   ├── engine.cpp                     # N-API 调度与异常捕获入口
 │   │
 │   ├── core/                          # 🧠 引擎大脑与通信核心
-│   │   ├── parser.cpp/.h              # AST 深度递归解析引擎 (搭载维度扫描仪与矩阵旁路)
+│   │   ├── parser.cpp/.h              # AST 深度递归解析引擎
+│   │   ├── MatrixParser.cpp/.h        # 矩阵 AST 解析
 │   │   ├── giac_bridge.cpp/.h         # Giac CAS 引擎初始化与黑盒求值通道
 │   │   └── ErrorHandler.h             # 全局异常状态机与细粒度错误码字典
 │   │
