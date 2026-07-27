@@ -36,9 +36,21 @@
 ## 🖼️ 视觉效果
 
 <div align="center">
-  <img src="https://img.startyi.com/CalcX/Home.webp" width="30%" />
-  <img src="https://img.startyi.com/CalcX/Advanced%20Math.webp" width="30%" />
-  <img src="https://img.startyi.com/CalcX/Matrix.webp" width="30%" />
+  <!-- Home 图片 -->
+  <picture>
+    <img src="https://img.startyi.com/CalcX/Home.webp" width="30%" />
+  </picture>
+  <!-- AdvMath 图片 -->
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/AdvMath_dark.webp">
+    <img src="https://img.startyi.com/CalcX/AdvMath.webp" width="30%" />
+  </picture>
+  <!-- Matrix 图片 -->
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/Matrix_dark.webp">
+    <img src="https://img.startyi.com/CalcX/Matrix.webp" width="30%" />
+  </picture>
+
   <p><em>（深浅模式切换 | 高等数学微积分计算 | 矩阵与向量运算）</em></p>
 </div>
 
