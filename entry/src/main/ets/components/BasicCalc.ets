@@ -122,8 +122,8 @@ export struct BasicCalc {
         .rowsTemplate('1fr 1fr 1fr 1fr 1fr')
         .columnsTemplate('1fr 1fr 1fr 1fr')
         .rowsGap(12)
-        .columnsGap(16)
-        .padding({ left: 16, right: 16, top: 16, bottom: 5 })
+        .columnsGap(18)
+        .padding({ left: 16, right: 16, top: 20, bottom: 5 })
         .clip(false)
         .width('100%')
         .height('100%')
@@ -131,7 +131,7 @@ export struct BasicCalc {
       .width('100%')
       .height('55%')
       .backgroundColor($r('sys.color.comp_background_primary')) // 主背景色
-      .borderRadius(36)
+      .borderRadius(40)
       .padding({ bottom: this.navBarHeight - 8 })
     }
     .width('100%')
