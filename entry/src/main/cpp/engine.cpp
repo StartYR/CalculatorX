@@ -15,62 +15,14 @@
 #include <symengine/printers.h>
 #include <symengine/eval_double.h>
 #include <string>
-
+#include <vector>
 #include "utils/Logger.h"
 
 using json = nlohmann::json;
 using SymEngine::Expression;
 
 
-std::string formatEquationResult(std::string raw_latex, const std::string& var_name) {
-    // 1. 剥离首尾双引号 (应对 evaluateWithGiac 的默认行为)
-    if (raw_latex.size() >= 2 && raw_latex.front() == '"' && raw_latex.back() == '"') {
-        raw_latex = raw_latex.substr(1, raw_latex.size() - 2);
-    }
-    
-    // 2. 异常与无解判断
-    if (raw_latex.empty() || raw_latex.find("undef") != std::string::npos || 
-        raw_latex.find("Error") != std::string::npos || 
-        raw_latex == "\\left[\\right]" || raw_latex == "[]") {
-        return "\\text{无解 (No Solution)}";
-    }
-    
-    // 3. 清洗 Giac 生成的 LaTeX 数组括号标签
-    replaceAll(raw_latex, "\\left[", "");
-    replaceAll(raw_latex, "\\right]", "");
-    replaceAll(raw_latex, "\\left\\{", "");
-    replaceAll(raw_latex, "\\right\\}", "");
-    replaceAll(raw_latex, "[", "");
-    replaceAll(raw_latex, "]", "");
-    
-    // 4. 按逗号切割解集
-    std::vector<std::string> roots;
-    std::stringstream ss(raw_latex);
-    std::string item;
-    while (std::getline(ss, item, ',')) {
-        size_t first = item.find_first_not_of(" ");
-        if (first != std::string::npos) {
-            size_t last = item.find_last_not_of(" ");
-            roots.push_back(item.substr(first, (last - first + 1)));
-        }
-    }
-    
-    if (roots.empty()) return "\\text{无解 (No Solution)}";
-    
-    // 5. 拼装带下标的优雅 LaTeX (如 x_1=..., x_2=...)
-    std::string latex_out;
-    for (size_t i = 0; i < roots.size(); ++i) {
-        if (roots.size() == 1) {
-            latex_out += var_name + " = " + roots[i];
-        } else {
-            latex_out += var_name + "_{" + std::to_string(i + 1) + "} = " + roots[i];
-        }
-        if (i < roots.size() - 1) {
-            latex_out += ", \\quad ";
-        }
-    }
-    return latex_out;
-}
+
 
 static napi_value Calculate(napi_env env, napi_callback_info info) {
     size_t argc = 2; // 0：算式，1：配置
@@ -132,6 +84,62 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         ctx.hasDMS = false;
         ctx.mode = static_cast<CalcMode>(mode);
         
+        // ---------------- 方程求解专属拦截路由 (多元升维版) ----------------
+        if (mode == 2) {
+            std::vector<std::string> expr_strs;
+            
+            // 1. 拆解 List (方程组) 或 解析单一 Equal (一元方程)
+            if (ast.is_array() && !ast.empty() && ast[0] == "List") {
+                for (size_t i = 1; i < ast.size(); ++i) {
+                    Expression e = parseAST(ast[i], ctx);
+                    expr_strs.push_back(e.get_basic()->__str__());
+                }
+            } else {
+                Expression e = parseAST(ast, ctx);
+                expr_strs.push_back(e.get_basic()->__str__());
+            }
+
+            // 2. “六大金刚”未知数嗅探
+            std::vector<std::string> target_vars;
+            std::vector<std::string> candidates = {"x", "y", "z", "u", "v", "w"};
+            std::string combined_exprs = "";
+            for (const auto& s : expr_strs) combined_exprs += s + ",";
+
+            for (const auto& var : candidates) {
+                if (combined_exprs.find(var) != std::string::npos) {
+                    target_vars.push_back(var);
+                }
+            }
+            if (target_vars.empty()) target_vars.push_back("x"); // 兜底
+
+            // 3. 组装 Giac 专属多元指令 csolve([eq1, eq2], [x, y])
+            std::string eqs_str = "[";
+            for (size_t i = 0; i < expr_strs.size(); ++i) {
+                eqs_str += expr_strs[i];
+                if (i < expr_strs.size() - 1) eqs_str += ",";
+            }
+            eqs_str += "]";
+
+            std::string vars_str = "[";
+            for (size_t i = 0; i < target_vars.size(); ++i) {
+                vars_str += target_vars[i];
+                if (i < target_vars.size() - 1) vars_str += ",";
+            }
+            vars_str += "]";
+
+            std::string giacCmd = "latex(csolve(" + eqs_str + ", " + vars_str + "))";
+            std::string rawResult = evaluateWithGiac(giacCmd);
+
+            // 4. 交给 FormatUtils 进行降维美化
+            result_msg = formatEquationResult(rawResult, target_vars);
+            applyGlobalUIFormatting(result_msg);
+
+            napi_value result;
+            napi_create_string_utf8(env, result_msg.c_str(), NAPI_AUTO_LENGTH, &result);
+            return result;
+        }
+
+        // 非方程模式，继续原有的标准解析流程
         Expression expr = parseAST(ast, ctx);
         
         // 提取底层的 DMS 标志位以便兼容后续流程
@@ -141,33 +149,6 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         LOGI("[engine.cpp][引擎路由] 预处理表达式已生成: %{public}s", expr_str.c_str());
 //        LOGI("[SymEngine] Expression ready for evaluation: %{public}s", expr_str.c_str());
         
-        // ---------------- 方程求解专属拦截路由 ----------------
-        // 前端传入的 mode == 2 代表 CalcMode::EQUATION
-        if (mode == 2) { 
-            // 1. 获取未知数
-            std::string target_var = "x"; // 默认兜底
-            if (expr_str.find("x") != std::string::npos) {
-                target_var = "x";
-            } else if (expr_str.find("y") != std::string::npos) {
-                target_var = "y";
-            } else if (expr_str.find("z") != std::string::npos) {
-                target_var = "z";
-            }
-            
-            // 2. 组装 Giac 指令，直接使用 latex(solve(...))
-            std::string giacCmd = "latex(csolve(" + expr_str + ", " + target_var + "))";
-            std::string rawResult = evaluateWithGiac(giacCmd);
-            
-            // 3. 美化排版
-            result_msg = formatEquationResult(rawResult, target_var);
-            applyGlobalUIFormatting(result_msg);
-            
-            // 4. 提前阻断并返回给前端
-            napi_value result;
-            napi_create_string_utf8(env, result_msg.c_str(), NAPI_AUTO_LENGTH, &result);
-            return result;
-        }
-
         // 全局接管需要调用 Giac 的计算
         bool isGlobalGiacOp = (expr_str.find("MAGICMAT") != std::string::npos || 
                            expr_str.find("tran(") != std::string::npos || expr_str.find("trn(") != std::string::npos ||
