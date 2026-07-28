@@ -113,9 +113,15 @@ export struct FormulaScreen {
       }
       this.recalculateWithPrecision(cppPrecisionMode);
     } else if (action === '=') {
+      if (this.moduleType === 'equation') {
+        this.insertToWeb('=');
+      } else {
+        this.executeCalculation();
+      }
+    } else if (action === 'EXE') {
       this.executeCalculation();
     } else {
-      // 交给后厨翻译
+      // 交给后端翻译
       let latexChar = InputTranslator.translate(action, this.combSelect, this.permSelect);
       this.insertToWeb(latexChar);
     }
