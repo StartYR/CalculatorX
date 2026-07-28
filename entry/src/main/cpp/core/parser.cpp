@@ -20,7 +20,7 @@
 using json = nlohmann::json;
 using SymEngine::Expression;
 
-// 矩阵与数组转 Giac 字符串的核心解析器 (统一接收 ctx)
+// 矩阵与数组转 Giac 字符串的核心解析器
 static std::string parseListToGiacString(const json& listNode, CalcContext& ctx) {
     if (!listNode.is_array() || listNode.empty() || listNode[0] != "List") return "";
     
@@ -153,7 +153,7 @@ Expression parseAST(const json& ast, CalcContext& ctx) {
     // ==========================================
     if (ast.is_array() && !ast.empty() && ast[0].is_string()) {
         
-        // 🚨 终极拦截：只有前端明确是矩阵模式时，才允许进行矩阵判断！
+        // 只有前端明确是矩阵模式时，才允许进行矩阵判断
         if (ctx.mode == CalcMode::MATRIX && MatrixParser::isMatrixExpression(ast)) {
             return MatrixParser::handle(ast, ctx);
         }
@@ -231,6 +231,24 @@ Expression parseAST(const json& ast, CalcContext& ctx) {
         }
         if (op == "Divide" || op == "Rational") {
             return parseAST(ast[1], ctx) / parseAST(ast[2], ctx);
+        }
+        if (op == "Equal") {
+            // 确保等式绝对有左右两边
+            if (ast.size() != 3) {
+                throw std::runtime_error("SyntaxError: 完整的等式需要左右两边");
+            }
+    
+            // 递归解析左右两式
+            SymEngine::Expression lhs = parseAST(ast[1], ctx);
+            SymEngine::Expression rhs = parseAST(ast[2], ctx);
+        
+            // 方程模式，转化为 LHS - RHS
+            if (ctx.mode == CalcMode::EQUATION) {
+                return SymEngine::sub(lhs, rhs);
+            }
+    
+            // 如果不是方程模式却出现了等号
+            throw std::runtime_error("MathError: 非方程模式下不允许存在等号");
         }
 
         // 基础数学函数
