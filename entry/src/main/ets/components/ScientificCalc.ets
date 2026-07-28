@@ -403,6 +403,7 @@ export struct ScientificCalc {
     }
     .width('100%')
     .height('100%')
+    // .backgroundColor($r('sys.color.comp_background_tertiary'))
     .backgroundColor($r('sys.color.comp_background_tertiary'))
   }
 }
