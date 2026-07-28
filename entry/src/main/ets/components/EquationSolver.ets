@@ -20,6 +20,7 @@ import {
   icon_abs,
   icon_backspace
 } from '../utils/CalculatorConfigs';
+import {KeyGestureWrapper} from './common/KeyGestureWrapper'
 
 const icon_cases: Resource = $rawfile('icons/equation/icon_cases.svg');
 
@@ -124,82 +125,63 @@ struct TopKeyItem {
           .width('100%')
           .height(6)
       }
+      Row() {
+        KeyGestureWrapper({
+          actionId: typeof this.btn === 'string' ? this.btn : (this.btn === icon_cases ? 'cases' : ''),
+          targetBtn: this.btn,
+          shiftBtn: topShiftButtons[this.btnIndex] || '', // 传入对应的 Shift 按键
+          moduleType: 'equation',
+          isShiftMode: $isShift,
+          onKeyPress: this.onKeyPress,
+          onMenuSelect: this.onMenuSelect
+        }) {
 
-      Button() {
-        if (typeof this.btn === 'string') {
-          Text(this.btn)
-            .fontFamily(getFontFamily(this.btn))
-            .fontSize(getLocalFontSize(this.btn))
-            .fontWeight(FontWeight.Medium)
-            .fontColor(getLocalFontColor(this.btn))
-        } else {
-          Image(this.btn)
-            .width(36)
-            .height(36)
-            .fillColor($r('sys.color.font_secondary'))
+          Button() {
+            if (typeof this.btn === 'string') {
+              Text(this.btn)
+                .fontFamily(getFontFamily(this.btn))
+                .fontSize(getLocalFontSize(this.btn))
+                .fontWeight(FontWeight.Medium)
+                .fontColor(getLocalFontColor(this.btn))
+            } else {
+              Image(this.btn)
+                .width(36)
+                .height(36)
+                .fillColor($r('sys.color.font_secondary'))
+            }
+          }
+          .type(ButtonType.Normal)
+          .borderRadius(12)
+          .width('100%')
+          .height('100%')
+          .padding({
+            left: 2,
+            right: 2,
+            top: 0,
+            bottom: 0
+          })
+          .backgroundColor(getLocalBgColor(this.btn, this.isShift))
+          .shadow(ShadowStyle.OUTER_DEFAULT_SM)
+          .borderWidth({
+            top: 1,
+            left: 1,
+            bottom: 0,
+            right: 0
+          })
+          .borderColor($r('app.color.btn_highlight'))
+          .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
+          .stateStyles({
+            pressed: {
+              .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS)
+            },
+            normal: {
+              .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM)
+            }
+          })
         }
       }
-      .type(ButtonType.Normal)
-      .borderRadius(12)
       .width('100%')
       .layoutWeight(1)
-      .padding({ left: 2, right: 2, top: 0, bottom: 0 })
-      .backgroundColor(getLocalBgColor(this.btn, this.isShift))
-      .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-      .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
-      .borderColor($r('app.color.btn_highlight'))
-      .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
-      .stateStyles({
-        pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
-        normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
-      })
-      .onClick(() => {
-        if (this.btn === '⇧Shift') {
-          this.isShift = !this.isShift;
-          return;
-        }
-
-        if (this.isShift && topShiftButtons[this.btnIndex] !== '') {
-          this.onKeyPress(topShiftButtons[this.btnIndex]);
-          this.isShift = false;
-        } else {
-          this.onKeyPress(this.btn);
-        }
-      })
-      .onTouch((event: TouchEvent) => {
-        if (this.btn === '⇦' || this.btn === '⇨') {
-          if (event.type === TouchType.Down) {
-            clearTimeout(this.startDelayTimer);
-            clearInterval(this.repeatMoveTimer);
-
-            this.startDelayTimer = setTimeout(() => {
-              this.repeatMoveTimer = setInterval(() => {
-                this.onKeyPress(this.btn as string);
-              }, 80);
-            }, 500);
-          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-            clearTimeout(this.startDelayTimer);
-            clearInterval(this.repeatMoveTimer);
-          }
-        }
-      })
-      .bindContextMenu(this.isMenuShow, this.MenuBuilder, {
-        onDisappear: () => { this.isMenuShow = false; }
-      })
-      .gesture(
-        LongPressGesture({ repeat: false, duration: 300 }).onAction(() => {
-          if (typeof this.btn === 'string' && keyContextMenuRegistry[this.btn]) {
-            if (this.hapticFeedback) {
-              vibrator.startVibration({
-                type: 'preset',
-                effectId: 'haptic.effect.sharp',
-                count: 1
-              }, { usage: 'touch' }).catch(() => {});
-            }
-            this.isMenuShow = true;
-          }
-        })
-      )
     }
     .width('100%')
     .height('100%')
@@ -209,6 +191,7 @@ struct TopKeyItem {
 @Component
 struct BottomKeyItem {
   btn: string | Resource = '';
+  @Link isShift: boolean;
   @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
   @State isMenuShow: boolean = false;
 
@@ -232,71 +215,54 @@ struct BottomKeyItem {
   }
 
   build() {
-    Button() {
-      if (typeof this.btn === 'string') {
-        Text(this.btn)
-          .fontFamily(getFontFamily(this.btn))
-          .fontSize(getLocalFontSize(this.btn))
-          .fontWeight(FontWeight.Medium)
-          .fontColor(getLocalFontColor(this.btn))
-      } else {
-        Image(this.btn)
-          .width(48)
-          .height(40)
-          .fillColor(getFontColor(this.btn))
-      }
-    }
-    .type(ButtonType.Normal)
-    .borderRadius(16)
-    .width('100%')
-    .height('100%')
-    .padding({ left: 4, right: 4 })
-    .backgroundColor(getLocalBgColor(this.btn, false))
-    .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-    .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
-    .borderColor($r('app.color.btn_highlight'))
-    .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
-    .stateStyles({
-      pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
-      normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
-    })
-    .onClick(() => {
-      this.onKeyPress(this.btn as string);
-    })
-    .onTouch((event: TouchEvent) => {
-      if (this.btn === icon_backspace) {
-        if (event.type === TouchType.Down) {
-          clearTimeout(this.startDelayTimer);
-          clearInterval(this.repeatDeleteTimer);
-
-          this.startDelayTimer = setTimeout(() => {
-            this.repeatDeleteTimer = setInterval(() => {
-              this.onKeyPress(this.btn as string);
-            }, 80);
-          }, 500);
-        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-          clearTimeout(this.startDelayTimer);
-          clearInterval(this.repeatDeleteTimer);
+    KeyGestureWrapper({
+      actionId: typeof this.btn === 'string' ? this.btn : (this.btn === icon_cases ? 'cases' : ''),
+      targetBtn: this.btn,
+      shiftBtn: '', // 底部基础按键没有对应的 Shift
+      moduleType: 'equation',
+      // 底部的按键不需要双向绑定 isShift，所以传一个常数占位即可，因为它们也不触发直接 Shift
+      isShiftMode: $isShift,
+      onKeyPress: this.onKeyPress,
+      onMenuSelect: this.onMenuSelect
+    }) {
+      Button() {
+        if (typeof this.btn === 'string') {
+          Text(this.btn)
+            .fontFamily(getFontFamily(this.btn))
+            .fontSize(getLocalFontSize(this.btn))
+            .fontWeight(FontWeight.Medium)
+            .fontColor(getLocalFontColor(this.btn))
+        } else {
+          Image(this.btn)
+            .width(48)
+            .height(40)
+            .fillColor(getFontColor(this.btn))
         }
       }
-    })
-    .bindContextMenu(this.isMenuShow, this.MenuBuilder, {
-      onDisappear: () => { this.isMenuShow = false; }
-    })
-    .gesture(
-      LongPressGesture({ repeat: false, duration: 300 }).onAction(() => {
-        if (typeof this.btn === 'string' && keyContextMenuRegistry[this.btn]) {
-          if (this.hapticFeedback) {
-            vibrator.startVibration({
-              type: 'preset',
-              effectId: 'haptic.effect.sharp',
-              count: 1
-            }, { usage: 'touch' }).catch(() => {});
-          }
-          this.isMenuShow = true;
+      .type(ButtonType.Normal)
+      .borderRadius(16)
+      .width('100%')
+      .height('100%')
+      .padding({ left: 4, right: 4 })
+      .backgroundColor(getLocalBgColor(this.btn, false))
+      .shadow(ShadowStyle.OUTER_DEFAULT_SM)
+      .borderWidth({
+        top: 1,
+        left: 1,
+        bottom: 0,
+        right: 0
+      })
+      .borderColor($r('app.color.btn_highlight'))
+      .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
+      .stateStyles({
+        pressed: {
+          .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS)
+        },
+        normal: {
+          .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM)
         }
       })
-    )
+    }
   }
 }
 
@@ -379,6 +345,7 @@ export struct EquationSolver {
             GridItem() {
               BottomKeyItem({
                 btn: btn,
+                isShift: $isShift,
                 onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
                 onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
               })
