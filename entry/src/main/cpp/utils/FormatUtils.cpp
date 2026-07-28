@@ -10,6 +10,8 @@
 #include <sstream>
 #include <cmath>
 #include <regex>
+#include <vector>
+#include <string>
 
 void replaceAll(std::string& str, const std::string& from, const std::string& to) {
     if (from.empty()) return;
@@ -17,6 +19,125 @@ void replaceAll(std::string& str, const std::string& from, const std::string& to
     while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
         str.replace(start_pos, from.length(), to);
         start_pos += to.length(); 
+    }
+}
+
+// 终极方程/方程组解集美化中枢
+std::string formatEquationResult(std::string raw_latex, const std::vector<std::string>& var_names) {
+    // 1. 剥离首尾双引号
+    if (raw_latex.size() >= 2 && raw_latex.front() == '"' && raw_latex.back() == '"') {
+        raw_latex = raw_latex.substr(1, raw_latex.size() - 2);
+    }
+    
+    // 2. 异常与无解判断
+    if (raw_latex.empty() || raw_latex.find("undef") != std::string::npos || 
+        raw_latex.find("Error") != std::string::npos || 
+        raw_latex == "\\left[\\right]" || raw_latex == "[]") {
+        return "\\text{无解 (No Solution)}";
+    }
+    
+    // 3. 清洗 Giac 生成的冗余 LaTeX 标签，将环境统一降维为基础的 []
+    replaceAll(raw_latex, "\\left", "");
+    replaceAll(raw_latex, "\\right", "");
+    replaceAll(raw_latex, "\\{", "["); // 兼容 Giac 的集合大括号
+    replaceAll(raw_latex, "\\}", "]");
+    
+    // 剥离最外层的全局大数组括号
+    if (raw_latex.size() >= 2 && raw_latex.front() == '[' && raw_latex.back() == ']') {
+        raw_latex = raw_latex.substr(1, raw_latex.size() - 2);
+    }
+    
+    std::string latex_out;
+    
+    // ================= 4. 一元方程解集处理 =================
+    if (var_names.size() == 1) {
+        // 彻底清除残留括号
+        replaceAll(raw_latex, "[", "");
+        replaceAll(raw_latex, "]", "");
+        
+        std::vector<std::string> roots;
+        std::stringstream ss(raw_latex);
+        std::string item;
+        while (std::getline(ss, item, ',')) {
+            size_t first = item.find_first_not_of(" ");
+            if (first != std::string::npos) {
+                size_t last = item.find_last_not_of(" ");
+                roots.push_back(item.substr(first, (last - first + 1)));
+            }
+        }
+        
+        if (roots.empty()) return "\\text{无解 (No Solution)}";
+        
+        for (size_t i = 0; i < roots.size(); ++i) {
+            if (roots.size() == 1) {
+                latex_out += var_names[0] + " = " + roots[i];
+            } else {
+                latex_out += var_names[0] + "_{" + std::to_string(i + 1) + "} = " + roots[i];
+            }
+            if (i < roots.size() - 1) latex_out += ", \\quad ";
+        }
+        return latex_out;
+    } 
+    // ================= 5. 多元方程组解集处理 =================
+    else {
+        std::vector<std::vector<std::string>> solution_sets;
+        size_t start = 0;
+        
+        // 提取嵌套数组里的每一组解，例如 [1, 2], [3, 4]
+        while ((start = raw_latex.find('[', start)) != std::string::npos) {
+            size_t end = raw_latex.find(']', start);
+            if (end == std::string::npos) break;
+            std::string group = raw_latex.substr(start + 1, end - start - 1);
+            
+            std::vector<std::string> vals;
+            std::stringstream ss(group);
+            std::string item;
+            while (std::getline(ss, item, ',')) {
+                size_t first = item.find_first_not_of(" ");
+                if (first != std::string::npos) {
+                    size_t last = item.find_last_not_of(" ");
+                    vals.push_back(item.substr(first, (last - first + 1)));
+                }
+            }
+            // 校验：解的个数必须和嗅探到的未知数个数对齐
+            if (vals.size() == var_names.size()) {
+                solution_sets.push_back(vals);
+            }
+            start = end + 1;
+        }
+        
+        // 极端容错：如果 Giac 只返回了一组解且省去了内层括号 (例如 1, 2)
+        if (solution_sets.empty()) {
+            std::vector<std::string> vals;
+            std::stringstream ss(raw_latex);
+            std::string item;
+            while (std::getline(ss, item, ',')) {
+                size_t first = item.find_first_not_of(" ");
+                if (first != std::string::npos) {
+                    size_t last = item.find_last_not_of(" ");
+                    vals.push_back(item.substr(first, (last - first + 1)));
+                }
+            }
+            if (vals.size() == var_names.size()) solution_sets.push_back(vals);
+        }
+        
+        if (solution_sets.empty()) return "\\text{无解 (No Solution)}";
+        
+        // 组装极致视觉排版：\begin{cases} ... \end{cases}
+        for (size_t i = 0; i < solution_sets.size(); ++i) {
+            latex_out += "\\begin{cases} ";
+            for (size_t j = 0; j < var_names.size(); ++j) {
+                latex_out += var_names[j] + " = " + solution_sets[i][j];
+                if (j < var_names.size() - 1) latex_out += " \\\\ ";
+            }
+            latex_out += " \\end{cases}";
+            
+            // 如果有多组解（如二元二次方程组），中间用 \lor (逻辑或) 隔开
+            if (i < solution_sets.size() - 1) {
+                latex_out += " \\quad \\lor \\quad "; 
+            }
+        }
+        return latex_out;
     }
 }
 
