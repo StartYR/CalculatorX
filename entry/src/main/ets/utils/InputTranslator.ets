@@ -88,12 +88,12 @@ export class InputTranslator {
       case 'eig':      latexChar = "\\operatorname{eig}\\left(\\placeholder{}\\right)"; break;
       case 'rank':     latexChar = "\\operatorname{rank}\\left(\\placeholder{}\\right)"; break;
       case 'tr':       latexChar = "\\operatorname{tr}\\left(\\placeholder{}\\right)"; break;
-      // 3. 向量代数
-      // case '⨯':        latexChar = "\\boldsymbol{\\times}"; break;
-      case '•':        latexChar = "\\bullet "; break;
 
-      // 4. 特殊常量
+      // 3. 特殊常量
       case 'I':        latexChar = "\\operatorname{I}_{\\placeholder{}}"; break;
+
+      // =============== 方程求解 ===============
+      case 'cases':    latexChar = "\\begin{cases} \\placeholder{} \\\\ \\placeholder{} \\end{cases}"; break;
     }
     return latexChar;
   }

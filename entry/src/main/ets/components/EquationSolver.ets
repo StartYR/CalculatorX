@@ -17,12 +17,11 @@ import {
   icon_power2,
   icon_power,
   icon_fraction,
-  icon_power3,
-  icon_inverse,
-  icon_exp,
   icon_abs,
   icon_backspace
 } from '../utils/CalculatorConfigs';
+
+const icon_cases: Resource = $rawfile('icons/equation/icon_cases.svg');
 
 // ================= 按键布局 =================
 // Shift
@@ -34,7 +33,7 @@ const topShiftButtons: Array<string | Resource> = [
 
 // 顶部功能区
 const topButtons: Array<string | Resource> = [
-  '⇧Shift', 'R/D', '⇦', '⇨', '(', ')',
+  '⇧Shift', icon_cases, '⇦', '⇨', '(', ')',
   icon_fraction, icon_sqrt, icon_power2, 'e','log', 'ln',
    'sin', 'cos', 'tan', 'x', 'y', 'z'
 ];
@@ -325,7 +324,15 @@ export struct EquationSolver {
   }
 
   private handleButtonClick(btn: string | Resource) {
-    let action = getActionId(btn);
+    let action = '';
+
+    // 优先拦截本组件私有的资源/按键
+    if (btn === icon_cases) action = 'cases';
+    else {
+      // 通用按键交由全局统管
+      action = getActionId(btn);
+    }
+
     HapticUtils.playVibration(action, this.hapticFeedback, this.vibrationCurve);
     getContext(this).eventHub.emit('screen_handle_action', action, this.isShift);
   }
