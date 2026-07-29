@@ -10,7 +10,7 @@ import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { vibrator } from '@kit.SensorServiceKit';
 import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
-import { keyContextMenuRegistry, CustomMenuItem, PreferenceConfigs } from '../utils/CalculatorConfigs';
+import { PreferenceConfigs } from '../utils/CalculatorConfigs';
 import {
   icon_sqrt,
   icon_sqrtx,
@@ -82,26 +82,8 @@ struct TopKeyItem {
   @Link isShift: boolean;
   @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
 
-  @State isMenuShow: boolean = false;
-
-  private startDelayTimer: number = -1;
-  private repeatMoveTimer: number = -1;
-
   onKeyPress: (btn: string | Resource) => void = () => {};
   onMenuSelect: (actionCode: string) => void = () => {};
-
-  @Builder
-  MenuBuilder() {
-    Menu() {
-      ForEach(keyContextMenuRegistry[this.btn as string] || [], (item: CustomMenuItem) => {
-        MenuItem({ content: item.value })
-          .onClick(() => {
-            this.isMenuShow = false;
-            this.onMenuSelect(item.actionCode);
-          })
-      })
-    }
-  }
 
   build() {
     Column() {
@@ -201,26 +183,10 @@ struct BottomKeyItem {
   btn: string | Resource = '';
   @Link isShift: boolean;
   @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
-  @State isMenuShow: boolean = false;
-
-  private startDelayTimer: number = -1;
-  private repeatDeleteTimer: number = -1;
 
   onKeyPress: (btn: string | Resource) => void = () => {};
   onMenuSelect: (actionCode: string) => void = () => {};
 
-  @Builder
-  MenuBuilder() {
-    Menu() {
-      ForEach(keyContextMenuRegistry[this.btn as string] || [], (item: CustomMenuItem) => {
-        MenuItem({ content: item.value })
-          .onClick(() => {
-            this.isMenuShow = false;
-            this.onMenuSelect(item.actionCode);
-          })
-      })
-    }
-  }
 
   build() {
     KeyGestureWrapper({
