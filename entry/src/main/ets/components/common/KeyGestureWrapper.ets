@@ -8,11 +8,12 @@
 
 import { vibrator } from '@kit.SensorServiceKit';
 import { HapticUtils } from '../../utils/HapticUtils';
+import { icon_power2, icon_sqrtx, icon_sqrt3 } from '../../utils/CalculatorConfigs';
 
 export type LongPressStrategy = 'CONTINUOUS' | 'NATIVE_MENU' | 'SLIDE_BUBBLE' | 'DIRECT_SHIFT' | 'NONE';
 
 export interface MenuItem {
-  value: string;
+  value: string | Resource;
   actionCode: string;
 }
 
@@ -33,8 +34,12 @@ const BUBBLE_REGISTRY: Record<string, MenuItem[]> = {
     { value: '度分秒', actionCode: 'LONG_SD_DMS' }
   ],
   'sqrt': [
-    { value: '立方根', actionCode: 'sqrt3' },
-    { value: '根号', actionCode: 'sqrtx' }
+    { value: icon_sqrt3, actionCode: 'sqrt3' },
+    { value: icon_sqrtx, actionCode: 'sqrtx' }
+  ],
+  '2': [
+    { value: '1/2', actionCode: '1/2' },
+    { value: icon_power2, actionCode: 'power2' }
   ]
 };
 
@@ -105,21 +110,33 @@ export struct KeyGestureWrapper {
       if (this.isBubbleVisible && BUBBLE_REGISTRY[this.actionId]) {
         Row() {
           ForEach(BUBBLE_REGISTRY[this.actionId], (item: MenuItem, index: number) => {
-            Text(item.value)
-              .fontSize(15)
-              .fontWeight(this.activeBubbleIndex === index ? FontWeight.Bold : FontWeight.Medium)
-              .fontColor(this.activeBubbleIndex === index ? $r('sys.color.font_on_primary') : $r('sys.color.font_primary'))
-              .backgroundColor(this.activeBubbleIndex === index ? $r('sys.color.comp_background_emphasize') : 'transparent')
-              .width(52) // 单个选项宽度
-              .height(40)
-              .textAlign(TextAlign.Center)
-              .borderRadius(8)
-              // 动画过渡，让高亮背景色的切换更丝滑
-              .animation({ duration: 150, curve: Curve.EaseInOut })
+            // ======= 核心修改区：使用 Stack 统一包裹背景，内部按类型渲染 =======
+            Stack() {
+              if (typeof item.value === 'string') {
+                // 如果是文本，渲染 Text
+                Text(item.value)
+                  .fontSize(15)
+                  .fontWeight(this.activeBubbleIndex === index ? FontWeight.Bold : FontWeight.Medium)
+                  .fontColor(this.activeBubbleIndex === index ? $r('sys.color.font_on_primary') : $r('sys.color.font_primary'))
+              } else {
+                // 如果是 SVG 资源，渲染 Image
+                Image(item.value)
+                  .width(24) // 图标稍微调小一点，防止撑满边框
+                  .height(24)
+                  .fillColor(this.activeBubbleIndex === index ? $r('sys.color.font_on_primary') : $r('sys.color.font_primary'))
+                  .draggable(false) // 顺手禁掉气泡内图标的系统原生拖拽！
+              }
+            }
+            .width(52) // 统一选项宽度
+            .height(40) // 统一选项高度
+            .backgroundColor(this.activeBubbleIndex === index ? $r('sys.color.comp_background_emphasize') : 'transparent')
+            .borderRadius(8)
+            .animation({ duration: 150, curve: Curve.EaseInOut })
           })
         }
         .width(BUBBLE_REGISTRY[this.actionId].length * 52 + 8) // 宽度计算：选项数 * 52(单选项宽) + 8(左右各4的padding)
         .backgroundColor($r('sys.color.comp_background_tertiary'))
+        .backgroundBlurStyle(BlurStyle.Thin)
         .borderRadius(12)
         .padding(4)
         .shadow(ShadowStyle.OUTER_DEFAULT_MD)

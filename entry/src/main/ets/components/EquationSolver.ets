@@ -68,6 +68,12 @@ function getLocalFontSize(btn: string | Resource): number {
   return getFontSize(btn);
 }
 
+// 获取局部 Action ID
+function getLocalActionId(btn: string | Resource): string {
+  if (btn === icon_cases) return 'cases';
+  return getActionId(btn);
+}
+
 // ================= 键盘组件 =================
 @Component
 struct TopKeyItem {
@@ -127,7 +133,7 @@ struct TopKeyItem {
       }
       Row() {
         KeyGestureWrapper({
-          actionId: typeof this.btn === 'string' ? this.btn : (this.btn === icon_cases ? 'cases' : ''),
+          actionId: getLocalActionId(this.btn),
           targetBtn: this.btn,
           shiftBtn: topShiftButtons[this.btnIndex] || '', // 传入对应的 Shift 按键
           moduleType: 'equation',
@@ -217,7 +223,7 @@ struct BottomKeyItem {
 
   build() {
     KeyGestureWrapper({
-      actionId: typeof this.btn === 'string' ? this.btn : (this.btn === icon_cases ? 'cases' : ''),
+      actionId: getLocalActionId(this.btn),
       targetBtn: this.btn,
       shiftBtn: '', // 底部基础按键没有对应的 Shift
       moduleType: 'equation',
@@ -292,15 +298,7 @@ export struct EquationSolver {
   }
 
   private handleButtonClick(btn: string | Resource) {
-    let action = '';
-
-    // 优先拦截本组件私有的资源/按键
-    if (btn === icon_cases) action = 'cases';
-    else {
-      // 通用按键交由全局统管
-      action = getActionId(btn);
-    }
-
+    let action = getLocalActionId(btn);
     HapticUtils.playVibration(action, this.hapticFeedback, this.vibrationCurve);
     getContext(this).eventHub.emit('screen_handle_action', action, this.isShift);
   }
