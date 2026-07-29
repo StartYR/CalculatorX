@@ -36,6 +36,12 @@ const matrixShiftButtons: Array<string | Resource> = [
   '', 'i', 'I', icon_abs, ''
 ];
 
+// 字体大小
+function getLocalFontSize(btn: string | Resource): number {
+  if (btn === '⇧Shift') return 18;
+  return getFontSize(btn);
+}
+
 // 局部按键 ID
 function getLocalActionId(btn: string | Resource): string {
   if (btn === icon_M_power) return 'M_power';
@@ -71,7 +77,7 @@ struct MatrixKeyItem {
           if (typeof this.btn === 'string') {
             Text(this.btn)
               .fontFamily(getFontFamily(this.btn))
-              .fontSize(getFontSize(this.btn))
+              .fontSize(getLocalFontSize(this.btn))
               .fontWeight(FontWeight.Medium)
               .fontColor(getFontColor(this.btn))
               .width('100%')
