@@ -18,7 +18,7 @@ export interface MenuItem {
 }
 
 // ================= 内部长按逻辑配置字典 =================
-const CONTINUOUS_KEYS = ['⌫', '⇦', '⇨'];
+const CONTINUOUS_KEYS = ['⌫','⇧', '⇩', '⇦', '⇨'];
 
 const BUBBLE_REGISTRY: Record<string, MenuItem[]> = {
   'sin': [
@@ -88,6 +88,8 @@ export struct KeyGestureWrapper {
   @State private isBubbleVisible: boolean = false;
   @State private activeBubbleIndex: number = -1; // 当前高亮的选项索引
   @State private bubbleOffsetX: number = 0; // 记录触碰边缘时的 X 轴平移补偿量
+
+  @StorageLink('activeBubbleId') activeBubbleId: string = '';
   private lastHoverIndex: number = -1; // 用于防抖和触发切换震动
 
   private startDelayTimer: number = -1;
@@ -218,10 +220,12 @@ export struct KeyGestureWrapper {
               break;
             case 'SLIDE_BUBBLE':
               this.isBubbleVisible = true;
+              this.activeBubbleId = this.actionId;
               break;
             case 'DIRECT_SHIFT':
               this.onKeyPress(this.shiftBtn);
               this.isBubbleVisible = true; // 借用变量作为标记，拦截短按
+              this.activeBubbleId = this.actionId;
               break;
           }
         }, 300);
@@ -275,11 +279,13 @@ export struct KeyGestureWrapper {
           }
           // 状态重置
           this.isBubbleVisible = false;
+          this.activeBubbleId = '';
           this.activeBubbleIndex = -1;
           this.lastHoverIndex = -1;
         }
         else if (this.currentStrategy === 'DIRECT_SHIFT' && this.isBubbleVisible) {
           this.isBubbleVisible = false;
+          this.activeBubbleId = '';
         }
         else if (!this.isNativeMenuShow) {
           // 常规短按逻辑

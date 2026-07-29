@@ -81,6 +81,7 @@ struct TopKeyItem {
   btnIndex: number = 0;
   @Link isShift: boolean;
   @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
+
   @State isMenuShow: boolean = false;
 
   private startDelayTimer: number = -1;
@@ -279,6 +280,7 @@ struct BottomKeyItem {
 export struct EquationSolver {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
+  @StorageProp('activeBubbleId') activeBubbleId: string = '';
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
 
   @State @Watch('onShiftChange') isShift: boolean = false;
@@ -328,6 +330,7 @@ export struct EquationSolver {
                 onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
               })
             }
+            .zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
           })
         }
         .rowsTemplate('33fr 40fr 40fr')
@@ -350,6 +353,7 @@ export struct EquationSolver {
                 onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
               })
             }
+            .zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
           })
         }
         .rowsTemplate('1fr 1fr 1fr 1fr')
