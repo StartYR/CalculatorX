@@ -94,6 +94,10 @@ export class InputTranslator {
 
       // =============== 方程求解 ===============
       case 'cases':    latexChar = "\\begin{cases} \\placeholder{} \\\\ \\placeholder{} \\end{cases}"; break;
+      case 'cases_3':  latexChar = "\\begin{cases} \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\end{cases}"; break;
+      case 'cases_4':  latexChar = "\\begin{cases} \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\end{cases}"; break;
+      case 'cases_5':  latexChar = "\\begin{cases} \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\end{cases}"; break;
+      case 'cases_6':  latexChar = "\\begin{cases} \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\end{cases}"; break;
     }
     return latexChar;
   }
