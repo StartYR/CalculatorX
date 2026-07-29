@@ -352,28 +352,59 @@ Expression parseAST(const json& ast, CalcContext& ctx) {
             }
         }
 
-        // === 三角函数 ===
-        if (op == "Sin" || op == "Cos" || op == "Tan") {
+        // === 三角函数与倒数三角函数 ===
+        if (op == "Sin" || op == "Cos" || op == "Tan" || op == "Csc" || op == "Sec" || op == "Cot") {
             if (ast.size() < 2) return Expression(SymEngine::symbol("Error"));
             Expression arg = parseExactIsolateDMS(ast[1]); 
+            // 角度制下，先将输入的角度转换为弧度再进行计算
             if (!ctx.isRad) arg = arg * Expression(SymEngine::pi) / Expression(180);
+            
             if (op == "Sin") return SymEngine::sin(arg);
             if (op == "Cos") return SymEngine::cos(arg);
             if (op == "Tan") return SymEngine::tan(arg);
+            if (op == "Csc") return Expression(1) / SymEngine::sin(arg);
+            if (op == "Sec") return Expression(1) / SymEngine::cos(arg);
+            if (op == "Cot") return Expression(1) / SymEngine::tan(arg);
         }
 
-        if (op == "Arcsin" || op == "Arccos" || op == "Arctan") {
+        if (op == "Arcsin" || op == "Arccos" || op == "Arctan" || op == "Arccsc" || op == "Arcsec" || op == "Arccot") {
             if (ast.size() < 2) return Expression(SymEngine::symbol("Error"));
             Expression arg = parseExactIsolateDMS(ast[1]); 
             Expression res;
+            
             if (op == "Arcsin") res = SymEngine::asin(arg);
             else if (op == "Arccos") res = SymEngine::acos(arg);
             else if (op == "Arctan") res = SymEngine::atan(arg);
+            else if (op == "Arccsc") res = SymEngine::asin(Expression(1) / arg);
+            else if (op == "Arcsec") res = SymEngine::acos(Expression(1) / arg);
+            else if (op == "Arccot") res = SymEngine::atan(Expression(1) / arg);
             
+            // 角度制下，将算出的弧度结果转换为角度
             if (!ctx.isRad) res = res * Expression(180) / Expression(SymEngine::pi);
             ctx.hasDMS = true; 
             return res;
         }
+
+        // === 双曲函数与反双曲函数 (不受 Rad/Deg 模式影响) ===
+        if (op == "Sinh" || op == "Cosh" || op == "Tanh") {
+            if (ast.size() < 2) return Expression(SymEngine::symbol("Error"));
+            Expression arg = parseExactIsolateDMS(ast[1]);
+            
+            if (op == "Sinh") return SymEngine::sinh(arg);
+            if (op == "Cosh") return SymEngine::cosh(arg);
+            if (op == "Tanh") return SymEngine::tanh(arg);
+        }
+
+        if (op == "Arcsinh" || op == "Arccosh" || op == "Arctanh") {
+            if (ast.size() < 2) return Expression(SymEngine::symbol("Error"));
+            Expression arg = parseExactIsolateDMS(ast[1]);
+            
+            if (op == "Arcsinh") return SymEngine::asinh(arg);
+            if (op == "Arccosh") return SymEngine::acosh(arg);
+            if (op == "Arctanh") return SymEngine::atanh(arg);
+        }
+        
+        
         
         // === 对数函数 ===
         if (op == "Ln") return SymEngine::log(parseExact(ast[1]));
