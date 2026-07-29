@@ -63,6 +63,11 @@ export class EngineService {
       // 微积分求导
       .replace(/\\frac\{d\}\{dx\}/g, '\\operatorname{diff}')
 
+      // 三角函数
+      .replace(/\\csc\^\{-1\}/g, '\\operatorname{Arccsc}')
+      .replace(/\\sec\^\{-1\}/g, '\\operatorname{Arcsec}')
+      .replace(/\\cot\^\{-1\}/g, '\\operatorname{Arccot}')
+
       // --- 度分秒拦截 ---
       // 匹配完整的 12°34'56"
       .replace(/([0-9.]+)\^\{\\circ\}\s*([0-9.]+)\^\{\\prime\}\s*([0-9.]+)\^\{\\prime\s*\\prime\}/g, repDMS3)
