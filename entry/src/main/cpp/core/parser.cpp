@@ -381,7 +381,6 @@ Expression parseAST(const json& ast, CalcContext& ctx) {
             
             // 角度制下，将算出的弧度结果转换为角度
             if (!ctx.isRad) res = res * Expression(180) / Expression(SymEngine::pi);
-            ctx.hasDMS = true; 
             return res;
         }
 
