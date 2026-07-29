@@ -193,21 +193,3 @@ export class PreferenceConfigs {
   static readonly KEY_STARTUP_PAGE = 'startupPageMode';
   static readonly KEY_LAST_USED_MODULE = 'lastUsedModule';
 }
-
-// 长按菜单
-export interface CustomMenuItem {
-  value: string;
-  actionCode: string; // 传给后端的独立控制码
-}
-
-export const keyContextMenuRegistry: Record<string, CustomMenuItem[]> = {
-  'S⇄D': [
-    { value: '小数', actionCode: 'LONG_SD_DEC' },
-    { value: '分数', actionCode: 'LONG_SD_FRAC' },
-    { value: '带分数', actionCode: 'LONG_SD_MIXED' },
-    { value: '度分秒', actionCode: 'LONG_SD_DMS' }
-  ],
-
-  // 其他按键（例如 Ans、sin、log）需要长按时，直接在这里追加一行即可！
-  // 'Ans': [{ value: '清除历史记录', actionCode: 'CLEAR_HISTORY' }]
-};
