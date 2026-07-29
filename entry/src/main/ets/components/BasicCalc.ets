@@ -8,9 +8,9 @@
 
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
-import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor, PreferenceConfigs, icon_backspace } from '../utils/CalculatorConfigs';
+import { getActionId, getFontColor, getBgColor, PreferenceConfigs, icon_backspace } from '../utils/CalculatorConfigs';
 
-// 1. 私有按键布局数组
+// 按键布局
 const basicButtons: Array<string | Resource> = [
   '×', '÷', icon_backspace, 'AC',
   '7', '8', '9', '%',
@@ -19,7 +19,13 @@ const basicButtons: Array<string | Resource> = [
   '.', '0', 'Ans', '='
 ];
 
-// 2. 局部私有基础按键积木
+function getLocalFontSize(btn: string | Resource): number {
+  if (btn === '+' || btn === '−' || btn === 'π' || btn === '×' || btn === '÷' || btn === '=') return 40;
+  if (btn === 'Ans' || btn === 'AC') return 26;
+  return 30;
+}
+
+// 按键
 @Component
 struct BasicKeyItem {
   btn: string | Resource = '';
@@ -33,19 +39,20 @@ struct BasicKeyItem {
     Button() {
       if (typeof this.btn === 'string') {
         Text(this.btn)
-          .fontFamily(getFontFamily(this.btn))
-          .fontSize(getFontSize(this.btn) + 2)
+          .fontFamily('HarmonyOS Sans')
+          .fontSize(getLocalFontSize(this.btn))
           .fontWeight(FontWeight.Medium)
           .fontColor(getFontColor(this.btn))
       } else {
         Image(this.btn)
           .width(48)
-          .height(40)
+          .height(48)
           .fillColor(getFontColor(this.btn))
+          .draggable(false)
       }
     }
     .type(ButtonType.Normal)
-    .borderRadius(20)
+    .borderRadius(40)
     .width('100%')
     .height('100%')
     .padding({ left: 4, right: 4 })
@@ -81,7 +88,7 @@ struct BasicKeyItem {
   }
 }
 
-// 3. 基础计算器外壳组件
+// 外壳组件
 @Component
 export struct BasicCalc {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
@@ -102,29 +109,34 @@ export struct BasicCalc {
         .height('45%')
         .width('100%')
 
-      // 基础键盘，占位 55%
-      Grid() {
-        ForEach(basicButtons, (btn: string | Resource) => {
-          GridItem() {
-            BasicKeyItem({
-              btn: btn,
-              onKeyPress: (b: string | Resource): void => { this.handleKeyPress(b); } // 修复 ArkTS 类型检测
-            })
-          }
-        })
+      Column() {
+        Grid() {
+          ForEach(basicButtons, (btn: string | Resource) => {
+            GridItem() {
+              BasicKeyItem({
+                btn: btn,
+                onKeyPress: (b: string | Resource): void => { this.handleKeyPress(b); }
+              })
+            }
+          })
+        }
+        .rowsTemplate('1fr 1fr 1fr 1fr 1fr')
+        .columnsTemplate('1fr 1fr 1fr 1fr')
+        .rowsGap(12)
+        .columnsGap(18)
+        .padding({ left: 16, right: 16, top: 20, bottom: 5 })
+        .clip(false)
+        .width('100%')
+        .height('100%')
       }
-      .rowsTemplate('1fr 1fr 1fr 1fr 1fr')
-      .columnsTemplate('1fr 1fr 1fr 1fr')
-      .rowsGap(14)
-      .columnsGap(12)
-      .padding({ left: 16, right: 16, top: 10, bottom: 5 })
-      .clip(false)
       .width('100%')
       .height('55%')
+      .backgroundColor($r('sys.color.comp_background_primary')) // 主背景色
+      .borderRadius(40)
+      .padding({ bottom: this.navBarHeight - 8 })
     }
     .width('100%')
     .height('100%')
-    .padding({ bottom: this.navBarHeight - 8 })
-    .backgroundColor($r('sys.color.background_primary'))
+    .backgroundColor($r('sys.color.comp_background_tertiary'))
   }
 }

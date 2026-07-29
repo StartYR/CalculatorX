@@ -15,11 +15,14 @@
 #include <symengine/printers.h>
 #include <symengine/eval_double.h>
 #include <string>
-
+#include <vector>
 #include "utils/Logger.h"
 
 using json = nlohmann::json;
 using SymEngine::Expression;
+
+
+
 
 static napi_value Calculate(napi_env env, napi_callback_info info) {
     size_t argc = 2; // 0：算式，1：配置
@@ -81,6 +84,62 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         ctx.hasDMS = false;
         ctx.mode = static_cast<CalcMode>(mode);
         
+        // ---------------- 方程求解专属拦截路由 (多元升维版) ----------------
+        if (mode == 2) {
+            std::vector<std::string> expr_strs;
+            
+            // 1. 拆解 List (方程组) 或 解析单一 Equal (一元方程)
+            if (ast.is_array() && !ast.empty() && ast[0] == "List") {
+                for (size_t i = 1; i < ast.size(); ++i) {
+                    Expression e = parseAST(ast[i], ctx);
+                    expr_strs.push_back(e.get_basic()->__str__());
+                }
+            } else {
+                Expression e = parseAST(ast, ctx);
+                expr_strs.push_back(e.get_basic()->__str__());
+            }
+
+            // 2. “六大金刚”未知数嗅探
+            std::vector<std::string> target_vars;
+            std::vector<std::string> candidates = {"x", "y", "z", "u", "v", "w"};
+            std::string combined_exprs = "";
+            for (const auto& s : expr_strs) combined_exprs += s + ",";
+
+            for (const auto& var : candidates) {
+                if (combined_exprs.find(var) != std::string::npos) {
+                    target_vars.push_back(var);
+                }
+            }
+            if (target_vars.empty()) target_vars.push_back("x"); // 兜底
+
+            // 3. 组装 Giac 专属多元指令 csolve([eq1, eq2], [x, y])
+            std::string eqs_str = "[";
+            for (size_t i = 0; i < expr_strs.size(); ++i) {
+                eqs_str += expr_strs[i];
+                if (i < expr_strs.size() - 1) eqs_str += ",";
+            }
+            eqs_str += "]";
+
+            std::string vars_str = "[";
+            for (size_t i = 0; i < target_vars.size(); ++i) {
+                vars_str += target_vars[i];
+                if (i < target_vars.size() - 1) vars_str += ",";
+            }
+            vars_str += "]";
+
+            std::string giacCmd = "latex(csolve(" + eqs_str + ", " + vars_str + "))";
+            std::string rawResult = evaluateWithGiac(giacCmd);
+
+            // 4. 交给 FormatUtils 进行降维美化
+            result_msg = formatEquationResult(rawResult, target_vars);
+            applyGlobalUIFormatting(result_msg);
+
+            napi_value result;
+            napi_create_string_utf8(env, result_msg.c_str(), NAPI_AUTO_LENGTH, &result);
+            return result;
+        }
+
+        // 非方程模式，继续原有的标准解析流程
         Expression expr = parseAST(ast, ctx);
         
         // 提取底层的 DMS 标志位以便兼容后续流程

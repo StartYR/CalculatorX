@@ -37,12 +37,43 @@ export class InputTranslator {
       case 'ln':       latexChar = "\\ln\\left(\\placeholder{}\\right)"; break;
       case 'lg':       latexChar = '\\lg\\left(\\placeholder{}\\right)'; break;
       case 'log':      latexChar = "\\log_{\\placeholder{}}\\left(\\placeholder{}\\right)"; break;
+
       case 'sin':      latexChar = "\\sin\\left(\\placeholder{}\\right)"; break;
       case 'cos':      latexChar = "\\cos\\left(\\placeholder{}\\right)"; break;
       case 'tan':      latexChar = "\\tan\\left(\\placeholder{}\\right)"; break;
-      case 'sin⁻¹':    latexChar = "\\arcsin\\left(\\placeholder{}\\right)"; break;
-      case 'cos⁻¹':    latexChar = "\\arccos\\left(\\placeholder{}\\right)"; break;
-      case 'tan⁻¹':    latexChar = "\\arctan\\left(\\placeholder{}\\right)"; break;
+      // case 'sin⁻¹':    latexChar = "\\arcsin\\left(\\placeholder{}\\right)"; break;
+      // case 'cos⁻¹':    latexChar = "\\arccos\\left(\\placeholder{}\\right)"; break;
+      // case 'tan⁻¹':    latexChar = "\\arctan\\left(\\placeholder{}\\right)"; break;
+      case 'sinh':      latexChar = "\\sinh\\left(\\placeholder{}\\right)"; break;
+      case 'cosh':      latexChar = "\\cosh\\left(\\placeholder{}\\right)"; break;
+      case 'tanh':      latexChar = "\\tanh\\left(\\placeholder{}\\right)"; break;
+      // case 'sinh⁻¹':    latexChar = "\\arcsinh\\left(\\placeholder{}\\right)"; break;
+      // case 'cosh⁻¹':    latexChar = "\\arccosh\\left(\\placeholder{}\\right)"; break;
+      // case 'tanh⁻¹':    latexChar = "\\arctanh\\left(\\placeholder{}\\right)"; break;
+      case 'csc':      latexChar = "\\csc\\left(\\placeholder{}\\right)"; break;
+      case 'sec':      latexChar = "\\sec\\left(\\placeholder{}\\right)"; break;
+      case 'cot':      latexChar = "\\cot\\left(\\placeholder{}\\right)"; break;
+      // case 'csc⁻¹':    latexChar = "\\arccsc\\left(\\placeholder{}\\right)"; break;
+      // case 'sec⁻¹':    latexChar = "\\arcsec\\left(\\placeholder{}\\right)"; break;
+      // case 'cot⁻¹':    latexChar = "\\arccot\\left(\\placeholder{}\\right)"; break;
+
+
+      case 'sin⁻¹':    latexChar = "\\sin^{-1}\\left(\\placeholder{}\\right)"; break;
+      case 'cos⁻¹':    latexChar = "\\cos^{-1}\\left(\\placeholder{}\\right)"; break;
+      case 'tan⁻¹':    latexChar = "\\tan^{-1}\\left(\\placeholder{}\\right)"; break;
+
+      // 双曲反函数
+      case 'sinh⁻¹':    latexChar = "\\sinh^{-1}\\left(\\placeholder{}\\right)"; break;
+      case 'cosh⁻¹':    latexChar = "\\cosh^{-1}\\left(\\placeholder{}\\right)"; break;
+      case 'tanh⁻¹':    latexChar = "\\tanh^{-1}\\left(\\placeholder{}\\right)"; break;
+
+      // 倒数三角反函数（这三个如果不改，大概率也会标红）
+      case 'csc⁻¹':    latexChar = "\\csc^{-1}\\left(\\placeholder{}\\right)"; break;
+      case 'sec⁻¹':    latexChar = "\\sec^{-1}\\left(\\placeholder{}\\right)"; break;
+      case 'cot⁻¹':    latexChar = "\\cot^{-1}\\left(\\placeholder{}\\right)"; break;
+
+
+
       case 'integral': latexChar = "\\int_{\\placeholder{}}^{\\placeholder{}}\\left(\\placeholder{}\\right)dx"; break;
       case 'indef_integral': latexChar = "\\int\\left(\\placeholder{}\\right)dx"; break;
       case 'sum':      latexChar = "\\sum_{x=\\placeholder{}}^{\\placeholder{}}\\left(\\placeholder{}\\right)"; break;
@@ -88,12 +119,16 @@ export class InputTranslator {
       case 'eig':      latexChar = "\\operatorname{eig}\\left(\\placeholder{}\\right)"; break;
       case 'rank':     latexChar = "\\operatorname{rank}\\left(\\placeholder{}\\right)"; break;
       case 'tr':       latexChar = "\\operatorname{tr}\\left(\\placeholder{}\\right)"; break;
-      // 3. 向量代数
-      // case '⨯':        latexChar = "\\boldsymbol{\\times}"; break;
-      case '•':        latexChar = "\\bullet "; break;
 
-      // 4. 特殊常量
+      // 3. 特殊常量
       case 'I':        latexChar = "\\operatorname{I}_{\\placeholder{}}"; break;
+
+      // =============== 方程求解 ===============
+      case 'cases':    latexChar = "\\begin{cases} \\placeholder{} \\\\ \\placeholder{} \\end{cases}"; break;
+      case 'cases_3':  latexChar = "\\begin{cases} \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\end{cases}"; break;
+      case 'cases_4':  latexChar = "\\begin{cases} \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\end{cases}"; break;
+      case 'cases_5':  latexChar = "\\begin{cases} \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\end{cases}"; break;
+      case 'cases_6':  latexChar = "\\begin{cases} \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\end{cases}"; break;
     }
     return latexChar;
   }

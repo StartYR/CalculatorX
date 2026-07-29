@@ -114,8 +114,8 @@ export class RoutePath {
  */
 export function getFontFamily(btn: string | Resource): string {
   if (typeof btn !== 'string') return 'HarmonyOS Sans';
-  if (['AC', '⌫', '='].includes(btn)) return 'HarmonyOS Sans';
-  if (['a', 'b', 'c', 'd', 'm', 'n', 'x', 'y', 'z', 'i', 'e', 'π'].includes(btn)) return 'Cambria Italic';
+  if (['AC', 'EXE', '.'].includes(btn)) return 'HarmonyOS Sans';
+  if (['a', 'b', 'c', 'd', 'm', 'n', 'x', 'y', 'z', 'u', 'v', 'w', 'i', 'e'].includes(btn)) return 'Cambria Italic';
   return 'Cambria Math';
 }
 
@@ -126,7 +126,7 @@ export function getBgColor(btn: string | Resource, isShift: boolean): ResourceCo
   let action = getActionId(btn);
   if (action === 'AC' || action === '⌫') return '#ffff5d3e';
   if (action === '⇧Shift') return isShift ? '#ffb87200' : '#ff9900';
-  if (action === '=') return $r('sys.color.comp_background_emphasize');
+  if (action === '=' || action === 'EXE') return $r('sys.color.comp_background_emphasize');
   if (['+', '−', '×', '÷', '∘', 'Ans'].includes(action)) return $r('sys.color.comp_background_tertiary');
 
   let isNumberOrCore = (typeof btn === 'string' && btn >= '0' && btn <= '9') || action === '.' || action === 'dim' || action === '⇦'|| action === '⇨' || btn === '⇧'|| btn === '⇩';
@@ -140,9 +140,9 @@ export function getBgColor(btn: string | Resource, isShift: boolean): ResourceCo
  */
 export function getFontSize(btn: string | Resource): number {
   if (typeof btn !== 'string') return 14;
-  if (btn >= '0' && btn <= '9') return 24;
+  if ((btn >= '0' && btn <= '9') || btn === '.') return 24;
   if (btn === 'e' || btn === 'Ans' || btn === 'Dim') return 22;
-  if (btn === '+' || btn === '×' || btn === '÷' || btn === '=' || btn === '−' || btn === '.') return 28;
+  if (btn === '+' || btn === '×' || btn === '÷' || btn === '=' || btn === '−') return 28;
   if (btn === '∘') return 36;
   if (['d/dx', 'lim'].includes(btn)) return 20;
   if (['sin', 'cos', 'tan', 'log', 'ln'].includes(btn)) return 20;
@@ -160,7 +160,7 @@ export function getFontColor(btn: string | Resource): ResourceColor {
   let action = getActionId(btn);
 
   // 1. 使用反色文字
-  if (['AC', '⌫', '=', '⇧Shift'].includes(action)) return $r('sys.color.font_on_primary');
+  if (['AC', '⌫', '=', '⇧Shift', 'EXE'].includes(action)) return $r('sys.color.font_on_primary');
 
   // 2. SVG 图标：使用主要文字色
   if (typeof btn !== 'string') return $r('sys.color.font_primary');
@@ -193,21 +193,3 @@ export class PreferenceConfigs {
   static readonly KEY_STARTUP_PAGE = 'startupPageMode';
   static readonly KEY_LAST_USED_MODULE = 'lastUsedModule';
 }
-
-// 长按菜单
-export interface CustomMenuItem {
-  value: string;
-  actionCode: string; // 传给后端的独立控制码
-}
-
-export const keyContextMenuRegistry: Record<string, CustomMenuItem[]> = {
-  'S⇄D': [
-    { value: '小数', actionCode: 'LONG_SD_DEC' },
-    { value: '分数', actionCode: 'LONG_SD_FRAC' },
-    { value: '带分数', actionCode: 'LONG_SD_MIXED' },
-    { value: '度分秒', actionCode: 'LONG_SD_DMS' }
-  ],
-
-  // 其他按键（例如 Ans、sin、log）需要长按时，直接在这里追加一行即可！
-  // 'Ans': [{ value: '清除历史记录', actionCode: 'CLEAR_HISTORY' }]
-};

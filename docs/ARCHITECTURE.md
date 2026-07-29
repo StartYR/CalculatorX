@@ -91,7 +91,8 @@ entry/src/main/
 │   │   ├── TopBar.ets                 # 顶部悬浮控制栏
 │   │   └── common/
 │   │       ├── MenuComponents.ets         # 通用菜单样式组件
-│   │       └── UniversalHistoryList.ets   # 通用历史记录列表
+│   │       ├── UniversalHistoryList.ets   # 通用历史记录列表
+│   │       └── KeyGestureWrapper.ets      # 管理按键长按行为
 │   │
 │   ├── utils/                         # 🧠 核心服务与纯逻辑层
 │   │   ├── InputTranslator.ets        # 翻译中枢：将按键指令无状态翻译为标准 LaTeX

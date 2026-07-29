@@ -7,6 +7,7 @@
  */
 #pragma once
 #include <string>
+#include <vector>
 
 // 全局查找替换
 void replaceAll(std::string& str, const std::string& from, const std::string& to);
@@ -28,3 +29,6 @@ void applyGlobalUIFormatting(std::string& result_msg);
 
 // 适配 SymEngine 传递到 Giac 的语法差异
 void adaptSymEngineToGiac(std::string& str);
+
+// 
+std::string formatEquationResult(std::string raw_latex, const std::vector<std::string>& var_names);
