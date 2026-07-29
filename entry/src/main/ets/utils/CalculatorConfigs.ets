@@ -140,9 +140,9 @@ export function getBgColor(btn: string | Resource, isShift: boolean): ResourceCo
  */
 export function getFontSize(btn: string | Resource): number {
   if (typeof btn !== 'string') return 14;
-  if (btn >= '0' && btn <= '9') return 24;
+  if ((btn >= '0' && btn <= '9') || btn === '.') return 24;
   if (btn === 'e' || btn === 'Ans' || btn === 'Dim') return 22;
-  if (btn === '+' || btn === '×' || btn === '÷' || btn === '=' || btn === '−' || btn === '.') return 28;
+  if (btn === '+' || btn === '×' || btn === '÷' || btn === '=' || btn === '−') return 28;
   if (btn === '∘') return 36;
   if (['d/dx', 'lim'].includes(btn)) return 20;
   if (['sin', 'cos', 'tan', 'log', 'ln'].includes(btn)) return 20;
