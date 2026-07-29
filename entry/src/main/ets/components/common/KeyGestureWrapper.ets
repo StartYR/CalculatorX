@@ -6,7 +6,7 @@
  * @date 2026/7/28 20:26
  */
 
-import { vibrator } from '@kit.SensorServiceKit';
+import { display } from '@kit.ArkUI'; // 用于获取屏幕宽度
 import { HapticUtils } from '../../utils/HapticUtils';
 import { icon_power2, icon_sqrtx, icon_sqrt3 } from '../../utils/CalculatorConfigs';
 
@@ -73,6 +73,7 @@ export struct KeyGestureWrapper {
   // 气泡菜单状态
   @State private isBubbleVisible: boolean = false;
   @State private activeBubbleIndex: number = -1; // 当前高亮的选项索引
+  @State private bubbleOffsetX: number = 0; // 记录触碰边缘时的 X 轴平移补偿量
   private lastHoverIndex: number = -1; // 用于防抖和触发切换震动
 
   private startDelayTimer: number = -1;
@@ -130,7 +131,7 @@ export struct KeyGestureWrapper {
             .width(52) // 统一选项宽度
             .height(40) // 统一选项高度
             .backgroundColor(this.activeBubbleIndex === index ? $r('sys.color.comp_background_emphasize') : 'transparent')
-            .borderRadius(8)
+            .borderRadius(12)
             .animation({ duration: 150, curve: Curve.EaseInOut })
           })
         }
@@ -140,10 +141,7 @@ export struct KeyGestureWrapper {
         .borderRadius(12)
         .padding(4)
         .shadow(ShadowStyle.OUTER_DEFAULT_MD)
-        // 让气泡的中心，锚定在按键的顶部中心
-        // .markAnchor({ x: '180%', y: '100%' })
-        // .position({ x: '50%', y: -8 }) // y: -8 代表距离按键顶部还有 8vp 的悬浮间隙
-        .offset({ y: -55 })
+        .offset({ x: this.bubbleOffsetX, y: -55 })
         .zIndex(100)
       }
     }
@@ -152,6 +150,35 @@ export struct KeyGestureWrapper {
     // 动态获取按键宽度，作为滑动坐标换算的基准
     .onAreaChange((oldValue: Area, newValue: Area) => {
       this.btnWidth = newValue.width as number;
+
+      // 气泡边缘碰撞检测
+      if (BUBBLE_REGISTRY[this.actionId]) {
+        let globalX = newValue.globalPosition.x as number; // 按钮在屏幕上的绝对 X 坐标
+        let bubbleWidth = BUBBLE_REGISTRY[this.actionId].length * 52 + 8;
+        let btnCenterX = globalX + (this.btnWidth / 2); // 按钮的中心点绝对坐标
+
+        let bubbleLeft = btnCenterX - (bubbleWidth / 2); // 气泡理论上的左边缘坐标
+        let bubbleRight = btnCenterX + (bubbleWidth / 2); // 气泡理论上的右边缘坐标
+
+        try {
+          // 获取当前屏幕的宽度 (将像素 px 转换为 vp)
+          let screenWidth = px2vp(display.getDefaultDisplaySync().width);
+          let edgeMargin = 12; // 留出 12vp 的安全边距，避免气泡死死贴着屏幕边缘
+
+          if (bubbleLeft < edgeMargin) {
+            // 如果左边溢出了，强制往右推
+            this.bubbleOffsetX = edgeMargin - bubbleLeft;
+          } else if (bubbleRight > screenWidth - edgeMargin) {
+            // 如果右边溢出了，强制往左推
+            this.bubbleOffsetX = (screenWidth - edgeMargin) - bubbleRight;
+          } else {
+            // 如果很安全，无需平移
+            this.bubbleOffsetX = 0;
+          }
+        } catch (e) {
+          this.bubbleOffsetX = 0;
+        }
+      }
     })
     .bindContextMenu(this.isNativeMenuShow, this.NativeMenuBuilder, {
       onDisappear: () => { this.isNativeMenuShow = false; }
@@ -197,7 +224,7 @@ export struct KeyGestureWrapper {
           let bubbleWidth = itemCount * itemWidth;
 
           // 计算气泡最左侧选项相对于按键左侧的 X 坐标起始点
-          let startX = (this.btnWidth / 2) - (bubbleWidth / 2);
+          let startX = (this.btnWidth / 2) - (bubbleWidth / 2) + this.bubbleOffsetX;
 
           // 碰撞检测：只有当手指移动到按键上方区域 (y < -5) 时，才触发选项高亮
 
