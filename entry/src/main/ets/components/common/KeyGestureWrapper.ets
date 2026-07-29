@@ -7,6 +7,7 @@
  */
 
 import { vibrator } from '@kit.SensorServiceKit';
+import { HapticUtils } from '../../utils/HapticUtils';
 
 export type LongPressStrategy = 'CONTINUOUS' | 'NATIVE_MENU' | 'SLIDE_BUBBLE' | 'DIRECT_SHIFT' | 'NONE';
 
@@ -30,6 +31,10 @@ const BUBBLE_REGISTRY: Record<string, MenuItem[]> = {
     { value: '分数', actionCode: 'LONG_SD_FRAC' },
     { value: '带分数', actionCode: 'LONG_SD_MIXED' },
     { value: '度分秒', actionCode: 'LONG_SD_DMS' }
+  ],
+  'sqrt': [
+    { value: '立方根', actionCode: 'sqrt3' },
+    { value: '根号', actionCode: 'sqrtx' }
   ]
 };
 
@@ -47,6 +52,7 @@ export struct KeyGestureWrapper {
   moduleType: string = 'standard';
   @Link isShiftMode: boolean;
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
+  @StorageProp('vibrationCurve') vibrationCurve: number = 0;
 
   @BuilderParam customUI: () => void;
 
@@ -112,13 +118,15 @@ export struct KeyGestureWrapper {
               .animation({ duration: 150, curve: Curve.EaseInOut })
           })
         }
+        .width(BUBBLE_REGISTRY[this.actionId].length * 52 + 8) // 宽度计算：选项数 * 52(单选项宽) + 8(左右各4的padding)
         .backgroundColor($r('sys.color.comp_background_tertiary'))
         .borderRadius(12)
         .padding(4)
         .shadow(ShadowStyle.OUTER_DEFAULT_MD)
-        // 关键定位：让气泡的底部中心，锚定在按键的顶部中心
-        .markAnchor({ x: '50%', y: '100%' })
-        .position({ x: '50%', y: -8 }) // y: -8 代表距离按键顶部还有 8vp 的悬浮间隙
+        // 让气泡的中心，锚定在按键的顶部中心
+        // .markAnchor({ x: '180%', y: '100%' })
+        // .position({ x: '50%', y: -8 }) // y: -8 代表距离按键顶部还有 8vp 的悬浮间隙
+        .offset({ y: -55 })
         .zIndex(100)
       }
     }
@@ -141,9 +149,7 @@ export struct KeyGestureWrapper {
         this.startDelayTimer = setTimeout(() => {
           if (this.currentStrategy === 'NONE') return;
 
-          if (this.hapticFeedback) {
-            vibrator.startVibration({ type: 'preset', effectId: 'haptic.effect.sharp', count: 1 }, { usage: 'touch' }).catch(() => {});
-          }
+          HapticUtils.playVibration(this.actionId, this.hapticFeedback, this.vibrationCurve);
 
           switch (this.currentStrategy) {
             case 'CONTINUOUS':
@@ -177,7 +183,7 @@ export struct KeyGestureWrapper {
           let startX = (this.btnWidth / 2) - (bubbleWidth / 2);
 
           // 碰撞检测：只有当手指移动到按键上方区域 (y < -5) 时，才触发选项高亮
-          if (touchY < -5) {
+
             let relativeX = touchX - startX;
             let hoverIndex = Math.floor(relativeX / itemWidth);
 
@@ -187,16 +193,12 @@ export struct KeyGestureWrapper {
                 this.activeBubbleIndex = hoverIndex;
                 this.lastHoverIndex = hoverIndex;
                 // 跨越选项时，触发轻微震动反馈 (Tick)
-                if (this.hapticFeedback) vibrator.startVibration({ type: 'preset', effectId: 'haptic.effect.tick', count: 1 }, { usage: 'touch' }).catch(() => {});
+                HapticUtils.playVibration('slide_tick', this.hapticFeedback, this.vibrationCurve);
               }
             } else {
               this.activeBubbleIndex = -1;
               this.lastHoverIndex = -1;
             }
-          } else {
-            this.activeBubbleIndex = -1;
-            this.lastHoverIndex = -1;
-          }
         }
 
       } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
