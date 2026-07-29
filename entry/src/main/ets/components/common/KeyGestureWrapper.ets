@@ -21,6 +21,24 @@ export interface MenuItem {
 const CONTINUOUS_KEYS = ['⌫', '⇦', '⇨'];
 
 const BUBBLE_REGISTRY: Record<string, MenuItem[]> = {
+  'sin': [
+    { value: 'csc', actionCode: 'csc' },
+    { value: 'csc⁻¹', actionCode: 'csc⁻¹' },
+    { value: 'sinh', actionCode: 'sinh' },
+    { value: 'sinh⁻¹', actionCode: 'sinh⁻¹' }
+  ],
+  'cos': [
+    { value: 'sec', actionCode: 'sec' },
+    { value: 'sec⁻¹', actionCode: 'sec⁻¹' },
+    { value: 'cosh', actionCode: 'cosh' },
+    { value: 'cosh⁻¹', actionCode: 'cosh⁻¹' }
+  ],
+  'tan': [
+    { value: 'cot', actionCode: 'cot' },
+    { value: 'cot⁻¹', actionCode: 'cot⁻¹' },
+    { value: 'tanh', actionCode: 'tanh' },
+    { value: 'tanh⁻¹', actionCode: 'tanh⁻¹' }
+  ],
   'cases': [
     { value: '3行', actionCode: 'cases_3' },
     { value: '4行', actionCode: 'cases_4' },
@@ -36,10 +54,6 @@ const BUBBLE_REGISTRY: Record<string, MenuItem[]> = {
   'sqrt': [
     { value: icon_sqrt3, actionCode: 'sqrt3' },
     { value: icon_sqrtx, actionCode: 'sqrtx' }
-  ],
-  '2': [
-    { value: '1/2', actionCode: '1/2' },
-    { value: icon_power2, actionCode: 'power2' }
   ]
 };
 
@@ -111,7 +125,7 @@ export struct KeyGestureWrapper {
       if (this.isBubbleVisible && BUBBLE_REGISTRY[this.actionId]) {
         Row() {
           ForEach(BUBBLE_REGISTRY[this.actionId], (item: MenuItem, index: number) => {
-            // ======= 核心修改区：使用 Stack 统一包裹背景，内部按类型渲染 =======
+            // 使用 Stack 统一包裹背景，内部按类型渲染
             Stack() {
               if (typeof item.value === 'string') {
                 // 如果是文本，渲染 Text
