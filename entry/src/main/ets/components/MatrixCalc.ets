@@ -70,6 +70,7 @@ struct MatrixKeyItem {
               .height(40)
               .fillColor(getFontColor(this.btn))
               .objectFit(ImageFit.Contain)
+              .draggable(false)
           }
           .width('100%')
           .height('100%')

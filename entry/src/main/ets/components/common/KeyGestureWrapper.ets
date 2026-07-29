@@ -8,7 +8,6 @@
 
 import { vibrator } from '@kit.SensorServiceKit';
 
-// ================= 全局长按策略枚举 =================
 export type LongPressStrategy = 'CONTINUOUS' | 'NATIVE_MENU' | 'SLIDE_BUBBLE' | 'DIRECT_SHIFT' | 'NONE';
 
 export interface MenuItem {
@@ -17,10 +16,8 @@ export interface MenuItem {
 }
 
 // ================= 内部长按逻辑配置字典 =================
-// 1. 连续触发名单 (80ms 连发)
 const CONTINUOUS_KEYS = ['⌫', '⇦', '⇨'];
 
-// 2. 悬浮气泡菜单字典 (支持滑动选择)
 const BUBBLE_REGISTRY: Record<string, MenuItem[]> = {
   'cases': [
     { value: '3行', actionCode: 'cases_3' },
@@ -36,37 +33,39 @@ const BUBBLE_REGISTRY: Record<string, MenuItem[]> = {
   ]
 };
 
-// 3. 原生系统菜单字典
 const NATIVE_MENU_REGISTRY: Record<string, MenuItem[]> = {
   'Ans': [{ value: '清除历史记录', actionCode: 'CLEAR_HISTORY' }]
 };
 
-// ================= 纯逻辑组件 =================
+// ================= 纯手势逻辑组件 =================
 @Component
 export struct KeyGestureWrapper {
-  // --- 核心纯逻辑参数 ---
-  actionId: string = '';             // 当前按键的唯一标识符
-  targetBtn: string | Resource = ''; // 原始按键值，用于短按发射
-  shiftBtn: string | Resource = '';  // 对应的 Shift 态按键，用于触发 DIRECT_SHIFT
-  moduleType: string = 'standard';   // 当前所处的计算模式
-  @Link isShiftMode: boolean;        // 面板当前的 Shift 状态
+  // --- 核心参数 ---
+  actionId: string = '';
+  targetBtn: string | Resource = '';
+  shiftBtn: string | Resource = '';
+  moduleType: string = 'standard';
+  @Link isShiftMode: boolean;
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
 
-  // --- UI 由外部完全接管 ---
   @BuilderParam customUI: () => void;
 
-  // --- 回调 ---
   onKeyPress: (btn: string | Resource) => void = () => {};
   onMenuSelect: (actionCode: string) => void = () => {};
 
   // --- 内部状态机变量 ---
+  @State private btnWidth: number = 0; // 用于计算碰撞热区
+
+  // 原生菜单状态
   @State private isNativeMenuShow: boolean = false;
+
+  // 气泡菜单状态
+  @State private isBubbleVisible: boolean = false;
+  @State private activeBubbleIndex: number = -1; // 当前高亮的选项索引
+  private lastHoverIndex: number = -1; // 用于防抖和触发切换震动
+
   private startDelayTimer: number = -1;
   private repeatMoveTimer: number = -1;
-
-  private touchStartX: number = 0;
-  private touchStartY: number = 0;
-  private isBubbleTriggered: boolean = false;
   private currentStrategy: LongPressStrategy = 'NONE';
 
   private resolveStrategy(): LongPressStrategy {
@@ -91,20 +90,49 @@ export struct KeyGestureWrapper {
   }
 
   build() {
-    // 作为一个透明的容器，包裹外部传入的 UI，接管触摸事件
+    // 使用 Stack 作为绝对坐标系，将气泡压在自定义 UI 之上
     Stack() {
+      // 1. 外部传入的原汁原味按键 UI
       this.customUI()
+
+      // 2. 长按滑动悬浮气泡 UI
+      if (this.isBubbleVisible && BUBBLE_REGISTRY[this.actionId]) {
+        Row() {
+          ForEach(BUBBLE_REGISTRY[this.actionId], (item: MenuItem, index: number) => {
+            Text(item.value)
+              .fontSize(15)
+              .fontWeight(this.activeBubbleIndex === index ? FontWeight.Bold : FontWeight.Medium)
+              .fontColor(this.activeBubbleIndex === index ? $r('sys.color.font_on_primary') : $r('sys.color.font_primary'))
+              .backgroundColor(this.activeBubbleIndex === index ? $r('sys.color.comp_background_emphasize') : 'transparent')
+              .width(52) // 单个选项宽度
+              .height(40)
+              .textAlign(TextAlign.Center)
+              .borderRadius(8)
+              // 动画过渡，让高亮背景色的切换更丝滑
+              .animation({ duration: 150, curve: Curve.EaseInOut })
+          })
+        }
+        .backgroundColor($r('sys.color.comp_background_tertiary'))
+        .borderRadius(12)
+        .padding(4)
+        .shadow(ShadowStyle.OUTER_DEFAULT_MD)
+        // 关键定位：让气泡的底部中心，锚定在按键的顶部中心
+        .markAnchor({ x: '50%', y: '100%' })
+        .position({ x: '50%', y: -8 }) // y: -8 代表距离按键顶部还有 8vp 的悬浮间隙
+        .zIndex(100)
+      }
     }
     .width('100%')
     .height('100%')
+    // 动态获取按键宽度，作为滑动坐标换算的基准
+    .onAreaChange((oldValue: Area, newValue: Area) => {
+      this.btnWidth = newValue.width as number;
+    })
     .bindContextMenu(this.isNativeMenuShow, this.NativeMenuBuilder, {
       onDisappear: () => { this.isNativeMenuShow = false; }
     })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
-        this.touchStartX = event.touches[0].windowX;
-        this.touchStartY = event.touches[0].windowY;
-        this.isBubbleTriggered = false;
         this.currentStrategy = this.resolveStrategy();
 
         clearTimeout(this.startDelayTimer);
@@ -114,11 +142,7 @@ export struct KeyGestureWrapper {
           if (this.currentStrategy === 'NONE') return;
 
           if (this.hapticFeedback) {
-            vibrator.startVibration({
-              type: 'preset',
-              effectId: 'haptic.effect.sharp',
-              count: 1
-            }, { usage: 'touch' }).catch(() => {});
+            vibrator.startVibration({ type: 'preset', effectId: 'haptic.effect.sharp', count: 1 }, { usage: 'touch' }).catch(() => {});
           }
 
           switch (this.currentStrategy) {
@@ -129,40 +153,72 @@ export struct KeyGestureWrapper {
               this.isNativeMenuShow = true;
               break;
             case 'SLIDE_BUBBLE':
-              this.isBubbleTriggered = true;
-              let bubbleOptions = BUBBLE_REGISTRY[this.actionId];
-              getContext(this).eventHub.emit('open_global_bubble', bubbleOptions, this.touchStartX, this.touchStartY);
+              this.isBubbleVisible = true;
               break;
             case 'DIRECT_SHIFT':
               this.onKeyPress(this.shiftBtn);
-              this.isBubbleTriggered = true;
+              this.isBubbleVisible = true; // 借用变量作为标记，拦截短按
               break;
           }
         }, 300);
 
       } else if (event.type === TouchType.Move) {
-        if (this.currentStrategy === 'SLIDE_BUBBLE' && this.isBubbleTriggered) {
-          let currentX = event.touches[0].windowX;
-          let currentY = event.touches[0].windowY;
-          getContext(this).eventHub.emit('update_bubble_hover', currentX, currentY);
+        if (this.currentStrategy === 'SLIDE_BUBBLE' && this.isBubbleVisible) {
+          // 获取相对当前按键左上角的局部坐标
+          let touchX = event.touches[0].x;
+          let touchY = event.touches[0].y;
+
+          let items = BUBBLE_REGISTRY[this.actionId];
+          let itemCount = items.length;
+          let itemWidth = 52; // 与 UI 中设定的选项宽度一致
+          let bubbleWidth = itemCount * itemWidth;
+
+          // 计算气泡最左侧选项相对于按键左侧的 X 坐标起始点
+          let startX = (this.btnWidth / 2) - (bubbleWidth / 2);
+
+          // 碰撞检测：只有当手指移动到按键上方区域 (y < -5) 时，才触发选项高亮
+          if (touchY < -5) {
+            let relativeX = touchX - startX;
+            let hoverIndex = Math.floor(relativeX / itemWidth);
+
+            // 限制索引在有效范围内
+            if (hoverIndex >= 0 && hoverIndex < itemCount) {
+              if (this.lastHoverIndex !== hoverIndex) {
+                this.activeBubbleIndex = hoverIndex;
+                this.lastHoverIndex = hoverIndex;
+                // 跨越选项时，触发轻微震动反馈 (Tick)
+                if (this.hapticFeedback) vibrator.startVibration({ type: 'preset', effectId: 'haptic.effect.tick', count: 1 }, { usage: 'touch' }).catch(() => {});
+              }
+            } else {
+              this.activeBubbleIndex = -1;
+              this.lastHoverIndex = -1;
+            }
+          } else {
+            this.activeBubbleIndex = -1;
+            this.lastHoverIndex = -1;
+          }
         }
 
       } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
         clearTimeout(this.startDelayTimer);
         clearInterval(this.repeatMoveTimer);
 
-        if (this.currentStrategy === 'SLIDE_BUBBLE' && this.isBubbleTriggered) {
-          getContext(this).eventHub.emit('close_and_resolve_bubble', (selectedActionCode: string) => {
-            if (selectedActionCode) {
-              this.onMenuSelect(selectedActionCode);
-            }
-          });
-          this.isBubbleTriggered = false;
+        if (this.currentStrategy === 'SLIDE_BUBBLE' && this.isBubbleVisible) {
+          // 如果手指抬起时，正好停留在某个高亮的选项上，则发射对应的 Action
+          if (this.activeBubbleIndex !== -1) {
+            let items = BUBBLE_REGISTRY[this.actionId];
+            this.onMenuSelect(items[this.activeBubbleIndex].actionCode);
+          }
+          // 状态重置
+          this.isBubbleVisible = false;
+          this.activeBubbleIndex = -1;
+          this.lastHoverIndex = -1;
         }
-        else if (this.currentStrategy === 'DIRECT_SHIFT' && this.isBubbleTriggered) {
-          this.isBubbleTriggered = false;
+        else if (this.currentStrategy === 'DIRECT_SHIFT' && this.isBubbleVisible) {
+          this.isBubbleVisible = false;
         }
         else if (!this.isNativeMenuShow) {
+          // 常规短按逻辑
           if (this.actionId === '⇧Shift') {
             this.isShiftMode = !this.isShiftMode;
           } else if (this.isShiftMode && this.shiftBtn !== '') {

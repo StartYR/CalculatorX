@@ -48,6 +48,7 @@ struct BasicKeyItem {
           .width(48)
           .height(48)
           .fillColor(getFontColor(this.btn))
+          .draggable(false)
       }
     }
     .type(ButtonType.Normal)

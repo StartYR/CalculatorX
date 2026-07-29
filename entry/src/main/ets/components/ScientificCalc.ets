@@ -145,6 +145,7 @@ struct TopKeyItem {
             .width(36)
             .height(36)
             .fillColor($r('sys.color.font_secondary'))
+            .draggable(false)
         }
       }
       .type(ButtonType.Normal)
@@ -252,6 +253,7 @@ struct BottomKeyItem {
           .width(48)
           .height(40)
           .fillColor(getFontColor(this.btn))
+          .draggable(false)
       }
     }
     .type(ButtonType.Normal)
