@@ -29,7 +29,7 @@ const icon_cases: Resource = $rawfile('icons/equation/icon_cases.svg');
 const topShiftButtons: Array<string | Resource> = [
   '', '', '', '', '', '',
   icon_abs, icon_sqrtx, icon_power, 'i', 'm', 'n',
-   'sin⁻¹', 'cos⁻¹', 'tan⁻¹', 'a', 'b', 'c'
+   'sin⁻¹', 'cos⁻¹', 'tan⁻¹', 'u', 'v', 'w'
 ];
 
 // 顶部功能区
