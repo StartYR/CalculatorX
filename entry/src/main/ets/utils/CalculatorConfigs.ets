@@ -115,7 +115,7 @@ export class RoutePath {
 export function getFontFamily(btn: string | Resource): string {
   if (typeof btn !== 'string') return 'HarmonyOS Sans';
   if (['AC', 'EXE', '.'].includes(btn)) return 'HarmonyOS Sans';
-  if (['a', 'b', 'c', 'd', 'm', 'n', 'x', 'y', 'z', 'i', 'e'].includes(btn)) return 'Cambria Italic';
+  if (['a', 'b', 'c', 'd', 'm', 'n', 'x', 'y', 'z', 'u', 'v', 'w', 'i', 'e'].includes(btn)) return 'Cambria Italic';
   return 'Cambria Math';
 }
 

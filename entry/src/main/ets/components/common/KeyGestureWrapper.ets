@@ -135,11 +135,11 @@ export struct KeyGestureWrapper {
             .animation({ duration: 150, curve: Curve.EaseInOut })
           })
         }
-        .width(BUBBLE_REGISTRY[this.actionId].length * 52 + 8) // 宽度计算：选项数 * 52(单选项宽) + 8(左右各4的padding)
+        .width(BUBBLE_REGISTRY[this.actionId].length * 52 + 4) // 宽度计算：选项数 * 52(单选项宽) + 8(左右各4的padding)
         .backgroundColor($r('sys.color.comp_background_tertiary'))
         .backgroundBlurStyle(BlurStyle.Thin)
-        .borderRadius(12)
-        .padding(4)
+        .borderRadius(14)
+        .padding(2)
         .shadow(ShadowStyle.OUTER_DEFAULT_MD)
         .offset({ x: this.bubbleOffsetX, y: -55 })
         .zIndex(100)
@@ -228,21 +228,25 @@ export struct KeyGestureWrapper {
 
           // 碰撞检测：只有当手指移动到按键上方区域 (y < -5) 时，才触发选项高亮
 
-            let relativeX = touchX - startX;
-            let hoverIndex = Math.floor(relativeX / itemWidth);
+          let relativeX = touchX - startX;
+          let hoverIndex = Math.floor(relativeX / itemWidth);
 
-            // 限制索引在有效范围内
-            if (hoverIndex >= 0 && hoverIndex < itemCount) {
-              if (this.lastHoverIndex !== hoverIndex) {
-                this.activeBubbleIndex = hoverIndex;
-                this.lastHoverIndex = hoverIndex;
-                // 跨越选项时，触发轻微震动反馈 (Tick)
-                HapticUtils.playVibration('slide_tick', this.hapticFeedback, this.vibrationCurve);
-              }
-            } else {
-              this.activeBubbleIndex = -1;
-              this.lastHoverIndex = -1;
-            }
+          // 边缘吸附：如果手指滑到了最左侧外面，强制锁定为第 0 个选项
+          if (hoverIndex < 0) {
+            hoverIndex = 0;
+          }
+          // 如果手指滑到了最右侧外面，强制锁定为最后一个选项
+          else if (hoverIndex >= itemCount) {
+            hoverIndex = itemCount - 1;
+          }
+
+          // 只要索引发生变化（跨越了选项边界），就更新高亮并触发震动
+          if (this.lastHoverIndex !== hoverIndex) {
+            this.activeBubbleIndex = hoverIndex;
+            this.lastHoverIndex = hoverIndex;
+
+            HapticUtils.playVibration('slide_tick', this.hapticFeedback, this.vibrationCurve);
+          }
         }
 
       } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
