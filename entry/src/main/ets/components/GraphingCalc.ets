@@ -5,7 +5,15 @@
  * * @author 易睿 (Yi Rui)
  * @date 2026/7/24 22:51
  */
-
+import { FormulaScreen } from './FormulaScreen';
+import { HapticUtils } from '../utils/HapticUtils';
+import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
+import { PreferenceConfigs } from '../utils/CalculatorConfigs';
+import {
+  icon_sqrt, icon_sqrt3, icon_sqrtx, icon_power2, icon_power3,
+  icon_power, icon_fraction, icon_abs, icon_backspace
+} from '../utils/CalculatorConfigs';
+import { KeyGestureWrapper } from './common/KeyGestureWrapper';
 import mediaquery from '@ohos.mediaquery';
 
 @Component
@@ -50,12 +58,17 @@ export struct GraphingCalc {
     getContext(this).eventHub.on('open_graphing_edit_sheet', () => {
       this.isEditSheetShow = true;
     });
+    // 监听 Shift 被消费的事件
+    getContext(this).eventHub.on('screen_shift_consumed', () => {
+      this.isShift = false;
+    });
   }
 
   aboutToDisappear() {
     // 组件销毁时注销监听，防止内存泄漏
     this.darkMediaQuery.off('change', this.onDarkModeChange);
     getContext(this).eventHub.off('open_graphing_edit_sheet');
+    getContext(this).eventHub.off('screen_shift_consumed');
   }
 
   // 统一的重绘分发器
@@ -245,21 +258,21 @@ export struct GraphingCalc {
         Row() {
           Text("y₁ = ")
             .fontSize(20)
-            .fontColor(Color.Black)
+            .fontColor($r('sys.color.font_primary'))
             .fontWeight(FontWeight.Medium)
           Text("waiting for input...")
             .fontSize(20)
-            .fontColor(Color.Gray)
+            .fontColor($r('sys.color.font_secondary'))
             .fontStyle(FontStyle.Italic)
         }
-        .padding(10)
-        .backgroundColor($r('sys.color.background_primary'))
-        .borderRadius(8)
-        .shadow({ radius: 4, color: '#33000000', offsetY: 2 })
-
+        .padding({ top: 8, bottom: 8, left: 12, right: 12 })
+        .backgroundColor(Color.Transparent)
+        .borderRadius(12)
+        .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 12 })
+        .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
       }
       // top 留出 90 的距离以避开状态栏和 TopBar
-      .margin({ top: 90, left: 20 })
+      .margin({ top: 80, left: 12 })
 
       // 3. TODO: 绑定 Sheet 用于弹出原有的 FormulaScreen 键盘
       // .bindSheet($$this.isEditSheetShow, this.EditPanelBuilder(), { ... })
@@ -267,5 +280,241 @@ export struct GraphingCalc {
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.background_primary'))
+    .bindSheet($$this.isEditSheetShow, this.EditPanelBuilder(), {
+      height: '95%', // 占据屏幕高度
+      dragBar: true, // 顶部显示拖拽条
+      backgroundColor: $r('sys.color.comp_background_tertiary'),
+      onDisappear: () => {
+        // 面板彻底消失时的回调（这里可触发 AST 的解析与画布重新连线绘制）
+      }
+    })
+  }
+
+
+  // ================= 键盘相关状态 =================
+  @StorageProp('navBarHeight') navBarHeight: number = 0;
+  @StorageProp('vibrationCurve') vibrationCurve: number = 0;
+  @StorageProp('activeBubbleId') activeBubbleId: string = '';
+  @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
+
+  @State @Watch('onShiftChange') isShift: boolean = false;
+
+  onShiftChange() {
+    getContext(this).eventHub.emit('event_shift_change', this.isShift);
+  }
+
+  private handleButtonClick(btn: string | Resource) {
+    let action = getLocalActionId(btn);
+    HapticUtils.playVibration(action, this.hapticFeedback, this.vibrationCurve);
+    getContext(this).eventHub.emit('screen_handle_action', action, this.isShift);
+  }
+
+  private handleButtonLongPress(actionCode: string) {
+    getContext(this).eventHub.emit('screen_handle_action', actionCode, this.isShift);
+  }
+
+  // ================= 编辑面板抽屉构建器 =================
+  @Builder
+  EditPanelBuilder() {
+    Column() {
+      // 1. 顶部指示区 (可用于显示正在编辑哪个函数，或者添加绘制按钮)
+      Row() {
+        Text("编辑函数图像 (y₁)")
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
+          .fontColor($r('sys.color.font_primary'))
+        Blank() // 撑开空间
+        Button("绘制")
+          .type(ButtonType.Capsule)
+          .backgroundColor($r('sys.color.brand'))
+          .height(28)
+          .onClick(() => {
+            // 点击绘制时主动收起抽屉，后续在这里获取 AST
+            this.isEditSheetShow = false;
+          })
+      }
+      .width('100%')
+      .padding({ left: 20, right: 20, top: 12, bottom: 8 })
+
+      // 2. 中间：复用的公式屏幕组件
+      FormulaScreen({ moduleType: 'graphing' })
+        .layoutWeight(1) // 占据键盘以上的剩余空间
+        .width('100%')
+
+      // 3. 底部：复用的旧版键盘外壳
+      Column() {
+        // 顶部高级键盘
+        Grid() {
+          ForEach(topButtons, (btn: string | Resource, index: number) => {
+            GridItem() {
+              TopKeyItem({
+                btn: btn, btnIndex: index, isShift: $isShift,
+                onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
+                onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
+              })
+            }.zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
+          })
+        }
+        .rowsTemplate('33fr 40fr 40fr')
+        .columnsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
+        .rowsGap(6).columnsGap(4).padding({ left: 10, right: 10, top: 6, bottom: 6 })
+        .clip(false).width('100%').height(200)
+
+        // 底部基础键盘
+        Grid() {
+          ForEach(bottomButtons, (btn: string | Resource) => {
+            GridItem() {
+              BottomKeyItem({
+                btn: btn, isShift: $isShift,
+                onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
+                onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
+              })
+            }.zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
+          })
+        }
+        .rowsTemplate('1fr 1fr 1fr 1fr')
+        .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
+        .rowsGap(8).columnsGap(6).padding({ left: 10, right: 10, top: 6, bottom: 0 })
+        .clip(false).width('100%').height(250)
+      }
+      .width('100%')
+      .backgroundColor($r('sys.color.comp_background_primary'))
+      // 避让底部系统导航条
+      .padding({ bottom: this.navBarHeight })
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('sys.color.comp_background_tertiary'))
+  }
+
+
+
+
+}
+
+/**
+ * 半模态面板和键盘
+ */
+// ================= 按键布局与特征处理 (完全复用旧版) =================
+const topShiftButtons: Array<string | Resource> = [
+  '', '', '', '', '', '',
+  icon_sqrt3, icon_abs, icon_power3, '', '', 'lg',
+  'sin⁻¹', 'cos⁻¹', 'tan⁻¹', '', '', ''
+];
+const topButtons: Array<string | Resource> = [
+  '⇧Shift', '', '⇦', '⇨', '(', ')',
+  icon_sqrt, icon_sqrtx, icon_power2, icon_power,'log', 'ln',
+  'sin', 'cos', 'tan', icon_fraction, 'x', 'θ'
+];
+const bottomButtons: Array<string | Resource> = [
+  '7', '8', '9', icon_backspace, 'AC',
+  '4', '5', '6', '×', '÷',
+  '1', '2', '3', '+', '−',
+  '.', '0', 'π', 'e', '=' // 注意：这里的确定键我暂时写成了 '='，以便接入常规计算，也可根据需要调整
+];
+
+function getLocalFontColor(btn: string | Resource): ResourceColor {
+  if (btn === '=') return getFontColor('+');
+  if (btn === 'π' || btn === 'e') return getFontColor('0');
+  return getFontColor(btn);
+}
+function getLocalBgColor(btn: string | Resource, isShift: boolean): ResourceColor {
+  if (btn === '=') return getBgColor('+', false);
+  if (btn === 'π' || btn === 'e') return getBgColor('0', false);
+  return getBgColor(btn, isShift);
+}
+function getLocalFontSize(btn: string | Resource): number {
+  if (btn === 'π' || btn === 'e') return getFontSize('0');
+  return getFontSize(btn);
+}
+function getLocalActionId(btn: string | Resource): string {
+  return getActionId(btn);
+}
+
+// ================= 键盘子组件 (完全复用旧版) =================
+@Component
+struct TopKeyItem {
+  btn: string | Resource = '';
+  btnIndex: number = 0;
+  @Link isShift: boolean;
+  @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
+  onKeyPress: (btn: string | Resource) => void = () => {};
+  onMenuSelect: (actionCode: string) => void = () => {};
+
+  build() {
+    Column() {
+      if (this.btnIndex >= 6) {
+        Row() {
+          if (typeof topShiftButtons[this.btnIndex] === 'string') {
+            Text(topShiftButtons[this.btnIndex] as string)
+              .fontFamily(getFontFamily(topShiftButtons[this.btnIndex]))
+              .fontSize(17).fontColor('#ffac8100').textAlign(TextAlign.Center).width('100%')
+          } else {
+            Image(topShiftButtons[this.btnIndex] as Resource)
+              .width(30).height(30).fillColor('#ffac8100').objectFit(ImageFit.Contain)
+          }
+        }
+        .width('100%').height(16).justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center).margin({ bottom: 1 })
+      } else {
+        Row().width('100%').height(6)
+      }
+      Row() {
+        KeyGestureWrapper({
+          actionId: getLocalActionId(this.btn), targetBtn: this.btn,
+          shiftBtn: topShiftButtons[this.btnIndex] || '', moduleType: 'graphing',
+          isShiftMode: $isShift, onKeyPress: this.onKeyPress, onMenuSelect: this.onMenuSelect
+        }) {
+          Button() {
+            if (typeof this.btn === 'string') {
+              Text(this.btn).fontFamily(getFontFamily(this.btn)).fontSize(getLocalFontSize(this.btn))
+                .fontWeight(FontWeight.Medium).fontColor(getLocalFontColor(this.btn))
+            } else {
+              Image(this.btn).width(36).height(36).fillColor($r('sys.color.font_secondary')).draggable(false)
+            }
+          }
+          .type(ButtonType.Normal).borderRadius(12).width('100%').height('100%').padding({ left: 2, right: 2 })
+          .backgroundColor(getLocalBgColor(this.btn, this.isShift)).shadow(ShadowStyle.OUTER_DEFAULT_SM)
+          .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 }).borderColor($r('app.color.btn_highlight'))
+          .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
+          .stateStyles({
+            pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
+            normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
+          })
+        }
+      }.width('100%').layoutWeight(1)
+    }.width('100%').height('100%')
+  }
+}
+
+@Component
+struct BottomKeyItem {
+  btn: string | Resource = '';
+  @Link isShift: boolean;
+  @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
+  onKeyPress: (btn: string | Resource) => void = () => {};
+  onMenuSelect: (actionCode: string) => void = () => {};
+
+  build() {
+    KeyGestureWrapper({
+      actionId: getLocalActionId(this.btn), targetBtn: this.btn, shiftBtn: '',
+      moduleType: 'graphing', isShiftMode: $isShift, onKeyPress: this.onKeyPress, onMenuSelect: this.onMenuSelect
+    }) {
+      Button() {
+        if (typeof this.btn === 'string') {
+          Text(this.btn).fontFamily(getFontFamily(this.btn)).fontSize(getLocalFontSize(this.btn))
+            .fontWeight(FontWeight.Medium).fontColor(getLocalFontColor(this.btn))
+        } else {
+          Image(this.btn).width(48).height(40).fillColor(getFontColor(this.btn)).draggable(false)
+        }
+      }
+      .type(ButtonType.Normal).borderRadius(16).width('100%').height('100%').padding({ left: 4, right: 4 })
+      .backgroundColor(getLocalBgColor(this.btn, false)).shadow(ShadowStyle.OUTER_DEFAULT_SM)
+      .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 }).borderColor($r('app.color.btn_highlight'))
+      .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
+      .stateStyles({
+        pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
+        normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
+      })
+    }
   }
 }
