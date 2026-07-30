@@ -5,13 +5,8 @@
  * * @author 易睿 (Yi Rui)
  * @date 2026/7/24 22:51
  */
-/**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
- * @file GraphingCalc.ets
- * @description 函数图像模块 - 原生 Canvas 自适应坐标系与手势引擎
- * @author 易睿 (Yi Rui)
- * @date 2026
- */
+
+import mediaquery from '@ohos.mediaquery';
 
 @Component
 export struct GraphingCalc {
@@ -27,6 +22,9 @@ export struct GraphingCalc {
   @State @Watch('requestDraw') offsetX: number = 0;   // 坐标原点相对屏幕中心的 X 偏移量
   @State @Watch('requestDraw') offsetY: number = 0;   // 坐标原点相对屏幕中心的 Y 偏移量
 
+  // 获取全局深浅色配置，并监听变化触发画布重绘
+  @StorageProp('colorModeIndex') @Watch('requestDraw') colorModeIndex: number = 2;
+
   // 手势过程中的临时状态，用于增量计算
   private lastOffsetX: number = 0;
   private lastOffsetY: number = 0;
@@ -35,13 +33,28 @@ export struct GraphingCalc {
   // 底部编辑抽屉的控制开关
   @State isEditSheetShow: boolean = false;
 
+  // 系统深色模式的媒体查询监听器
+  private darkMediaQuery: mediaquery.MediaQueryListener = mediaquery.matchMediaSync('(dark-mode: true)');
+
+  // 响应系统主题变化的回调函数
+  private onDarkModeChange = (mediaQueryResult: mediaquery.MediaQueryResult) => {
+    // 只有当设置为“跟随系统” (2) 时，系统级别的深浅切换才需要主动触发重绘
+    if (this.colorModeIndex === 2) {
+      this.requestDraw();
+    }
+  }
+
   aboutToAppear() {
+    // 注册系统主题变化监听
+    this.darkMediaQuery.on('change', this.onDarkModeChange);
     getContext(this).eventHub.on('open_graphing_edit_sheet', () => {
       this.isEditSheetShow = true;
     });
   }
 
   aboutToDisappear() {
+    // 组件销毁时注销监听，防止内存泄漏
+    this.darkMediaQuery.off('change', this.onDarkModeChange);
     getContext(this).eventHub.off('open_graphing_edit_sheet');
   }
 
@@ -59,6 +72,20 @@ export struct GraphingCalc {
     let width = this.canvasWidth;
     let height = this.canvasHeight;
 
+    // --- 深浅色模式判断 ---
+    let isDark = this.colorModeIndex === 1;
+    if (this.colorModeIndex === 2) {
+      try {
+        // 0 为 COLOR_MODE_DARK
+        isDark = getContext(this).resourceManager.getConfigurationSync().colorMode === 0;
+      } catch (e) {}
+    }
+
+    // 动态配色表
+    let gridColor = isDark ? '#333333' : '#E0E0E0';
+    let axisColor = isDark ? '#888888' : '#333333';
+    let textColor = isDark ? '#AAAAAA' : '#666666';
+
     // 1. 清空画布，准备重绘
     ctx.clearRect(0, 0, width, height);
 
@@ -66,9 +93,8 @@ export struct GraphingCalc {
     let originX = width / 2 + this.offsetX;
     let originY = height / 2 + this.offsetY;
 
-    // 2. 动态网格步长算法（根据当前的 scale，计算出最舒适的 1, 2, 5, 0.1, 0.5 序列）
-    // 假设相邻两个刻度的最小像素距离为 60
-    let minSpacingPx = 70;
+    // 2. 动态网格步长算法
+    let minSpacingPx = 40;  // 相邻两个刻度的最小像素距离
     let rawStep = minSpacingPx / this.viewScale;
     let magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
     let residual = rawStep / magnitude;
@@ -80,7 +106,7 @@ export struct GraphingCalc {
 
     // 3. 绘制次级网格线 (浅灰色)
     ctx.lineWidth = 1;
-    ctx.strokeStyle = '#E0E0E0'; // 适配深浅色模式的话，后续可通过主题变量切换
+    ctx.strokeStyle = gridColor; // 适配深浅色模式的话，后续可通过主题变量切换
     ctx.beginPath();
 
     // 计算当前视野内可见的坐标范围
@@ -106,8 +132,8 @@ export struct GraphingCalc {
     ctx.stroke();
 
     // 4. 绘制主坐标轴 (X轴与Y轴的粗线)
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#333333';
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = axisColor;
     ctx.beginPath();
     // X轴
     if (originY >= 0 && originY <= height) {
@@ -122,8 +148,8 @@ export struct GraphingCalc {
     ctx.stroke();
 
     // 5. 绘制坐标刻度数字
-    ctx.font = '48px sans-serif';
-    ctx.fillStyle = '#666666';
+    ctx.font = '36px sans-serif';
+    ctx.fillStyle = textColor;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
 
@@ -150,6 +176,13 @@ export struct GraphingCalc {
       if (originX < 30) textX = 35;
 
       ctx.fillText(Number(y.toFixed(toFixedNum)).toString(), textX, py);
+    }
+
+    // 原点 0
+    if (originX >= -20 && originX <= width + 20 && originY >= -20 && originY <= height + 20) {
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'top';
+      ctx.fillText('0', originX - 8, originY + 8);
     }
   }
 
@@ -211,14 +244,19 @@ export struct GraphingCalc {
       Column({ space: 10 }) {
         Row() {
           Text("y₁ = ")
-            .fontSize(20).fontColor(Color.Black).fontWeight(FontWeight.Medium)
+            .fontSize(20)
+            .fontColor(Color.Black)
+            .fontWeight(FontWeight.Medium)
           Text("waiting for input...")
-            .fontSize(20).fontColor(Color.Gray).fontStyle(FontStyle.Italic)
+            .fontSize(20)
+            .fontColor(Color.Gray)
+            .fontStyle(FontStyle.Italic)
         }
-        .padding(10).backgroundColor('#AAFFFFFF').borderRadius(8)
+        .padding(10)
+        .backgroundColor($r('sys.color.background_primary'))
+        .borderRadius(8)
         .shadow({ radius: 4, color: '#33000000', offsetY: 2 })
 
-        // （此处的编辑按钮已移除）
       }
       // top 留出 90 的距离以避开状态栏和 TopBar
       .margin({ top: 90, left: 20 })
@@ -228,6 +266,6 @@ export struct GraphingCalc {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F5F5F5') // 护眼背景
+    .backgroundColor($r('sys.color.background_primary'))
   }
 }
