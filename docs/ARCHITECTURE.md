@@ -288,7 +288,7 @@ CalculatorX 采用**单页面应用 (SPA) + 壳与插件**架构，不使用传�
 
 #### FormulaScreen（公式屏幕）
 
-[FormulaScreen.ets](../entry/src/main/ets/components/FormulaScreen.ets) 是连接 UI 键盘与计算引擎的**核心中枢**。所有 *Calc 组件都复用它。
+[FormulaScreen.ets](../entry/src/main/ets/components/FormulaScreen.ets) 是连接 UI 键盘与计算引擎的**核心中枢**。大部分 *Calc 组件都复用它。
 
 - **双 WebView 架构**：
   - `webviewController` → `calculator.html`（前台公式编辑 + 结果显示）
