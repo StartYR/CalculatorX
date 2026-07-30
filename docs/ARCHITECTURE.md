@@ -51,21 +51,21 @@ CalculatorX 采用**单页面应用 (SPA) + 壳与插件**架构，不使用传�
 
 ```
 ┌──────────────────────────────────────────┐
-│  Index.ets (壳 Shell)                     │
+│  Index.ets (壳 Shell)                    │
 │  ┌────────────────────────────────────┐  │
 │  │  TopBar (全局悬浮控制栏)             │  │
-│  │  - 菜单按钮 / 撤销 / 重做 / 历史    │  │
-│  │  - 动态状态岛（模块名 + RAD/DEG）   │  │
+│  │  - 菜单按钮 / 撤销 / 重做 / 历史      │  │
+│  │  - 动态状态岛（模块名 + RAD/DEG）     │  │
 │  ├────────────────────────────────────┤  │
-│  │  动态插槽 (currentModule 驱动)      │  │
+│  │  动态插槽 (currentModule 驱动)       │  │
 │  │  ┌──────────────────────────────┐  │  │
 │  │  │ ScientificCalc / BasicCalc / │  │  │
 │  │  │ MatrixCalc / EquationSolver  │  │  │
 │  │  │ ...                          │  │  │
 │  │  └──────────────────────────────┘  │  │
 │  ├────────────────────────────────────┤  │
-│  │  SideBarMenu (侧边栏抽屉)           │  │
-│  │  HistorySheet (历史半模态抽屉)      │  │
+│  │  SideBarMenu (侧边栏抽屉)            │  │
+│  │  HistorySheet (历史半模态抽屉)        │  │
 │  └────────────────────────────────────┘  │
 └──────────────────────────────────────────┘
 ```
@@ -137,77 +137,77 @@ CalculatorX 采用**单页面应用 (SPA) + 壳与插件**架构，不使用传�
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│ 步骤 1: 按键捕获 (ScientificCalc → FormulaScreen)             │
+│ 步骤 1: 按键捕获 (ScientificCalc → FormulaScreen)              │
 │                                                              │
 │   ScientificCalc.handleButtonClick('=')                      │
-│     → HapticUtils.playVibration('=')   // 马达震动           │
+│     → HapticUtils.playVibration('=')   // 马达震动            │
 │     → eventHub.emit('screen_handle_action', '=', isShift)    │
-│     → FormulaScreen.handleAction('=', false)                  │
-│         → executeCalculation()                                │
+│     → FormulaScreen.handleAction('=', false)                 │
+│         → executeCalculation()                               │
 └──────────────────────────────────────────────────────────────┘
                               ↓
 ┌──────────────────────────────────────────────────────────────┐
-│ 步骤 2: 提取 LaTeX (FormulaScreen → Calculator.html WebView) │
+│ 步骤 2: 提取 LaTeX (FormulaScreen → Calculator.html WebView)  │
 │                                                              │
 │   webviewController.runJavaScript('window.getFormula()')     │
-│   ← math-field.value  (原始 LaTeX，如 \sin\left(x\right))    │
+│   ← math-field.value  (原始 LaTeX，如 \sin\left(x\right))     │
 └──────────────────────────────────────────────────────────────┘
                               ↓
 ┌──────────────────────────────────────────────────────────────┐
-│ 步骤 3: 正则清洗 (EngineService.cleanRawLatex)               │
+│ 步骤 3: 正则清洗 (EngineService.cleanRawLatex)                 │
 │                                                              │
-│   - 组合/排列 5 种样式 → 统一为 \operatorname{nCr/nPr}       │
-│   - 度分秒 → \operatorname{dms}(d,m,s)                       │
-│   - 反三角函数 → \operatorname{Arccsc/Arcsec/Arccot}         │
-│   - 矩阵包装 → \operatorname{MWrap}(...) 绕过类型检查        │
+│   - 组合/排列 5 种样式 → 统一为 \operatorname{nCr/nPr}          │
+│   - 度分秒 → \operatorname{dms}(d,m,s)                        │
+│   - 反三角函数 → \operatorname{Arccsc/Arcsec/Arccot}           │
+│   - 矩阵包装 → \operatorname{MWrap}(...) 绕过类型检查           │
 │   - 矩阵上标 → \operatorname{TranOp/ConjTranOp/InvOp/MatPowOp}│
-│   - 微积分导数 \frac{d}{dx} → \operatorname{diff}            │
-│   - 行列式 \det → \operatorname{Det}                         │
+│   - 微积分导数 \frac{d}{dx} → \operatorname{diff}             │
+│   - 行列式 \det → \operatorname{Det}                          │
 └──────────────────────────────────────────────────────────────┘
                               ↓
-┌──────────────────────────────────────────────────────────────┐
-│ 步骤 4: LaTeX → MathJSON AST (FormulaScreen → WebView)      │
-│                                                              │
+┌───────────────────────────────────────────────────────────────┐
+│ 步骤 4: LaTeX → MathJSON AST (FormulaScreen → WebView)         │
+│                                                               │
 │   EngineService.generateInjectJs(cleanedLatex)                │
 │   → JS: 创建隐藏 math-field → 设置 value → getValue('math-json')│
-│   → 返回 MathJSON 格式的 AST 字符串                           │
-│   → EngineService.parseWebJsonResult() 安全解析并验证 JSON    │
-└──────────────────────────────────────────────────────────────┘
+│   → 返回 MathJSON 格式的 AST 字符串                              │
+│   → EngineService.parseWebJsonResult() 安全解析并验证 JSON       │
+└────────────────────────────────────────────────────────────────┘
                               ↓
 ┌──────────────────────────────────────────────────────────────┐
-│ 步骤 5: N-API 调用 C++ 引擎 (EngineService → libentry.so)    │
+│ 步骤 5: N-API 调用 C++ 引擎 (EngineService → libentry.so)      │
 │                                                              │
-│   EngineService.calculateNative(jsonStr, config)              │
-│     → unwrapMWrap() 剥离矩阵包装层                            │
+│   EngineService.calculateNative(jsonStr, config)             │
+│     → unwrapMWrap() 剥离矩阵包装层                             │
 │     → testNapi.calculate(jsonStr, {isRad, precision, mode})  │
-│     → engine.cpp: Calculate() N-API 入口                     │
+│     → engine.cpp: Calculate() N-API 入口                      │
 │         → json::parse 解析 AST                                │
-│         → parser.cpp: parseAST() 递归下降解析                 │
+│         → parser.cpp: parseAST() 递归下降解析                  │
 │             - 数字/符号/函数 → SymEngine Expression            │
 │             - 矩阵 → Giac 指令                                │
 │             - 方程组 → csolve()                               │
 │         → 精度分发:                                           │
-│             precision=-1/-3: 符号/精确模式                    │
-│             precision=-4: 带分数格式化                        │
+│             precision=-1/-3: 符号/精确模式                     │
+│             precision=-4: 带分数格式化                         │
 │             precision=-5: DMS 度分秒                          │
-│             precision>=0: 指定小数位数                        │
-│         → FormatUtils 格式化输出 LaTeX                        │
-│     ← 返回结果 LaTeX 字符串                                   │
+│             precision>=0: 指定小数位数                         │
+│         → FormatUtils 格式化输出 LaTeX                         │
+│     ← 返回结果 LaTeX 字符串                                    │
 └──────────────────────────────────────────────────────────────┘
                               ↓
 ┌──────────────────────────────────────────────────────────────┐
-│ 步骤 6: 显示结果 + 后台渲染入库                               │
+│ 步骤 6: 显示结果 + 后台渲染入库                                  │
 │                                                              │
-│   webviewController.runJavaScript('showResult(latex)')        │
-│   → 结果显示在前端 math-field (自适应字号缩放)                │
+│   webviewController.runJavaScript('showResult(latex)')       │
+│   → 结果显示在前端 math-field (自适应字号缩放)                    │
 │                                                              │
 │   同时:                                                       │
-│   renderWebController.runJavaScript('exportLatexToPng(...)')  │
-│   → render.html (暗房 WebView) 用 html2canvas 生成 PNG       │
-│   → arktsBridge.onImageReady() 回调                          │
-│   → HistoryRepository.insertRecord() 静默入库                │
-│      (含自动去重: 与上一条相同则跳过; 按模块保留最多 100 条)   │
-└──────────────────────────────────────────────────────────────┘
+│   renderWebController.runJavaScript('exportLatexToPng(...)') │
+│   → render.html (暗房 WebView) 用 html2canvas 生成 PNG         │
+│   → arktsBridge.onImageReady() 回调                           │
+│   → HistoryRepository.insertRecord() 静默入库                  │
+│      (含自动去重: 与上一条相同则跳过; 按模块保留最多 100 条)         │
+└───────────────────────────────────────────────────────────────┘
 ```
 
 ### 关键设计决策
@@ -642,7 +642,7 @@ entry/src/main/cpp/
 
 ---
 
-## 10. 核心目录结构
+## 10. 目录结构
 
 ```text
 entry/src/main/
