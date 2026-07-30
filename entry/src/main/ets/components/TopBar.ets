@@ -118,19 +118,37 @@ export struct TopBar {
         .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
         .onClick(() => { if (this.onRedoClick) this.onRedoClick(); })
 
-        // 4. 历史记录按钮
-        Button({ type: ButtonType.Capsule, stateEffect: true }) {
-          SymbolGlyph($r('sys.symbol.arrow_counterclockwise_clock'))
-            .fontSize(18)
-            .fontColor([$r('sys.color.icon_primary')])
+        // 4. 动态切换：函数图像模块显示“编辑”，其他模块显示“历史”
+        if (this.currentModule === 'graphing') {
+          Button({ type: ButtonType.Capsule, stateEffect: true }) {
+            SymbolGlyph($r('sys.symbol.square_and_pencil')) // 系统的编辑图标
+              .fontSize(18)
+              .fontColor([$r('sys.color.icon_primary')])
+          }
+          .width(44)
+          .height(32)
+          .backgroundColor('#54ffffff')
+          .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+          .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })
+          .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
+          .onClick(() => {
+            // 抛出全局事件，通知 GraphingCalc 唤起面板
+            getContext(this).eventHub.emit('open_graphing_edit_sheet');
+          })
+        } else {
+          Button({ type: ButtonType.Capsule, stateEffect: true }) {
+            SymbolGlyph($r('sys.symbol.arrow_counterclockwise_clock'))
+              .fontSize(18)
+              .fontColor([$r('sys.color.icon_primary')])
+          }
+          .width(44)
+          .height(32)
+          .backgroundColor('#54ffffff')
+          .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+          .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })
+          .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
+          .onClick(() => { if (this.onHistoryClick) this.onHistoryClick(); })
         }
-        .width(44)
-        .height(32)
-        .backgroundColor('#54ffffff')
-        .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
-        .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })
-        .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
-        .onClick(() => { if (this.onHistoryClick) this.onHistoryClick(); })
       }
     }
     .width('100%')

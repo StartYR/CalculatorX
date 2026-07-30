@@ -36,7 +36,13 @@ export struct GraphingCalc {
   @State isEditSheetShow: boolean = false;
 
   aboutToAppear() {
-    // 初始化逻辑（后续可在此拉取已存的图例数据）
+    getContext(this).eventHub.on('open_graphing_edit_sheet', () => {
+      this.isEditSheetShow = true;
+    });
+  }
+
+  aboutToDisappear() {
+    getContext(this).eventHub.off('open_graphing_edit_sheet');
   }
 
   // 统一的重绘分发器
@@ -116,7 +122,7 @@ export struct GraphingCalc {
     ctx.stroke();
 
     // 5. 绘制坐标刻度数字
-    ctx.font = '14px sans-serif';
+    ctx.font = '48px sans-serif';
     ctx.fillStyle = '#666666';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
@@ -165,8 +171,8 @@ export struct GraphingCalc {
     // 以双指中心为缩放锚点，这需要结合偏移量计算，这里先提供简易的中心缩放
     let newScale = this.lastViewScale * event.scale;
     // 限制极限缩放倍率，防止数值溢出
-    if (newScale < 5) newScale = 5;
-    if (newScale > 2000) newScale = 2000;
+    if (newScale < 0.00001) newScale = 0.00001;
+    if (newScale > 10000000) newScale = 10000000;
 
     // 简易处理：补偿由于缩放导致的中心偏移 (若要实现完美的指尖跟随缩放，需要结合 event.pinchCenterX)
     this.viewScale = newScale;
@@ -201,7 +207,7 @@ export struct GraphingCalc {
           )
         )
 
-      // 2. 顶层：图例列表与临时编辑按钮 (悬浮在左上角)
+      // 2. 顶层：图例列表 (悬浮在左上角)
       Column({ space: 10 }) {
         Row() {
           Text("y₁ = ")
@@ -212,14 +218,10 @@ export struct GraphingCalc {
         .padding(10).backgroundColor('#AAFFFFFF').borderRadius(8)
         .shadow({ radius: 4, color: '#33000000', offsetY: 2 })
 
-        Button("添加 / 编辑函数")
-          .type(ButtonType.Capsule)
-          .backgroundColor('#007DFF')
-          .onClick(() => {
-            this.isEditSheetShow = true;
-          })
+        // （此处的编辑按钮已移除）
       }
-      .margin({ top: 20, left: 20 })
+      // top 留出 90 的距离以避开状态栏和 TopBar
+      .margin({ top: 90, left: 20 })
 
       // 3. TODO: 绑定 Sheet 用于弹出原有的 FormulaScreen 键盘
       // .bindSheet($$this.isEditSheetShow, this.EditPanelBuilder(), { ... })
