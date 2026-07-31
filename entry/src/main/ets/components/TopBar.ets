@@ -6,6 +6,8 @@
  * @date 2026
  */
 
+import Logger from '../utils/Logger'
+
 // 定义模块名称映射
 const MODULE_TITLES: Record<string, string> = {
   'scientific': '科学计算',
@@ -48,20 +50,28 @@ export struct TopBar {
         .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })
         .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
         .onClick(() => { if (this.onMenuClick) this.onMenuClick(); })
-
-        // 2. 撤销按钮
-        Button({ type: ButtonType.Capsule, stateEffect: true }) {
-          SymbolGlyph($r('sys.symbol.arrowshape_turn_up_left'))
-            .fontSize(18)
-            .fontColor([$r('sys.color.icon_primary')])
+        if (this.currentModule !== 'graphing') {
+          // 2. 撤销按钮
+          Button({ type: ButtonType.Capsule, stateEffect: true }) {
+            SymbolGlyph($r('sys.symbol.arrowshape_turn_up_left'))
+              .fontSize(18)
+              .fontColor([$r('sys.color.icon_primary')])
+          }
+          .width(36)
+          .height(32)
+          .backgroundColor('#54ffffff')
+          .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+          .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })
+          .shadow({
+            radius: 32,
+            color: '#25000000',
+            offsetX: 3,
+            offsetY: 6
+          })
+          .onClick(() => {
+            if (this.onUndoClick) this.onUndoClick();
+          })
         }
-        .width(36)
-        .height(32)
-        .backgroundColor('#54ffffff')
-        .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
-        .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })
-        .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
-        .onClick(() => { if (this.onUndoClick) this.onUndoClick(); })
       }
 
       // ================= 中间：动态状态岛 =================
@@ -103,21 +113,30 @@ export struct TopBar {
       .animation({ duration: 300, curve: Curve.Friction }) // 状态切换动画
 
       // ================= 右侧组合：重做 + 历史 =================
+
       Row({ space: 8 }) {
         // 3. 重做按钮
-        Button({ type: ButtonType.Capsule, stateEffect: true }) {
-          SymbolGlyph($r('sys.symbol.arrowshape_turn_up_right'))
-            .fontSize(18)
-            .fontColor([$r('sys.color.icon_primary')])
+        if (this.currentModule !== 'graphing') {
+          Button({ type: ButtonType.Capsule, stateEffect: true }) {
+            SymbolGlyph($r('sys.symbol.arrowshape_turn_up_right'))
+              .fontSize(18)
+              .fontColor([$r('sys.color.icon_primary')])
+          }
+          .width(36)
+          .height(32)
+          .backgroundColor('#54ffffff')
+          .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+          .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })
+          .shadow({
+            radius: 32,
+            color: '#25000000',
+            offsetX: 3,
+            offsetY: 6
+          })
+          .onClick(() => {
+            if (this.onRedoClick) this.onRedoClick();
+          })
         }
-        .width(36)
-        .height(32)
-        .backgroundColor('#54ffffff')
-        .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
-        .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })
-        .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
-        .onClick(() => { if (this.onRedoClick) this.onRedoClick(); })
-
         // 4. 动态切换：函数图像模块显示“编辑”，其他模块显示“历史”
         if (this.currentModule === 'graphing') {
           Button({ type: ButtonType.Capsule, stateEffect: true }) {
@@ -133,7 +152,9 @@ export struct TopBar {
           .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
           .onClick(() => {
             // 抛出全局事件，通知 GraphingCalc 唤起面板
+            Logger.info('[TopBar] 打开编辑面板');
             getContext(this).eventHub.emit('open_graphing_edit_sheet');
+            Logger.info('[TopBar] 编辑面板打开结束');
           })
         } else {
           Button({ type: ButtonType.Capsule, stateEffect: true }) {
