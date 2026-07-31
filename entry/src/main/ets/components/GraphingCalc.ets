@@ -17,6 +17,7 @@ import {
 import { KeyGestureWrapper } from './common/KeyGestureWrapper';
 import mediaquery from '@ohos.mediaquery';
 import { GRAPHING_COLORS } from '../utils/CalculatorConfigs';
+import { EngineService, CalcConfig } from '../utils/EngineService';
 
 // ==================== 函数项数据结构 ====================
 export interface GraphFunctionItem {
@@ -25,6 +26,7 @@ export interface GraphFunctionItem {
   base64: string;    // 暗房渲染好的透明图片
   color: string;     // 绑定的主题色
   isVisible: boolean;// 是否在画布上展示此函数
+  ast?: string;      // 保存用于 C++ 计算的纯净 AST
 }
 
 // ==================== 按键布局配置 ====================
@@ -288,8 +290,26 @@ export struct GraphingCalc {
     // 注册系统主题变化监听
     this.darkMediaQuery.on('change', this.onDarkModeChange);
 
+    getContext(this).eventHub.on('screen_shift_consumed', () => {
+      this.isShift = false;
+    });
+
+    // ==================== 接收从 FormulaScreen 传回的 AST 与 LaTeX ====================
+    getContext(this).eventHub.on('response_graphing_data', (reqId: number, rawLatex: string, ast: string) => {
+      if (reqId >= 0 && reqId < this.functionList.length) {
+        this.functionList[reqId].latex = rawLatex;
+        this.functionList[reqId].ast = ast;
+        this.functionList.splice(reqId, 1, this.functionList[reqId]); // 触发 UI 刷新
+        this.saveFunctions();
+        this.requestDraw(); // 拿到最新 AST 后，强制触发画布重绘
+      }
+    });
+
+    // ==================== 接收编辑面板弹出指令 ====================
     getContext(this).eventHub.on('open_graphing_edit_sheet', () => {
+      console.info('[Debug_Panel] 1. GraphingCalc 成功接收到 open_graphing_edit_sheet 事件');
       this.isEditSheetShow = true;
+      console.info('[Debug_Panel] 2. isEditSheetShow 状态已赋值为 true');
     });
   }
 
@@ -298,6 +318,8 @@ export struct GraphingCalc {
     this.darkMediaQuery.off('change', this.onDarkModeChange);
     getContext(this).eventHub.off('open_graphing_edit_sheet');
     getContext(this).eventHub.off('screen_shift_consumed');
+    // 注销数据接收
+    getContext(this).eventHub.off('response_graphing_data');
   }
 
   // 自动将当前内存中的函数列表序列化并触发落盘机制
@@ -431,6 +453,61 @@ export struct GraphingCalc {
       ctx.textBaseline = 'top';
       ctx.fillText('0', originX - 8, originY + 8);
     }
+
+    // ==================== 新增：函数图像曲线渲染闭环 ====================
+    let pointsCount = Math.floor(width); // 直接使用屏幕横向物理像素数作为采样密度
+    if (pointsCount < 100) pointsCount = 100;
+
+    for (let i = 0; i < this.functionList.length; i++) {
+      let funcItem = this.functionList[i];
+
+      // 如果不可见、没有 AST 数据，或者是被 Web 端判定为 Error 的无效语法，则跳过该条曲线
+      if (!funcItem.isVisible || !funcItem.ast || funcItem.ast.includes('"Error"')) continue;
+
+      // 准备向 C++ 引擎发送的参数
+      let config: CalcConfig = {
+        isRad: AppStorage.get<boolean>('isRad') || false,
+        precision: -1,
+        mode: 3,
+        xMin: xMin,
+        xMax: xMax,
+        pointsCount: pointsCount
+      };
+
+      // 1. 发起同步调用，压榨 C++ 引擎的算力，瞬间获取超长 Float64Array
+      let points = EngineService.calculateGraphPoints(funcItem.ast, config);
+      if (!points || points.length === 0) continue;
+
+      // 2. 准备绘制当前颜色曲线
+      ctx.beginPath();
+      ctx.lineWidth = 2.5; // 曲线适当加粗，增强视觉辨识度
+      ctx.strokeStyle = funcItem.color;
+
+      let stepX = (xMax - xMin) / (pointsCount - 1);
+      let isFirstPoint = true; // 断崖检测标识位
+
+      for (let p = 0; p < pointsCount; p++) {
+        let mathY = points[p];
+
+        // 遇到 NaN 断崖 (如除以零、复数)，抬起画笔跳过，防止出现纵向连接假线
+        if (Number.isNaN(mathY)) {
+          isFirstPoint = true;
+          continue;
+        }
+
+        let mathX = xMin + p * stepX;
+        let px = originX + mathX * this.viewScale;
+        let py = originY - mathY * this.viewScale; // Y 轴需要反转
+
+        if (isFirstPoint) {
+          ctx.moveTo(px, py);
+          isFirstPoint = false;
+        } else {
+          ctx.lineTo(px, py);
+        }
+      }
+      ctx.stroke();
+    }
   }
 
   // ---------- 手势事件处理 ----------
@@ -515,7 +592,8 @@ export struct GraphingCalc {
           .backgroundColor($r('sys.color.brand'))
           .height(28)
           .onClick(() => {
-            // 点击绘制时主动收起抽屉，后续在这里获取 AST
+            // 点击绘制时，向 FormulaScreen 请求获取当前激活项的 AST
+            getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
             this.isEditSheetShow = false;
           })
       }
@@ -706,7 +784,7 @@ export struct GraphingCalc {
       dragBar: true,
       backgroundColor: $r('sys.color.background_secondary'),
       onDisappear: () => {
-        // 面板彻底消失时的回调（这里可触发 AST 的解析与画布重新连线绘制）
+        getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
       }
     })
   }

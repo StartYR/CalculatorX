@@ -49,7 +49,25 @@ export struct FormulaScreen {
     eventHub.on('screen_handle_action', (action: string, isShift: boolean) => {
       this.handleAction(action, isShift);
     });
+
+    eventHub.on('request_graphing_data', (reqId: number) => {
+      this.webviewController.runJavaScript('window.getFormula()', (error, rawLatexResult) => {
+        if (error) return;
+        let rawLatex = rawLatexResult.replace(/^"|"$/g, '').replace(/\\\\/g, '\\');
+        let cleanedLatex = EngineService.cleanRawLatex(rawLatexResult);
+        let injectJs = EngineService.generateInjectJs(cleanedLatex);
+
+        this.webviewController.runJavaScript(injectJs, (err, jsonResult) => {
+          if (err) return;
+          let cleanJsonString = EngineService.parseWebJsonResult(jsonResult);
+
+          // 获取成功后，将 LaTeX 与 AST 发射回给发起请求的 GraphingCalc 实例
+          getContext(this).eventHub.emit('response_graphing_data', reqId, rawLatex, cleanJsonString);
+        });
+      });
+    });
   }
+
 
   aboutToDisappear() {
     let eventHub = getContext(this).eventHub;
@@ -57,6 +75,7 @@ export struct FormulaScreen {
     eventHub.off('event_math_undo');
     eventHub.off('event_math_redo');
     eventHub.off('screen_handle_action');
+    eventHub.off('request_graphing_data');
   }
 
   // 接收并处理任何界面的按键逻辑
