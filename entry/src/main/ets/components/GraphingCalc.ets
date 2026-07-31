@@ -287,6 +287,10 @@ export struct GraphingCalc {
 
     // 注册系统主题变化监听
     this.darkMediaQuery.on('change', this.onDarkModeChange);
+
+    getContext(this).eventHub.on('open_graphing_edit_sheet', () => {
+      this.isEditSheetShow = true;
+    });
   }
 
   aboutToDisappear() {
@@ -501,7 +505,7 @@ export struct GraphingCalc {
     Column() {
       // 顶部指示区
       Row() {
-        Text("编辑函数图像 (y₁)")
+        Text("编辑函数图像")
           .fontSize(16)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('sys.color.font_primary'))
@@ -536,6 +540,7 @@ export struct GraphingCalc {
               if (this.activeIndex === index) {
                 // 编辑态：挂载唯一的 WebView 屏幕
                 FormulaScreen({ moduleType: 'graphing' })
+                // Text("测试")
                   .layoutWeight(1)
                   .height(64)
               } else {
@@ -699,7 +704,7 @@ export struct GraphingCalc {
     .bindSheet($$this.isEditSheetShow, this.EditPanelBuilder(), {
       height: '95%',
       dragBar: true,
-      backgroundColor: $r('sys.color.comp_background_tertiary'),
+      backgroundColor: $r('sys.color.background_secondary'),
       onDisappear: () => {
         // 面板彻底消失时的回调（这里可触发 AST 的解析与画布重新连线绘制）
       }

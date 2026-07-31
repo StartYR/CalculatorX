@@ -708,12 +708,8 @@ entry/src/main/
 │   ├── include/
 │   │   ├── json.hpp                        # nlohmann/json 单头文件 JSON 库
 │   │   └── gmp.h                           # GNU Multiple Precision 大数库头文件
-│   ├── libs/arm64-v8a/
-│   │   └── libgmp.a                        # GMP 预编译静态库
+│   ├── libs/arm64-v8a/libgmp.a             # GMP 预编译静态库
 │   ├── third_party/                        # 第三方依赖源码包 (静态链接)
-│   │   ├── giac-1.9.0.tar.gz
-│   │   ├── symengine-0.11.2.tar.gz
-│   │   └── boost_1_82_0.tar.gz
 │   └── types/libentry/                     # N-API 类型声明 (供 ArkTS 侧导入)
 │       ├── Index.d.ts
 │       └── oh-package.json5
@@ -724,27 +720,9 @@ entry/src/main/
 │   ├── compute-engine.min.js               # MathJSON 计算引擎 (Cortex JS)
 │   ├── mathlive.min.js                     # MathLive 数学排版引擎
 │   ├── html2canvas.min.js                  # HTML→Canvas 截图库 (用于历史记录缩略图)
-│   ├── mathlive-fonts.css                  # MathLive 官方字体样式
-│   ├── mathlive-static.css                 # MathLive 官方静态样式
 │   ├── fonts/                              # 数学字体 (WOFF2 + TTF)
-│   │   ├── KaTeX_*.woff2                   # KaTeX 全套字体 (Main/Math/AMS/Caligraphic/Fraktur/SansSerif/Script/Size/Typewriter)
-│   │   ├── Cambria Math.ttf                # 微软 Cambria Math (数学符号)
-│   │   └── Cambria Italic.ttf              # 微软 Cambria Italic (变量斜体)
 │   ├── icons/                              # 自定义 SVG 数学图标
-│   │   ├── math/                           # 通用数学符号 (分数/根号/幂/积分/求和/求积/绝对值/阶乘/∞/e^x/偏导/nabla...)
-│   │   │   ├── comb/                       # 组合数 5 种样式图标 (binom/subsup/calc/calc2/inline)
-│   │   │   └── perm/                       # 排列数 5 种样式图标 (A/P/calc/calc2/inline)
-│   │   ├── matrix/                         # 矩阵专属图标 (M_power/abs/dim)
-│   │   ├── equation/                       # 方程专属图标 (cases)
-│   │   └── icon_backspace.svg              # 退格图标
 │   └── docs/                               # Nextra 静态帮助文档站点 (_next/ + HTML 页面)
-│       ├── index.html                      # 文档首页
-│       ├── basics/                         # 基础使用指南 (arithmetic/history/interface)
-│       ├── scientific/                     # 科学计算指南 (algebra/calculus/equations/exponents/fractions/intro/trigonometry)
-│       ├── historys/                       # 历史记录使用指南
-│       ├── support/                        # 支持页面 (changelog/privacy)
-│       ├── about.html / faq.html           # 关于与常见问题
-│       └── images/                         # 文档截图资源
 │
 ├── resources/base/                         # 🎨 基础资源
 │   ├── element/
