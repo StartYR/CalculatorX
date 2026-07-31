@@ -50,7 +50,7 @@ export struct TopBar {
         .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })
         .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
         .onClick(() => { if (this.onMenuClick) this.onMenuClick(); })
-        if (this.currentModule !== 'graphing') {
+        if (!(this.currentModule === 'graphing'|| this.currentModule === 'basic')) {
           // 2. 撤销按钮
           Button({ type: ButtonType.Capsule, stateEffect: true }) {
             SymbolGlyph($r('sys.symbol.arrowshape_turn_up_left'))
@@ -116,7 +116,7 @@ export struct TopBar {
 
       Row({ space: 8 }) {
         // 3. 重做按钮
-        if (this.currentModule !== 'graphing') {
+        if (!(this.currentModule === 'graphing'|| this.currentModule === 'basic')) {
           Button({ type: ButtonType.Capsule, stateEffect: true }) {
             SymbolGlyph($r('sys.symbol.arrowshape_turn_up_right'))
               .fontSize(18)
