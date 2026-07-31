@@ -15,6 +15,9 @@ export interface CalcConfig {
   isRad: boolean;
   precision: number;
   mode: number; // 0:标准(微积分/常规), 1:矩阵, 2:方程等
+  xMin?: number;
+  xMax?: number;
+  pointsCount?: number;
 }
 
 export class EngineService {
@@ -168,6 +171,38 @@ export class EngineService {
     Logger.info(`[EngineService] C++ 返回的 LaTeX: ${cppResult}`);
 
     return cppResult;
+  }
+
+  /**
+   * 5. 新增：专供 GraphingCalc 调用的批量采样接口
+   * 接收 C++ 返回的纯文本 CSV，高效切分为 Float64Array 供 Canvas 画线
+   */
+  public static calculateGraphPoints(jsonStr: string, config: CalcConfig): Float64Array {
+    let astObj = JSON.parse(jsonStr) as Object;
+    let cleanedAstObj = EngineService.unwrapMWrap(astObj);
+    let finalJsonStr = JSON.stringify(cleanedAstObj);
+
+    // 此时调用 testNapi.calculate 走的是 mode === 3，返回的将是逗号分隔的超长数字字符串
+    let cppResult = testNapi.calculate(finalJsonStr, config);
+
+    if (cppResult.startsWith("Error")) {
+      return new Float64Array(0); // 兜底：遇到语法崩溃则返回空数组
+    }
+
+    // 利用原生 JS 极速分割字符串，并映射到强类型的 Float64Array 节省内存
+    let strArray = cppResult.split(',');
+    let pointsArray = new Float64Array(strArray.length);
+
+    for (let i = 0; i < strArray.length; i++) {
+      let val = strArray[i];
+      if (val === 'NaN') {
+        pointsArray[i] = NaN; // 准确传递断崖标记
+      } else {
+        pointsArray[i] = parseFloat(val);
+      }
+    }
+
+    return pointsArray;
   }
 
   /**
