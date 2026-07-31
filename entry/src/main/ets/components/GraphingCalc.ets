@@ -5,6 +5,7 @@
  * @author 易睿 (Yi Rui)
  * @date 2026/7/24 22:51
  */
+
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
@@ -15,6 +16,16 @@ import {
 } from '../utils/CalculatorConfigs';
 import { KeyGestureWrapper } from './common/KeyGestureWrapper';
 import mediaquery from '@ohos.mediaquery';
+import { GRAPHING_COLORS } from '../utils/CalculatorConfigs';
+
+// ==================== 函数项数据结构 ====================
+export interface GraphFunctionItem {
+  id: string;        // 唯一标识 (采用时间戳形式)
+  latex: string;     // 原始 LaTeX
+  base64: string;    // 暗房渲染好的透明图片
+  color: string;     // 绑定的主题色
+  isVisible: boolean;// 是否在画布上展示此函数
+}
 
 // ==================== 按键布局配置 ====================
 const topShiftButtons: Array<string | Resource> = [
@@ -236,6 +247,11 @@ export struct GraphingCalc {
   // ---------- 编辑面板状态 ----------
   @State isEditSheetShow: boolean = false;
 
+  // ---------- 函数列表管理状态 ----------
+  @StorageLink(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS) graphingFunctionsJson: string = '[]';
+  @State functionList: GraphFunctionItem[] = [];
+  @State activeIndex: number = 0; // 当前获取焦点的编辑项索引
+
   // ---------- 键盘相关状态 ----------
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
@@ -246,15 +262,31 @@ export struct GraphingCalc {
 
   // ---------- 生命周期 ----------
   aboutToAppear() {
+    // 解析持久化的函数列表，如果是首次使用则注入一个默认空项
+    try {
+      let parsedList = JSON.parse(this.graphingFunctionsJson) as GraphFunctionItem[];
+      if (parsedList.length === 0) {
+        parsedList = [{
+          id: Date.now().toString(),
+          latex: '',
+          base64: '',
+          color: GRAPHING_COLORS[0],
+          isVisible: true
+        }];
+      }
+      this.functionList = parsedList;
+    } catch (e) {
+      this.functionList = [{
+        id: Date.now().toString(),
+        latex: '',
+        base64: '',
+        color: GRAPHING_COLORS[0],
+        isVisible: true
+      }];
+    }
+
     // 注册系统主题变化监听
     this.darkMediaQuery.on('change', this.onDarkModeChange);
-    getContext(this).eventHub.on('open_graphing_edit_sheet', () => {
-      this.isEditSheetShow = true;
-    });
-    // 监听 Shift 被消费的事件
-    getContext(this).eventHub.on('screen_shift_consumed', () => {
-      this.isShift = false;
-    });
   }
 
   aboutToDisappear() {
@@ -262,6 +294,11 @@ export struct GraphingCalc {
     this.darkMediaQuery.off('change', this.onDarkModeChange);
     getContext(this).eventHub.off('open_graphing_edit_sheet');
     getContext(this).eventHub.off('screen_shift_consumed');
+  }
+
+  // 自动将当前内存中的函数列表序列化并触发落盘机制
+  private saveFunctions() {
+    this.graphingFunctionsJson = JSON.stringify(this.functionList);
   }
 
   // ---------- 重绘调度 ----------
@@ -434,6 +471,30 @@ export struct GraphingCalc {
     getContext(this).eventHub.emit('screen_handle_action', actionCode, this.isShift);
   }
 
+  // ---------- 滑动删除按钮构建器 ----------
+  @Builder
+  DeleteButton(index: number) {
+    Button({ type: ButtonType.Circle, stateEffect: true }) {
+      Image(icon_backspace) // 暂时复用退格图标作为删除图标
+        .width(20)
+        .height(20)
+        .fillColor(Color.White)
+    }
+    .width(44)
+    .height(44)
+    .margin({ left: 8, right: 16 })
+    .backgroundColor(Color.Red)
+    .onClick(() => {
+      if (this.functionList.length > 1) { // 限制至少保留一条
+        this.functionList.splice(index, 1);
+        if (this.activeIndex >= this.functionList.length) {
+          this.activeIndex = this.functionList.length - 1;
+        }
+        this.saveFunctions();
+      }
+    })
+  }
+
   // ---------- 编辑面板抽屉构建器 ----------
   @Builder
   EditPanelBuilder() {
@@ -457,10 +518,74 @@ export struct GraphingCalc {
       .width('100%')
       .padding({ left: 20, right: 20, top: 12, bottom: 8 })
 
-      // 公式编辑区
-      FormulaScreen({ moduleType: 'graphing' })
-        .layoutWeight(1)
-        .width('100%')
+      // 公式编辑区 (重构为多状态列表)
+      List({ space: 8 }) {
+        ForEach(this.functionList, (item: GraphFunctionItem, index: number) => {
+          ListItem() {
+            Row() {
+              // 颜色与可见性切换按钮
+              Circle({ width: 14, height: 14 })
+                .fill(item.isVisible ? item.color : $r('sys.color.comp_divider')) // 隐藏时置灰
+                .margin({ left: 16, right: 12 })
+                .onClick(() => {
+                  item.isVisible = !item.isVisible;
+                  this.functionList.splice(index, 1, item); // 替换式赋值以触发 UI 刷新
+                  this.saveFunctions();
+                })
+
+              if (this.activeIndex === index) {
+                // 编辑态：挂载唯一的 WebView 屏幕
+                FormulaScreen({ moduleType: 'graphing' })
+                  .layoutWeight(1)
+                  .height(64)
+              } else {
+                // 浏览态：展示图片或占位文字
+                Row() {
+                  if (item.base64) {
+                    Image(item.base64)
+                      .height(36)
+                      .objectFit(ImageFit.Contain)
+                  } else {
+                    Text("点击此处编辑表达式...")
+                      .fontColor($r('sys.color.font_secondary'))
+                  }
+                }
+                .layoutWeight(1)
+                .height(64)
+                .alignItems(VerticalAlign.Center)
+                .onClick(() => {
+                  this.activeIndex = index; // 切换焦点
+                })
+              }
+            }
+            .width('100%')
+            .backgroundColor(this.activeIndex === index ? $r('sys.color.comp_background_primary') : Color.Transparent)
+            .borderRadius(12)
+          }
+          .swipeAction({ end: this.DeleteButton(index) }) // 绑定右滑删除
+        }, (item: GraphFunctionItem) => item.id)
+
+        // 追加项：添加按钮
+        ListItem() {
+          Button("+ 添加新的函数", { type: ButtonType.Normal })
+            .backgroundColor(Color.Transparent)
+            .fontColor($r('sys.color.brand'))
+            .width('100%')
+            .height(50)
+            .onClick(() => {
+              let nextColor = GRAPHING_COLORS[this.functionList.length % GRAPHING_COLORS.length];
+              this.functionList.push({
+                id: Date.now().toString(),
+                latex: '', base64: '', color: nextColor, isVisible: true
+              });
+              this.activeIndex = this.functionList.length - 1;
+              this.saveFunctions();
+            })
+        }
+      }
+      .layoutWeight(1)
+      .width('100%')
+      .padding({ top: 4, bottom: 4 })
 
       // 键盘区域
       Column() {
@@ -500,7 +625,7 @@ export struct GraphingCalc {
       }
       .width('100%')
       .backgroundColor($r('sys.color.comp_background_primary'))
-      .padding({ bottom: this.navBarHeight })
+      .padding({ bottom: this.navBarHeight - 8})
     }
     .width('100%')
     .height('100%')
@@ -535,21 +660,35 @@ export struct GraphingCalc {
 
       // 2. 顶层：图例列表（悬浮在左上角）
       Column({ space: 10 }) {
-        Row() {
-          Text("y₁ = ")
-            .fontSize(20)
-            .fontColor($r('sys.color.font_primary'))
-            .fontWeight(FontWeight.Medium)
-          Text("waiting for input...")
-            .fontSize(20)
-            .fontColor($r('sys.color.font_secondary'))
-            .fontStyle(FontStyle.Italic)
-        }
-        .padding({ top: 8, bottom: 8, left: 12, right: 12 })
-        .backgroundColor(Color.Transparent)
-        .borderRadius(12)
-        .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 12 })
-        .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
+        ForEach(this.functionList, (item: GraphFunctionItem, index: number) => {
+          if (item.isVisible) {
+            Row({ space: 8 }) {
+              Circle({ width: 10, height: 10 })
+                .fill(item.color)
+
+              Text(`y${index + 1} = `)
+                .fontSize(20)
+                .fontColor($r('sys.color.font_primary'))
+                .fontWeight(FontWeight.Medium)
+
+              if (item.base64) {
+                Image(item.base64)
+                  .height(24) // 注释说明：限制渲染图片的最大高度以保持排版整洁
+                  .objectFit(ImageFit.Contain)
+              } else {
+                Text("waiting for input...")
+                  .fontSize(20)
+                  .fontColor($r('sys.color.font_secondary'))
+                  .fontStyle(FontStyle.Italic)
+              }
+            }
+            .padding({ top: 8, bottom: 8, left: 12, right: 12 })
+            .backgroundColor(Color.Transparent)
+            .borderRadius(12)
+            .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 12 })
+            .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
+          }
+        }, (item: GraphFunctionItem) => item.id)
       }
       // top 留出 90 的距离以避开状态栏和 TopBar
       .margin({ top: 80, left: 12 })

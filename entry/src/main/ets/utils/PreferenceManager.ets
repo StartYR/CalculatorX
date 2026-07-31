@@ -66,6 +66,8 @@ export class PreferenceManager {
     AppStorage.setOrCreate(PreferenceConfigs.KEY_COMBINATION_SELECT, PreferenceManager.get(PreferenceConfigs.KEY_COMBINATION_SELECT, 1));
     AppStorage.setOrCreate(PreferenceConfigs.KEY_PERMUTATION_SELECT, PreferenceManager.get(PreferenceConfigs.KEY_PERMUTATION_SELECT, 1));
 
+    AppStorage.setOrCreate(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS, PreferenceManager.get(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS, '[]'));
+
     Logger.info(`[PreferenceManager] 所有配置已成功加载到 AppStorage`);
   }
 }
