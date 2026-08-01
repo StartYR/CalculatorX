@@ -294,14 +294,23 @@ export struct GraphingCalc {
       this.isShift = false;
     });
 
-    // ==================== 接收从 FormulaScreen 传回的 AST 与 LaTeX ====================
-    getContext(this).eventHub.on('response_graphing_data', (reqId: number, rawLatex: string, ast: string) => {
+    // ==================== 接收打散返回的 AST 数据 ====================
+    getContext(this).eventHub.on('temp_graph_ast_ready', (reqId: number, rawLatex: string, ast: string) => {
       if (reqId >= 0 && reqId < this.functionList.length) {
         this.functionList[reqId].latex = rawLatex;
         this.functionList[reqId].ast = ast;
-        this.functionList.splice(reqId, 1, this.functionList[reqId]); // 触发 UI 刷新
+        this.functionList.splice(reqId, 1, this.functionList[reqId]);
         this.saveFunctions();
-        this.requestDraw(); // 拿到最新 AST 后，强制触发画布重绘
+        this.requestDraw(); // 拿到 AST 立刻刷新画布连线
+      }
+    });
+
+    // ==================== 接收暗房异步返回的 Base64 截图 ====================
+    getContext(this).eventHub.on('response_graph_base64_ready', (reqId: number, base64: string) => {
+      if (reqId >= 0 && reqId < this.functionList.length) {
+        this.functionList[reqId].base64 = base64;
+        this.functionList.splice(reqId, 1, this.functionList[reqId]); // 触发 UI 刷新，占位文字消失，图片出现！
+        this.saveFunctions();
       }
     });
 
@@ -319,7 +328,8 @@ export struct GraphingCalc {
     getContext(this).eventHub.off('open_graphing_edit_sheet');
     getContext(this).eventHub.off('screen_shift_consumed');
     // 注销数据接收
-    getContext(this).eventHub.off('response_graphing_data');
+    getContext(this).eventHub.off('temp_graph_ast_ready');
+    getContext(this).eventHub.off('response_graph_base64_ready');
   }
 
   // 自动将当前内存中的函数列表序列化并触发落盘机制
@@ -617,7 +627,10 @@ export struct GraphingCalc {
 
               if (this.activeIndex === index) {
                 // 编辑态：挂载唯一的 WebView 屏幕
-                FormulaScreen({ moduleType: 'graphing' })
+                FormulaScreen({
+                  moduleType: 'graphing',
+                  initialLatex: item.latex
+                })
                 // Text("测试")
                   .layoutWeight(1)
                   .height(64)
@@ -637,6 +650,8 @@ export struct GraphingCalc {
                 .height(64)
                 .alignItems(VerticalAlign.Center)
                 .onClick(() => {
+                  // 在切换焦点前，先向当前正在编辑的组件索要 AST 和图片数据
+                  getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
                   this.activeIndex = index; // 切换焦点
                 })
               }
@@ -656,6 +671,8 @@ export struct GraphingCalc {
             .width('100%')
             .height(50)
             .onClick(() => {
+              // 在新建函数前，先保存当前正在编辑的数据
+              getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
               let nextColor = GRAPHING_COLORS[this.functionList.length % GRAPHING_COLORS.length];
               this.functionList.push({
                 id: Date.now().toString(),
