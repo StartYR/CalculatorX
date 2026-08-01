@@ -5,6 +5,13 @@
  * @author 易睿 (Yi Rui)
  * @date 2026/7/24 22:51
  */
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * @file GraphingCalc.ets
+ * @description 图形计算器主组件，负责坐标系渲染、手势交互和编辑面板管理 (隐藏键盘坞终极架构)
+ * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
 
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
@@ -21,12 +28,12 @@ import { EngineService, CalcConfig } from '../utils/EngineService';
 
 // ==================== 函数项数据结构 ====================
 export interface GraphFunctionItem {
-  id: string;         // 唯一标识 (采用时间戳形式)
-  latex: string;      // 原始 LaTeX
-  base64: string;     // 暗房渲染好的透明图片
-  color: string;      // 绑定的主题色
-  isVisible: boolean; // 是否在画布上展示此函数
-  ast?: string;       // 保存用于 C++ 计算的纯净 AST
+  id: string;
+  latex: string;
+  base64: string;
+  color: string;
+  isVisible: boolean;
+  ast?: string;
 }
 
 // ==================== 按键布局配置 ====================
@@ -47,7 +54,6 @@ const bottomButtons: Array<string | Resource> = [
   '.', '0', 'π', 'e', '确定'
 ];
 
-// ==================== 按键样式适配函数 ====================
 function getLocalFontColor(btn: string | Resource): ResourceColor {
   if (btn === '=') return getFontColor('+');
   if (btn === 'π' || btn === 'e') return getFontColor('0');
@@ -69,7 +75,6 @@ function getLocalActionId(btn: string | Resource): string {
   return getActionId(btn);
 }
 
-// ==================== 键盘子组件 ====================
 @Component
 struct TopKeyItem {
   btn: string | Resource = '';
@@ -81,7 +86,6 @@ struct TopKeyItem {
 
   build() {
     Column() {
-      // Shift 功能提示区
       if (this.btnIndex >= 6) {
         Row() {
           if (typeof topShiftButtons[this.btnIndex] === 'string') {
@@ -105,12 +109,9 @@ struct TopKeyItem {
         .alignItems(VerticalAlign.Center)
         .margin({ bottom: 1 })
       } else {
-        Row()
-          .width('100%')
-          .height(6)
+        Row().width('100%').height(6)
       }
 
-      // 主按键区域
       Row() {
         KeyGestureWrapper({
           actionId: getLocalActionId(this.btn),
@@ -214,167 +215,119 @@ struct BottomKeyItem {
 // ==================== 图形计算器主组件 ====================
 @Component
 export struct GraphingCalc {
-  // ---------- 画布渲染引擎 ----------
   private settings: RenderingContextSettings = new RenderingContextSettings(true);
   private context: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings);
 
-  // 画布的物理尺寸
   @State canvasWidth: number = 0;
   @State canvasHeight: number = 0;
 
-  // 核心视图状态（触发 @Watch 进行极低开销的路径重绘，绝不重新实例化 Canvas 组件）
-  @State @Watch('requestDraw') viewScale: number = 80;    // 缩放比例（1个单位刻度占用多少物理像素）
-  @State @Watch('requestDraw') offsetX: number = 0;   // 坐标原点相对屏幕中心的 X 偏移量
-  @State @Watch('requestDraw') offsetY: number = 0;   // 坐标原点相对屏幕中心的 Y 偏移量
-
-  // 获取全局深浅色配置，并监听变化触发画布重绘
+  @State @Watch('requestDraw') viewScale: number = 80;
+  @State @Watch('requestDraw') offsetX: number = 0;
+  @State @Watch('requestDraw') offsetY: number = 0;
   @StorageProp('colorModeIndex') @Watch('requestDraw') colorModeIndex: number = 2;
 
-  // 手势过程中的临时状态，用于增量计算
   private lastOffsetX: number = 0;
   private lastOffsetY: number = 0;
   private lastViewScale: number = 80;
 
-  // 系统深色模式的媒体查询监听器
   private darkMediaQuery: mediaquery.MediaQueryListener = mediaquery.matchMediaSync('(dark-mode: true)');
-
-  // 响应系统主题变化的回调函数
   private onDarkModeChange = (mediaQueryResult: mediaquery.MediaQueryResult) => {
-    // 只有当设置为"跟随系统" (2) 时，系统级别的深浅切换才需要主动触发重绘
     if (this.colorModeIndex === 2) {
       this.requestDraw();
     }
   }
 
-  // ---------- 编辑面板状态 ----------
+  // ---------- 编辑面板与键盘状态 ----------
   @State isEditSheetShow: boolean = false;
+  // 新增：精准控制底座键盘与引擎显示折叠的核心状态
+  @State isKeyboardShow: boolean = false;
 
-  // ---------- 函数列表管理状态 ----------
   @StorageLink(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS) graphingFunctionsJson: string = '[]';
   @State functionList: GraphFunctionItem[] = [];
-  @State activeIndex: number = 0; // 当前获取焦点的编辑项索引
+  @State activeIndex: number = 0;
 
-  // ---------- 键盘相关状态 ----------
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @StorageProp('activeBubbleId') activeBubbleId: string = '';
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
-
   @State @Watch('onShiftChange') isShift: boolean = false;
 
-  // ---------- 生命周期 ----------
   aboutToAppear() {
-    // 解析持久化的函数列表，如果是首次使用则注入一个默认空项
     try {
       let parsedList = JSON.parse(this.graphingFunctionsJson) as GraphFunctionItem[];
       if (parsedList.length === 0) {
-        parsedList = [{
-          id: Date.now().toString(),
-          latex: '',
-          base64: '',
-          color: GRAPHING_COLORS[0],
-          isVisible: true
-        }];
+        parsedList = [{ id: Date.now().toString(), latex: '', base64: '', color: GRAPHING_COLORS[0], isVisible: true }];
       }
       this.functionList = parsedList;
     } catch (e) {
-      this.functionList = [{
-        id: Date.now().toString(),
-        latex: '',
-        base64: '',
-        color: GRAPHING_COLORS[0],
-        isVisible: true
-      }];
+      this.functionList = [{ id: Date.now().toString(), latex: '', base64: '', color: GRAPHING_COLORS[0], isVisible: true }];
     }
 
-    // 注册系统主题变化监听
     this.darkMediaQuery.on('change', this.onDarkModeChange);
 
     getContext(this).eventHub.on('screen_shift_consumed', () => {
       this.isShift = false;
     });
 
-    // ==================== 接收打散返回的 AST 数据 ====================
     getContext(this).eventHub.on('temp_graph_ast_ready', (reqId: number, rawLatex: string, ast: string) => {
       if (reqId >= 0 && reqId < this.functionList.length) {
         this.functionList[reqId].latex = rawLatex;
         this.functionList[reqId].ast = ast;
         this.functionList.splice(reqId, 1, this.functionList[reqId]);
         this.saveFunctions();
-        this.requestDraw(); // 拿到 AST 立刻刷新画布连线
+        this.requestDraw();
       }
     });
 
-    // ==================== 接收暗房异步返回的 Base64 截图 ====================
     getContext(this).eventHub.on('response_graph_base64_ready', (reqId: number, base64: string) => {
       if (reqId >= 0 && reqId < this.functionList.length) {
         this.functionList[reqId].base64 = base64;
-        this.functionList.splice(reqId, 1, this.functionList[reqId]); // 触发 UI 刷新，占位文字消失，图片出现！
+        this.functionList.splice(reqId, 1, this.functionList[reqId]);
         this.saveFunctions();
       }
     });
 
-    // ==================== 接收编辑面板弹出指令 ====================
     getContext(this).eventHub.on('open_graphing_edit_sheet', () => {
-      console.info('[Debug_Panel] 1. GraphingCalc 成功接收到 open_graphing_edit_sheet 事件');
       this.isEditSheetShow = true;
-      console.info('[Debug_Panel] 2. isEditSheetShow 状态已赋值为 true');
     });
   }
 
   aboutToDisappear() {
-    // 组件销毁时注销监听，防止内存泄漏
     this.darkMediaQuery.off('change', this.onDarkModeChange);
     getContext(this).eventHub.off('open_graphing_edit_sheet');
     getContext(this).eventHub.off('screen_shift_consumed');
-    // 注销数据接收
     getContext(this).eventHub.off('temp_graph_ast_ready');
     getContext(this).eventHub.off('response_graph_base64_ready');
   }
 
-  // 自动将当前内存中的函数列表序列化并触发落盘机制
   private saveFunctions() {
     this.graphingFunctionsJson = JSON.stringify(this.functionList);
   }
 
-  // ---------- 重绘调度 ----------
-  // 统一的重绘分发器
   private requestDraw() {
     if (this.canvasWidth === 0 || this.canvasHeight === 0) return;
     this.drawCoordinateSystem();
   }
 
-  /**
-   * 核心：自适应网格与坐标轴渲染引擎
-   */
   private drawCoordinateSystem() {
     let ctx = this.context;
     let width = this.canvasWidth;
     let height = this.canvasHeight;
 
-    // --- 深浅色模式判断 ---
     let isDark = this.colorModeIndex === 1;
     if (this.colorModeIndex === 2) {
-      try {
-        // 0 为 COLOR_MODE_DARK
-        isDark = getContext(this).resourceManager.getConfigurationSync().colorMode === 0;
-      } catch (e) {}
+      try { isDark = getContext(this).resourceManager.getConfigurationSync().colorMode === 0; } catch (e) {}
     }
 
-    // 动态配色表
     let gridColor = isDark ? '#333333' : '#E0E0E0';
     let axisColor = isDark ? '#888888' : '#333333';
     let textColor = isDark ? '#AAAAAA' : '#666666';
 
-    // 1. 清空画布，准备重绘
     ctx.clearRect(0, 0, width, height);
-
-    // 计算物理原点位置 (画布中心 + 偏移量)
     let originX = width / 2 + this.offsetX;
     let originY = height / 2 + this.offsetY;
 
-    // 2. 动态网格步长算法
-    let minSpacingPx = 40;  // 相邻两个刻度的最小像素距离
+    let minSpacingPx = 40;
     let rawStep = minSpacingPx / this.viewScale;
     let magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
     let residual = rawStep / magnitude;
@@ -384,50 +337,34 @@ export struct GraphingCalc {
     else if (residual > 2) step = 5 * magnitude;
     else if (residual > 1) step = 2 * magnitude;
 
-    // 3. 绘制次级网格线 (浅灰色)
     ctx.lineWidth = 1;
     ctx.strokeStyle = gridColor;
     ctx.beginPath();
 
-    // 计算当前视野内可见的坐标范围
     let xMin = (0 - originX) / this.viewScale;
     let xMax = (width - originX) / this.viewScale;
-    let yMin = (originY - height) / this.viewScale; // Y 轴屏幕向下为正，数学向上为正
+    let yMin = (originY - height) / this.viewScale;
     let yMax = (originY - 0) / this.viewScale;
 
-    // 绘制 X 轴方向的网格 (垂直线)
     let startX = Math.ceil(xMin / step) * step;
     for (let x = startX; x <= xMax; x += step) {
       let px = originX + x * this.viewScale;
-      ctx.moveTo(px, 0);
-      ctx.lineTo(px, height);
+      ctx.moveTo(px, 0); ctx.lineTo(px, height);
     }
-    // 绘制 Y 轴方向的网格 (水平线)
     let startY = Math.ceil(yMin / step) * step;
     for (let y = startY; y <= yMax; y += step) {
       let py = originY - y * this.viewScale;
-      ctx.moveTo(0, py);
-      ctx.lineTo(width, py);
+      ctx.moveTo(0, py); ctx.lineTo(width, py);
     }
     ctx.stroke();
 
-    // 4. 绘制主坐标轴 (X轴与Y轴的粗线)
     ctx.lineWidth = 1.5;
     ctx.strokeStyle = axisColor;
     ctx.beginPath();
-    // X轴
-    if (originY >= 0 && originY <= height) {
-      ctx.moveTo(0, originY);
-      ctx.lineTo(width, originY);
-    }
-    // Y轴
-    if (originX >= 0 && originX <= width) {
-      ctx.moveTo(originX, 0);
-      ctx.lineTo(originX, height);
-    }
+    if (originY >= 0 && originY <= height) { ctx.moveTo(0, originY); ctx.lineTo(width, originY); }
+    if (originX >= 0 && originX <= width) { ctx.moveTo(originX, 0); ctx.lineTo(originX, height); }
     ctx.stroke();
 
-    // 5. 绘制坐标刻度数字
     ctx.font = '36px sans-serif';
     ctx.fillStyle = textColor;
     ctx.textAlign = 'center';
@@ -435,17 +372,14 @@ export struct GraphingCalc {
 
     let toFixedNum = step < 1 ? Math.abs(Math.floor(Math.log10(step))) : 0;
 
-    // X轴数字
     for (let x = startX; x <= xMax; x += step) {
-      if (Math.abs(x) < step / 2) continue; // 跳过原点 0
+      if (Math.abs(x) < step / 2) continue;
       let px = originX + x * this.viewScale;
       let textY = (originY >= 0 && originY <= height) ? originY + 5 : 5;
       if (originY > height - 20) textY = height - 25;
-
       ctx.fillText(Number(x.toFixed(toFixedNum)).toString(), px, textY);
     }
 
-    // Y轴数字
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     for (let y = startY; y <= yMax; y += step) {
@@ -453,53 +387,41 @@ export struct GraphingCalc {
       let py = originY - y * this.viewScale;
       let textX = (originX >= 0 && originX <= width) ? originX - 8 : width - 8;
       if (originX < 30) textX = 35;
-
       ctx.fillText(Number(y.toFixed(toFixedNum)).toString(), textX, py);
     }
 
-    // 原点 0
     if (originX >= -20 && originX <= width + 20 && originY >= -20 && originY <= height + 20) {
       ctx.textAlign = 'right';
       ctx.textBaseline = 'top';
       ctx.fillText('0', originX - 8, originY + 8);
     }
 
-    // ==================== 新增：函数图像曲线渲染闭环 ====================
-    let pointsCount = Math.floor(width); // 直接使用屏幕横向物理像素数作为采样密度
+    let pointsCount = Math.floor(width);
     if (pointsCount < 100) pointsCount = 100;
 
     for (let i = 0; i < this.functionList.length; i++) {
       let funcItem = this.functionList[i];
-
-      // 如果不可见、没有 AST 数据，或者是被 Web 端判定为 Error 的无效语法，则跳过该条曲线
       if (!funcItem.isVisible || !funcItem.ast || funcItem.ast.includes('"Error"')) continue;
 
-      // 准备向 C++ 引擎发送的参数
       let config: CalcConfig = {
         isRad: AppStorage.get<boolean>('isRad') || false,
         precision: -1,
         mode: 3,
-        xMin: xMin,
-        xMax: xMax,
-        pointsCount: pointsCount
+        xMin: xMin, xMax: xMax, pointsCount: pointsCount
       };
 
-      // 1. 发起同步调用，压榨 C++ 引擎的算力，瞬间获取超长 Float64Array
       let points = EngineService.calculateGraphPoints(funcItem.ast, config);
       if (!points || points.length === 0) continue;
 
-      // 2. 准备绘制当前颜色曲线
       ctx.beginPath();
-      ctx.lineWidth = 2.5; // 曲线适当加粗，增强视觉辨识度
+      ctx.lineWidth = 2.5;
       ctx.strokeStyle = funcItem.color;
 
       let stepX = (xMax - xMin) / (pointsCount - 1);
-      let isFirstPoint = true; // 断崖检测标识位
+      let isFirstPoint = true;
 
       for (let p = 0; p < pointsCount; p++) {
         let mathY = points[p];
-
-        // 遇到 NaN 断崖 (如除以零、复数)，抬起画笔跳过，防止出现纵向连接假线
         if (Number.isNaN(mathY)) {
           isFirstPoint = true;
           continue;
@@ -507,7 +429,7 @@ export struct GraphingCalc {
 
         let mathX = xMin + p * stepX;
         let px = originX + mathX * this.viewScale;
-        let py = originY - mathY * this.viewScale; // Y 轴需要反转
+        let py = originY - mathY * this.viewScale;
 
         if (isFirstPoint) {
           ctx.moveTo(px, py);
@@ -520,39 +442,38 @@ export struct GraphingCalc {
     }
   }
 
-  // ---------- 手势事件处理 ----------
   private handlePanUpdate(event: GestureEvent) {
-    // 拖拽过程，只叠加增量
     this.offsetX = this.lastOffsetX + event.offsetX;
     this.offsetY = this.lastOffsetY + event.offsetY;
   }
-
   private handlePanEnd() {
-    // 拖拽结束，固化当前偏移量
     this.lastOffsetX = this.offsetX;
     this.lastOffsetY = this.offsetY;
   }
-
   private handlePinchUpdate(event: GestureEvent) {
-    // 以双指中心为缩放锚点，这需要结合偏移量计算，这里先提供简易的中心缩放
     let newScale = this.lastViewScale * event.scale;
-    // 限制极限缩放倍率，防止数值溢出
     if (newScale < 0.00001) newScale = 0.00001;
     if (newScale > 10000000) newScale = 10000000;
-
     this.viewScale = newScale;
   }
-
   private handlePinchEnd() {
     this.lastViewScale = this.viewScale;
   }
 
-  // ---------- 键盘事件处理 ----------
   onShiftChange() {
     getContext(this).eventHub.emit('event_shift_change', this.isShift);
   }
 
+  // ==================== 修改：专机拦截“确定”按键 ====================
   private handleButtonClick(btn: string | Resource) {
+    // 拦截“确定”按键：充当收起键盘坞和触发截图提取的指令
+    if (btn === '确定') {
+      if (this.isKeyboardShow) {
+        getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
+      }
+      this.isKeyboardShow = false; // 折叠底层键盘坞
+      return;
+    }
     let action = getLocalActionId(btn);
     HapticUtils.playVibration(action, this.hapticFeedback, this.vibrationCurve);
     getContext(this).eventHub.emit('screen_handle_action', action, this.isShift);
@@ -562,21 +483,14 @@ export struct GraphingCalc {
     getContext(this).eventHub.emit('screen_handle_action', actionCode, this.isShift);
   }
 
-  // ---------- 滑动删除按钮构建器 ----------
   @Builder
   DeleteButton(index: number) {
     Button({ type: ButtonType.Circle, stateEffect: true }) {
-      Image(icon_backspace) // 暂时复用退格图标作为删除图标
-        .width(20)
-        .height(20)
-        .fillColor(Color.White)
+      Image(icon_backspace).width(20).height(20).fillColor(Color.White)
     }
-    .width(44)
-    .height(44)
-    .margin({ left: 8, right: 16 })
-    .backgroundColor(Color.Red)
+    .width(44).height(44).margin({ left: 8, right: 16 }).backgroundColor(Color.Red)
     .onClick(() => {
-      if (this.functionList.length > 1) { // 限制至少保留一条
+      if (this.functionList.length > 1) {
         this.functionList.splice(index, 1);
         if (this.activeIndex >= this.functionList.length) {
           this.activeIndex = this.functionList.length - 1;
@@ -586,100 +500,96 @@ export struct GraphingCalc {
     })
   }
 
-  // ---------- 编辑面板抽屉构建器 ----------
   @Builder
   EditPanelBuilder() {
     Column() {
       // 顶部指示区
       Row() {
         Text("编辑函数图像")
-          .fontSize(16)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('sys.color.font_primary'))
+          .fontSize(16).fontWeight(FontWeight.Bold).fontColor($r('sys.color.font_primary'))
         Blank()
         Button("绘制")
-          .type(ButtonType.Capsule)
-          .backgroundColor($r('sys.color.brand'))
-          .height(28)
+          .type(ButtonType.Capsule).backgroundColor($r('sys.color.brand')).height(28)
           .onClick(() => {
-            // 点击绘制时，向 FormulaScreen 请求获取当前激活项的 AST
-            getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
+            // ==================== 修改：绘制时提取数据并释放 GPU ====================
+            if (this.isKeyboardShow) {
+              getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
+            }
+            this.isKeyboardShow = false;
             this.isEditSheetShow = false;
+            getContext(this).eventHub.emit('sleep_web_engines'); // 物理级休眠
           })
       }
-      .width('100%')
-      .padding({ left: 20, right: 20, top: 12, bottom: 8 })
+      .width('100%').padding({ left: 20, right: 20, top: 12, bottom: 8 })
 
-      // 公式编辑区 (重构为多状态列表)
+      // ==================== 修改：纯净展示列表 ====================
       List({ space: 8 }) {
         ForEach(this.functionList, (item: GraphFunctionItem, index: number) => {
           ListItem() {
             Row() {
-              // 颜色与可见性切换按钮
               Circle({ width: 14, height: 14 })
-                .fill(item.isVisible ? item.color : $r('sys.color.comp_divider')) // 隐藏时置灰
+                .fill(item.isVisible ? item.color : $r('sys.color.comp_divider'))
                 .margin({ left: 16, right: 12 })
                 .onClick(() => {
                   item.isVisible = !item.isVisible;
-                  this.functionList.splice(index, 1, item); // 替换式赋值以触发 UI 刷新
+                  this.functionList.splice(index, 1, item);
                   this.saveFunctions();
                 })
 
-              if (this.activeIndex === index) {
-                // 编辑态：挂载唯一的 WebView 屏幕
-                FormulaScreen({
-                  moduleType: 'graphing',
-                  initialLatex: item.latex
-                })
-                // Text("测试")
-                  .layoutWeight(1)
-                  .height(64)
-              } else {
-                // 浏览态：展示图片或占位文字
-                Row() {
-                  if (item.base64) {
-                    Image(item.base64)
-                      .height(36)
-                      .objectFit(ImageFit.Contain)
-                  } else {
-                    Text("点击此处编辑表达式...")
-                      .fontColor($r('sys.color.font_secondary'))
-                  }
+              // 永远是浏览态视图，彻底去除内部嵌套的 FormulaScreen
+              Row() {
+                if (item.base64) {
+                  Image(item.base64).height(36).objectFit(ImageFit.Contain)
+                } else {
+                  // 如果是当前焦点项且键盘已展开，显示正在编辑；否则显示等待输入
+                  Text((this.activeIndex === index && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑表达式...")
+                    .fontColor($r('sys.color.font_secondary'))
                 }
-                .layoutWeight(1)
-                .height(64)
-                .alignItems(VerticalAlign.Center)
-                .onClick(() => {
-                  // 在切换焦点前，先向当前正在编辑的组件索要 AST 和图片数据
-                  getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
-                  this.activeIndex = index; // 切换焦点
-                })
               }
+              .layoutWeight(1).height(64).alignItems(VerticalAlign.Center)
+              .onClick(() => {
+                // 点击同项且键盘已展开，无视点击
+                if (this.activeIndex === index && this.isKeyboardShow) return;
+
+                // 如果切换了焦点，让旧项交出数据
+                if (this.isKeyboardShow) {
+                  getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
+                }
+
+                // 核心控制链路：更新索引 -> 展开键盘坞 -> 唤醒引擎 -> 喂入 LaTeX
+                this.activeIndex = index;
+                this.isKeyboardShow = true;
+                getContext(this).eventHub.emit('wake_web_engines');
+                getContext(this).eventHub.emit('load_latex_to_editor', item.latex);
+              })
             }
             .width('100%')
-            .backgroundColor(this.activeIndex === index ? $r('sys.color.comp_background_primary') : Color.Transparent)
+            .backgroundColor((this.activeIndex === index && this.isKeyboardShow) ? $r('sys.color.comp_background_primary') : Color.Transparent)
             .borderRadius(12)
           }
-          .swipeAction({ end: this.DeleteButton(index) }) // 绑定右滑删除
+          .swipeAction({ end: this.DeleteButton(index) })
         }, (item: GraphFunctionItem) => `${item.id}_${item.latex}_${item.base64 ? 'Y' : 'N'}_${item.isVisible}`)
 
-        // 追加项：添加按钮
         ListItem() {
           Button("+ 添加新的函数", { type: ButtonType.Normal })
-            .backgroundColor(Color.Transparent)
-            .fontColor($r('sys.color.brand'))
-            .width('100%')
-            .height(50)
+            .backgroundColor(Color.Transparent).fontColor($r('sys.color.brand'))
+            .width('100%').height(50)
             .onClick(() => {
-              // 在新建函数前，先保存当前正在编辑的数据
-              getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
+              if (this.isKeyboardShow) {
+                getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
+              }
               let nextColor = GRAPHING_COLORS[this.functionList.length % GRAPHING_COLORS.length];
               this.functionList.push({
                 id: Date.now().toString(),
                 latex: '', base64: '', color: nextColor, isVisible: true
               });
+
+              // 自动聚焦新项，并起飞底层输入框
               this.activeIndex = this.functionList.length - 1;
+              this.isKeyboardShow = true;
               this.saveFunctions();
+              getContext(this).eventHub.emit('wake_web_engines');
+              getContext(this).eventHub.emit('load_latex_to_editor', '');
             })
         }
       }
@@ -687,8 +597,14 @@ export struct GraphingCalc {
       .width('100%')
       .padding({ top: 4, bottom: 4 })
 
-      // 键盘区域
+      // ==================== 新增：全局唯一的底层键盘坞 ====================
       Column() {
+        // 常驻在底部的输入框，永远存在，永不销毁！
+        FormulaScreen({ moduleType: 'graphing' })
+          .width('100%')
+          .height(64)
+          .backgroundColor($r('sys.color.comp_background_primary')) // 稍微加深底色以作区分
+
         // 顶部高级键盘
         Grid() {
           ForEach(topButtons, (btn: string | Resource, index: number) => {
@@ -701,8 +617,7 @@ export struct GraphingCalc {
             }.zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
           })
         }
-        .rowsTemplate('33fr 40fr 40fr')
-        .columnsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
+        .rowsTemplate('33fr 40fr 40fr').columnsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
         .rowsGap(6).columnsGap(4).padding({ left: 10, right: 10, top: 6, bottom: 6 })
         .clip(false).width('100%').height(200)
 
@@ -718,12 +633,13 @@ export struct GraphingCalc {
             }.zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
           })
         }
-        .rowsTemplate('1fr 1fr 1fr 1fr')
-        .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
+        .rowsTemplate('1fr 1fr 1fr 1fr').columnsTemplate('1fr 1fr 1fr 1fr 1fr')
         .rowsGap(8).columnsGap(6).padding({ left: 10, right: 10, top: 6, bottom: 0 })
         .clip(false).width('100%').height(250)
       }
       .width('100%')
+      // 物理级的空间折叠：不销毁，只消失！把 100% 的空间让给上方的 List！
+      .visibility(this.isKeyboardShow ? Visibility.Visible : Visibility.None)
       .backgroundColor($r('sys.color.comp_background_primary'))
       .padding({ bottom: this.navBarHeight - 8})
     }
@@ -732,10 +648,8 @@ export struct GraphingCalc {
     .backgroundColor($r('sys.color.comp_background_tertiary'))
   }
 
-  // ---------- 主界面构建 ----------
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      // 1. 底层：全屏画布（坐标系渲染区域）
       Canvas(this.context)
         .width('100%')
         .height('100%')
@@ -744,54 +658,36 @@ export struct GraphingCalc {
           this.canvasHeight = newValue.height as number;
           this.requestDraw();
         })
-        .onReady(() => {
-          this.requestDraw();
-        })
+        .onReady(() => { this.requestDraw(); })
         .gesture(
           GestureGroup(GestureMode.Parallel,
-            PanGesture()
-              .onActionUpdate((event: GestureEvent) => this.handlePanUpdate(event))
-              .onActionEnd(() => this.handlePanEnd()),
-            PinchGesture()
-              .onActionUpdate((event: GestureEvent) => this.handlePinchUpdate(event))
-              .onActionEnd(() => this.handlePinchEnd())
+            PanGesture().onActionUpdate((event: GestureEvent) => this.handlePanUpdate(event)).onActionEnd(() => this.handlePanEnd()),
+            PinchGesture().onActionUpdate((event: GestureEvent) => this.handlePinchUpdate(event)).onActionEnd(() => this.handlePinchEnd())
           )
         )
 
-      // 2. 顶层：图例列表（悬浮在左上角）
       Column({ space: 10 }) {
         ForEach(this.functionList, (item: GraphFunctionItem, index: number) => {
           if (item.isVisible) {
             Row({ space: 8 }) {
-              Circle({ width: 10, height: 10 })
-                .fill(item.color)
-
-              Text(`y${index + 1} = `)
-                .fontSize(20)
-                .fontColor($r('sys.color.font_primary'))
-                .fontWeight(FontWeight.Medium)
+              Circle({ width: 10, height: 10 }).fill(item.color)
+              Text(`y${index + 1} = `).fontSize(20).fontColor($r('sys.color.font_primary')).fontWeight(FontWeight.Medium)
 
               if (item.base64) {
-                Image(item.base64)
-                  .height(24) // 限制渲染图片的最大高度以保持排版整洁
-                  .objectFit(ImageFit.Contain)
+                Image(item.base64).height(24).objectFit(ImageFit.Contain)
               } else {
-                Text("waiting for input...")
-                  .fontSize(20)
-                  .fontColor($r('sys.color.font_secondary'))
-                  .fontStyle(FontStyle.Italic)
+                Text("waiting for input...").fontSize(20).fontColor($r('sys.color.font_secondary')).fontStyle(FontStyle.Italic)
               }
             }
             .padding({ top: 8, bottom: 8, left: 12, right: 12 })
-            .backgroundColor(Color.Transparent)
+            .backgroundColor('#40ffffff')
+            .backgroundBlurStyle(BlurStyle.COMPONENT_THIN, { colorMode: ThemeColorMode.SYSTEM, adaptiveColor: AdaptiveColor.DEFAULT, scale: 1.0 })
             .borderRadius(12)
             .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 12 })
             .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
           }
-          // 将状态变量拼接入 Key，强制触发该条目的 UI 刷新
         }, (item: GraphFunctionItem) => `${item.id}_${item.latex}_${item.base64 ? 'Y' : 'N'}_${item.isVisible}`)
       }
-      // top 留出 90 的距离以避开状态栏和 TopBar
       .margin({ top: 80, left: 12 })
     }
     .width('100%')
@@ -802,7 +698,12 @@ export struct GraphingCalc {
       dragBar: true,
       backgroundColor: $r('sys.color.background_secondary'),
       onDisappear: () => {
-        getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
+        // ==================== 终极防呆与系统镇压 ====================
+        if (this.isKeyboardShow) {
+          getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
+        }
+        this.isKeyboardShow = false;
+        getContext(this).eventHub.emit('sleep_web_engines'); // 用户随手一划收起面板，GPU 瞬间释放！
       }
     })
   }
