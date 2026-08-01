@@ -75,7 +75,7 @@ export struct FormulaScreen {
       } catch (e) {}
     });
 
-    // ==================== 新增：对象池复用，接收新公式并重置输入框 ====================
+    // ==================== 对象池复用，接收新公式并重置输入框 ====================
     eventHub.on('load_latex_to_editor', (latex: string) => {
       // 1. 如果 Web 的 HTML 还没加载完（比如刚启动应用），把任务存起来
       if (!this.isWebReady) {
@@ -83,16 +83,13 @@ export struct FormulaScreen {
         return;
       }
 
-      // 2. 将清空和插入合并为一条原子级 JS 指令，彻底消灭跨语言回调丢失的隐患
+      // 2. 将清空和插入合并为一条原子级 JS 指令，消灭跨语言回调丢失的隐患
       let safeString = JSON.stringify(latex);
       let script = latex ? `clearMath(); insertMath(${safeString});` : `clearMath();`;
 
-      // 3. 给予渲染管线 30ms 的时间完成从 Visibility.None 到 Visible 的底层画布挂载
-      setTimeout(() => {
-        try {
-          this.webviewController.runJavaScript(script);
-        } catch (e) {}
-      }, 30);
+      try {
+        this.webviewController.runJavaScript(script);
+      } catch (e) {}
     });
 
     // ==================== 画图数据提取 ====================
