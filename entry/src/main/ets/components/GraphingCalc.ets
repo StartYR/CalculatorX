@@ -484,20 +484,31 @@ export struct GraphingCalc {
   }
 
   @Builder
-  DeleteButton(index: number) {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      Image(icon_backspace).width(20).height(20).fillColor(Color.White)
-    }
-    .width(44).height(44).margin({ left: 8, right: 16 }).backgroundColor(Color.Red)
-    .onClick(() => {
-      if (this.functionList.length > 1) {
-        this.functionList.splice(index, 1);
-        if (this.activeIndex >= this.functionList.length) {
-          this.activeIndex = this.functionList.length - 1;
-        }
-        this.saveFunctions();
+  DeleteAction(index: number) {
+    Row() {
+      Button({ type: ButtonType.Circle, stateEffect: true }) {
+        // 垃圾桶图标
+        SymbolGlyph($r('sys.symbol.trash_fill'))
+          .fontSize(24)
+          .fontColor([Color.White])
       }
-    })
+      .width(40)
+      .height(40)
+      .backgroundColor('#FF3B30')
+      .shadow({ radius: 8, color: '#33FF3B30', offsetY: 4 }) // 增加悬浮阴影
+      .onClick(() => {
+        if (this.functionList.length > 1) {
+          this.functionList.splice(index, 1);
+          if (this.activeIndex >= this.functionList.length) {
+            this.activeIndex = this.functionList.length - 1;
+          }
+          this.saveFunctions();
+        }
+      })
+    }
+    .height('100%')
+    .padding({ left: 16, right: 24 }) // 给删除按钮留出贴边的视觉缓冲
+    .justifyContent(FlexAlign.Center)
   }
 
   @Builder
@@ -515,52 +526,68 @@ export struct GraphingCalc {
             .fontColor($r('sys.color.font_primary'))
         }
         .width('100%')
-        .padding({ left: 24, right: 0, top: 24, bottom: 8 })
+        .padding({ left: 24, right: 0, top: 24, bottom: 16 })
 
         // 纯净展示列表
         List({ space: 8 }) {
           ForEach(this.functionList, (item: GraphFunctionItem, index: number) => {
             ListItem() {
               Row() {
+                // 左侧颜色标识 (参考历史记录左侧图标的边距)
                 Circle({ width: 14, height: 14 })
                   .fill(item.isVisible ? item.color : $r('sys.color.comp_divider'))
-                  .margin({ left: 16, right: 12 })
+                  .margin({ right: 14 })
                   .onClick(() => {
                     item.isVisible = !item.isVisible;
                     this.functionList.splice(index, 1, item);
                     this.saveFunctions();
                   })
 
-                // 纯浏览视图
-                Row() {
+                // 右侧内容区
+                Column() {
                   if (item.base64) {
-                    Image(item.base64).height(36).objectFit(ImageFit.Contain)
+                    Row() {
+                      Image(item.base64).height(36).objectFit(ImageFit.Contain)
+                    }
+                    .width('100%')
+                    .justifyContent(FlexAlign.Start)
                   } else {
                     Text((this.activeIndex === index && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑表达式...")
                       .fontColor($r('sys.color.font_secondary'))
+                      .width('100%')
+                      .textAlign(TextAlign.Start)
                   }
                 }
-                .layoutWeight(1).height(64).alignItems(VerticalAlign.Center)
-                .onClick(() => {
-                  if (this.activeIndex === index && this.isKeyboardShow) return;
-
-                  if (this.isKeyboardShow) {
-                    getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
-                  }
-
-                  this.activeIndex = index;
-                  this.isKeyboardShow = true; // 触发键盘升起动画
-                  getContext(this).eventHub.emit('wake_web_engines');
-                  getContext(this).eventHub.emit('load_latex_to_editor', item.latex);
-                })
+                .layoutWeight(1)
+                .padding({ top: 12, bottom: 12 }) // 增加上下的呼吸感
               }
               .width('100%')
+              .padding({ left: 16, right: 16 }) // 内部卡片的内边距
+              // 选中态与未选中态的背景色切换
               .backgroundColor((this.activeIndex === index && this.isKeyboardShow) ? $r('sys.color.comp_background_primary') : Color.Transparent)
-              .borderRadius(12)
+              .borderRadius(16) // 与历史记录一致的 16 圆角
             }
-            .swipeAction({ end: this.DeleteButton(index) })
+            // ★ 核心魔法：这一层 padding 把内容往里挤，但 ListItem 依然占满全屏！
+            .padding({ left: 16, right: 16 })
+            .swipeAction({
+              end: { builder: () => { this.DeleteAction(index) } }, // 绑定新的滑动块
+              edgeEffect: SwipeEdgeEffect.Spring // 引入弹性回弹效果
+            })
+            .onClick(() => {
+              if (this.activeIndex === index && this.isKeyboardShow) return;
+
+              if (this.isKeyboardShow) {
+                getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
+              }
+
+              this.activeIndex = index;
+              this.isKeyboardShow = true;
+              getContext(this).eventHub.emit('wake_web_engines');
+              getContext(this).eventHub.emit('load_latex_to_editor', item.latex);
+            })
           }, (item: GraphFunctionItem) => `${item.id}_${item.latex}_${item.base64.length}_${item.base64.slice(-20)}_${item.isVisible}`)
 
+          // 底部添加按钮
           ListItem() {
             Button("+ 添加新的函数", { type: ButtonType.Normal })
               .backgroundColor(Color.Transparent).fontColor($r('sys.color.brand'))
@@ -576,18 +603,18 @@ export struct GraphingCalc {
                 });
 
                 this.activeIndex = this.functionList.length - 1;
-                this.isKeyboardShow = true; // 触发键盘升起动画
+                this.isKeyboardShow = true;
                 this.saveFunctions();
                 getContext(this).eventHub.emit('wake_web_engines');
                 getContext(this).eventHub.emit('load_latex_to_editor', '');
               })
           }
+          .padding({ left: 16, right: 16 }) // 让添加按钮也对齐
         }
         .layoutWeight(1)
         .width('100%')
-        // 动态底部内边距：键盘升起时，给列表底部让出约 514px 的空间，防止最后一条被遮挡
+        // 保留跟随键盘上推的底部边距
         .padding({ top: 4, bottom: this.isKeyboardShow ? 520 : 4 })
-        // 给 padding 的变化也加上动画，让列表的内容跟随键盘一起丝滑上推！
         .animation({ duration: 300, curve: Curve.FastOutSlowIn })
       }
       .width('100%')
