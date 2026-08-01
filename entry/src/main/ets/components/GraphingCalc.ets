@@ -21,12 +21,12 @@ import { EngineService, CalcConfig } from '../utils/EngineService';
 
 // ==================== 函数项数据结构 ====================
 export interface GraphFunctionItem {
-  id: string;        // 唯一标识 (采用时间戳形式)
-  latex: string;     // 原始 LaTeX
-  base64: string;    // 暗房渲染好的透明图片
-  color: string;     // 绑定的主题色
-  isVisible: boolean;// 是否在画布上展示此函数
-  ast?: string;      // 保存用于 C++ 计算的纯净 AST
+  id: string;         // 唯一标识 (采用时间戳形式)
+  latex: string;      // 原始 LaTeX
+  base64: string;     // 暗房渲染好的透明图片
+  color: string;      // 绑定的主题色
+  isVisible: boolean; // 是否在画布上展示此函数
+  ast?: string;       // 保存用于 C++ 计算的纯净 AST
 }
 
 // ==================== 按键布局配置 ====================
@@ -661,7 +661,7 @@ export struct GraphingCalc {
             .borderRadius(12)
           }
           .swipeAction({ end: this.DeleteButton(index) }) // 绑定右滑删除
-        }, (item: GraphFunctionItem) => item.id)
+        }, (item: GraphFunctionItem) => `${item.id}_${item.latex}_${item.base64 ? 'Y' : 'N'}_${item.isVisible}`)
 
         // 追加项：添加按钮
         ListItem() {
@@ -773,7 +773,7 @@ export struct GraphingCalc {
 
               if (item.base64) {
                 Image(item.base64)
-                  .height(24) // 注释说明：限制渲染图片的最大高度以保持排版整洁
+                  .height(24) // 限制渲染图片的最大高度以保持排版整洁
                   .objectFit(ImageFit.Contain)
               } else {
                 Text("waiting for input...")
@@ -788,7 +788,8 @@ export struct GraphingCalc {
             .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 12 })
             .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
           }
-        }, (item: GraphFunctionItem) => item.id)
+          // 将状态变量拼接入 Key，强制触发该条目的 UI 刷新
+        }, (item: GraphFunctionItem) => `${item.id}_${item.latex}_${item.base64 ? 'Y' : 'N'}_${item.isVisible}`)
       }
       // top 留出 90 的距离以避开状态栏和 TopBar
       .margin({ top: 80, left: 12 })
