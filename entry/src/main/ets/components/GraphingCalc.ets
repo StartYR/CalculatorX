@@ -752,14 +752,19 @@ export struct GraphingCalc {
       height: '95%',
       dragBar: true,
       backgroundColor: $r('sys.color.background_secondary'),
-      onDisappear: () => {
-        // 彻底关闭半模态时，如果有没存的数据，强行提取
+
+      // 在即将关闭时抢救数据
+      onWillDisappear: () => {
+        // 关闭动画开始，让引擎提取最后一次输入的数据
         if (this.isKeyboardShow) {
           getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
-        } else {
-          // 如果数据已经是最新，物理级镇压引擎
-          getContext(this).eventHub.emit('sleep_web_engines');
         }
+      },
+
+      // 完全关闭后的安全清理
+      onDisappear: () => {
+        // 面板已经完全销毁，休眠引擎并重置状态
+        getContext(this).eventHub.emit('sleep_web_engines');
         this.isKeyboardShow = false;
       }
     })
