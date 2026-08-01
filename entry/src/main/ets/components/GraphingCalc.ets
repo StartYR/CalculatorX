@@ -510,23 +510,12 @@ export struct GraphingCalc {
         // 顶部指示区
         Row() {
           Text("编辑函数图像")
-            .fontSize(16).fontWeight(FontWeight.Bold).fontColor($r('sys.color.font_primary'))
-          Blank()
-          Button("绘制")
-            .type(ButtonType.Capsule).backgroundColor($r('sys.color.brand')).height(28)
-            .onClick(() => {
-              // 绘制时，向处于屏幕下方（或当前）的键盘坞索要数据
-              if (this.isKeyboardShow) {
-                getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
-              } else {
-                // 如果键盘已经收起（数据已最新），直接休眠引擎
-                getContext(this).eventHub.emit('sleep_web_engines');
-              }
-              this.isKeyboardShow = false;
-              this.isEditSheetShow = false; // 触发外层的 onDisappear 彻底休眠
-            })
+            .fontSize(20)
+            .fontWeight(FontWeight.Bold)
+            .fontColor($r('sys.color.font_primary'))
         }
-        .width('100%').padding({ left: 20, right: 20, top: 12, bottom: 8 })
+        .width('100%')
+        .padding({ left: 24, right: 0, top: 24, bottom: 8 })
 
         // 纯净展示列表
         List({ space: 8 }) {
