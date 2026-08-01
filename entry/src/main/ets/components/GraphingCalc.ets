@@ -248,6 +248,7 @@ export struct GraphingCalc {
 
   private onDarkModeChange = (mediaQueryResult: mediaquery.MediaQueryResult) => {
     if (this.colorModeIndex === 2) {
+      this.isDarkModeUI = mediaQueryResult.matches;
       this.requestDraw();
     }
   }
@@ -722,9 +723,15 @@ export struct GraphingCalc {
               Text(`y${index + 1} = `).fontSize(20).fontColor($r('sys.color.font_primary')).fontWeight(FontWeight.Medium)
 
               if (item.base64) {
-                Image(item.base64).height(24).objectFit(ImageFit.Contain)
+                Image(item.base64)
+                  .height(24)
+                  .objectFit(ImageFit.Contain)
+                  .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
               } else {
-                Text("waiting for input...").fontSize(20).fontColor($r('sys.color.font_secondary')).fontStyle(FontStyle.Italic)
+                Text("等待输入...")
+                  .fontSize(20)
+                  .fontColor($r('sys.color.font_secondary'))
+                  .fontStyle(FontStyle.Italic)
               }
             }
             .padding({ top: 8, bottom: 8, left: 12, right: 12 })
