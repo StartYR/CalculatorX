@@ -612,14 +612,26 @@ export struct GraphingCalc {
 
           // 底部添加按钮
           ListItem() {
-            Button("+ 添加新的函数", { type: ButtonType.Normal })
-              .backgroundColor(Color.Transparent).fontColor($r('sys.color.brand'))
-              .width('100%').height(50)
+            // 1. 状态降级：动态切换文案
+            Button(this.functionList.length >= 5 ? "已达数量上限 (5/5)" : "+ 添加新的函数", { type: ButtonType.Normal })
+              .backgroundColor(Color.Transparent)
+              // 2. 状态降级：动态切换颜色 (达上限时置灰)
+              .fontColor(this.functionList.length >= 5 ? $r('sys.color.font_tertiary') : $r('sys.color.brand'))
+              .borderRadius(50)
+              .width('100%')
+              .height(48)
               .onClick(() => {
+                // 3. 物理阻断：如果达到 5 条，拦截点击事件
+                if (this.functionList.length >= 5) return;
+
                 if (this.isKeyboardShow) {
                   getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
                 }
-                let nextColor = GRAPHING_COLORS[this.functionList.length % GRAPHING_COLORS.length];
+
+                // 4. 智能颜色回收池：遍历当前已存在的颜色，找出第一个没被占用的颜色
+                let usedColors = this.functionList.map(item => item.color);
+                let nextColor = GRAPHING_COLORS.find(color => !usedColors.includes(color)) || GRAPHING_COLORS[0];
+
                 this.functionList.push({
                   id: Date.now().toString(),
                   latex: '', base64: '', color: nextColor, isVisible: true
@@ -632,7 +644,7 @@ export struct GraphingCalc {
                 getContext(this).eventHub.emit('load_latex_to_editor', '');
               })
           }
-          .padding({ left: 16, right: 16 }) // 让添加按钮也对齐
+          .padding({ left: 48, right: 48 }) // 保持对齐
         }
         .layoutWeight(1)
         .width('100%')
