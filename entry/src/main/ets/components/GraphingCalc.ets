@@ -570,7 +570,7 @@ export struct GraphingCalc {
               .borderRadius(12)
             }
             .swipeAction({ end: this.DeleteButton(index) })
-          }, (item: GraphFunctionItem) => `${item.id}_${item.latex}_${item.base64 ? 'Y' : 'N'}_${item.isVisible}`)
+          }, (item: GraphFunctionItem) => `${item.id}_${item.latex}_${item.base64.length}_${item.base64.slice(-20)}_${item.isVisible}`)
 
           ListItem() {
             Button("+ 添加新的函数", { type: ButtonType.Normal })
@@ -696,7 +696,7 @@ export struct GraphingCalc {
             .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 12 })
             .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
           }
-        }, (item: GraphFunctionItem) => `${item.id}_${item.latex}_${item.base64 ? 'Y' : 'N'}_${item.isVisible}`)
+        }, (item: GraphFunctionItem) => `${item.id}_${item.latex}_${item.base64.length}_${item.base64.slice(-20)}_${item.isVisible}`)
       }
       .margin({ top: 80, left: 12 })
     }
