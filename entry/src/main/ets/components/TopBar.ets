@@ -93,7 +93,7 @@ export struct TopBar {
               .fontColor($r('sys.color.font_primary'))
 
             // 角度制徽章
-            if (['scientific', 'graphing'].includes(this.currentModule)) {
+            if (['scientific'].includes(this.currentModule)) {
               Text(this.isRad ? 'RAD' : 'DEG')
                 .fontSize(10)
                 .fontWeight(FontWeight.Bold)
