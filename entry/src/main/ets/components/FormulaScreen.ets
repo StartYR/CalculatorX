@@ -15,6 +15,7 @@ import { PreferenceConfigs } from '../utils/CalculatorConfigs';
 @Component
 export struct FormulaScreen {
   @Prop moduleType: string; // 区分是 basic 还是 scientific，用于入库打标签
+  @Prop initialLatex: string = ""; // 用于组件重新挂载时恢复上一条公式
 
   // 全局配置属性
   @StorageProp('answerOutputMode') answerOutputMode: number = 0;
@@ -50,6 +51,7 @@ export struct FormulaScreen {
       this.handleAction(action, isShift);
     });
 
+    // ==================== 修改：响应 GraphingCalc 获取数据的请求，加入暗房截图接力 ====================
     eventHub.on('request_graphing_data', (reqId: number) => {
       this.webviewController.runJavaScript('window.getFormula()', (error, rawLatexResult) => {
         if (error) return;
@@ -57,12 +59,21 @@ export struct FormulaScreen {
         let cleanedLatex = EngineService.cleanRawLatex(rawLatexResult);
         let injectJs = EngineService.generateInjectJs(cleanedLatex);
 
+        // 1. 获取 AST
         this.webviewController.runJavaScript(injectJs, (err, jsonResult) => {
           if (err) return;
           let cleanJsonString = EngineService.parseWebJsonResult(jsonResult);
 
-          // 获取成功后，将 LaTeX 与 AST 发射回给发起请求的 GraphingCalc 实例
-          getContext(this).eventHub.emit('response_graphing_data', reqId, rawLatex, cleanJsonString);
+          // 2. 指挥暗房去渲染这句 LaTeX，但不让他直接入库，我们需要注册一个临时桥梁
+          // 由于我们是在 ArkTS 层协调，我们可以直接利用现成的 window.exportLatexToPng，
+          // 因为原版设计中 exportLatexToPng 会触发 onImageReady，我们需要在那里拦截它。
+
+          // 给原库的 onImageReady 发送一个特殊的特征码（比如让 output 变成特殊的占位符），以便拦截
+          let graphHookTag = `GRAPH_HOOK_${reqId}`;
+          this.renderWebController.runJavaScript(`window.exportLatexToPng(${JSON.stringify(rawLatex)}, ${JSON.stringify(graphHookTag)})`);
+
+          // 临时把 AST 发过去，等图片好了再在 onImageReady 里面发射最终结果
+          getContext(this).eventHub.emit('temp_graph_ast_ready', reqId, rawLatex, cleanJsonString);
         });
       });
     });
@@ -232,6 +243,12 @@ export struct FormulaScreen {
         .width('100%')
         .height('100%')
         .backgroundColor(Color.Transparent)
+        .onPageEnd(() => {
+          // 在页面加载完成的第一时间，把公式填回去
+          if (this.initialLatex) {
+            this.insertToWeb(this.initialLatex);
+          }
+        })
 
       // 2. 暗房 Webview (完全解耦，后台静默运行)
       Web({
@@ -250,6 +267,17 @@ export struct FormulaScreen {
               try {
                 let parsed = JSON.parse(jsonStr) as Record<string, string>;
                 if (parsed['error']) return;
+
+                // 拦截绘图模块的数据请求，防止被写入到全局历史记录中
+                let outLatex = parsed['outputLatex'];
+                if (outLatex && outLatex.startsWith("GRAPH_HOOK_")) {
+                  let reqId = parseInt(outLatex.replace("GRAPH_HOOK_", ""));
+                  let inputBase64 = parsed['inputBase64'];
+
+                  // 发射最终闭环事件：通知 GraphingCalc Base64 图片做好了
+                  getContext(this).eventHub.emit('response_graph_base64_ready', reqId, inputBase64);
+                  return; // 拦截成功，直接返回，不入库
+                }
 
                 HistoryRepository.insertRecord({
                   moduleType: this.moduleType, // 动态识别调用方
