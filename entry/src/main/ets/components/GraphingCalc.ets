@@ -548,12 +548,12 @@ export struct GraphingCalc {
         .width('100%')
         .padding({ left: 24, right: 0, top: 24, bottom: 16 })
 
-        // 纯净展示列表
+        // 展示列表
         List({ space: 8 }) {
           ForEach(this.functionList, (item: GraphFunctionItem, index: number) => {
             ListItem() {
               Row() {
-                // 左侧颜色标识 (参考历史记录左侧图标的边距)
+                // 左侧颜色标识
                 Circle({ width: 14, height: 14 })
                   .fill(item.isVisible ? item.color : $r('sys.color.comp_divider'))
                   .margin({ right: 14 })
@@ -587,13 +587,12 @@ export struct GraphingCalc {
               .width('100%')
               .padding({ left: 16, right: 16 }) // 内部卡片的内边距
               // 选中态与未选中态的背景色切换
-              .backgroundColor((this.activeIndex === index && this.isKeyboardShow) ? $r('sys.color.comp_background_primary') : Color.Transparent)
+              .backgroundColor((this.activeIndex === index && this.isKeyboardShow) ? $r('sys.color.comp_background_tertiary') : $r('sys.color.background_primary'))
               .borderRadius(16) // 与历史记录一致的 16 圆角
             }
-            // ★ 核心魔法：这一层 padding 把内容往里挤，但 ListItem 依然占满全屏！
             .padding({ left: 16, right: 16 })
             .swipeAction({
-              end: { builder: () => { this.DeleteAction(index) } }, // 绑定新的滑动块
+              end: { builder: () => { this.DeleteAction(index) } },
               edgeEffect: SwipeEdgeEffect.Spring // 引入弹性回弹效果
             })
             .onClick(() => {
@@ -621,7 +620,7 @@ export struct GraphingCalc {
               .width('100%')
               .height(48)
               .onClick(() => {
-                // 3. 物理阻断：如果达到 5 条，拦截点击事件
+                // 3. 如果达到 5 条，拦截点击事件
                 if (this.functionList.length >= 5) return;
 
                 if (this.isKeyboardShow) {
