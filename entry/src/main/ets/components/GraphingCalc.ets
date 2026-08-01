@@ -224,13 +224,28 @@ export struct GraphingCalc {
   @State @Watch('requestDraw') viewScale: number = 80;
   @State @Watch('requestDraw') offsetX: number = 0;
   @State @Watch('requestDraw') offsetY: number = 0;
-  @StorageProp('colorModeIndex') @Watch('requestDraw') colorModeIndex: number = 2;
+  @StorageProp('colorModeIndex')
+  @Watch('requestDraw') colorModeIndex: number = 2;
+  @State isDarkModeUI: boolean = false;
 
   private lastOffsetX: number = 0;
   private lastOffsetY: number = 0;
   private lastViewScale: number = 80;
 
   private darkMediaQuery: mediaquery.MediaQueryListener = mediaquery.matchMediaSync('(dark-mode: true)');
+
+  // 统一的深浅色判断逻辑
+  private onColorModeChange() {
+    if (this.colorModeIndex === 1) {
+      this.isDarkModeUI = true;
+    } else if (this.colorModeIndex === 2) {
+      this.isDarkModeUI = this.darkMediaQuery.matches;
+    } else {
+      this.isDarkModeUI = false;
+    }
+    this.requestDraw(); // 触发画布重绘
+  }
+
   private onDarkModeChange = (mediaQueryResult: mediaquery.MediaQueryResult) => {
     if (this.colorModeIndex === 2) {
       this.requestDraw();
@@ -264,6 +279,7 @@ export struct GraphingCalc {
     }
 
     this.darkMediaQuery.on('change', this.onDarkModeChange);
+    this.onColorModeChange();
 
     getContext(this).eventHub.on('screen_shift_consumed', () => {
       this.isShift = false;
@@ -498,11 +514,14 @@ export struct GraphingCalc {
       .shadow({ radius: 8, color: '#33FF3B30', offsetY: 4 }) // 增加悬浮阴影
       .onClick(() => {
         if (this.functionList.length > 1) {
-          this.functionList.splice(index, 1);
-          if (this.activeIndex >= this.functionList.length) {
-            this.activeIndex = this.functionList.length - 1;
-          }
-          this.saveFunctions();
+          // 引入 UniversalHistoryList 同款摩擦力弹簧动画[cite: 5]
+          animateTo({ duration: 350, curve: Curve.Friction }, () => {
+            this.functionList.splice(index, 1);
+            if (this.activeIndex >= this.functionList.length) {
+              this.activeIndex = this.functionList.length - 1;
+            }
+          });
+          this.saveFunctions(); // 数据落盘
         }
       })
     }
@@ -547,7 +566,10 @@ export struct GraphingCalc {
                 Column() {
                   if (item.base64) {
                     Row() {
-                      Image(item.base64).height(36).objectFit(ImageFit.Contain)
+                      Image(item.base64)
+                        .height(36)
+                        .objectFit(ImageFit.Contain)
+                        .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined) // 深色模式下的颜色反转
                     }
                     .width('100%')
                     .justifyContent(FlexAlign.Start)
