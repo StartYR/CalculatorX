@@ -502,110 +502,116 @@ export struct GraphingCalc {
 
   @Builder
   EditPanelBuilder() {
-    Column() {
-      // 顶部指示区
-      Row() {
-        Text("编辑函数图像")
-          .fontSize(16).fontWeight(FontWeight.Bold).fontColor($r('sys.color.font_primary'))
-        Blank()
-        Button("绘制")
-          .type(ButtonType.Capsule).backgroundColor($r('sys.color.brand')).height(28)
-          .onClick(() => {
-            // ==================== 修改：绘制时提取数据并释放 GPU ====================
-            if (this.isKeyboardShow) {
-              getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
-            }
-            this.isKeyboardShow = false;
-            this.isEditSheetShow = false;
-            getContext(this).eventHub.emit('sleep_web_engines'); // 物理级休眠
-          })
-      }
-      .width('100%').padding({ left: 20, right: 20, top: 12, bottom: 8 })
+    // ==================== 终极重构：Stack 层叠布局 + Translate 动画 ====================
+    Stack({ alignContent: Alignment.Bottom }) {
 
-      // ==================== 修改：纯净展示列表 ====================
-      List({ space: 8 }) {
-        ForEach(this.functionList, (item: GraphFunctionItem, index: number) => {
-          ListItem() {
-            Row() {
-              Circle({ width: 14, height: 14 })
-                .fill(item.isVisible ? item.color : $r('sys.color.comp_divider'))
-                .margin({ left: 16, right: 12 })
-                .onClick(() => {
-                  item.isVisible = !item.isVisible;
-                  this.functionList.splice(index, 1, item);
-                  this.saveFunctions();
-                })
-
-              // 永远是浏览态视图，彻底去除内部嵌套的 FormulaScreen
-              Row() {
-                if (item.base64) {
-                  Image(item.base64).height(36).objectFit(ImageFit.Contain)
-                } else {
-                  // 如果是当前焦点项且键盘已展开，显示正在编辑；否则显示等待输入
-                  Text((this.activeIndex === index && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑表达式...")
-                    .fontColor($r('sys.color.font_secondary'))
-                }
+      // ---------- 第 1 层：全屏列表与顶部标题 ----------
+      Column() {
+        // 顶部指示区
+        Row() {
+          Text("编辑函数图像")
+            .fontSize(16).fontWeight(FontWeight.Bold).fontColor($r('sys.color.font_primary'))
+          Blank()
+          Button("绘制")
+            .type(ButtonType.Capsule).backgroundColor($r('sys.color.brand')).height(28)
+            .onClick(() => {
+              // 绘制时，向处于屏幕下方（或当前）的键盘坞索要数据
+              if (this.isKeyboardShow) {
+                getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
+              } else {
+                // 如果键盘已经收起（数据已最新），直接休眠引擎
+                getContext(this).eventHub.emit('sleep_web_engines');
               }
-              .layoutWeight(1).height(64).alignItems(VerticalAlign.Center)
-              .onClick(() => {
-                // 点击同项且键盘已展开，无视点击
-                if (this.activeIndex === index && this.isKeyboardShow) return;
+              this.isKeyboardShow = false;
+              this.isEditSheetShow = false; // 触发外层的 onDisappear 彻底休眠
+            })
+        }
+        .width('100%').padding({ left: 20, right: 20, top: 12, bottom: 8 })
 
-                // 如果切换了焦点，让旧项交出数据
+        // 纯净展示列表
+        List({ space: 8 }) {
+          ForEach(this.functionList, (item: GraphFunctionItem, index: number) => {
+            ListItem() {
+              Row() {
+                Circle({ width: 14, height: 14 })
+                  .fill(item.isVisible ? item.color : $r('sys.color.comp_divider'))
+                  .margin({ left: 16, right: 12 })
+                  .onClick(() => {
+                    item.isVisible = !item.isVisible;
+                    this.functionList.splice(index, 1, item);
+                    this.saveFunctions();
+                  })
+
+                // 纯浏览视图
+                Row() {
+                  if (item.base64) {
+                    Image(item.base64).height(36).objectFit(ImageFit.Contain)
+                  } else {
+                    Text((this.activeIndex === index && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑表达式...")
+                      .fontColor($r('sys.color.font_secondary'))
+                  }
+                }
+                .layoutWeight(1).height(64).alignItems(VerticalAlign.Center)
+                .onClick(() => {
+                  if (this.activeIndex === index && this.isKeyboardShow) return;
+
+                  if (this.isKeyboardShow) {
+                    getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
+                  }
+
+                  this.activeIndex = index;
+                  this.isKeyboardShow = true; // 触发键盘升起动画
+                  getContext(this).eventHub.emit('wake_web_engines');
+                  getContext(this).eventHub.emit('load_latex_to_editor', item.latex);
+                })
+              }
+              .width('100%')
+              .backgroundColor((this.activeIndex === index && this.isKeyboardShow) ? $r('sys.color.comp_background_primary') : Color.Transparent)
+              .borderRadius(12)
+            }
+            .swipeAction({ end: this.DeleteButton(index) })
+          }, (item: GraphFunctionItem) => `${item.id}_${item.latex}_${item.base64 ? 'Y' : 'N'}_${item.isVisible}`)
+
+          ListItem() {
+            Button("+ 添加新的函数", { type: ButtonType.Normal })
+              .backgroundColor(Color.Transparent).fontColor($r('sys.color.brand'))
+              .width('100%').height(50)
+              .onClick(() => {
                 if (this.isKeyboardShow) {
                   getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
                 }
+                let nextColor = GRAPHING_COLORS[this.functionList.length % GRAPHING_COLORS.length];
+                this.functionList.push({
+                  id: Date.now().toString(),
+                  latex: '', base64: '', color: nextColor, isVisible: true
+                });
 
-                // 核心控制链路：更新索引 -> 展开键盘坞 -> 唤醒引擎 -> 喂入 LaTeX
-                this.activeIndex = index;
-                this.isKeyboardShow = true;
+                this.activeIndex = this.functionList.length - 1;
+                this.isKeyboardShow = true; // 触发键盘升起动画
+                this.saveFunctions();
                 getContext(this).eventHub.emit('wake_web_engines');
-                getContext(this).eventHub.emit('load_latex_to_editor', item.latex);
+                getContext(this).eventHub.emit('load_latex_to_editor', '');
               })
-            }
-            .width('100%')
-            .backgroundColor((this.activeIndex === index && this.isKeyboardShow) ? $r('sys.color.comp_background_primary') : Color.Transparent)
-            .borderRadius(12)
           }
-          .swipeAction({ end: this.DeleteButton(index) })
-        }, (item: GraphFunctionItem) => `${item.id}_${item.latex}_${item.base64 ? 'Y' : 'N'}_${item.isVisible}`)
-
-        ListItem() {
-          Button("+ 添加新的函数", { type: ButtonType.Normal })
-            .backgroundColor(Color.Transparent).fontColor($r('sys.color.brand'))
-            .width('100%').height(50)
-            .onClick(() => {
-              if (this.isKeyboardShow) {
-                getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
-              }
-              let nextColor = GRAPHING_COLORS[this.functionList.length % GRAPHING_COLORS.length];
-              this.functionList.push({
-                id: Date.now().toString(),
-                latex: '', base64: '', color: nextColor, isVisible: true
-              });
-
-              // 自动聚焦新项，并起飞底层输入框
-              this.activeIndex = this.functionList.length - 1;
-              this.isKeyboardShow = true;
-              this.saveFunctions();
-              getContext(this).eventHub.emit('wake_web_engines');
-              getContext(this).eventHub.emit('load_latex_to_editor', '');
-            })
         }
+        .layoutWeight(1)
+        .width('100%')
+        // 动态底部内边距：键盘升起时，给列表底部让出约 514px 的空间，防止最后一条被遮挡
+        .padding({ top: 4, bottom: this.isKeyboardShow ? 520 : 4 })
+        // 给 padding 的变化也加上动画，让列表的内容跟随键盘一起丝滑上推！
+        .animation({ duration: 300, curve: Curve.FastOutSlowIn })
       }
-      .layoutWeight(1)
       .width('100%')
-      .padding({ top: 4, bottom: 4 })
+      .height('100%')
 
-      // ==================== 新增：全局唯一的底层键盘坞 ====================
+      // ---------- 第 2 层：悬浮键盘坞 (常驻内存，仅做物理位移) ----------
       Column() {
-        // 常驻在底部的输入框，永远存在，永不销毁！
+        // 常驻底部的 WebView：永远存活，永远不会被裁切高度
         FormulaScreen({ moduleType: 'graphing' })
           .width('100%')
           .height(64)
-          .backgroundColor($r('sys.color.comp_background_primary')) // 稍微加深底色以作区分
+          .backgroundColor($r('sys.color.comp_background_primary'))
 
-        // 顶部高级键盘
         Grid() {
           ForEach(topButtons, (btn: string | Resource, index: number) => {
             GridItem() {
@@ -621,7 +627,6 @@ export struct GraphingCalc {
         .rowsGap(6).columnsGap(4).padding({ left: 10, right: 10, top: 6, bottom: 6 })
         .clip(false).width('100%').height(200)
 
-        // 底部基础键盘
         Grid() {
           ForEach(bottomButtons, (btn: string | Resource) => {
             GridItem() {
@@ -638,14 +643,19 @@ export struct GraphingCalc {
         .clip(false).width('100%').height(250)
       }
       .width('100%')
-      // 物理级的空间折叠：不销毁，只消失！把 100% 的空间让给上方的 List！
-      .visibility(this.isKeyboardShow ? Visibility.Visible : Visibility.None)
       .backgroundColor($r('sys.color.comp_background_primary'))
       .padding({ bottom: this.navBarHeight - 8})
+      // 核心魔法：100% 位移。为 0 时在屏幕内，为 '100%' 时刚好完全滑出屏幕底部边界。
+      .translate({ y: this.isKeyboardShow ? 0 : '100%' })
+      // 极其丝滑的阻尼弹簧动画曲线
+      .animation({ duration: 300, curve: Curve.FastOutSlowIn })
+
     }
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.comp_background_tertiary'))
+    // 裁剪掉 Stack 溢出底部边缘的部分，避免影响其他 UI
+    .clip(true)
   }
 
   build() {
@@ -698,12 +708,14 @@ export struct GraphingCalc {
       dragBar: true,
       backgroundColor: $r('sys.color.background_secondary'),
       onDisappear: () => {
-        // ==================== 终极防呆与系统镇压 ====================
+        // 彻底关闭半模态时，如果有没存的数据，强行提取
         if (this.isKeyboardShow) {
           getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
+        } else {
+          // 如果数据已经是最新，物理级镇压引擎
+          getContext(this).eventHub.emit('sleep_web_engines');
         }
         this.isKeyboardShow = false;
-        getContext(this).eventHub.emit('sleep_web_engines'); // 用户随手一划收起面板，GPU 瞬间释放！
       }
     })
   }
