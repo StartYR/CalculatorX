@@ -5,6 +5,13 @@
  * * @author 易睿 (Yi Rui)
  * @date 2026/6/26 21:12
  */
+/**
+ * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * * @file FormulaScreen.ets
+ * @description 全能公式屏幕，负责渲染、引擎通信及入库闭环 (对象池与休眠重构版)
+ * * @author 易睿 (Yi Rui)
+ * @date 2026
+ */
 
 import web_webview from '@ohos.web.webview';
 import { HistoryRepository } from '../database/HistoryRepository';
@@ -15,7 +22,6 @@ import { PreferenceConfigs } from '../utils/CalculatorConfigs';
 @Component
 export struct FormulaScreen {
   @Prop moduleType: string; // 区分是 basic 还是 scientific，用于入库打标签
-  @Prop initialLatex: string = ""; // 用于组件重新挂载时恢复上一条公式
 
   // 全局配置属性
   @StorageProp('answerOutputMode') answerOutputMode: number = 0;
@@ -32,10 +38,15 @@ export struct FormulaScreen {
   @State lastValidJson: string = "";      // 供 S⇄D 重新计算的纯净 AST
   @State isTempDecimal: boolean = false;  // 当前 S⇄D 面板的显示状态
 
+  // Web 就绪状态与缓冲
+  @State isWebReady: boolean = false;
+  private pendingLatex: string | null = null;
+
   aboutToAppear() {
     let eventHub = getContext(this).eventHub;
 
-    // 监听全局历史记录插板的插入、顶部撤销重做
+
+    // ---------- 基础编辑监听 ----------
     eventHub.on('event_math_insert', (str: string) => {
       this.insertToWeb(str);
     });
@@ -45,13 +56,46 @@ export struct FormulaScreen {
     eventHub.on('event_math_redo', () => {
       this.webviewController.runJavaScript(`document.querySelector('math-field').executeCommand('redo')`);
     });
-
-    // 监听来自各模式 UI 外壳的按键指令分发
     eventHub.on('screen_handle_action', (action: string, isShift: boolean) => {
       this.handleAction(action, isShift);
     });
 
-    // ==================== 修改：响应 GraphingCalc 获取数据的请求，加入暗房截图接力 ====================
+    // ==================== 新增：底层引擎的硬件级休眠与唤醒控制 ====================
+    eventHub.on('sleep_web_engines', () => {
+      try {
+        this.webviewController.onInactive();
+        this.renderWebController.onInactive();
+      } catch (e) {}
+    });
+
+    eventHub.on('wake_web_engines', () => {
+      try {
+        this.webviewController.onActive();
+        this.renderWebController.onActive();
+      } catch (e) {}
+    });
+
+    // ==================== 新增：对象池复用，接收新公式并重置输入框 ====================
+    eventHub.on('load_latex_to_editor', (latex: string) => {
+      // 1. 如果 Web 的 HTML 还没加载完（比如刚启动应用），把任务存起来
+      if (!this.isWebReady) {
+        this.pendingLatex = latex;
+        return;
+      }
+
+      // 2. 将清空和插入合并为一条原子级 JS 指令，彻底消灭跨语言回调丢失的隐患
+      let safeString = JSON.stringify(latex);
+      let script = latex ? `clearMath(); insertMath(${safeString});` : `clearMath();`;
+
+      // 3. 给予渲染管线 30ms 的时间完成从 Visibility.None 到 Visible 的底层画布挂载
+      setTimeout(() => {
+        try {
+          this.webviewController.runJavaScript(script);
+        } catch (e) {}
+      }, 30);
+    });
+
+    // ==================== 画图数据提取 ====================
     eventHub.on('request_graphing_data', (reqId: number) => {
       this.webviewController.runJavaScript('window.getFormula()', (error, rawLatexResult) => {
         if (error) return;
@@ -59,26 +103,20 @@ export struct FormulaScreen {
         let cleanedLatex = EngineService.cleanRawLatex(rawLatexResult);
         let injectJs = EngineService.generateInjectJs(cleanedLatex);
 
-        // 1. 获取 AST
         this.webviewController.runJavaScript(injectJs, (err, jsonResult) => {
           if (err) return;
           let cleanJsonString = EngineService.parseWebJsonResult(jsonResult);
-
-          // 2. 指挥暗房去渲染这句 LaTeX，但不让他直接入库，我们需要注册一个临时桥梁
-          // 由于我们是在 ArkTS 层协调，我们可以直接利用现成的 window.exportLatexToPng，
-          // 因为原版设计中 exportLatexToPng 会触发 onImageReady，我们需要在那里拦截它。
-
-          // 给原库的 onImageReady 发送一个特殊的特征码（比如让 output 变成特殊的占位符），以便拦截
           let graphHookTag = `GRAPH_HOOK_${reqId}`;
+
+          // 用户已经输入完毕并触发了提取，DOM 必定是稳定渲染状态，直接单次自信调用截图！
           this.renderWebController.runJavaScript(`window.exportLatexToPng(${JSON.stringify(rawLatex)}, ${JSON.stringify(graphHookTag)})`);
 
-          // 临时把 AST 发过去，等图片好了再在 onImageReady 里面发射最终结果
+          // AST 无需等待，直接起飞
           getContext(this).eventHub.emit('temp_graph_ast_ready', reqId, rawLatex, cleanJsonString);
         });
       });
     });
   }
-
 
   aboutToDisappear() {
     let eventHub = getContext(this).eventHub;
@@ -87,6 +125,9 @@ export struct FormulaScreen {
     eventHub.off('event_math_redo');
     eventHub.off('screen_handle_action');
     eventHub.off('request_graphing_data');
+    eventHub.off('sleep_web_engines');
+    eventHub.off('wake_web_engines');
+    eventHub.off('load_latex_to_editor');
   }
 
   // 接收并处理任何界面的按键逻辑
@@ -104,7 +145,7 @@ export struct FormulaScreen {
     } else if (action === '⇩') {
       this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveDown')`);
     } else if (action === 'R/D') {
-      AppStorage.setOrCreate('isRad', !this.isRad); // 改变全局状态
+      AppStorage.setOrCreate('isRad', !this.isRad);
     } else if (action === '° \' \"') {
       this.webviewController.runJavaScript('insertDMS()');
     } else if (action === 'Ans') {
@@ -114,8 +155,8 @@ export struct FormulaScreen {
       if (!this.lastValidJson) return;
       let cppPrecisionMode = -1;
       if (isShift) {
-        cppPrecisionMode = -4; // 消费掉 Shift 状态 (通过事件回调或让外部自行复位)
-        getContext(this).eventHub.emit('screen_shift_consumed'); // 通知外部复位 Shift
+        cppPrecisionMode = -4;
+        getContext(this).eventHub.emit('screen_shift_consumed');
       } else {
         this.isTempDecimal = !this.isTempDecimal;
         cppPrecisionMode = this.isTempDecimal ? (this.decimalPrecision === 16 ? -2 : this.decimalPrecision) : -3;
@@ -151,23 +192,20 @@ export struct FormulaScreen {
     } else if (action === 'EXE') {
       this.executeCalculation();
     } else {
-      // 交给后端翻译
       let latexChar = InputTranslator.translate(action, this.combSelect, this.permSelect);
       this.insertToWeb(latexChar);
     }
   }
 
-  // 根据当前 UI 面板的类型，动态映射为 C++ 的底层解析模式
   private getCalcMode(): number {
     switch (this.moduleType) {
       case 'matrix': return 1;
       case 'equation': return 2;
       case 'graphing': return 3;
-      default: return 0; // 'scientific', 'basic' 等默认走标准通道
+      default: return 0;
     }
   }
 
-  // 执行核心计算过程
   private executeCalculation() {
     this.webviewController.runJavaScript('window.getFormula()', (error, rawLatexResult) => {
       if (error) return;
@@ -189,7 +227,6 @@ export struct FormulaScreen {
           cppPrecisionMode = this.decimalPrecision === 16 ? -2 : this.decimalPrecision;
         }
 
-        // 将参数打包成配置对象，并动态获取当前模式
         let config: CalcConfig = {
           isRad: this.isRad,
           precision: cppPrecisionMode,
@@ -214,19 +251,16 @@ export struct FormulaScreen {
     });
   }
 
-  // 通过特定控制码重新请求 C++ 渲染
-    private recalculateWithPrecision(cppPrecisionMode: number) {
-      // 确保 S⇄D 重新计算时，也带上正确的面板模式
-      let config: CalcConfig = {
-        isRad: this.isRad,
-        precision: cppPrecisionMode,
-        mode: this.getCalcMode()
-      };
-      let cppResponse: string = EngineService.calculateNative(this.lastValidJson, config);
-      this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
-    }
+  private recalculateWithPrecision(cppPrecisionMode: number) {
+    let config: CalcConfig = {
+      isRad: this.isRad,
+      precision: cppPrecisionMode,
+      mode: this.getCalcMode()
+    };
+    let cppResponse: string = EngineService.calculateNative(this.lastValidJson, config);
+    this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
+  }
 
-  // 向 Web 插入 LaTeX 代码
   private insertToWeb(str: string) {
     let safeString = JSON.stringify(str);
     this.webviewController.runJavaScript(`insertMath(${safeString})`);
@@ -243,14 +277,18 @@ export struct FormulaScreen {
         .width('100%')
         .height('100%')
         .backgroundColor(Color.Transparent)
+        // 加载完毕后消费积压的任务
         .onPageEnd(() => {
-          // 在页面加载完成的第一时间，把公式填回去
-          if (this.initialLatex) {
-            this.insertToWeb(this.initialLatex);
+          this.isWebReady = true;
+          if (this.pendingLatex !== null) {
+            let safeString = JSON.stringify(this.pendingLatex);
+            let script = this.pendingLatex ? `clearMath(); insertMath(${safeString});` : `clearMath();`;
+            this.webviewController.runJavaScript(script);
+            this.pendingLatex = null;
           }
         })
 
-      // 2. 暗房 Webview (完全解耦，后台静默运行)
+      // 2. 暗房 Webview
       Web({
         src: $rawfile('render.html'),
         controller: this.renderWebController
@@ -268,19 +306,18 @@ export struct FormulaScreen {
                 let parsed = JSON.parse(jsonStr) as Record<string, string>;
                 if (parsed['error']) return;
 
-                // 拦截绘图模块的数据请求，防止被写入到全局历史记录中
                 let outLatex = parsed['outputLatex'];
                 if (outLatex && outLatex.startsWith("GRAPH_HOOK_")) {
                   let reqId = parseInt(outLatex.replace("GRAPH_HOOK_", ""));
                   let inputBase64 = parsed['inputBase64'];
 
-                  // 发射最终闭环事件：通知 GraphingCalc Base64 图片做好了
+                  // 完美闭环
                   getContext(this).eventHub.emit('response_graph_base64_ready', reqId, inputBase64);
-                  return; // 拦截成功，直接返回，不入库
+                  return;
                 }
 
                 HistoryRepository.insertRecord({
-                  moduleType: this.moduleType, // 动态识别调用方
+                  moduleType: this.moduleType,
                   inputContent: parsed['inputLatex'],
                   outputContent: parsed['outputLatex'],
                   inputBase64: parsed['inputBase64'],
