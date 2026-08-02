@@ -432,7 +432,7 @@ export struct GraphingCalc {
         xMin: xMin, xMax: xMax, pointsCount: pointsCount
       };
 
-      let points = EngineService.calculateGraphPoints(funcItem.ast, config);
+      let points = EngineService.calculateGraphPoints(funcItem.ast, config) as Float64Array;
       if (!points || points.length === 0) continue;
 
       ctx.beginPath();
