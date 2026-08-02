@@ -17,12 +17,10 @@
 #include <string>
 #include <vector>
 #include "utils/Logger.h"
+#include "core/GraphingEngine.h"
 
 using json = nlohmann::json;
 using SymEngine::Expression;
-
-
-
 
 static napi_value Calculate(napi_env env, napi_callback_info info) {
     size_t argc = 2; // 0：算式，1：配置
@@ -112,44 +110,12 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         ctx.hasDMS = false;
         ctx.mode = static_cast<CalcMode>(mode);
         
-        // ---------------- 函数图像专属拦截路由 (批量离散采样) ----------------
-        if (mode == 3) {
+        // ---------------- 函数图像专属拦截路由 ----------------
+       if (mode == 3) {
             Expression expr = parseAST(ast, ctx);
-            std::string result_csv = "";
             
-            // 防御性保护：确保至少有两个点，防止除零错误
-            if (pointsCount <= 1) pointsCount = 2; 
-            double step = (xMax - xMin) / (pointsCount - 1);
-            
-            // 预先构造目标符号，避免在循环中重复构造
-            auto x_sym = SymEngine::symbol("x");
-            
-            for (int32_t i = 0; i < pointsCount; ++i) {
-                double current_x = xMin + i * step;
-                try {
-                    // 构建替换映射表，将 AST 中的 x 替换为具体的 current_x 浮点数值
-                    SymEngine::map_basic_basic subs_map;
-                    subs_map[x_sym] = SymEngine::real_double(current_x);
-                    
-                    auto subbed_expr = expr.get_basic()->subs(subs_map);
-                    double y_val = SymEngine::eval_double(*subbed_expr);
-                    
-                    // 如果结果是无穷大或无理数界限 (如复数)，输出特殊标记 "NaN"
-                    if (std::isnan(y_val) || std::isinf(y_val)) {
-                        result_csv += "NaN";
-                    } else {
-                        result_csv += std::to_string(y_val);
-                    }
-                } catch (...) {
-                    // 捕获定义域错误(DOMAIN_ERROR)或除零错误(DIV_BY_ZERO)，同作断崖处理
-                    result_csv += "NaN";
-                }
-                
-                // 拼接逗号
-                if (i < pointsCount - 1) {
-                    result_csv += ",";
-                }
-            }
+            // 直接将 AST 树丢给 GraphingEngine，它会负责编译和极速采样
+            std::string result_csv = GraphingEngine::generatePoints(expr, xMin, xMax, pointsCount);
             
             napi_value result;
             napi_create_string_utf8(env, result_csv.c_str(), NAPI_AUTO_LENGTH, &result);

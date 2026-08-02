@@ -144,6 +144,7 @@ add_library(entry SHARED
     core/parser.cpp
     core/MatrixParser.cpp
     core/giac_bridge.cpp
+    core/GraphingEngine.cpp
 )
 
 # 将 N-API、SymEngine、Giac 和 arm64 版 GMP 一并链接
