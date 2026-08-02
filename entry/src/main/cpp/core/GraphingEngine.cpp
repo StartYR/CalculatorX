@@ -123,26 +123,23 @@ double GraphingEngine::evaluate(double x) const {
 }
 
 // ==================== 阶段三：批量采样分发 ====================
-std::string GraphingEngine::generatePoints(const SymEngine::Expression& expr, double xMin, double xMax, int pointsCount) {
+std::vector<double> GraphingEngine::generatePoints(const SymEngine::Expression& expr, double xMin, double xMax, int pointsCount) {
     GraphingEngine engine;
     engine.compile(expr); // 一次编译
 
-    std::string result_csv;
-    result_csv.reserve(pointsCount * 15); // 提前申请好 CSV 字符串的内存
-    
     if (pointsCount <= 1) pointsCount = 2;
-    double step = (xMax - xMin) / (pointsCount - 1);
     
+    // 直接开辟连续的内存空间
+    std::vector<double> y_values;
+    y_values.reserve(pointsCount); 
+    
+    double step = (xMax - xMin) / (pointsCount - 1);
     for (int32_t i = 0; i < pointsCount; ++i) {
         double current_x = xMin + i * step;
-        double y_val = engine.evaluate(current_x); // 万次极速运行
+        double y_val = engine.evaluate(current_x);
         
-        if (std::isnan(y_val) || std::isinf(y_val)) {
-            result_csv += "NaN";
-        } else {
-            result_csv += std::to_string(y_val);
-        }
-        if (i < pointsCount - 1) result_csv += ",";
+        // 遇到 NaN 或 Inf，C++ 原生的 double 本身就支持存储 NaN，直接塞进去就行！
+        y_values.push_back(y_val); 
     }
-    return result_csv;
+    return y_values;
 }

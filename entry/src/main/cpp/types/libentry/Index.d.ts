@@ -8,4 +8,4 @@ export interface CalcConfig {
   pointsCount?: number;
 }
 
-export const calculate: (jsonStr: string, config: CalcConfig) => string;
+export const calculate: (ast: string, config?: object) => string | Float64Array;

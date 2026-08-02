@@ -40,6 +40,6 @@ public:
     // 对外接口：极速求值（零内存分配）
     double evaluate(double x) const;
     
-    // 对外接口：批量生成 CSV 坐标系数据
-    static std::string generatePoints(const SymEngine::Expression& expr, double xMin, double xMax, int pointsCount);
+    // 对外接口：返回原生 double 数组
+    static std::vector<double> generatePoints(const SymEngine::Expression& expr, double xMin, double xMax, int pointsCount);
 };

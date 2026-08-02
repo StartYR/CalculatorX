@@ -165,8 +165,8 @@ export class EngineService {
 
     Logger.info(`[EngineService] 清洗后传递给 C++ 的 JSON: ${finalJsonStr}`);
 
-    // 仅调用一次 C++ 引擎
-    let cppResult = testNapi.calculate(finalJsonStr, config);
+    // 调用 C++ 引擎
+    let cppResult = testNapi.calculate(finalJsonStr, config) as string;
 
     Logger.info(`[EngineService] C++ 返回的 LaTeX: ${cppResult}`);
 
@@ -174,35 +174,24 @@ export class EngineService {
   }
 
   /**
-   * 5. 新增：专供 GraphingCalc 调用的批量采样接口
-   * 接收 C++ 返回的纯文本 CSV，高效切分为 Float64Array 供 Canvas 画线
+   * 5. 供 GraphingCalc 调用的批量采样接口
+   * 接收 C++ 返回的 Float64Array (二进制共享内存)，零解析开销直接返回给 Canvas 画线
    */
   public static calculateGraphPoints(jsonStr: string, config: CalcConfig): Float64Array {
     let astObj = JSON.parse(jsonStr) as Object;
     let cleanedAstObj = EngineService.unwrapMWrap(astObj);
     let finalJsonStr = JSON.stringify(cleanedAstObj);
 
-    // 此时调用 testNapi.calculate 走的是 mode === 3，返回的将是逗号分隔的超长数字字符串
+    // 此时 cppResult 的类型是 string | Float64Array
     let cppResult = testNapi.calculate(finalJsonStr, config);
 
-    if (cppResult.startsWith("Error")) {
-      return new Float64Array(0); // 兜底：遇到语法崩溃则返回空数组
+    // 类型守卫：如果是字符串，说明发生了错误（返回了 "Error..."），触发兜底
+    if (typeof cppResult === 'string') {
+      return new Float64Array(0);
     }
 
-    // 利用原生 JS 极速分割字符串，并映射到强类型的 Float64Array 节省内存
-    let strArray = cppResult.split(',');
-    let pointsArray = new Float64Array(strArray.length);
-
-    for (let i = 0; i < strArray.length; i++) {
-      let val = strArray[i];
-      if (val === 'NaN') {
-        pointsArray[i] = NaN; // 准确传递断崖标记
-      } else {
-        pointsArray[i] = parseFloat(val);
-      }
-    }
-
-    return pointsArray;
+    // 既然不是字符串，那在 ArkTS 的类型推导里，它必定是 Float64Array，直接返回！
+    return cppResult;
   }
 
   /**
