@@ -126,7 +126,7 @@ export function getBgColor(btn: string | Resource, isShift: boolean): ResourceCo
   let action = getActionId(btn);
   if (action === 'AC' || action === '⌫') return '#ffff5d3e';
   if (action === '⇧Shift') return isShift ? '#ffb87200' : '#ff9900';
-  if (action === '=' || action === 'EXE' || action === '确定') return $r('sys.color.comp_background_emphasize');
+  if (action === '=' || action === 'EXE') return $r('sys.color.comp_background_emphasize');
   if (['+', '−', '×', '÷', '∘', 'Ans'].includes(action)) return $r('sys.color.comp_background_tertiary');
 
   let isNumberOrCore = (typeof btn === 'string' && btn >= '0' && btn <= '9') || action === '.' || action === 'dim' || action === '⇦'|| action === '⇨' || btn === '⇧'|| btn === '⇩';
@@ -160,7 +160,7 @@ export function getFontColor(btn: string | Resource): ResourceColor {
   let action = getActionId(btn);
 
   // 1. 使用反色文字
-  if (['AC', '⌫', '=', '⇧Shift', 'EXE', '确定'].includes(action)) return $r('sys.color.font_on_primary');
+  if (['AC', '⌫', '=', '⇧Shift', 'EXE'].includes(action)) return $r('sys.color.font_on_primary');
 
   // 2. SVG 图标：使用主要文字色
   if (typeof btn !== 'string') return $r('sys.color.font_primary');
