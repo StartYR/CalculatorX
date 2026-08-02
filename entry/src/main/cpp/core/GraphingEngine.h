@@ -42,4 +42,7 @@ public:
     
     // 对外接口：返回原生 double 数组
     static std::vector<double> generatePoints(const SymEngine::Expression& expr, double xMin, double xMax, int pointsCount);
+    
+    // 使用当前对象已编译好的指令进行采样
+    std::vector<double> generatePointsFast(double xMin, double xMax, int pointsCount) const;
 };
