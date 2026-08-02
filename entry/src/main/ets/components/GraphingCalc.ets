@@ -730,8 +730,9 @@ export struct GraphingCalc {
         ForEach(this.functionList, (item: GraphFunctionItem, index: number) => {
           if (item.isVisible) {
             Row({ space: 8 }) {
-              Circle({ width: 10, height: 10 }).fill(item.color)
-              Text(`y${index + 1} = `)
+              Circle({ width: 10, height: 10 })
+                .fill(item.color)
+              Text(`y${"₁₂₃₄₅".charAt(index)} = `)
                 .fontSize(20)
                 .fontColor($r('sys.color.font_primary'))
                 .fontWeight(FontWeight.Medium)
