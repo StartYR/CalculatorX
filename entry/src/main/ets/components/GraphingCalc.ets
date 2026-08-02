@@ -444,7 +444,7 @@ export struct GraphingCalc {
 
       for (let p = 0; p < pointsCount; p++) {
         let mathY = points[p];
-        if (Number.isNaN(mathY)) {
+        if (!Number.isFinite(mathY)) {
           isFirstPoint = true;
           continue;
         }

@@ -18,6 +18,10 @@
 #include <vector>
 #include "utils/Logger.h"
 #include "core/GraphingEngine.h"
+#include <unordered_map>
+
+// 定义全局静态缓存字典，记住编译好的 RPN 虚拟机
+static std::unordered_map<std::string, GraphingEngine> graphing_cache;
 
 using json = nlohmann::json;
 using SymEngine::Expression;
@@ -112,26 +116,30 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         
         // ---------------- 函数图像专属拦截路由 ----------------
         if (mode == 3) {
-            Expression expr = parseAST(ast, ctx);
+            // 将 isRad 状态拼接入 Key，防止用户切换弧度制时图象不更新
+            std::string cache_key = json_str + (isRad ? "_rad" : "_deg");
             
-            // 1. 获取极速引擎算出的原生双精度浮点数组
-            std::vector<double> y_values = GraphingEngine::generatePoints(expr, xMin, xMax, pointsCount);
+            // 缓存穿透：只有第一次输入新公式时，才会执行昂贵的 JSON 解析和建树！
+            if (graphing_cache.find(cache_key) == graphing_cache.end()) {
+                json ast = json::parse(json_str);
+                Expression expr = parseAST(ast, ctx);
+                GraphingEngine engine;
+                engine.compile(expr);
+                graphing_cache[cache_key] = engine; // 存入缓存
+                LOGI("[engine.cpp] 缓存未命中，已编译并缓存新函数图像: %{public}s", cache_key.c_str());
+            }
+
+            // 直接从缓存中掏出早就编译好的虚拟机，跳过一切解析
+            std::vector<double> y_values = graphing_cache[cache_key].generatePointsFast(xMin, xMax, pointsCount);
             
-            // 2. 计算需要的字节总长度 (1000个点 * 8字节 = 8000 Byte)
+            // N-API：在内存中创建 ArrayBuffer
             size_t byte_length = y_values.size() * sizeof(double);
-            
-            // 3. 召唤 N-API 魔法：在内存中创建 ArrayBuffer
             napi_value arraybuffer, typedarray;
             void* data_ptr = nullptr;
             napi_create_arraybuffer(env, byte_length, &data_ptr, &arraybuffer);
-            
-            // 4. 零延迟拷贝：将 C++ 的 vector 内存块瞬间复刻到 ArrayBuffer 中
             memcpy(data_ptr, y_values.data(), byte_length);
-            
-            // 5. 将这块内存包装成 ArkTS 前端可以直接操作的 Float64Array (Type=6)
             napi_create_typedarray(env, napi_float64_array, y_values.size(), arraybuffer, 0, &typedarray);
             
-            // 6. 直接返回 TypedArray 对象，前端无需 parse，0 损耗读取！
             return typedarray;
         }
         

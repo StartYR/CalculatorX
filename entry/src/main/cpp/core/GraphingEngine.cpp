@@ -122,24 +122,23 @@ double GraphingEngine::evaluate(double x) const {
     return sp >= 0 ? stack[0] : 0.0;
 }
 
-// ==================== 阶段三：批量采样分发 ====================
-std::vector<double> GraphingEngine::generatePoints(const SymEngine::Expression& expr, double xMin, double xMax, int pointsCount) {
-    GraphingEngine engine;
-    engine.compile(expr); // 一次编译
-
+// ==================== 阶段三：使用已有指令直接极速采样 ====================
+std::vector<double> GraphingEngine::generatePointsFast(double xMin, double xMax, int pointsCount) const {
     if (pointsCount <= 1) pointsCount = 2;
-    
-    // 直接开辟连续的内存空间
     std::vector<double> y_values;
     y_values.reserve(pointsCount); 
     
     double step = (xMax - xMin) / (pointsCount - 1);
     for (int32_t i = 0; i < pointsCount; ++i) {
         double current_x = xMin + i * step;
-        double y_val = engine.evaluate(current_x);
+        double y_val = this->evaluate(current_x);
         
-        // 遇到 NaN 或 Inf，C++ 原生的 double 本身就支持存储 NaN，直接塞进去就行！
-        y_values.push_back(y_val); 
+        // 在 C++ 底层也加上双保险：直接将 Infinity 强转为 NaN
+        if (std::isnan(y_val) || std::isinf(y_val)) {
+            y_values.push_back(std::nan(""));
+        } else {
+            y_values.push_back(y_val);
+        }
     }
     return y_values;
 }
