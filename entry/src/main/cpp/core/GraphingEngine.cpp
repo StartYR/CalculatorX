@@ -19,11 +19,13 @@
 #include <cmath>
 #include <symengine/rational.h>
 #include <symengine/number.h>
+#include "utils/Logger.h"
 
 using namespace SymEngine;
 
 // ==================== 阶段一：降维编译器 ====================
 void GraphingEngine::compileNode(const RCP<const Basic>& node) {
+//    LOGI("Node type: %{public}s", node->__str__().c_str());
     // 1. 变量 x
     if (is_a<Symbol>(*node)) {
         if (down_cast<const Symbol&>(*node).get_name() == "x") {
@@ -56,11 +58,51 @@ void GraphingEngine::compileNode(const RCP<const Basic>& node) {
         }
         return;
     }
-    // 5. 幂运算
+        // 5. 幂运算
     if (is_a<Pow>(*node)) {
         auto args = node->get_args();
-        compileNode(args[0]); // 底数
-        compileNode(args[1]); // 指数
+        
+        // 检查指数是否为整数常量
+        if (is_a<Integer>(*args[1])) {
+            int exp = down_cast<const Integer&>(*args[1]).as_int();
+            if (exp == 0) {
+                // x^0 = 1
+                instructions.push_back({OpCode::CONST_VAL, 1.0});
+                return;
+            }
+            if (exp == 1) {
+                // x^1 = x，直接编译底数
+                compileNode(args[0]);
+                return;
+            }
+            if (exp == 2) {
+                compileNode(args[0]);
+                compileNode(args[0]);
+                instructions.push_back({OpCode::MUL});
+                return;
+            }
+            if (exp == 3) {
+                compileNode(args[0]);
+                compileNode(args[0]);
+                instructions.push_back({OpCode::MUL});
+                compileNode(args[0]);
+                instructions.push_back({OpCode::MUL});
+                return;
+            }
+            // 其他小整数次幂也可以按需展开
+            if (exp >= 4 && exp <= 8) {
+                compileNode(args[0]);
+                for (int i = 1; i < exp; i++) {
+                    compileNode(args[0]);
+                    instructions.push_back({OpCode::MUL});
+                }
+                return;
+            }
+        }
+        
+        // 非整数次幂，回退到通用路径
+        compileNode(args[0]);
+        compileNode(args[1]);
         instructions.push_back({OpCode::POW});
         return;
     }
