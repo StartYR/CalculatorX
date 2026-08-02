@@ -5,13 +5,6 @@
  * @author 易睿 (Yi Rui)
  * @date 2026/7/24 22:51
  */
-/**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
- * @file GraphingCalc.ets
- * @description 图形计算器主组件，负责坐标系渲染、手势交互和编辑面板管理 (隐藏键盘坞终极架构)
- * @author 易睿 (Yi Rui)
- * @date 2026
- */
 
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
@@ -217,17 +210,20 @@ struct BottomKeyItem {
 // ==================== 图形计算器主组件 ====================
 @Component
 export struct GraphingCalc {
+
+  private isRenderPending: boolean = false;
+
   private settings: RenderingContextSettings = new RenderingContextSettings(true);
   private context: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings);
 
   @State canvasWidth: number = 0;
   @State canvasHeight: number = 0;
 
-  @State @Watch('requestDraw') viewScale: number = 80;
-  @State @Watch('requestDraw') offsetX: number = 0;
-  @State @Watch('requestDraw') offsetY: number = 0;
+  @State viewScale: number = 80;
+  @State offsetX: number = 0;
+  @State  offsetY: number = 0;
   @StorageProp('colorModeIndex')
-  @Watch('requestDraw') colorModeIndex: number = 2;
+  colorModeIndex: number = 2;
   @State isDarkModeUI: boolean = false;
 
   private lastOffsetX: number = 0;
@@ -328,7 +324,19 @@ export struct GraphingCalc {
 
   private requestDraw() {
     if (this.canvasWidth === 0 || this.canvasHeight === 0) return;
-    this.drawCoordinateSystem();
+
+    // 核心节流逻辑：如果当前帧已经有一个绘制任务在排队了，直接丢弃后续冗余请求
+    if (this.isRenderPending) {
+      return;
+    }
+
+    this.isRenderPending = true;
+
+    // 向系统申请在下一次屏幕物理刷新时（约 16ms 后）统一执行一次绘制
+    setTimeout(() => {
+      this.drawCoordinateSystem();  // 绘图逻辑
+      this.isRenderPending = false; // 画完后解锁，准备接收下一帧的请求
+    });
   }
 
   private drawCoordinateSystem() {
@@ -467,6 +475,8 @@ export struct GraphingCalc {
   private handlePanUpdate(event: GestureEvent) {
     this.offsetX = this.lastOffsetX + event.offsetX;
     this.offsetY = this.lastOffsetY + event.offsetY;
+
+    this.requestDraw();
   }
   private handlePanEnd() {
     this.lastOffsetX = this.offsetX;
@@ -477,6 +487,7 @@ export struct GraphingCalc {
     if (newScale < 0.00001) newScale = 0.00001;
     if (newScale > 10000000) newScale = 10000000;
     this.viewScale = newScale;
+    this.requestDraw();
   }
   private handlePinchEnd() {
     this.lastViewScale = this.viewScale;
