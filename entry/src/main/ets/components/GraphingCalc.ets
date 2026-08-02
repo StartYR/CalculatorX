@@ -286,9 +286,16 @@ export struct GraphingCalc {
 
     getContext(this).eventHub.on('temp_graph_ast_ready', (reqId: number, rawLatex: string, ast: string) => {
       if (reqId >= 0 && reqId < this.functionList.length) {
-        this.functionList[reqId].latex = rawLatex;
-        this.functionList[reqId].ast = ast;
-        this.functionList.splice(reqId, 1, this.functionList[reqId]);
+        let oldItem = this.functionList[reqId];
+        let newItem: GraphFunctionItem = {
+          id: oldItem.id,
+          latex: rawLatex,
+          base64: oldItem.base64,
+          color: oldItem.color,
+          isVisible: oldItem.isVisible,
+          ast: ast
+        };
+        this.functionList[reqId] = newItem;
         this.saveFunctions();
         this.requestDraw();
       }
@@ -296,8 +303,16 @@ export struct GraphingCalc {
 
     getContext(this).eventHub.on('response_graph_base64_ready', (reqId: number, base64: string) => {
       if (reqId >= 0 && reqId < this.functionList.length) {
-        this.functionList[reqId].base64 = base64;
-        this.functionList.splice(reqId, 1, this.functionList[reqId]);
+        let oldItem = this.functionList[reqId];
+        let newItem: GraphFunctionItem = {
+          id: oldItem.id,
+          latex: oldItem.latex,
+          base64: base64,
+          color: oldItem.color,
+          isVisible: oldItem.isVisible,
+          ast: oldItem.ast
+        };
+        this.functionList[reqId] = newItem;
         this.saveFunctions();
       }
     });
@@ -574,8 +589,15 @@ export struct GraphingCalc {
                   .fill(item.isVisible ? item.color : $r('sys.color.comp_divider'))
                   .margin({ right: 14 })
                   .onClick(() => {
-                    item.isVisible = !item.isVisible;
-                    this.functionList.splice(index, 1, item);
+                    let newItem: GraphFunctionItem = {
+                      id: item.id,
+                      latex: item.latex,
+                      base64: item.base64,
+                      color: item.color,
+                      isVisible: !item.isVisible,
+                      ast: item.ast
+                    };
+                    this.functionList[index] = newItem;
                     this.saveFunctions();
                   })
 
