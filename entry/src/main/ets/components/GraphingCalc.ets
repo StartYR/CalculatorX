@@ -25,6 +25,7 @@ import { KeyGestureWrapper } from './common/KeyGestureWrapper';
 import mediaquery from '@ohos.mediaquery';
 import { GRAPHING_COLORS } from '../utils/CalculatorConfigs';
 import { EngineService, CalcConfig } from '../utils/EngineService';
+import { PreferenceManager } from '../utils/PreferenceManager';
 
 // ==================== 函数项数据结构 ====================
 export interface GraphFunctionItem {
@@ -43,7 +44,7 @@ const topShiftButtons: Array<string | Resource> = [
   'sin⁻¹', 'cos⁻¹', 'tan⁻¹', '', '', ''
 ];
 const topButtons: Array<string | Resource> = [
-  '⇧Shift', '', '⇦', '⇨', '(', ')',
+  '⇧Shift', '(', '⇦', '⇨', ')', '关闭',
   icon_sqrt, icon_sqrtx, icon_power2, icon_power,'log', 'ln',
   'sin', 'cos', 'tan', icon_fraction, 'x', 'θ'
 ];
@@ -55,14 +56,15 @@ const bottomButtons: Array<string | Resource> = [
 ];
 
 function getLocalFontColor(btn: string | Resource): ResourceColor {
-  if (btn === '=') return getFontColor('+');
   if (btn === 'π' || btn === 'e') return getFontColor('0');
+  if (btn === '确定' || btn === '关闭') return getFontColor('=');
   return getFontColor(btn);
 }
 
 function getLocalBgColor(btn: string | Resource, isShift: boolean): ResourceColor {
-  if (btn === '=') return getBgColor('+', false);
   if (btn === 'π' || btn === 'e') return getBgColor('0', false);
+  if (btn === '确定') return getBgColor('=', false);
+  if (btn === '关闭') return Color.Red;
   return getBgColor(btn, isShift);
 }
 
@@ -318,7 +320,10 @@ export struct GraphingCalc {
   }
 
   private saveFunctions() {
+    // 更新内存与 UI
     this.graphingFunctionsJson = JSON.stringify(this.functionList);
+    // 调用 PreferenceManager，将数据真正写入磁盘
+    PreferenceManager.set(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS, this.graphingFunctionsJson);
   }
 
   private requestDraw() {
@@ -481,10 +486,10 @@ export struct GraphingCalc {
     getContext(this).eventHub.emit('event_shift_change', this.isShift);
   }
 
-  // ==================== 修改：专机拦截“确定”按键 ====================
+  // ==================== 拦截“确定”和“关闭”按键 ====================
   private handleButtonClick(btn: string | Resource) {
     // 拦截“确定”按键：充当收起键盘坞和触发截图提取的指令
-    if (btn === '确定') {
+    if (btn === '确定' || btn === '关闭') {
       if (this.isKeyboardShow) {
         getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
       }
@@ -766,7 +771,7 @@ export struct GraphingCalc {
     .height('100%')
     .backgroundColor($r('sys.color.background_primary'))
     .bindSheet($$this.isEditSheetShow, this.EditPanelBuilder(), {
-      height: '95%',
+      height: '78%',
       dragBar: true,
       backgroundColor: $r('sys.color.background_secondary'),
 
