@@ -248,27 +248,45 @@ export struct GraphingEditSheet {
                     Column({ space: 8 }) {
                       // 1. x(t)
                       Row() {
-                        Text("x(t) = ").fontColor($r('sys.color.font_primary')).fontSize(22).fontFamily('Cambria Math').fontWeight(FontWeight.Medium)
+                        Text("x(t) = ")
+                          .fontColor($r('sys.color.font_primary'))
+                          .fontSize(22)
+                          .fontFamily('Cambria Math')
+                          .fontWeight(FontWeight.Medium)
                         if (item.base64) {
-                          Image(item.base64).height(36).objectFit(ImageFit.Contain)
+                          Image(item.base64)
+                            .height(36)
+                            .objectFit(ImageFit.Contain)
                             .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
                         } else {
                           Text((this.activeIndex === index && this.activeSubTarget === 0 && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑...")
-                            .fontColor($r('sys.color.font_secondary')).height(36)
+                            .fontColor($r('sys.color.font_secondary'))
+                            .height(36)
                         }
-                      }.width('100%').justifyContent(FlexAlign.Start)
+                      }
+                      .width('100%')
+                      .justifyContent(FlexAlign.Start)
 
                       // 2. y(t)
                       Row() {
-                        Text("y(t) = ").fontColor($r('sys.color.font_primary')).fontSize(22).fontFamily('Cambria Math').fontWeight(FontWeight.Medium)
+                        Text("y(t) = ")
+                          .fontColor($r('sys.color.font_primary'))
+                          .fontSize(22)
+                          .fontFamily('Cambria Math')
+                          .fontWeight(FontWeight.Medium)
                         if (item.base64_2) {
-                          Image(item.base64_2).height(36).objectFit(ImageFit.Contain)
+                          Image(item.base64_2)
+                            .height(36)
+                            .objectFit(ImageFit.Contain)
                             .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
                         } else {
                           Text((this.activeIndex === index && this.activeSubTarget === 1 && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑...")
-                            .fontColor($r('sys.color.font_secondary')).height(36)
+                            .fontColor($r('sys.color.font_secondary'))
+                            .height(36)
                         }
-                      }.width('100%').justifyContent(FlexAlign.Start)
+                      }
+                      .width('100%')
+                      .justifyContent(FlexAlign.Start)
                       .onClick((event) => {
                         // 点 y(t) 时，不要触发下方外层的 ListItem 点击事件
                         this.switchEditorFocus(index, 1, item.latex2 || '');
@@ -276,110 +294,167 @@ export struct GraphingEditSheet {
 
                       // 3. 定义域
                       Row() {
-                        Text("定义域: ").fontColor($r('sys.color.font_secondary')).fontSize(14).fontFamily('Cambria Math')
+                        Text("定义域: ")
+                          .fontColor($r('sys.color.font_secondary'))
+                          .fontSize(14)
+                          .fontFamily('Cambria Math')
 
                         TextInput({ text: item.tMin?.toString() })
                           .width(60)
                           .height(28)
-                          .fontSize(14).fontFamily('Cambria Math')
+                          .fontSize(14)
+                          .fontFamily('Cambria Math')
                           .type(InputType.Normal)
                           .textAlign(TextAlign.Center) // 文字居中，视觉更平衡
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
                           .onChange((val) => { item.tMin = parseFloat(val) || 0; this.saveFunctions(); })
 
-                        Text(" ≤ t ≤ ").fontColor($r('sys.color.font_secondary')).fontSize(16).fontFamily('Cambria Math')
+                        Text(" ≤ t ≤ ")
+                          .fontColor($r('sys.color.font_secondary'))
+                          .fontSize(16)
+                          .fontFamily('Cambria Math')
 
                         TextInput({ text: item.tMax?.toString() })
                           .width(60)
                           .height(28)
-                          .fontSize(14).fontFamily('Cambria Math')
+                          .fontSize(14)
+                          .fontFamily('Cambria Math')
                           .type(InputType.Normal)
                           .textAlign(TextAlign.Center) // 文字居中
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
                           .onChange((val) => { item.tMax = parseFloat(val) || 0; this.saveFunctions(); })
                       }
-                      .width('100%').justifyContent(FlexAlign.Start).margin({ top: 4 })
+                      .width('100%')
+                      .justifyContent(FlexAlign.Start)
+                      .margin({ top: 4 })
                     }
                   } else if (item.type === FunctionType.POLAR) {
                     Column({ space: 8 }) {
                       // 1. r(θ)
                       Row() {
-                        Text("r(θ) = ").fontColor($r('sys.color.font_primary')).fontSize(22).fontFamily('Cambria Math').fontWeight(FontWeight.Medium)
+                        Text("r(θ) = ")
+                          .fontColor($r('sys.color.font_primary'))
+                          .fontSize(22)
+                          .fontFamily('Cambria Math')
+                          .fontWeight(FontWeight.Medium)
                         if (item.base64) {
-                          Image(item.base64).height(36).objectFit(ImageFit.Contain)
+                          Image(item.base64)
+                            .height(36)
+                            .objectFit(ImageFit.Contain)
                             .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
                         } else {
                           Text((this.activeIndex === index && this.activeSubTarget === 0 && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑...")
-                            .fontColor($r('sys.color.font_secondary')).height(36)
+                            .fontColor($r('sys.color.font_secondary'))
+                            .height(36)
                         }
-                      }.width('100%').justifyContent(FlexAlign.Start)
+                      }
+                      .width('100%')
+                      .justifyContent(FlexAlign.Start)
 
                       // 2. 极坐标定义域
                       Row() {
-                        Text("定义域: ").fontColor($r('sys.color.font_secondary')).fontSize(14).fontFamily('Cambria Math')
+                        Text("定义域: ")
+                          .fontColor($r('sys.color.font_secondary'))
+                          .fontSize(14)
+                          .fontFamily('Cambria Math')
 
                         TextInput({ text: item.tMin?.toString() })
                           .width(60)
                           .height(28)
-                          .fontSize(14).fontFamily('Cambria Math')
+                          .fontSize(14)
+                          .fontFamily('Cambria Math')
                           .type(InputType.Normal) // 继承参数方程的完美键盘设置
                           .textAlign(TextAlign.Center)
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
                           .onChange((val) => { item.tMin = parseFloat(val) || 0; this.saveFunctions(); })
 
-                        Text(" ≤ θ ≤ ").fontColor($r('sys.color.font_secondary')).fontSize(16).fontFamily('Cambria Math') // 使用专属的 θ 符号
+                        Text(" ≤ θ ≤ ")
+                          .fontColor($r('sys.color.font_secondary'))
+                          .fontSize(16)
+                          .fontFamily('Cambria Math') // 使用专属的 θ 符号
 
                         TextInput({ text: item.tMax?.toString() })
                           .width(60)
                           .height(28)
-                          .fontSize(14).fontFamily('Cambria Math')
+                          .fontSize(14)
+                          .fontFamily('Cambria Math')
                           .type(InputType.Normal)
                           .textAlign(TextAlign.Center)
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
                           .onChange((val) => { item.tMax = parseFloat(val) || 0; this.saveFunctions(); })
-                      }.width('100%').justifyContent(FlexAlign.Start).margin({ top: 4 })
+                      }
+                      .width('100%')
+                      .justifyContent(FlexAlign.Start)
+                      .margin({ top: 4 })
                     }
                   } else if (item.type === FunctionType.IMPLICIT) {
                     Row() {
-                      Text("f(x,y) = ").fontColor($r('sys.color.font_primary')).fontSize(22).fontFamily('Cambria Math').fontWeight(FontWeight.Medium)
+                      Text("f(x,y) = ")
+                        .fontColor($r('sys.color.font_primary'))
+                        .fontSize(22)
+                        .fontFamily('Cambria Math')
+                        .fontWeight(FontWeight.Medium)
                       if (item.base64) {
-                        Image(item.base64).height(36).objectFit(ImageFit.Contain)
+                        Image(item.base64)
+                          .height(36)
+                          .objectFit(ImageFit.Contain)
                           .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
                       } else {
                         Text((this.activeIndex === index && this.activeSubTarget === 0 && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑方程...")
-                          .fontColor($r('sys.color.font_secondary')).height(36)
+                          .fontColor($r('sys.color.font_secondary'))
+                          .height(36)
                       }
-                    }.width('100%').justifyContent(FlexAlign.Start)
+                    }
+                    .width('100%')
+                    .justifyContent(FlexAlign.Start)
 
                   } else if (item.type === FunctionType.POINT) {
                     // --- 点 ---
                     Column({ space: 8 }) {
                       // 1. x 坐标
                       Row() {
-                        Text("x = ").fontColor($r('sys.color.font_primary')).fontSize(22).fontFamily('Cambria Math').fontWeight(FontWeight.Medium)
+                        Text("x = ")
+                          .fontColor($r('sys.color.font_primary'))
+                          .fontSize(22)
+                          .fontFamily('Cambria Math')
+                          .fontWeight(FontWeight.Medium)
                         if (item.base64) {
-                          Image(item.base64).height(36).objectFit(ImageFit.Contain)
+                          Image(item.base64)
+                            .height(36)
+                            .objectFit(ImageFit.Contain)
                             .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
                         } else {
                           Text((this.activeIndex === index && this.activeSubTarget === 0 && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑 x 坐标...")
-                            .fontColor($r('sys.color.font_secondary')).height(36)
+                            .fontColor($r('sys.color.font_secondary'))
+                            .height(36)
                         }
-                      }.width('100%').justifyContent(FlexAlign.Start)
+                      }
+                      .width('100%')
+                      .justifyContent(FlexAlign.Start)
                       .onClick(() => {
                         this.switchEditorFocus(index, 0, item.latex || '');
                       })
 
                       // 2. y 坐标
                       Row() {
-                        Text("y = ").fontColor($r('sys.color.font_primary')).fontSize(22).fontFamily('Cambria Math').fontWeight(FontWeight.Medium)
+                        Text("y = ")
+                          .fontColor($r('sys.color.font_primary'))
+                          .fontSize(22)
+                          .fontFamily('Cambria Math')
+                          .fontWeight(FontWeight.Medium)
                         if (item.base64_2) {
-                          Image(item.base64_2).height(36).objectFit(ImageFit.Contain)
+                          Image(item.base64_2)
+                            .height(36)
+                            .objectFit(ImageFit.Contain)
                             .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
                         } else {
                           Text((this.activeIndex === index && this.activeSubTarget === 1 && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑 y 坐标...")
-                            .fontColor($r('sys.color.font_secondary')).height(36)
+                            .fontColor($r('sys.color.font_secondary'))
+                            .height(36)
                         }
-                      }.width('100%').justifyContent(FlexAlign.Start)
+                      }
+                      .width('100%')
+                      .justifyContent(FlexAlign.Start)
                       .onClick(() => {
                         this.switchEditorFocus(index, 1, item.latex2 || '');
                       })
@@ -388,15 +463,24 @@ export struct GraphingEditSheet {
                   } else {
                     // --- 普通显函数 ---
                     Row() {
-                      Text("f(x) = ").fontColor($r('sys.color.font_primary')).fontSize(22).fontFamily('Cambria Math').fontWeight(FontWeight.Medium)
+                      Text("f(x) = ")
+                        .fontColor($r('sys.color.font_primary'))
+                        .fontSize(22)
+                        .fontFamily('Cambria Math')
+                        .fontWeight(FontWeight.Medium)
                       if (item.base64) {
-                        Image(item.base64).height(36).objectFit(ImageFit.Contain)
+                        Image(item.base64)
+                          .height(36)
+                          .objectFit(ImageFit.Contain)
                           .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
                       } else {
                         Text((this.activeIndex === index && this.activeSubTarget === 0 && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑表达式...")
-                          .fontColor($r('sys.color.font_secondary')).height(36)
+                          .fontColor($r('sys.color.font_secondary'))
+                          .height(36)
                       }
-                    }.width('100%').justifyContent(FlexAlign.Start)
+                    }
+                    .width('100%')
+                    .justifyContent(FlexAlign.Start)
                   }
                 }
                 .layoutWeight(1)
@@ -469,12 +553,18 @@ export struct GraphingEditSheet {
                 onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
                 onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
               })
-            }.zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
+            }
+            .zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
           })
         }
-        .rowsTemplate('33fr 40fr 40fr').columnsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
-        .rowsGap(6).columnsGap(4).padding({ left: 10, right: 10, top: 6, bottom: 6 })
-        .clip(false).width('100%').height(200)
+        .rowsTemplate('33fr 40fr 40fr')
+        .columnsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
+        .rowsGap(6)
+        .columnsGap(4)
+        .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+        .clip(false)
+        .width('100%')
+        .height(200)
 
         Grid() {
           ForEach(bottomButtons, (btn: string | Resource) => {
@@ -484,12 +574,18 @@ export struct GraphingEditSheet {
                 onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
                 onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
               })
-            }.zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
+            }
+            .zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
           })
         }
-        .rowsTemplate('1fr 1fr 1fr 1fr').columnsTemplate('1fr 1fr 1fr 1fr 1fr')
-        .rowsGap(8).columnsGap(6).padding({ left: 10, right: 10, top: 6, bottom: 0 })
-        .clip(false).width('100%').height(250)
+        .rowsTemplate('1fr 1fr 1fr 1fr')
+        .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
+        .rowsGap(8)
+        .columnsGap(6)
+        .padding({ left: 10, right: 10, top: 6, bottom: 0 })
+        .clip(false)
+        .width('100%')
+        .height(250)
       }
       .width('100%')
       .backgroundColor($r('sys.color.comp_background_primary'))
