@@ -278,7 +278,7 @@ CalculatorX 采用**单页面应用 (SPA) + 壳与插件**架构，不使用传�
 ### 5.3 占位模块（开发中）
 
 以下组件的 `build()` 仅渲染 "当前模块正在开发中..." 文本：
-- [GraphingCalc.ets](../entry/src/main/ets/components/GraphingCalc.ets) — 函数图像
+- [GraphingCalc.ets](../entry/src/main/ets/components/graphing/GraphingCalc.ets) — 函数图像
 - [StatisticsCalc.ets](../entry/src/main/ets/components/StatisticsCalc.ets) — 统计分析
 - [UnitConverter.ets](../entry/src/main/ets/components/UnitConverter.ets) — 单位转换
 - [BaseConverter.ets](../entry/src/main/ets/components/BaseConverter.ets) — 进制转换
