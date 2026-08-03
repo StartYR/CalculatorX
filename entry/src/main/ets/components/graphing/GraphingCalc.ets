@@ -23,8 +23,8 @@ function getLocalActionId(btn: string | Resource): string {
 export struct GraphingCalc {
   // ---------- 编辑面板与键盘状态 ----------
   @State isEditSheetShow: boolean = false;
-  // 精准控制底座键盘与引擎显示折叠的核心状态
-  @State isKeyboardShow: boolean = false;
+  @State isKeyboardShow: boolean = false; // 精准控制底座键盘与引擎显示折叠的核心状态
+  @State activeSubTarget: number = 0; // 0 代表主表达式x(t)或f(x), 1 代表伴生表达式y(t)
 
   @StorageLink(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS) graphingFunctionsJson: string = '[]';
   @State functionList: GraphFunctionItem[] = [];
@@ -74,34 +74,54 @@ export struct GraphingCalc {
       this.isShift = false;
     });
 
-    getContext(this).eventHub.on('temp_graph_ast_ready', (reqId: number, rawLatex: string, ast: string) => {
-      if (reqId >= 0 && reqId < this.functionList.length) {
-        let oldItem = this.functionList[reqId];
+    getContext(this).eventHub.on('temp_graph_ast_ready', (encodedReqId: number, rawLatex: string, ast: string) => {
+
+      let targetIndex = encodedReqId % 10000;
+      let targetSubTarget = Math.floor(encodedReqId / 10000);
+
+      if (targetIndex >= 0 && targetIndex < this.functionList.length) {
+        let oldItem = this.functionList[targetIndex];
         let newItem: GraphFunctionItem = {
-          id: oldItem.id,
-          latex: rawLatex,
-          base64: oldItem.base64,
-          color: oldItem.color,
-          isVisible: oldItem.isVisible,
-          ast: ast
+          id: oldItem.id, color: oldItem.color, isVisible: oldItem.isVisible, type: oldItem.type,
+          tMin: oldItem.tMin, tMax: oldItem.tMax,
+          latex: oldItem.latex, base64: oldItem.base64, ast: oldItem.ast,
+          latex2: oldItem.latex2, base64_2: oldItem.base64_2, ast2: oldItem.ast2
         };
-        this.functionList[reqId] = newItem;
+
+        if (targetSubTarget === 1) {
+          newItem.latex2 = rawLatex;
+          newItem.ast2 = ast;
+        } else {
+          newItem.latex = rawLatex;
+          newItem.ast = ast;
+        }
+
+        this.functionList[targetIndex] = newItem;
         this.saveFunctions();
       }
     });
 
-    getContext(this).eventHub.on('response_graph_base64_ready', (reqId: number, base64: string) => {
-      if (reqId >= 0 && reqId < this.functionList.length) {
-        let oldItem = this.functionList[reqId];
+    getContext(this).eventHub.on('response_graph_base64_ready', (encodedReqId: number, base64: string) => {
+
+      let targetIndex = encodedReqId % 10000;
+      let targetSubTarget = Math.floor(encodedReqId / 10000);
+
+      if (targetIndex >= 0 && targetIndex < this.functionList.length) {
+        let oldItem = this.functionList[targetIndex];
         let newItem: GraphFunctionItem = {
-          id: oldItem.id,
-          latex: oldItem.latex,
-          base64: base64,
-          color: oldItem.color,
-          isVisible: oldItem.isVisible,
-          ast: oldItem.ast
+          id: oldItem.id, color: oldItem.color, isVisible: oldItem.isVisible, type: oldItem.type,
+          tMin: oldItem.tMin, tMax: oldItem.tMax,
+          latex: oldItem.latex, base64: oldItem.base64, ast: oldItem.ast,
+          latex2: oldItem.latex2, base64_2: oldItem.base64_2, ast2: oldItem.ast2
         };
-        this.functionList[reqId] = newItem;
+
+        if (targetSubTarget === 1) {
+          newItem.base64_2 = base64;
+        } else {
+          newItem.base64 = base64;
+        }
+
+        this.functionList[targetIndex] = newItem;
         this.saveFunctions();
       }
     });
@@ -135,7 +155,8 @@ export struct GraphingCalc {
     // 拦截“确定”按键：充当收起键盘坞和触发截图提取的指令
     if (btn === '确定' || btn === '关闭') {
       if (this.isKeyboardShow) {
-        getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
+        let magicId = this.activeIndex + (this.activeSubTarget * 10000);
+        getContext(this).eventHub.emit('request_graphing_data', magicId);
       }
       this.isKeyboardShow = false; // 折叠底层键盘坞
       return;
@@ -154,6 +175,7 @@ export struct GraphingCalc {
     GraphingEditSheet({
       functionList: $functionList,
       activeIndex: $activeIndex,
+      activeSubTarget: $activeSubTarget,
       isKeyboardShow: $isKeyboardShow,
       isShift: $isShift,
       isDarkModeUI: $isDarkModeUI,
@@ -201,7 +223,7 @@ export struct GraphingCalc {
             .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 12 })
             .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
           }
-        }, (item: GraphFunctionItem) => `${item.id}_${item.latex}_${item.base64.length}_${item.base64.slice(-20)}_${item.isVisible}`)
+        }, (item: GraphFunctionItem) => `${item.id}_${item.latex}_${item.base64.length}_${item.isVisible}_${item.latex2 || ''}_${item.base64_2?.length || 0}`)
       }
       .alignItems(HorizontalAlign.Start)
       .margin({ top: 80, left: 12 })
@@ -210,7 +232,7 @@ export struct GraphingCalc {
     .height('100%')
     .backgroundColor($r('sys.color.background_primary'))
     .bindSheet($$this.isEditSheetShow, this.EditPanelBuilder(), {
-      height: '78%',
+      height: '100%',
       dragBar: true,
       backgroundColor: $r('sys.color.background_secondary'),
 
@@ -218,7 +240,8 @@ export struct GraphingCalc {
       onWillDisappear: () => {
         // 关闭动画开始，让引擎提取最后一次输入的数据
         if (this.isKeyboardShow) {
-          getContext(this).eventHub.emit('request_graphing_data', this.activeIndex);
+          let magicId = this.activeIndex + (this.activeSubTarget * 10000);
+          getContext(this).eventHub.emit('request_graphing_data', magicId);
         }
       },
 
