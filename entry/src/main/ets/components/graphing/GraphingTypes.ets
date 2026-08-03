@@ -11,7 +11,8 @@ export enum FunctionType {
   NORMAL = 0,      // 普通显函数 y = f(x)
   PARAMETRIC = 1,  // 参数方程 x(t), y(t)
   POLAR = 2,       // 极坐标方程 r(t) 或 r(θ)
-  IMPLICIT = 3     // 隐函数 f(x,y) = 0
+  IMPLICIT = 3,    // 隐函数 f(x,y) = 0
+  POINT = 4        // 独立点 (x, y)
 }
 
 // ==================== 函数项数据结构 ====================

@@ -43,18 +43,6 @@ export struct FunctionTypeDialog {
               this.controller?.close(); // 极致效率：点击即关闭并执行
             })
         }
-        ListItem() {
-          Button("参数方程 x(t), y(t)", { type: ButtonType.Normal })
-            .width('100%')
-            .height(48)
-            .backgroundColor($r('sys.color.comp_background_tertiary'))
-            .fontColor($r('sys.color.font_primary'))
-            .borderRadius(12)
-            .onClick(() => {
-              this.onTypeSelected(FunctionType.PARAMETRIC);
-              this.controller?.close();
-            })
-        }
         // 极坐标
         ListItem() {
           Button("极坐标方程 r(θ)", { type: ButtonType.Normal })
@@ -68,6 +56,19 @@ export struct FunctionTypeDialog {
               this.controller?.close();
             })
         }
+        // 参数方程
+        ListItem() {
+          Button("参数方程 x(t), y(t)", { type: ButtonType.Normal })
+            .width('100%')
+            .height(48)
+            .backgroundColor($r('sys.color.comp_background_tertiary'))
+            .fontColor($r('sys.color.font_primary'))
+            .borderRadius(12)
+            .onClick(() => {
+              this.onTypeSelected(FunctionType.PARAMETRIC);
+              this.controller?.close();
+            })
+        }
         // 隐函数
         ListItem() {
           Button("隐函数 f(x,y)", { type: ButtonType.Normal })
@@ -78,6 +79,19 @@ export struct FunctionTypeDialog {
             .borderRadius(12)
             .onClick(() => {
               this.onTypeSelected(FunctionType.IMPLICIT);
+              this.controller?.close();
+            })
+        }
+        // 点
+        ListItem() {
+          Button("点 (x, y)", { type: ButtonType.Normal })
+            .width('100%')
+            .height(48)
+            .backgroundColor($r('sys.color.comp_background_tertiary'))
+            .fontColor($r('sys.color.font_primary'))
+            .borderRadius(12)
+            .onClick(() => {
+              this.onTypeSelected(FunctionType.POINT);
               this.controller?.close();
             })
         }
@@ -338,8 +352,42 @@ export struct GraphingEditSheet {
                       }
                     }.width('100%').justifyContent(FlexAlign.Start)
 
+                  } else if (item.type === FunctionType.POINT) {
+                    // --- 点 ---
+                    Column({ space: 8 }) {
+                      // 1. x 坐标
+                      Row() {
+                        Text("x = ").fontColor($r('sys.color.font_primary')).fontSize(16).fontWeight(FontWeight.Medium)
+                        if (item.base64) {
+                          Image(item.base64).height(36).objectFit(ImageFit.Contain)
+                            .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
+                        } else {
+                          Text((this.activeIndex === index && this.activeSubTarget === 0 && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑 x 坐标...")
+                            .fontColor($r('sys.color.font_secondary')).height(36)
+                        }
+                      }.width('100%').justifyContent(FlexAlign.Start)
+                      .onClick(() => {
+                        this.switchEditorFocus(index, 0, item.latex || '');
+                      })
+
+                      // 2. y 坐标
+                      Row() {
+                        Text("y = ").fontColor($r('sys.color.font_primary')).fontSize(16).fontWeight(FontWeight.Medium)
+                        if (item.base64_2) {
+                          Image(item.base64_2).height(36).objectFit(ImageFit.Contain)
+                            .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
+                        } else {
+                          Text((this.activeIndex === index && this.activeSubTarget === 1 && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑 y 坐标...")
+                            .fontColor($r('sys.color.font_secondary')).height(36)
+                        }
+                      }.width('100%').justifyContent(FlexAlign.Start)
+                      .onClick(() => {
+                        this.switchEditorFocus(index, 1, item.latex2 || '');
+                      })
+                    }
+
                   } else {
-                    // --- 普通显函数布局：加上直观的 f(x) 前缀 ---
+                    // --- 普通显函数 ---
                     Row() {
                       Text("f(x) = ").fontColor($r('sys.color.font_primary')).fontSize(16).fontWeight(FontWeight.Medium)
                       if (item.base64) {
