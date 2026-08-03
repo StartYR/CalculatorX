@@ -668,7 +668,12 @@ entry/src/main/
 │   │   ├── BasicCalc.ets                   # 基础计算器插件：5×4 大圆按钮，四则运算/百分数/Ans/长按连续退格
 │   │   ├── MatrixCalc.ets                  # 矩阵与向量插件：6×5 键盘(Shift)，维度和类型网格选择器(1×1 到 6×6)
 │   │   ├── EquationSolver.ets              # 方程求解插件：3×6 上键盘(Shift)+5×5 下键盘，方程组模板(2-6行)，8个未知数变量
-│   │   ├── GraphingCalc.ets                # 函数图像插件（占位，开发中）
+│   │   ├── graphing/                       # 函数图像组件
+│   │   │   ├── GraphingCalc.ets            # 主枢纽：状态管理、事件调度、组合子组件
+│   │   │   ├── GraphingCanvas.ets          # 核心画布：坐标系渲染、引擎对接、手势处理
+│   │   │   ├── GraphingEditSheet.ets       # 编辑面板：函数列表管理与交互
+│   │   │   ├── GraphingKeyboard.ets        # 专属键盘：顶底键盘组件与按键布局配置
+│   │   │   └── GraphingTypes.ets           # 类型声明：GraphFunctionItem 等接口定义
 │   │   ├── StatisticsCalc.ets              # 统计分析插件（占位，开发中）
 │   │   ├── UnitConverter.ets               # 单位转换插件（占位，开发中）
 │   │   ├── BaseConverter.ets               # 进制转换插件（占位，开发中）
