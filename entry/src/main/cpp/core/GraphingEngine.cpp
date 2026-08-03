@@ -310,15 +310,66 @@ std::vector<double> GraphingEngine::generatePointsFast(double xMin, double xMax,
         double deriv_prev = this->evaluateDeriv(prev_x);
         double deriv_curr = this->evaluateDeriv(curr_x);
         
-        if (std::isnan(curr_y) || std::isinf(curr_y)) {
+        // 状态
+        bool prev_valid = std::isfinite(prev_y);
+        bool curr_valid = std::isfinite(curr_y);
+
+        if (!prev_valid && !curr_valid) {
+            // 1. 都在定义域外，直接推入 NaN 保持断开
             xy_values.push_back(curr_x);
             xy_values.push_back(std::nan(""));
-        } else if (std::isnan(prev_y) || std::isinf(prev_y)) {
-            xy_values.push_back(curr_x);
-            xy_values.push_back(curr_y);
-        } else {
-            // ============ 极值点拦截 ============
-            // 如果左端点导数和右端点导数符号相反，说明中间必有一个极值点
+        } 
+        else if (!prev_valid && curr_valid) {
+            // 2. 【进入定义域】（例如 sqrt(x) 跨越 0，从左往右）
+            double a = prev_x;
+            double b = curr_x;
+            // 20 次二分，锁定定义域左边界
+            for (int k = 0; k < 20; ++k) {
+                double m = (a + b) / 2.0;
+                if (std::isfinite(this->evaluate(m))) {
+                    b = m; // 中点有效，说明边界在左半区
+                } else {
+                    a = m; // 中点无效，说明边界在右半区
+                }
+            }
+            // 此时 b 是贴近有效定义域的最极限点
+            double y_b = this->evaluate(b);
+            
+            // 注入断点，确保左侧没有脏线
+            xy_values.push_back(a);
+            xy_values.push_back(std::nan(""));
+            
+            // 从真正的精确边界点 b 开始，向 curr_x 启动正常的自适应递归采样！
+            sampleRecursive(b, y_b, curr_x, curr_y, 0, error_threshold, jump_threshold, xy_values);
+        } 
+        else if (prev_valid && !curr_valid) {
+            // 3. 【离开定义域】跨越 0，从左往右
+            double a = prev_x;
+            double b = curr_x;
+            // 二分法计算定义域右边界
+            for (int k = 0; k < 20; ++k) {
+                double m = (a + b) / 2.0;
+                if (std::isfinite(this->evaluate(m))) {
+                    a = m; // 中点有效，说明边界在右半区
+                } else {
+                    b = m; // 中点无效，说明边界在左半区
+                }
+            }
+            // 此时 a 是贴近有效定义域的最极限点
+            double y_a = this->evaluate(a);
+            
+            // 从 prev_x 向真正的精确边界点 a 进行采样
+            sampleRecursive(prev_x, prev_y, a, y_a, 0, error_threshold, jump_threshold, xy_values);
+            
+            // 注入断点，彻底切断右侧的线
+            xy_values.push_back(b);
+            xy_values.push_back(std::nan(""));
+        } 
+        else {
+            // 4. 【全在定义域内】：寻找极值点强制采样
+            double deriv_prev = this->evaluateDeriv(prev_x);
+            double deriv_curr = this->evaluateDeriv(curr_x);
+            
             if (std::isfinite(deriv_prev) && std::isfinite(deriv_curr) && deriv_prev * deriv_curr < 0) {
                 
                 // 20 次二分法，求出导数为 0 的 X 坐标
