@@ -164,23 +164,27 @@ double GraphingEngine::evaluate(double x) const {
     return sp >= 0 ? stack[0] : 0.0;
 }
 
-// ==================== 阶段三：使用已有指令直接极速采样 ====================
+// ==================== 阶段三：直接采样 (二维交替坐标) ====================
 std::vector<double> GraphingEngine::generatePointsFast(double xMin, double xMax, int pointsCount) const {
     if (pointsCount <= 1) pointsCount = 2;
-    std::vector<double> y_values;
-    y_values.reserve(pointsCount); 
+    std::vector<double> xy_values;
+    // 容量翻倍，因为现在要装 X 和 Y
+    xy_values.reserve(pointsCount * 2); 
     
     double step = (xMax - xMin) / (pointsCount - 1);
     for (int32_t i = 0; i < pointsCount; ++i) {
         double current_x = xMin + i * step;
         double y_val = this->evaluate(current_x);
         
-        // 在 C++ 底层也加上双保险：直接将 Infinity 强转为 NaN
+        // 第一步：塞入真实的 X 坐标
+        xy_values.push_back(current_x);
+        
+        // 第二步：塞入 Y 坐标，遇到断崖直接强转 NaN 打断连线
         if (std::isnan(y_val) || std::isinf(y_val)) {
-            y_values.push_back(std::nan(""));
+            xy_values.push_back(std::nan(""));
         } else {
-            y_values.push_back(y_val);
+            xy_values.push_back(y_val);
         }
     }
-    return y_values;
+    return xy_values;
 }

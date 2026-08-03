@@ -465,14 +465,17 @@ export struct GraphingCalc {
       let stepX = (xMax - xMin) / (pointsCount - 1);
       let isFirstPoint = true;
 
-      for (let p = 0; p < pointsCount; p++) {
-        let mathY = points[p];
+      for (let p = 0; p < points.length; p += 2) {
+        let mathX = points[p];
+        let mathY = points[p + 1];
+
+        // 如果底层传来了 NaN，说明这里是断崖/奇点，切断连线
         if (!Number.isFinite(mathY)) {
           isFirstPoint = true;
           continue;
         }
 
-        let mathX = xMin + p * stepX;
+        // 使用底层的 mathX 映射物理像素
         let px = originX + mathX * this.viewScale;
         let py = originY - mathY * this.viewScale;
 
