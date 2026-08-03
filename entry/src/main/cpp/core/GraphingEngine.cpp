@@ -164,27 +164,98 @@ double GraphingEngine::evaluate(double x) const {
     return sp >= 0 ? stack[0] : 0.0;
 }
 
-// ==================== 阶段三：直接采样 (二维交替坐标) ====================
-std::vector<double> GraphingEngine::generatePointsFast(double xMin, double xMax, int pointsCount) const {
-    if (pointsCount <= 1) pointsCount = 2;
-    std::vector<double> xy_values;
-    // 容量翻倍，因为现在要装 X 和 Y
-    xy_values.reserve(pointsCount * 2); 
-    
-    double step = (xMax - xMin) / (pointsCount - 1);
-    for (int32_t i = 0; i < pointsCount; ++i) {
-        double current_x = xMin + i * step;
-        double y_val = this->evaluate(current_x);
-        
-        // 第一步：塞入真实的 X 坐标
-        xy_values.push_back(current_x);
-        
-        // 第二步：塞入 Y 坐标，遇到断崖直接强转 NaN 打断连线
-        if (std::isnan(y_val) || std::isinf(y_val)) {
-            xy_values.push_back(std::nan(""));
+// ==================== 自适应递归采样核心逻辑 ====================
+void GraphingEngine::sampleRecursive(double x1, double y1, double x2, double y2, int depth, double error_threshold, double jump_threshold, std::vector<double>& result) const {
+    // 1. 递归出口：防止无限细分导致栈溢出（最大深度设定为 8，相当于把一个区间细分 2^8 = 256 份）
+    if (depth >= 8) {
+        // 奇点/断崖终极拦截：如果细分到了极限，Y值的跳跃依然极其夸张，且发生了正负跳变
+        if (std::abs(y1 - y2) > jump_threshold && y1 * y2 < 0) {
+            // 判定为跨越了垂直渐近线 (如 1/x 或 tan(x))，强行打入 NaN 断开连线！
+            result.push_back(std::nan(""));
+            result.push_back(std::nan(""));
         } else {
-            xy_values.push_back(y_val);
+            // 不是奇点，只是纯粹的极度陡峭，正常推入右侧点
+            result.push_back(x2);
+            result.push_back(y2);
         }
+        return;
     }
+
+    // 2. 取 X 的物理中点，算出真实的 Y 值
+    double x_mid = (x1 + x2) / 2.0;
+    double y_mid_real = this->evaluate(x_mid);
+
+    // 如果中点算出来是非法值，直接打断连线
+    if (std::isnan(y_mid_real) || std::isinf(y_mid_real)) {
+        result.push_back(std::nan(""));
+        result.push_back(std::nan(""));
+        return;
+    }
+
+    // 3. 计算如果用直线相连，中点的理论 Y 值
+    double y_mid_line = (y1 + y2) / 2.0;
+
+    // 4. 核心裁决：计算真实曲线与直线的垂直偏差
+    double error = std::abs(y_mid_real - y_mid_line);
+
+    // 5. 分支判断：如果偏差大于我们设定的容忍度，说明曲线在这里很弯，继续递归细分！
+    if (error > error_threshold) {
+        sampleRecursive(x1, y1, x_mid, y_mid_real, depth + 1, error_threshold, jump_threshold, result);
+        sampleRecursive(x_mid, y_mid_real, x2, y2, depth + 1, error_threshold, jump_threshold, result);
+    } else {
+        // 曲线在这段极其平滑，甚至就是一条直线，停止细分，直接推入右侧点
+        result.push_back(x2);
+        result.push_back(y2);
+    }
+}
+
+// ==================== 阶段三：直接采样 (自适应递归) ====================
+std::vector<double> GraphingEngine::generatePointsFast(double xMin, double xMax, int pointsCount) const {
+    std::vector<double> xy_values;
+    // 预留足够大的空间，应对高频震荡函数产生的海量细分点
+    xy_values.reserve(2000); 
+
+    // 1. 建立稀疏的“基准网格” (只需极少的探测点，比如 50 段)
+    int base_segments = 50; 
+    double step = (xMax - xMin) / base_segments;
+    
+    // 2. 动态计算视口相关的容忍度阈值
+    // 弯曲容忍度：屏幕宽度的 1/1000 (相当于容忍 1 像素的视觉误差)
+    double error_threshold = (xMax - xMin) / 1000.0;
+    // 断崖跳跃阈值：视口宽度的 5 倍 (手机屏幕高度通常不超过宽度的 2.5 倍，5 倍绝对是飞出屏幕的渐近线)
+    double jump_threshold = (xMax - xMin) * 5.0;
+
+    // 3. 推入最左侧的初始原点
+    double prev_x = xMin;
+    double prev_y = this->evaluate(prev_x);
+    xy_values.push_back(prev_x);
+    if (std::isnan(prev_y) || std::isinf(prev_y)) {
+        xy_values.push_back(std::nan(""));
+    } else {
+        xy_values.push_back(prev_y);
+    }
+
+    // 4. 遍历基准网格，对每个区间启动自适应探测
+    for (int i = 1; i <= base_segments; ++i) {
+        double curr_x = xMin + i * step;
+        double curr_y = this->evaluate(curr_x);
+        
+        if (std::isnan(curr_y) || std::isinf(curr_y)) {
+            // 如果右端点是无理数，直接推入 NaN 截断
+            xy_values.push_back(curr_x);
+            xy_values.push_back(std::nan(""));
+        } else if (std::isnan(prev_y) || std::isinf(prev_y)) {
+            // 如果左端点是无理数，右端点正常，无需细分，直接连过去
+            xy_values.push_back(curr_x);
+            xy_values.push_back(curr_y);
+        } else {
+            // 左右端点都正常，启动魔法：递归自适应细分探测！
+            sampleRecursive(prev_x, prev_y, curr_x, curr_y, 0, error_threshold, jump_threshold, xy_values);
+        }
+        
+        prev_x = curr_x;
+        prev_y = curr_y;
+    }
+
     return xy_values;
 }
