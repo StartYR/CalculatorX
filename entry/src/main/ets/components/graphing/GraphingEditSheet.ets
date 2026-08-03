@@ -55,6 +55,32 @@ export struct FunctionTypeDialog {
               this.controller?.close();
             })
         }
+        // 极坐标
+        ListItem() {
+          Button("极坐标方程 r(θ)", { type: ButtonType.Normal })
+            .width('100%')
+            .height(48)
+            .backgroundColor($r('sys.color.comp_background_tertiary'))
+            .fontColor($r('sys.color.font_primary'))
+            .borderRadius(12)
+            .onClick(() => {
+              this.onTypeSelected(FunctionType.POLAR);
+              this.controller?.close();
+            })
+        }
+        // 隐函数
+        ListItem() {
+          Button("隐函数 f(x,y)", { type: ButtonType.Normal })
+            .width('100%')
+            .height(48)
+            .backgroundColor($r('sys.color.comp_background_tertiary'))
+            .fontColor($r('sys.color.font_primary'))
+            .borderRadius(12)
+            .onClick(() => {
+              this.onTypeSelected(FunctionType.IMPLICIT);
+              this.controller?.close();
+            })
+        }
       }
       .width('100%')
       .padding({ left: 16, right: 16, bottom: 16 })
@@ -260,6 +286,58 @@ export struct GraphingEditSheet {
                       }
                       .width('100%').justifyContent(FlexAlign.Start).margin({ top: 4 })
                     }
+                  } else if (item.type === FunctionType.POLAR) {
+                    Column({ space: 8 }) {
+                      // 1. r(θ)
+                      Row() {
+                        Text("r(θ) = ").fontColor($r('sys.color.font_primary')).fontSize(16).fontWeight(FontWeight.Medium)
+                        if (item.base64) {
+                          Image(item.base64).height(36).objectFit(ImageFit.Contain)
+                            .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
+                        } else {
+                          Text((this.activeIndex === index && this.activeSubTarget === 0 && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑...")
+                            .fontColor($r('sys.color.font_secondary')).height(36)
+                        }
+                      }.width('100%').justifyContent(FlexAlign.Start)
+
+                      // 2. 极坐标定义域
+                      Row() {
+                        Text("定义域: ").fontColor($r('sys.color.font_secondary')).fontSize(14)
+
+                        TextInput({ text: item.tMin?.toString() })
+                          .width(60)
+                          .height(28)
+                          .fontSize(14)
+                          .type(InputType.Normal) // 继承参数方程的完美键盘设置
+                          .textAlign(TextAlign.Center)
+                          .padding({ top: 0, bottom: 0, left: 4, right: 4 })
+                          .onChange((val) => { item.tMin = parseFloat(val) || 0; this.saveFunctions(); })
+
+                        Text(" ≤ θ ≤ ").fontColor($r('sys.color.font_secondary')).fontSize(14) // 使用专属的 θ 符号
+
+                        TextInput({ text: item.tMax?.toString() })
+                          .width(60)
+                          .height(28)
+                          .fontSize(14)
+                          .type(InputType.Normal)
+                          .textAlign(TextAlign.Center)
+                          .padding({ top: 0, bottom: 0, left: 4, right: 4 })
+                          .onChange((val) => { item.tMax = parseFloat(val) || 0; this.saveFunctions(); })
+                      }.width('100%').justifyContent(FlexAlign.Start).margin({ top: 4 })
+                    }
+                  } else if (item.type === FunctionType.IMPLICIT) {
+                    Row() {
+                      // 隐函数由用户自己输入等号，所以这里用冒号引导
+                      Text("f(x,y) = ").fontColor($r('sys.color.font_primary')).fontSize(16).fontWeight(FontWeight.Medium)
+                      if (item.base64) {
+                        Image(item.base64).height(36).objectFit(ImageFit.Contain)
+                          .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
+                      } else {
+                        Text((this.activeIndex === index && this.activeSubTarget === 0 && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑方程...")
+                          .fontColor($r('sys.color.font_secondary')).height(36)
+                      }
+                    }.width('100%').justifyContent(FlexAlign.Start)
+
                   } else {
                     // --- 普通显函数布局：加上直观的 f(x) 前缀 ---
                     Row() {
