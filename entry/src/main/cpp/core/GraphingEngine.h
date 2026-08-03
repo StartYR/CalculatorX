@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
  * @file GraphingEngine.h
- * @description 自定义逆波兰 (RPN) 极速求值机
+ * @description 函数渲染核心 (集成符号伴生导数雷达、极限边界嗅探与 RPN 自适应递归采样)
  * @author 易睿 (Yi Rui)
  * @date 2026/8/2 20:52
 */

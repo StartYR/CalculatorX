@@ -700,6 +700,7 @@ entry/src/main/
 │   │   ├── parser.cpp/.h                   # AST 递归下降解析器：MathJSON → SymEngine Expression，角度/弧度转换，DMS/矩阵/排列组合/微积分特殊节点
 │   │   ├── MatrixParser.cpp/.h             # 矩阵 AST 解析：JSON Matrix → 二维数组 → Giac 矩阵指令
 │   │   ├── giac_bridge.cpp/.h              # Giac CAS 桥接：符号积分/极限/方程/矩阵运算/Romberg 数值积分降级
+│   │   ├── GraphingEngine.cpp/.h           # 函数渲染核心 (集成符号伴生导数雷达、极限边界嗅探与 RPN 自适应递归采样)
 │   │   └── ErrorHandler.h                  # 异常状态机：6 种业务错误码(DIV_BY_ZERO/DOMAIN/OVERFLOW/SYNTAX/TIMEOUT/DMS) → 前端友好信息
 │   ├── utils/
 │   │   ├── FastMath.cpp/.h                 # 极速超大数运算：O(1) 阶乘/幂运算(10^10^19 级)，幽灵变量 MAGICBASETEN 传递精确基数
@@ -723,20 +724,6 @@ entry/src/main/
 │   ├── fonts/                              # 数学字体 (WOFF2 + TTF)
 │   ├── icons/                              # 自定义 SVG 数学图标
 │   └── docs/                               # Nextra 静态帮助文档站点 (_next/ + HTML 页面)
-│
-├── resources/base/                         # 🎨 基础资源
-│   ├── element/
-│   │   ├── color.json                      # 颜色资源定义
-│   │   ├── float.json                      # 浮点数值资源
-│   │   └── string.json                     # 字符串资源 (应用名等)
-│   ├── media/                              # 媒体资源 (应用图标/启动图/帮助图片)
-│   └── profile/
-│       ├── main_pages.json                 # 页面路由注册表
-│       └── backup_config.json              # 备份配置
-│
-├── resources/dark/                         # 🌙 深色模式资源
-│   └── element/
-│       └── color.json                      # 深色模式颜色覆盖
 │
 └── module.json5                            # 模块配置：abilities 声明、权限、包名等
 ```
