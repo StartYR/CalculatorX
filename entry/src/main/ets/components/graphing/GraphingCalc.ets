@@ -10,7 +10,7 @@ import mediaquery from '@ohos.mediaquery';
 import { HapticUtils } from '../../utils/HapticUtils';
 import { getActionId, GRAPHING_COLORS, PreferenceConfigs } from '../../utils/CalculatorConfigs';
 import { PreferenceManager } from '../../utils/PreferenceManager';
-import { GraphFunctionItem } from './GraphingTypes';
+import { GraphFunctionItem, FunctionType } from './GraphingTypes';
 import { GraphingCanvas } from './GraphingCanvas';
 import { GraphingEditSheet } from './GraphingEditSheet';
 
@@ -192,28 +192,129 @@ export struct GraphingCalc {
         functionList: $functionList
       })
 
+      // 左上角图例
       Column({ space: 10 }) {
         ForEach(this.functionList, (item: GraphFunctionItem, index: number) => {
           if (item.isVisible) {
             Row({ space: 8 }) {
+              // 左侧统一的颜色标识点
               Circle({ width: 10, height: 10 })
                 .fill(item.color)
-              Text(`y${"₁₂₃₄₅".charAt(index)} = `)
-                .fontSize(20)
-                .fontColor($r('sys.color.font_primary'))
-                .fontWeight(FontWeight.Medium)
 
-              if (item.base64) {
-                Image(item.base64)
-                  .height(24)
-                  .objectFit(ImageFit.Contain)
-                  .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
-              } else {
-                Text("等待输入...")
-                  .fontSize(20)
-                  .fontColor($r('sys.color.font_secondary'))
-                  .fontStyle(FontStyle.Italic)
+              // 右侧：根据不同函数类型，动态渲染对应的表达式前缀与图片
+              Column({ space: 4 }) {
+                if (item.type === FunctionType.PARAMETRIC) {
+                  // --- 参数方程 x(t), y(t) 双行布局 ---
+                  Row() {
+                    Text("x(t) = ")
+                      .fontSize(20).fontFamily('Cambria Math')
+                      .fontColor($r('sys.color.font_primary'))
+                      .fontWeight(FontWeight.Medium)
+                    if (item.base64) {
+                      Image(item.base64)
+                        .height(24)
+                        .objectFit(ImageFit.Contain)
+                        .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
+                    } else {
+                      Text("等待输入...")
+                        .fontSize(20).fontFamily('Cambria Math')
+                        .fontColor($r('sys.color.font_secondary'))
+                        .fontStyle(FontStyle.Italic)
+                    }
+                  }
+                  Row() {
+                    Text("y(t) = ").fontSize(20).fontFamily('Cambria Math').fontColor($r('sys.color.font_primary')).fontWeight(FontWeight.Medium)
+                    if (item.base64_2) {
+                      Image(item.base64_2).height(24).objectFit(ImageFit.Contain).colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
+                    } else {
+                      Text("等待输入...")
+                        .fontSize(20).fontFamily('Cambria Math')
+                        .fontColor($r('sys.color.font_secondary'))
+                        .fontStyle(FontStyle.Italic)
+                    }
+                  }
+                } else if (item.type === FunctionType.POLAR) {
+                  // --- 极坐标 r(θ) 单行布局 ---
+                  Row() {
+                    Text("r(θ) = ")
+                      .fontSize(20).fontFamily('Cambria Math')
+                      .fontColor($r('sys.color.font_primary'))
+                      .fontWeight(FontWeight.Medium)
+                    if (item.base64) {
+                      Image(item.base64)
+                        .height(24)
+                        .objectFit(ImageFit.Contain)
+                        .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
+                    } else {
+                      Text("等待输入...")
+                        .fontSize(20).fontFamily('Cambria Math')
+                        .fontColor($r('sys.color.font_secondary'))
+                        .fontStyle(FontStyle.Italic)
+                    }
+                  }
+                } else if (item.type === FunctionType.IMPLICIT) {
+                  // --- 隐函数 f(x,y) 单行布局 ---
+                  Row() {
+                    Text("f(x,y): ")
+                      .fontSize(20).fontFamily('Cambria Math')
+                      .fontColor($r('sys.color.font_primary'))
+                      .fontWeight(FontWeight.Medium)
+                    if (item.base64) {
+                      Image(item.base64)
+                        .height(24)
+                        .objectFit(ImageFit.Contain)
+                        .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
+                    } else {
+                      Text("等待输入...").fontSize(20).fontFamily('Cambria Math').fontColor($r('sys.color.font_secondary')).fontStyle(FontStyle.Italic)
+                    }
+                  }
+                } else if (item.type === FunctionType.POINT) {
+                  // --- 坐标点 (x,y) 双行布局 ---
+                  Row() {
+                    Text("( ").fontSize(20).fontFamily('Cambria Math').fontColor($r('sys.color.font_primary')).fontWeight(FontWeight.Medium)
+
+                    // x 坐标
+                    if (item.base64) {
+                      Image(item.base64).height(24).objectFit(ImageFit.Contain)
+                        .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
+                    } else {
+                      Text("?").fontSize(20).fontFamily('Cambria Math').fontColor($r('sys.color.font_secondary')).fontStyle(FontStyle.Italic)
+                    }
+
+                    Text(", ").fontSize(20).fontFamily('Cambria Math').fontColor($r('sys.color.font_primary')).fontWeight(FontWeight.Medium)
+
+                    // y 坐标
+                    if (item.base64_2) {
+                      Image(item.base64_2).height(24).objectFit(ImageFit.Contain)
+                        .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
+                    } else {
+                      Text("?").fontSize(20).fontFamily('Cambria Math').fontColor($r('sys.color.font_secondary')).fontStyle(FontStyle.Italic)
+                    }
+
+                    Text(" )").fontSize(20).fontFamily('Cambria Math').fontColor($r('sys.color.font_primary')).fontWeight(FontWeight.Medium)
+                  }
+                } else {
+                  // --- 默认：普通显函数 f(x) 单行布局 ---
+                  Row() {
+                    Text(`f(x) = `)
+                      .fontSize(20).fontFamily('Cambria Math')
+                      .fontColor($r('sys.color.font_primary'))
+                      .fontWeight(FontWeight.Medium)
+                    if (item.base64) {
+                      Image(item.base64)
+                        .height(24)
+                        .objectFit(ImageFit.Contain)
+                        .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
+                    } else {
+                      Text("等待输入...")
+                        .fontSize(20).fontFamily('Cambria Math')
+                        .fontColor($r('sys.color.font_secondary'))
+                        .fontStyle(FontStyle.Italic)
+                    }
+                  }
+                }
               }
+              .alignItems(HorizontalAlign.Start) // 确保多行表达式左对齐
             }
             .padding({ top: 8, bottom: 8, left: 12, right: 12 })
             .backgroundColor(Color.Transparent)
