@@ -29,12 +29,17 @@ struct Instruction {
 class GraphingEngine {
 private:
     std::vector<Instruction> instructions;
+    // 伴生导数指令集
+    std::vector<Instruction> deriv_instructions; 
 
     // 降维编译器：将 3D 的 SymEngine AST 压平成 1D 的机器指令数组
     void compileNode(const SymEngine::RCP<const SymEngine::Basic>& node);
-
+    
     // 自适应递归采样器
     void sampleRecursive(double x1, double y1, double x2, double y2, int depth, double error_threshold, double jump_threshold, std::vector<double>& result) const;
+    
+    // 提取公共的虚拟机核心执行逻辑
+    double executeMachine(double x, const std::vector<Instruction>& inst_list) const;
 
 public:
     // 对外接口：预编译表达式
@@ -42,6 +47,9 @@ public:
     
     // 对外接口：极速求值（零内存分配）
     double evaluate(double x) const;
+    
+    // 求导数值
+    double evaluateDeriv(double x) const; 
     
     // 对外接口：返回原生 double 数组
     static std::vector<double> generatePoints(const SymEngine::Expression& expr, double xMin, double xMax, int pointsCount);
