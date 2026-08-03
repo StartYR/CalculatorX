@@ -496,19 +496,43 @@ export struct GraphingCalc {
 
     this.requestDraw();
   }
+
   private handlePanEnd() {
     this.lastOffsetX = this.offsetX;
     this.lastOffsetY = this.offsetY;
   }
+
   private handlePinchUpdate(event: GestureEvent) {
     let newScale = this.lastViewScale * event.scale;
     if (newScale < 0.00001) newScale = 0.00001;
     if (newScale > 10000000) newScale = 10000000;
+
+    // 1. 计算当前缩放比例的相对变化率
+    let scaleRatio = newScale / this.lastViewScale;
+
+    // 2. 获取双指捏合中心点坐标
+    let cx = event.pinchCenterX;
+    let cy = event.pinchCenterY;
+
+    // 3. 计算中心点相对于画布物理中点的偏差
+    let dx = cx - this.canvasWidth / 2;
+    let dy = cy - this.canvasHeight / 2;
+
+    // 4. 几何补偿魔法：缩放的同时，强行平移偏移量，把画面拉回手指下方！
+    this.offsetX = dx - (dx - this.lastOffsetX) * scaleRatio;
+    this.offsetY = dy - (dy - this.lastOffsetY) * scaleRatio;
+
+    // 5. 更新比例并请求重绘
     this.viewScale = newScale;
     this.requestDraw();
   }
+
   private handlePinchEnd() {
     this.lastViewScale = this.viewScale;
+
+    // 捏合操作同步保存基准值
+    this.lastOffsetX = this.offsetX;
+    this.lastOffsetY = this.offsetY;
   }
 
   onShiftChange() {
