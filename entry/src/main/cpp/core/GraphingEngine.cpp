@@ -122,22 +122,40 @@ void GraphingEngine::compileNode(const RCP<const Basic>& node) {
 
 void GraphingEngine::compile(const Expression& expr) {
     instructions.clear();
-    instructions.reserve(50); // 预分配空间，防止扩容开销
+    instructions.reserve(50); 
     compileNode(expr.get_basic());
+
+    // ============ 微积分中枢：自动编译导数伴生虚拟机 ============
+    try {
+        SymEngine::RCP<const SymEngine::Symbol> x_sym = SymEngine::rcp(new SymEngine::Symbol("x"));
+        // 极速符号求导 f'(x)
+        SymEngine::RCP<const SymEngine::Basic> df = expr.get_basic()->diff(x_sym);
+        
+        // 用 instructions 容器编译导数
+        std::vector<Instruction> temp = instructions; 
+        instructions.clear();
+        compileNode(df);
+        deriv_instructions = instructions; // 存入专属容器
+        instructions = temp; // 恢复原指令集
+    } catch (...) {
+        // 遇到无法求导的奇异函数，清空伴生指令
+        deriv_instructions.clear();
+    }
 }
 
-// ==================== 阶段二：极速求值机 ====================
-double GraphingEngine::evaluate(double x) const {
-    // 使用静态数组充当栈，彻底消灭内存分配
+// ==================== 极速求值机 ====================
+double GraphingEngine::executeMachine(double x, const std::vector<Instruction>& inst_list) const {
+    if (inst_list.empty()) return std::nan(""); // 降级保护
+
     double stack[128];
     int sp = -1; // 栈顶指针
 
-    for (const auto& inst : instructions) {
+    for (const auto& inst : inst_list) {
         switch (inst.op) {
             case OpCode::VAR_X:     stack[++sp] = x; break;
             case OpCode::CONST_VAL: stack[++sp] = inst.value; break;
             
-            // 二元操作符
+           // 二元操作符
             case OpCode::ADD: sp--; stack[sp] += stack[sp+1]; break;
             case OpCode::SUB: sp--; stack[sp] -= stack[sp+1]; break;
             case OpCode::MUL: sp--; stack[sp] *= stack[sp+1]; break;
@@ -162,6 +180,14 @@ double GraphingEngine::evaluate(double x) const {
         }
     }
     return sp >= 0 ? stack[0] : 0.0;
+}
+
+double GraphingEngine::evaluate(double x) const {
+    return executeMachine(x, instructions);
+}
+
+double GraphingEngine::evaluateDeriv(double x) const {
+    return executeMachine(x, deriv_instructions);
 }
 
 // ==================== 自适应递归采样 ====================
@@ -278,17 +304,46 @@ std::vector<double> GraphingEngine::generatePointsFast(double xMin, double xMax,
         double curr_x = xMin + i * step;
         double curr_y = this->evaluate(curr_x);
         
+        // 计算两端点的导数
+        double deriv_prev = this->evaluateDeriv(prev_x);
+        double deriv_curr = this->evaluateDeriv(curr_x);
+        
         if (std::isnan(curr_y) || std::isinf(curr_y)) {
-            // 如果右端点是无理数，直接推入 NaN 截断
             xy_values.push_back(curr_x);
             xy_values.push_back(std::nan(""));
         } else if (std::isnan(prev_y) || std::isinf(prev_y)) {
-            // 如果左端点是无理数，右端点正常，无需细分，直接连过去
             xy_values.push_back(curr_x);
             xy_values.push_back(curr_y);
         } else {
-            // 左右端点都正常，启动魔法：递归自适应细分探测！
-            sampleRecursive(prev_x, prev_y, curr_x, curr_y, 0, error_threshold, jump_threshold, xy_values);
+            // ============ 极值点拦截 ============
+            // 如果左端点导数和右端点导数符号相反，说明中间必有一个极值点
+            if (std::isfinite(deriv_prev) && std::isfinite(deriv_curr) && deriv_prev * deriv_curr < 0) {
+                
+                // 20 次二分法，求出导数为 0 的 X 坐标
+                double a = prev_x;
+                double b = curr_x;
+                for (int k = 0; k < 20; ++k) {
+                    double m = (a + b) / 2.0;
+                    if (this->evaluateDeriv(a) * this->evaluateDeriv(m) <= 0) {
+                        b = m;
+                    } else {
+                        a = m;
+                    }
+                }
+                double x_peak = (a + b) / 2.0;
+                double y_peak = this->evaluate(x_peak);
+                
+                if (std::isfinite(y_peak)) {
+                    // 强制将区间分成两段
+                    sampleRecursive(prev_x, prev_y, x_peak, y_peak, 0, error_threshold, jump_threshold, xy_values);
+                    sampleRecursive(x_peak, y_peak, curr_x, curr_y, 0, error_threshold, jump_threshold, xy_values);
+                } else {
+                    sampleRecursive(prev_x, prev_y, curr_x, curr_y, 0, error_threshold, jump_threshold, xy_values);
+                }
+            } else {
+                // 没有极值点，自适应探测
+                sampleRecursive(prev_x, prev_y, curr_x, curr_y, 0, error_threshold, jump_threshold, xy_values);
+            }
         }
         
         prev_x = curr_x;
