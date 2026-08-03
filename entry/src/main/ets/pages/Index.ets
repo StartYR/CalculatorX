@@ -20,7 +20,7 @@ import { HistoryRepository } from '../database/HistoryRepository';
 import { ScientificCalc } from '../components/ScientificCalc';
 import { BasicCalc } from '../components/BasicCalc';
 import { MatrixCalc } from '../components/MatrixCalc';
-import { GraphingCalc } from '../components/GraphingCalc';
+import { GraphingCalc } from '../components/graphing/GraphingCalc';
 import { EquationSolver } from '../components/EquationSolver';
 import { StatisticsCalc } from '../components/StatisticsCalc';
 import { UnitConverter } from '../components/UnitConverter';
