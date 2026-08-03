@@ -110,7 +110,7 @@ export struct GraphingEditSheet {
           id: Date.now().toString(),
           type: type,
           latex: '', base64: '', latex2: '', base64_2: '',
-          tMin: 0, tMax: 6.2831853, // 默认参数范围 0 到 2π
+          tMin: -10, tMax: 10, // 默认参数范围 0 到 2π
           color: nextColor, isVisible: true
         });
 
@@ -237,12 +237,28 @@ export struct GraphingEditSheet {
                       // 3. 定义域
                       Row() {
                         Text("定义域: ").fontColor($r('sys.color.font_secondary')).fontSize(14)
-                        TextInput({ text: item.tMin?.toString() }).width(60).height(28).fontSize(14).type(InputType.Number)
+
+                        TextInput({ text: item.tMin?.toString() })
+                          .width(60)
+                          .height(28)
+                          .fontSize(14)
+                          .type(InputType.Normal)
+                          .textAlign(TextAlign.Center) // 文字居中，视觉更平衡
+                          .padding({ top: 0, bottom: 0, left: 4, right: 4 })
                           .onChange((val) => { item.tMin = parseFloat(val) || 0; this.saveFunctions(); })
+
                         Text(" ≤ t ≤ ").fontColor($r('sys.color.font_secondary')).fontSize(14)
-                        TextInput({ text: item.tMax?.toString() }).width(60).height(28).fontSize(14).type(InputType.Number)
+
+                        TextInput({ text: item.tMax?.toString() })
+                          .width(60)
+                          .height(28)
+                          .fontSize(14)
+                          .type(InputType.Normal)
+                          .textAlign(TextAlign.Center) // 文字居中
+                          .padding({ top: 0, bottom: 0, left: 4, right: 4 })
                           .onChange((val) => { item.tMax = parseFloat(val) || 0; this.saveFunctions(); })
-                      }.width('100%').justifyContent(FlexAlign.Start).margin({ top: 4 })
+                      }
+                      .width('100%').justifyContent(FlexAlign.Start).margin({ top: 4 })
                     }
                   } else {
                     // --- 普通显函数布局：加上直观的 f(x) 前缀 ---
