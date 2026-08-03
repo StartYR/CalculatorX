@@ -490,49 +490,90 @@ export struct GraphingCalc {
     }
   }
 
+  // ==================== 手势交互状态 (纯增量架构) ====================
+  // 彻底抛弃 lastOffsetX/Y 和 lastViewScale
+  private panPrevX: number = 0;
+  private panPrevY: number = 0;
+  private pinchPrevScale: number = 1;
+
+  // 核心避震器标志
+  private justEndedPinch: boolean = false;
+
+  // ==================== 手势交互处理 ====================
+
+  // --- 拖拽处理 (Pan) ---
+  private handlePanStart(event: GestureEvent) {
+    this.panPrevX = event.offsetX;
+    this.panPrevY = event.offsetY;
+    this.justEndedPinch = false;
+  }
+
   private handlePanUpdate(event: GestureEvent) {
-    this.offsetX = this.lastOffsetX + event.offsetX;
-    this.offsetY = this.lastOffsetY + event.offsetY;
+    // 吸收单指抬起时的“重心跳跃”
+    if (this.justEndedPinch) {
+      // 只重置基准点，不移动画面，吸收跳跃
+      this.panPrevX = event.offsetX;
+      this.panPrevY = event.offsetY;
+      this.justEndedPinch = false;
+      return;
+    }
+
+    // 1. 计算这一帧的微小增量
+    let deltaX = event.offsetX - this.panPrevX;
+    let deltaY = event.offsetY - this.panPrevY;
+
+    // 2. 直接累加到当前偏移量上
+    this.offsetX += deltaX;
+    this.offsetY += deltaY;
+
+    // 3. 更新上一帧的状态
+    this.panPrevX = event.offsetX;
+    this.panPrevY = event.offsetY;
 
     this.requestDraw();
   }
 
-  private handlePanEnd() {
-    this.lastOffsetX = this.offsetX;
-    this.lastOffsetY = this.offsetY;
+  private handlePanEnd() {}
+
+  // --- 缩放处理 (Pinch) ---
+  private handlePinchStart(event: GestureEvent) {
+    this.pinchPrevScale = 1; // 每次缩放开始，scale 的基准都是 1
   }
 
   private handlePinchUpdate(event: GestureEvent) {
-    let newScale = this.lastViewScale * event.scale;
-    if (newScale < 0.00001) newScale = 0.00001;
-    if (newScale > 10000000) newScale = 10000000;
+    // 1. 计算这一帧的缩放微小比例 (增量倍数)
+    let ratio = event.scale / this.pinchPrevScale;
 
-    // 1. 计算当前缩放比例的相对变化率
-    let scaleRatio = newScale / this.lastViewScale;
+    // 2. 预计算新 Scale 并应用极值限制
+    let newScale = this.viewScale * ratio;
+    if (newScale < 0.00001) {
+      newScale = 0.00001;
+      ratio = newScale / this.viewScale; // 如果触底，修正真实的 ratio
+    }
+    if (newScale > 10000000) {
+      newScale = 10000000;
+      ratio = newScale / this.viewScale; // 如果触顶，修正真实的 ratio
+    }
 
-    // 2. 获取双指捏合中心点坐标
+    // 3. 几何补偿：把画面拉回手指下方
     let cx = event.pinchCenterX;
     let cy = event.pinchCenterY;
-
-    // 3. 计算中心点相对于画布物理中点的偏差
     let dx = cx - this.canvasWidth / 2;
     let dy = cy - this.canvasHeight / 2;
 
-    // 4. 几何补偿魔法：缩放的同时，强行平移偏移量，把画面拉回手指下方！
-    this.offsetX = dx - (dx - this.lastOffsetX) * scaleRatio;
-    this.offsetY = dy - (dy - this.lastOffsetY) * scaleRatio;
+    this.offsetX = dx - (dx - this.offsetX) * ratio;
+    this.offsetY = dy - (dy - this.offsetY) * ratio;
 
-    // 5. 更新比例并请求重绘
+    // 4. 更新状态
     this.viewScale = newScale;
+    this.pinchPrevScale = event.scale;
+
     this.requestDraw();
   }
 
   private handlePinchEnd() {
-    this.lastViewScale = this.viewScale;
-
-    // 捏合操作同步保存基准值
-    this.lastOffsetX = this.offsetX;
-    this.lastOffsetY = this.offsetY;
+    // 通知 PanGesture 开启避震，拦截重心跳跃
+    this.justEndedPinch = true;
   }
 
   onShiftChange() {
@@ -786,8 +827,14 @@ export struct GraphingCalc {
         .onReady(() => { this.requestDraw(); })
         .gesture(
           GestureGroup(GestureMode.Parallel,
-            PanGesture().onActionUpdate((event: GestureEvent) => this.handlePanUpdate(event)).onActionEnd(() => this.handlePanEnd()),
-            PinchGesture().onActionUpdate((event: GestureEvent) => this.handlePinchUpdate(event)).onActionEnd(() => this.handlePinchEnd())
+            PanGesture()
+              .onActionStart((event: GestureEvent) => this.handlePanStart(event))
+              .onActionUpdate((event: GestureEvent) => this.handlePanUpdate(event))
+              .onActionEnd(() => this.handlePanEnd()),
+            PinchGesture()
+              .onActionStart((event: GestureEvent) => this.handlePinchStart(event))
+              .onActionUpdate((event: GestureEvent) => this.handlePinchUpdate(event))
+              .onActionEnd(() => this.handlePinchEnd())
           )
         )
 
