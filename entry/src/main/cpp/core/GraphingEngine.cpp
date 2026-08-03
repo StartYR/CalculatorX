@@ -164,15 +164,53 @@ double GraphingEngine::evaluate(double x) const {
     return sp >= 0 ? stack[0] : 0.0;
 }
 
-// ==================== 自适应递归采样核心逻辑 ====================
+// ==================== 自适应递归采样 ====================
 void GraphingEngine::sampleRecursive(double x1, double y1, double x2, double y2, int depth, double error_threshold, double jump_threshold, std::vector<double>& result) const {
-    // 1. 递归出口：防止无限细分导致栈溢出（最大深度设定为 8，相当于把一个区间细分 2^8 = 256 份）
+    // 1. 递归出口：防止无限细分导致栈溢出
     if (depth >= 8) {
-        // 奇点/断崖终极拦截：如果细分到了极限，Y值的跳跃依然极其夸张，且发生了正负跳变
         if (std::abs(y1 - y2) > jump_threshold && y1 * y2 < 0) {
-            // 判定为跨越了垂直渐近线 (如 1/x 或 tan(x))，强行打入 NaN 断开连线！
+            // ============ 奇点的极限逼近 ============
+            double a = x1;
+            double b = x2;
+            
+            // 迭代 40 次，把精度压到 double 极限
+            for (int k = 0; k < 40; ++k) {
+                double m = (a + b) / 2.0;
+                double y_m = this->evaluate(m);
+                
+                // 防御：万一正中红心，刚好算到了真正的奇点导致 NaN
+                if (std::isnan(y_m) || std::isinf(y_m)) {
+                    a = m - 1e-14;
+                    b = m + 1e-14;
+                    break;
+                }
+                
+                // 严谨判断符号，收缩边界
+                if (this->evaluate(a) * y_m <= 0) {
+                    b = m;
+                } else {
+                    a = m;
+                }
+            }
+            
+            double y_a = this->evaluate(a);
+            double y_b = this->evaluate(b);
+            
+            // 奇点左侧点
+            result.push_back(a);
+            result.push_back(y_a);
+            
+            // 断崖标志
             result.push_back(std::nan(""));
             result.push_back(std::nan(""));
+            
+            // 奇点右侧点
+            result.push_back(b);
+            result.push_back(y_b);
+            
+            // 递归终点
+            result.push_back(x2);
+            result.push_back(y2);
         } else {
             // 不是奇点，只是纯粹的极度陡峭，正常推入右侧点
             result.push_back(x2);
