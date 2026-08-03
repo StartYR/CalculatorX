@@ -279,8 +279,10 @@ std::vector<double> GraphingEngine::generatePointsFast(double xMin, double xMax,
     // 预留足够大的空间，应对高频震荡函数产生的海量细分点
     xy_values.reserve(2000); 
 
-    // 1. 建立稀疏的“基准网格” (只需极少的探测点，比如 50 段)
-    int base_segments = 50; 
+    // 1. 建立稀疏的“基准网格”，让基准网格的密度与屏幕像素宽度挂钩，每 4 个像素放置一个探测点
+    int base_segments = pointsCount / 4; 
+    if (base_segments < 50) base_segments = 50;
+    if (base_segments > 500) base_segments = 500; // 封顶
     double step = (xMax - xMin) / base_segments;
     
     // 2. 动态计算视口相关的容忍度阈值
