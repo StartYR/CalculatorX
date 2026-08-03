@@ -330,42 +330,6 @@ export struct GraphingCanvas {
               .onActionEnd(() => this.handlePinchEnd())
           )
         )
-
-      Column({ space: 10 }) {
-        ForEach(this.functionList, (item: GraphFunctionItem, index: number) => {
-          if (item.isVisible) {
-            Row({ space: 8 }) {
-              Circle({ width: 10, height: 10 })
-                .fill(item.color)
-              Text(`y${"₁₂₃₄₅".charAt(index)} = `)
-                .fontSize(20)
-                .fontColor($r('sys.color.font_primary'))
-                .fontWeight(FontWeight.Medium)
-
-              if (item.base64) {
-                Image(item.base64)
-                  .height(24)
-                  .objectFit(ImageFit.Contain)
-                  .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
-              } else {
-                Text("等待输入...")
-                  .fontSize(20)
-                  .fontColor($r('sys.color.font_secondary'))
-                  .fontStyle(FontStyle.Italic)
-              }
-            }
-            .padding({ top: 8, bottom: 8, left: 12, right: 12 })
-            .backgroundColor(Color.Transparent)
-            // .backgroundBlurStyle(BlurStyle.COMPONENT_THIN, { colorMode: ThemeColorMode.SYSTEM, adaptiveColor: AdaptiveColor.DEFAULT, scale: 1.0 })
-
-            .borderRadius(12)
-            .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 12 })
-            .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
-          }
-        }, (item: GraphFunctionItem) => `${item.id}_${item.latex}_${item.base64.length}_${item.base64.slice(-20)}_${item.isVisible}`)
-      }
-      .alignItems(HorizontalAlign.Start)
-      .margin({ top: 80, left: 12 })
     }
     .width('100%')
     .height('100%')

@@ -248,7 +248,7 @@ export struct GraphingEditSheet {
                     Column({ space: 8 }) {
                       // 1. x(t)
                       Row() {
-                        Text("x(t) = ").fontColor($r('sys.color.font_primary')).fontSize(16).fontWeight(FontWeight.Medium)
+                        Text("x(t) = ").fontColor($r('sys.color.font_primary')).fontSize(22).fontFamily('Cambria Math').fontWeight(FontWeight.Medium)
                         if (item.base64) {
                           Image(item.base64).height(36).objectFit(ImageFit.Contain)
                             .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
@@ -260,7 +260,7 @@ export struct GraphingEditSheet {
 
                       // 2. y(t)
                       Row() {
-                        Text("y(t) = ").fontColor($r('sys.color.font_primary')).fontSize(16).fontWeight(FontWeight.Medium)
+                        Text("y(t) = ").fontColor($r('sys.color.font_primary')).fontSize(22).fontFamily('Cambria Math').fontWeight(FontWeight.Medium)
                         if (item.base64_2) {
                           Image(item.base64_2).height(36).objectFit(ImageFit.Contain)
                             .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
@@ -276,23 +276,23 @@ export struct GraphingEditSheet {
 
                       // 3. 定义域
                       Row() {
-                        Text("定义域: ").fontColor($r('sys.color.font_secondary')).fontSize(14)
+                        Text("定义域: ").fontColor($r('sys.color.font_secondary')).fontSize(14).fontFamily('Cambria Math')
 
                         TextInput({ text: item.tMin?.toString() })
                           .width(60)
                           .height(28)
-                          .fontSize(14)
+                          .fontSize(14).fontFamily('Cambria Math')
                           .type(InputType.Normal)
                           .textAlign(TextAlign.Center) // 文字居中，视觉更平衡
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
                           .onChange((val) => { item.tMin = parseFloat(val) || 0; this.saveFunctions(); })
 
-                        Text(" ≤ t ≤ ").fontColor($r('sys.color.font_secondary')).fontSize(14)
+                        Text(" ≤ t ≤ ").fontColor($r('sys.color.font_secondary')).fontSize(16).fontFamily('Cambria Math')
 
                         TextInput({ text: item.tMax?.toString() })
                           .width(60)
                           .height(28)
-                          .fontSize(14)
+                          .fontSize(14).fontFamily('Cambria Math')
                           .type(InputType.Normal)
                           .textAlign(TextAlign.Center) // 文字居中
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
@@ -304,7 +304,7 @@ export struct GraphingEditSheet {
                     Column({ space: 8 }) {
                       // 1. r(θ)
                       Row() {
-                        Text("r(θ) = ").fontColor($r('sys.color.font_primary')).fontSize(16).fontWeight(FontWeight.Medium)
+                        Text("r(θ) = ").fontColor($r('sys.color.font_primary')).fontSize(22).fontFamily('Cambria Math').fontWeight(FontWeight.Medium)
                         if (item.base64) {
                           Image(item.base64).height(36).objectFit(ImageFit.Contain)
                             .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
@@ -316,23 +316,23 @@ export struct GraphingEditSheet {
 
                       // 2. 极坐标定义域
                       Row() {
-                        Text("定义域: ").fontColor($r('sys.color.font_secondary')).fontSize(14)
+                        Text("定义域: ").fontColor($r('sys.color.font_secondary')).fontSize(14).fontFamily('Cambria Math')
 
                         TextInput({ text: item.tMin?.toString() })
                           .width(60)
                           .height(28)
-                          .fontSize(14)
+                          .fontSize(14).fontFamily('Cambria Math')
                           .type(InputType.Normal) // 继承参数方程的完美键盘设置
                           .textAlign(TextAlign.Center)
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
                           .onChange((val) => { item.tMin = parseFloat(val) || 0; this.saveFunctions(); })
 
-                        Text(" ≤ θ ≤ ").fontColor($r('sys.color.font_secondary')).fontSize(14) // 使用专属的 θ 符号
+                        Text(" ≤ θ ≤ ").fontColor($r('sys.color.font_secondary')).fontSize(16).fontFamily('Cambria Math') // 使用专属的 θ 符号
 
                         TextInput({ text: item.tMax?.toString() })
                           .width(60)
                           .height(28)
-                          .fontSize(14)
+                          .fontSize(14).fontFamily('Cambria Math')
                           .type(InputType.Normal)
                           .textAlign(TextAlign.Center)
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
@@ -341,8 +341,7 @@ export struct GraphingEditSheet {
                     }
                   } else if (item.type === FunctionType.IMPLICIT) {
                     Row() {
-                      // 隐函数由用户自己输入等号，所以这里用冒号引导
-                      Text("f(x,y) = ").fontColor($r('sys.color.font_primary')).fontSize(16).fontWeight(FontWeight.Medium)
+                      Text("f(x,y) = ").fontColor($r('sys.color.font_primary')).fontSize(22).fontFamily('Cambria Math').fontWeight(FontWeight.Medium)
                       if (item.base64) {
                         Image(item.base64).height(36).objectFit(ImageFit.Contain)
                           .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
@@ -357,7 +356,7 @@ export struct GraphingEditSheet {
                     Column({ space: 8 }) {
                       // 1. x 坐标
                       Row() {
-                        Text("x = ").fontColor($r('sys.color.font_primary')).fontSize(16).fontWeight(FontWeight.Medium)
+                        Text("x = ").fontColor($r('sys.color.font_primary')).fontSize(22).fontFamily('Cambria Math').fontWeight(FontWeight.Medium)
                         if (item.base64) {
                           Image(item.base64).height(36).objectFit(ImageFit.Contain)
                             .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
@@ -372,7 +371,7 @@ export struct GraphingEditSheet {
 
                       // 2. y 坐标
                       Row() {
-                        Text("y = ").fontColor($r('sys.color.font_primary')).fontSize(16).fontWeight(FontWeight.Medium)
+                        Text("y = ").fontColor($r('sys.color.font_primary')).fontSize(22).fontFamily('Cambria Math').fontWeight(FontWeight.Medium)
                         if (item.base64_2) {
                           Image(item.base64_2).height(36).objectFit(ImageFit.Contain)
                             .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
@@ -389,7 +388,7 @@ export struct GraphingEditSheet {
                   } else {
                     // --- 普通显函数 ---
                     Row() {
-                      Text("f(x) = ").fontColor($r('sys.color.font_primary')).fontSize(16).fontWeight(FontWeight.Medium)
+                      Text("f(x) = ").fontColor($r('sys.color.font_primary')).fontSize(22).fontFamily('Cambria Math').fontWeight(FontWeight.Medium)
                       if (item.base64) {
                         Image(item.base64).height(36).objectFit(ImageFit.Contain)
                           .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
