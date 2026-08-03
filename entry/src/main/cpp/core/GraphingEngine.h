@@ -30,8 +30,11 @@ class GraphingEngine {
 private:
     std::vector<Instruction> instructions;
 
-    // 核心降维编译器：将 3D 的 SymEngine AST 压平成 1D 的机器指令数组
+    // 降维编译器：将 3D 的 SymEngine AST 压平成 1D 的机器指令数组
     void compileNode(const SymEngine::RCP<const SymEngine::Basic>& node);
+
+    // 自适应递归采样器
+    void sampleRecursive(double x1, double y1, double x2, double y2, int depth, double error_threshold, double jump_threshold, std::vector<double>& result) const;
 
 public:
     // 对外接口：预编译表达式
