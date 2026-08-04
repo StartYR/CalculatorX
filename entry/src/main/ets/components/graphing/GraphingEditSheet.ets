@@ -528,11 +528,18 @@ export struct GraphingEditSheet {
               })
           }
           .padding({ left: 48, right: 48 }) // 保持对齐
+
+          // --- 底部占位符 ---
+          ListItem() {
+            Row()
+              .width('100%')
+              .height(this.isKeyboardShow ? 520 : 24)
+          }
         }
         .layoutWeight(1)
         .width('100%')
         // 保留跟随键盘上推的底部边距
-        .padding({ top: 4, bottom: this.isKeyboardShow ? 520 : 4 })
+        .padding({ top: 4, bottom: 0 })
         .animation({ duration: 300, curve: Curve.FastOutSlowIn })
       }
       .width('100%')
