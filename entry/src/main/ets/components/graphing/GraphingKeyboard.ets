@@ -18,13 +18,13 @@ import { KeyGestureWrapper } from '../common/KeyGestureWrapper';
 // ==================== 按键布局配置 ====================
 export const topShiftButtons: Array<string | Resource> = [
   '', '', '', '', '', '',
-  icon_sqrt3, icon_abs, icon_power3, '', '', 'lg',
+  icon_sqrt3, icon_abs, icon_power3, '', '', 'θ',
   'sin⁻¹', 'cos⁻¹', 'tan⁻¹', '', '', ''
 ];
 export const topButtons: Array<string | Resource> = [
   '⇧Shift', '(', '⇦', '⇨', ')', '关闭',
-  icon_sqrt, icon_sqrtx, icon_power2, icon_power,'log', 'ln',
-  'sin', 'cos', 'tan', icon_fraction, 'x', 'θ'
+  icon_sqrt, icon_sqrtx, icon_power2, icon_power,icon_fraction, 'x',
+  'sin', 'cos', 'tan', 'log', 'ln', 'lg'
 ];
 export const bottomButtons: Array<string | Resource> = [
   '7', '8', '9', icon_backspace, 'AC',
@@ -189,5 +189,50 @@ export struct BottomKeyItem {
         normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
       })
     }
+  }
+}
+
+// ==================== 定义域专属纯净数字键盘 ====================
+export const domainButtons: Array<string | Resource> = [
+  '7', '8', '9', icon_backspace,
+  '4', '5', '6', 'AC',
+  '1', '2', '3', '−', // 使用你已经处理好映射的优雅减号
+  '0', '.', '确定'
+];
+
+@Component
+export struct DomainKeyboard {
+  // 占位状态，用于满足 BottomKeyItem 对 @Link isShift 的要求
+  @State private isShift: boolean = false;
+
+  // 暴露给外部的回调，专门处理点击事件
+  onKeyPress: (btn: string | Resource) => void = () => {};
+
+  build() {
+    Column() {
+      Grid() {
+        ForEach(domainButtons, (btn: string | Resource) => {
+          GridItem() {
+            BottomKeyItem({
+              btn: btn,
+              isShift: $isShift, // 传入本地的占位状态
+              onKeyPress: this.onKeyPress
+            })
+          }
+          // 如果是 '0' 键，从第0列跨越到第1列（占据两格）
+          .columnStart(btn === '0' ? 0 : undefined)
+          .columnEnd(btn === '0' ? 1 : undefined)
+        }, (btn: string | Resource) => typeof btn === 'string' ? btn : 'icon_backspace')
+      }
+      .columnsTemplate('1fr 1fr 1fr 1fr')
+      .rowsTemplate('1fr 1fr 1fr 1fr')
+      .columnsGap(8)
+      .rowsGap(8)
+      .width('100%')
+      .height(260)
+      .padding({ left: 8, right: 8, top: 8, bottom: 8 })
+      .backgroundColor($r('sys.color.comp_background_tertiary'))
+    }
+    .width('100%')
   }
 }
