@@ -9,7 +9,7 @@
 import { FormulaScreen } from '../FormulaScreen';
 import { GRAPHING_COLORS, getActionId } from '../../utils/CalculatorConfigs';
 import { GraphFunctionItem } from './GraphingTypes';
-import { TopKeyItem, BottomKeyItem, topButtons, bottomButtons } from './GraphingKeyboard';
+import { TopKeyItem, BottomKeyItem, topButtons, bottomButtons, DomainKeyboard } from './GraphingKeyboard';
 import { FunctionType } from './GraphingTypes';
 import { LengthMetrics } from '@kit.ArkUI';
 
@@ -117,11 +117,118 @@ export struct GraphingEditSheet {
   @Link isShift: boolean;
   @Link isDarkModeUI: boolean;
 
+  // --- 定义域专属状态机 ---
+  @State editDomainIndex: number = -1;
+  @State editDomainField: 'tMin' | 'tMax' | '' = '';
+  @State editDomainStr: string = '';
+  // 追踪光标位置
+  @State currentCaretStart: number = 0;
+  @State currentCaretEnd: number = 0;
+
+  // 扩展到 10 个控制器，完美匹配 MAX_FUNCTIONS 的上限，杜绝越界崩溃
+  private tMinControllers: TextInputController[] = [
+    new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController(),
+    new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController()
+  ];
+  private tMaxControllers: TextInputController[] = [
+    new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController(),
+    new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController()
+  ];
+
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageProp('activeBubbleId') activeBubbleId: string = '';
 
   private listScroller: Scroller = new Scroller();
 
+  // --- 纯净小键盘的构建函数 (带防并发篡改的光标追踪) ---
+  @Builder
+  DomainKeyboardBuilder() {
+    DomainKeyboard({
+      onKeyPress: (btn: string | Resource) => {
+        let activeController = this.editDomainField === 'tMin' ? this.tMinControllers[this.editDomainIndex] : this.tMaxControllers[this.editDomainIndex];
+
+        if (btn === '确定') {
+          activeController?.stopEditing();
+          this.editDomainIndex = -1;
+        } else if (btn === 'AC') {
+          this.editDomainStr = '0';
+          this.currentCaretStart = 1;
+          this.currentCaretEnd = 1;
+          this.syncDomainValue();
+          setTimeout(() => { activeController?.caretPosition(1); }, 20);
+        } else if (typeof btn !== 'string') {
+          // --- ✅ 光标感知的退格删除 ---
+          let targetCaret = this.currentCaretStart; // 锁死目标光标位置
+
+          if (this.currentCaretStart === this.currentCaretEnd) {
+            if (this.currentCaretStart > 0) {
+              let startStr = this.editDomainStr.substring(0, this.currentCaretStart - 1);
+              let endStr = this.editDomainStr.substring(this.currentCaretStart);
+              this.editDomainStr = startStr + endStr;
+              targetCaret = this.currentCaretStart - 1; // 记录新的正确位置
+            }
+          } else {
+            let startStr = this.editDomainStr.substring(0, this.currentCaretStart);
+            let endStr = this.editDomainStr.substring(this.currentCaretEnd);
+            this.editDomainStr = startStr + endStr;
+            targetCaret = this.currentCaretStart;
+          }
+
+          // 同步状态
+          this.currentCaretStart = targetCaret;
+          this.currentCaretEnd = targetCaret;
+
+          if (this.editDomainStr === '' || this.editDomainStr === '-') {
+            this.syncDomainValue(0);
+          } else {
+            this.syncDomainValue();
+          }
+
+          // 延迟 20ms 等待 ArkUI 渲染完毕，强制将光标拉回我们锁死的 targetCaret
+          setTimeout(() => { activeController?.caretPosition(targetCaret); }, 20);
+
+        } else {
+          // --- ✅ 光标感知的文本插入 ---
+          let targetCaret = this.currentCaretStart;
+          let insertStr = (btn === '−') ? '-' : (btn as string);
+
+          if (this.editDomainStr === '0' && insertStr !== '.') {
+            this.editDomainStr = insertStr;
+            targetCaret = 1;
+          } else {
+            let startStr = this.editDomainStr.substring(0, this.currentCaretStart);
+            let endStr = this.editDomainStr.substring(this.currentCaretEnd);
+            this.editDomainStr = startStr + insertStr + endStr;
+            targetCaret = this.currentCaretStart + insertStr.length;
+          }
+
+          this.currentCaretStart = targetCaret;
+          this.currentCaretEnd = targetCaret;
+          this.syncDomainValue();
+
+          setTimeout(() => { activeController?.caretPosition(targetCaret); }, 20);
+        }
+      }
+    })
+  }
+
+  // --- ✅ 强制绑定上下文的箭头函数属性（补回刚才丢失的函数） ---
+  private syncDomainValue = (fallback: number = Number.NaN) => {
+    if (this.editDomainIndex >= 0 && this.editDomainIndex < this.functionList.length) {
+      let item = this.functionList[this.editDomainIndex];
+      let val = Number.isNaN(fallback) ? (parseFloat(this.editDomainStr) || 0) : fallback;
+
+      if (this.editDomainField === 'tMin') {
+        item.tMin = val;
+      } else if (this.editDomainField === 'tMax') {
+        item.tMax = val;
+      }
+
+      // 强制触发列表刷新
+      this.functionList.splice(this.editDomainIndex, 1, item);
+      this.saveFunctions();
+    }
+  }
   // 焦点切换辅助函数
   private switchEditorFocus(index: number, subTarget: number, targetLatex: string) {
     if (this.activeIndex === index && this.activeSubTarget === subTarget && this.isKeyboardShow) return;
@@ -133,7 +240,7 @@ export struct GraphingEditSheet {
     this.activeIndex = index;
     this.activeSubTarget = subTarget;
     this.isKeyboardShow = true;
-    this.isKeyboardShow = true;
+
     getContext(this).eventHub.emit('wake_web_engines');
     getContext(this).eventHub.emit('load_latex_to_editor', targetLatex || '');
 
@@ -304,39 +411,46 @@ export struct GraphingEditSheet {
 
                       // 3. 定义域
                       Row() {
-                        Text("定义域: ")
-                          .fontColor($r('sys.color.font_secondary'))
-                          .fontSize(14)
-                          .fontFamily('Cambria Math')
+                        Text("定义域: ").fontColor($r('sys.color.font_secondary')).fontSize(14)
 
-                        TextInput({ text: item.tMin?.toString() })
-                          .width(60)
-                          .height(28)
-                          .fontSize(14)
-                          .fontFamily('Cambria Math')
-                          .type(InputType.Normal)
-                          .textAlign(TextAlign.Center) // 文字居中，视觉更平衡
+                        TextInput({
+                          text: (this.editDomainIndex === index && this.editDomainField === 'tMin') ? this.editDomainStr : item.tMin?.toString(),
+                          controller: this.tMinControllers[index]
+                        })
+                          .width(60).height(28).fontSize(14).textAlign(TextAlign.Center)
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
-                          .onChange((val) => { item.tMin = parseFloat(val) || 0; this.saveFunctions(); })
+                          .customKeyboard(this.DomainKeyboardBuilder())
+                          .onFocus(() => {
+                            this.editDomainIndex = index;
+                            this.editDomainField = 'tMin';
+                            this.editDomainStr = item.tMin?.toString() || '0';
+                          })
+                          .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
+                            this.currentCaretStart = selectionStart;
+                            this.currentCaretEnd = selectionEnd;
+                          })
 
                         Text(" ≤ t ≤ ")
-                          .fontColor($r('sys.color.font_secondary'))
-                          .fontSize(16)
-                          .fontFamily('Cambria Math')
+                          .fontColor($r('sys.color.font_secondary')).fontSize(14)
 
-                        TextInput({ text: item.tMax?.toString() })
-                          .width(60)
-                          .height(28)
-                          .fontSize(14)
-                          .fontFamily('Cambria Math')
-                          .type(InputType.Normal)
-                          .textAlign(TextAlign.Center) // 文字居中
+                        TextInput({
+                          text: (this.editDomainIndex === index && this.editDomainField === 'tMax') ? this.editDomainStr : item.tMax?.toString(),
+                          controller: this.tMaxControllers[index]
+                        })
+                          .width(60).height(28).fontSize(14).textAlign(TextAlign.Center)
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
-                          .onChange((val) => { item.tMax = parseFloat(val) || 0; this.saveFunctions(); })
+                          .customKeyboard(this.DomainKeyboardBuilder())
+                          .onFocus(() => {
+                            this.editDomainIndex = index;
+                            this.editDomainField = 'tMax';
+                            this.editDomainStr = item.tMax?.toString() || '0';
+                          })
+                          .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
+                            this.currentCaretStart = selectionStart;
+                            this.currentCaretEnd = selectionEnd;
+                          })
                       }
-                      .width('100%')
-                      .justifyContent(FlexAlign.Start)
-                      .margin({ top: 4 })
+                      .width('100%').justifyContent(FlexAlign.Start).margin({ top: 4 })
                     }
                   } else if (item.type === FunctionType.POLAR) {
                     Column({ space: 8 }) {
@@ -363,39 +477,46 @@ export struct GraphingEditSheet {
 
                       // 2. 极坐标定义域
                       Row() {
-                        Text("定义域: ")
-                          .fontColor($r('sys.color.font_secondary'))
-                          .fontSize(14)
-                          .fontFamily('Cambria Math')
+                        Text("定义域: ").fontColor($r('sys.color.font_secondary')).fontSize(14)
 
-                        TextInput({ text: item.tMin?.toString() })
-                          .width(60)
-                          .height(28)
-                          .fontSize(14)
-                          .fontFamily('Cambria Math')
-                          .type(InputType.Normal)
-                          .textAlign(TextAlign.Center)
+                        TextInput({
+                          text: (this.editDomainIndex === index && this.editDomainField === 'tMin') ? this.editDomainStr : item.tMin?.toString(),
+                          controller: this.tMinControllers[index]
+                        })
+                          .width(60).height(28).fontSize(14).textAlign(TextAlign.Center)
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
-                          .onChange((val) => { item.tMin = parseFloat(val) || 0; this.saveFunctions(); })
+                          .customKeyboard(this.DomainKeyboardBuilder())
+                          .onFocus(() => {
+                            this.editDomainIndex = index;
+                            this.editDomainField = 'tMin';
+                            this.editDomainStr = item.tMin?.toString() || '0';
+                          })
+                          .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
+                            this.currentCaretStart = selectionStart;
+                            this.currentCaretEnd = selectionEnd;
+                          })
 
                         Text(" ≤ θ ≤ ")
-                          .fontColor($r('sys.color.font_secondary'))
-                          .fontSize(16)
-                          .fontFamily('Cambria Math') // 使用专属的 θ 符号
+                          .fontColor($r('sys.color.font_secondary')).fontSize(14)
 
-                        TextInput({ text: item.tMax?.toString() })
-                          .width(60)
-                          .height(28)
-                          .fontSize(14)
-                          .fontFamily('Cambria Math')
-                          .type(InputType.Normal)
-                          .textAlign(TextAlign.Center)
+                        TextInput({
+                          text: (this.editDomainIndex === index && this.editDomainField === 'tMax') ? this.editDomainStr : item.tMax?.toString(),
+                          controller: this.tMaxControllers[index]
+                        })
+                          .width(60).height(28).fontSize(14).textAlign(TextAlign.Center)
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
-                          .onChange((val) => { item.tMax = parseFloat(val) || 0; this.saveFunctions(); })
+                          .customKeyboard(this.DomainKeyboardBuilder())
+                          .onFocus(() => {
+                            this.editDomainIndex = index;
+                            this.editDomainField = 'tMax';
+                            this.editDomainStr = item.tMax?.toString() || '0';
+                          })
+                          .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
+                            this.currentCaretStart = selectionStart;
+                            this.currentCaretEnd = selectionEnd;
+                          })
                       }
-                      .width('100%')
-                      .justifyContent(FlexAlign.Start)
-                      .margin({ top: 4 })
+                      .width('100%').justifyContent(FlexAlign.Start).margin({ top: 4 })
                     }
                   } else if (item.type === FunctionType.IMPLICIT) {
                     Row() {
