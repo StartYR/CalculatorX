@@ -486,3 +486,87 @@ std::vector<double> GraphingEngine::generatePoint() const {
     
     return result;
 }
+
+// 4. 隐函数 f(x, y) = 0
+std::vector<double> GraphingEngine::generateImplicit(double xMin, double xMax, double yMin, double yMax, int resolution) const {
+    std::vector<double> result;
+    // 分辨率：网格越密，曲线越精细。150x150 = 22500 次并行采样
+    int resX = resolution > 100 ? resolution : 150;
+    int resY = resX; 
+
+    double dx = (xMax - xMin) / resX;
+    double dy = (yMax - yMin) / resY;
+
+    // 1. 预先采样二维网格
+    std::vector<std::vector<double>> grid(resX + 1, std::vector<double>(resY + 1));
+    for (int i = 0; i <= resX; ++i) {
+        double x = xMin + i * dx;
+        for (int j = 0; j <= resY; ++j) {
+            double y = yMin + j * dy;
+            // 将 x 和 y 同时喂给虚拟机，t 和 theta 传 0
+            grid[i][j] = this->evaluate(x, y, 0, 0);
+        }
+    }
+
+    // 线性插值辅助函数：精准定位 0 点在哪
+    auto interp = [](double val1, double val2, double coord1, double coord2) {
+        if (std::abs(val1 - val2) < 1e-9) return coord1;
+        return coord1 + (0.0 - val1) * (coord2 - coord1) / (val2 - val1);
+    };
+
+    // 压入独立线段，并用 NaN 切断，完美适配前端的 lineTo 逻辑
+    auto addLine = [&](double x1, double y1, double x2, double y2) {
+        result.push_back(x1); result.push_back(y1);
+        result.push_back(x2); result.push_back(y2);
+        result.push_back(std::nan("")); result.push_back(std::nan(""));
+    };
+
+    // 2. 遍历网格，查表法画线
+    for (int i = 0; i < resX; ++i) {
+        for (int j = 0; j < resY; ++j) {
+            double x0 = xMin + i * dx;
+            double x1 = xMin + (i + 1) * dx;
+            double y0 = yMin + j * dy;
+            double y1 = yMin + (j + 1) * dy;
+
+            double v0 = grid[i][j];       // 左下
+            double v1 = grid[i+1][j];     // 右下
+            double v2 = grid[i+1][j+1];   // 右上
+            double v3 = grid[i][j+1];     // 左上
+
+            // 计算 16 种状态 (用 4 位二进制表示，1 表示值大于 0)
+            int state = 0;
+            if (v0 > 0) state |= 1;
+            if (v1 > 0) state |= 2;
+            if (v2 > 0) state |= 4;
+            if (v3 > 0) state |= 8;
+
+            if (state == 0 || state == 15) continue; // 全大于0或全小于0，内部无交点
+
+            // 计算四条边的插值零点
+            double p0x = interp(v0, v1, x0, x1), p0y = y0; // 底边
+            double p1x = x1, p1y = interp(v1, v2, y0, y1); // 右边
+            double p2x = interp(v3, v2, x0, x1), p2y = y1; // 顶边
+            double p3x = x0, p3y = interp(v0, v3, y0, y1); // 左边
+
+            // 核心连线路由
+            switch (state) {
+                case 1: case 14: addLine(p3x, p3y, p0x, p0y); break;
+                case 2: case 13: addLine(p0x, p0y, p1x, p1y); break;
+                case 4: case 11: addLine(p1x, p1y, p2x, p2y); break;
+                case 8: case 7:  addLine(p2x, p2y, p3x, p3y); break;
+                case 3: case 12: addLine(p3x, p3y, p1x, p1y); break;
+                case 6: case 9:  addLine(p0x, p0y, p2x, p2y); break;
+                case 5: // 鞍点交错
+                    addLine(p0x, p0y, p3x, p3y);
+                    addLine(p1x, p1y, p2x, p2y);
+                    break;
+                case 10: // 鞍点交错
+                    addLine(p0x, p0y, p1x, p1y);
+                    addLine(p2x, p2y, p3x, p3y);
+                    break;
+            }
+        }
+    }
+    return result;
+}

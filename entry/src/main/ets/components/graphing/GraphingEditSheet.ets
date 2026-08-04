@@ -567,7 +567,7 @@ export struct GraphingEditSheet {
                     }
                   } else if (item.type === FunctionType.IMPLICIT) {
                     Row() {
-                      Text("f(x,y) = ")
+                      Text("f(x,y): ")
                         .fontColor($r('sys.color.font_primary'))
                         .fontSize(22)
                         .fontFamily('Cambria Math')
