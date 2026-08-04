@@ -23,15 +23,15 @@
 using namespace SymEngine;
 
 // ==================== 阶段一：降维编译器 ====================
-// ✅ 修改：增加 target_inst 参数，实现多核复用
+// 增加 target_inst 参数，实现多核复用
 void GraphingEngine::compileNode(const RCP<const Basic>& node, std::vector<Instruction>& target_inst) {
-    // 1. ✅ 多变量感知
+    // 1. 多变量感知
     if (is_a<Symbol>(*node)) {
         std::string name = down_cast<const Symbol&>(*node).get_name();
         if (name == "x") { target_inst.push_back({OpCode::VAR_X}); return; }
         if (name == "y") { target_inst.push_back({OpCode::VAR_Y}); return; }
         if (name == "t") { target_inst.push_back({OpCode::VAR_T}); return; }
-        if (name == "θ") { target_inst.push_back({OpCode::VAR_THETA}); return; } // 支持直接匹配前端的 Unicode
+        if (name == "θ" || name == "theta") { target_inst.push_back({OpCode::VAR_THETA}); return; } // 支持直接匹配前端的 Unicode
         
         // 兜底：遇到不认识的字母直接按 0 处理，防止引擎崩溃
         target_inst.push_back({OpCode::CONST_VAL, 0.0}); 
