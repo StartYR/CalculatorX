@@ -11,6 +11,7 @@ import { GRAPHING_COLORS, getActionId } from '../../utils/CalculatorConfigs';
 import { GraphFunctionItem } from './GraphingTypes';
 import { TopKeyItem, BottomKeyItem, topButtons, bottomButtons } from './GraphingKeyboard';
 import { FunctionType } from './GraphingTypes';
+import { LengthMetrics } from '@kit.ArkUI';
 
 const MAX_FUNCTIONS = 10; // 最大支持添加的函数数量
 
@@ -212,6 +213,7 @@ export struct GraphingEditSheet {
         }
         .width('100%')
         .padding({ left: 24, right: 0, top: 24, bottom: 16 })
+        .backgroundColor('rgba(255, 255, 255, 0.00)')
 
         // 展示列表
         List({ space: 8 }) {
@@ -541,6 +543,7 @@ export struct GraphingEditSheet {
         // 保留跟随键盘上推的底部边距
         .padding({ top: 4, bottom: 0 })
         .animation({ duration: 300, curve: Curve.FastOutSlowIn })
+        .fadingEdge(true, { fadingEdgeLength: LengthMetrics.vp(12) })
       }
       .width('100%')
       .height('100%')
