@@ -12,6 +12,8 @@ import { GraphFunctionItem } from './GraphingTypes';
 import { TopKeyItem, BottomKeyItem, topButtons, bottomButtons } from './GraphingKeyboard';
 import { FunctionType } from './GraphingTypes';
 
+const MAX_FUNCTIONS = 10; // 最大支持添加的函数数量
+
 function getLocalActionId(btn: string | Resource): string {
   return getActionId(btn);
 }
@@ -141,7 +143,7 @@ export struct GraphingEditSheet {
   dialogController: CustomDialogController = new CustomDialogController({
     builder: FunctionTypeDialog({
       onTypeSelected: (type: FunctionType) => {
-        if (this.functionList.length >= 5) return;
+        if (this.functionList.length >= MAX_FUNCTIONS) return;
 
         let usedColors = this.functionList.map(item => item.color);
         let nextColor = GRAPHING_COLORS.find(color => !usedColors.includes(color)) || GRAPHING_COLORS[0];
@@ -504,16 +506,17 @@ export struct GraphingEditSheet {
           // 底部添加按钮
           ListItem() {
             // 1. 状态降级：动态切换文案
-            Button(this.functionList.length >= 5 ? "已达数量上限 (5/5)" : "+ 添加新的函数", { type: ButtonType.Normal })
+            Button(this.functionList.length >= MAX_FUNCTIONS ? `已达数量上限 (${MAX_FUNCTIONS}/${MAX_FUNCTIONS})` :
+              "+ 添加新的函数", { type: ButtonType.Normal })
               .backgroundColor(Color.Transparent)
               // 2. 状态降级：动态切换颜色 (达上限时置灰)
-              .fontColor(this.functionList.length >= 5 ? $r('sys.color.font_tertiary') : $r('sys.color.brand'))
+              .fontColor(this.functionList.length >= MAX_FUNCTIONS ? $r('sys.color.font_tertiary') : $r('sys.color.brand'))
               .borderRadius(50)
               .width('100%')
               .height(48)
               .onClick(() => {
-                // 3. 如果达到 5 条，拦截点击事件
-                if (this.functionList.length >= 5) return;
+                // 3. 如果达到 MAX_FUNCTIONS 条，拦截点击事件
+                if (this.functionList.length >= MAX_FUNCTIONS) return;
 
                 if (this.isKeyboardShow) {
                   let magicId = this.activeIndex + (this.activeSubTarget * 10000);
@@ -588,7 +591,7 @@ export struct GraphingEditSheet {
       .width('100%')
       .backgroundColor($r('sys.color.comp_background_primary'))
       .padding({ bottom: this.navBarHeight - 8})
-      // 核心魔法：100% 位移。为 0 时在屏幕内，为 '100%' 时刚好完全滑出屏幕底部边界。
+      // 100% 位移。为 0 时在屏幕内，为 '100%' 时刚好完全滑出屏幕底部边界。
       .translate({ y: this.isKeyboardShow ? 0 : '100%' })
       // 极其丝滑的阻尼弹簧动画曲线
       .animation({ duration: 300, curve: Curve.FastOutSlowIn })
