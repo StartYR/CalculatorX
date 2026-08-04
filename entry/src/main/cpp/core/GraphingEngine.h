@@ -5,7 +5,6 @@
  * @author 易睿 (Yi Rui)
  * @date 2026/8/2 20:52
 */
-
 #pragma once
 #include <vector>
 #include <string>
@@ -13,7 +12,7 @@
 
 // 迷你虚拟机的核心指令集 (RPN 操作码)
 enum class OpCode {
-    VAR_X, CONST_VAL,
+    VAR_X, VAR_Y, VAR_T, VAR_THETA, CONST_VAL, // ✅ 新增：多变量支持
     ADD, SUB, MUL, DIV, POW,
     SIN, COS, TAN, ASIN, ACOS, ATAN,
     SINH, COSH, TANH,
@@ -28,32 +27,34 @@ struct Instruction {
 
 class GraphingEngine {
 private:
+    // ✅ 双核架构：支持主表达式和伴生表达式
     std::vector<Instruction> instructions;
-    // 伴生导数指令集
     std::vector<Instruction> deriv_instructions; 
+    std::vector<Instruction> instructions2;       // 专用于 y(t) 或独立点的 y
+    std::vector<Instruction> deriv_instructions2; 
 
-    // 降维编译器：将 3D 的 SymEngine AST 压平成 1D 的机器指令数组
-    void compileNode(const SymEngine::RCP<const SymEngine::Basic>& node);
+    // ✅ 修改：让编译器把指令推入指定的容器，而不是写死
+    void compileNode(const SymEngine::RCP<const SymEngine::Basic>& node, std::vector<Instruction>& target_inst);
     
-    // 自适应递归采样器
+    // ✅ 修改：执行环境升级，支持同时传入 x, y, t, theta
+    double executeMachine(double x, double y, double t, double theta, const std::vector<Instruction>& inst_list) const;
+
+    // 自适应递归采样器 (暂时保持原样)
     void sampleRecursive(double x1, double y1, double x2, double y2, int depth, double error_threshold, double jump_threshold, std::vector<double>& result) const;
     
-    // 提取公共的虚拟机核心执行逻辑
-    double executeMachine(double x, const std::vector<Instruction>& inst_list) const;
-
 public:
-    // 对外接口：预编译表达式
-    void compile(const SymEngine::Expression& expr);
+    // ✅ 修改：预编译表达式 (支持传入双表达式，第二个可为空)
+    void compile(const SymEngine::Expression& expr1, const SymEngine::Expression& expr2 = SymEngine::Expression(0));
     
-    // 对外接口：极速求值（零内存分配）
-    double evaluate(double x) const;
+    // ✅ 修改：极速求值接口升级
+    double evaluate(double x, double y = 0, double t = 0, double theta = 0) const;
+    double evaluateDeriv(double x, double y = 0, double t = 0, double theta = 0) const; 
     
-    // 求导数值
-    double evaluateDeriv(double x) const; 
+    // ✅ 新增：第二套指令的极速求值
+    double evaluate_2(double x, double y = 0, double t = 0, double theta = 0) const;
+    double evaluateDeriv_2(double x, double y = 0, double t = 0, double theta = 0) const;
     
-    // 对外接口：返回原生 double 数组
+    // (保留原有的静态生成接口和单变量快速采样接口)
     static std::vector<double> generatePoints(const SymEngine::Expression& expr, double xMin, double xMax, int pointsCount);
-    
-    // 使用当前对象已编译好的指令进行采样
     std::vector<double> generatePointsFast(double xMin, double xMax, int pointsCount) const;
 };
