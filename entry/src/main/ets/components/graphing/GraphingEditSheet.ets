@@ -114,6 +114,7 @@ export struct GraphingEditSheet {
   @Link activeIndex: number;
   @Link activeSubTarget: number; // 接收子焦点状态
   @Link isKeyboardShow: boolean;
+  @Link isSmallKeyboardShow: boolean;
   @Link isShift: boolean;
   @Link isDarkModeUI: boolean;
 
@@ -124,6 +125,21 @@ export struct GraphingEditSheet {
   // 追踪光标位置
   @State currentCaretStart: number = 0;
   @State currentCaretEnd: number = 0;
+
+  aboutToAppear() {
+    getContext(this).eventHub.on('force_close_domain_keyboard', () => {
+      if (this.editDomainIndex !== -1) {
+        let activeController = this.editDomainField === 'tMin' ? this.tMinControllers[this.editDomainIndex] : this.tMaxControllers[this.editDomainIndex];
+        activeController?.stopEditing();
+        this.editDomainIndex = -1;
+        this.isSmallKeyboardShow = false; // 状态归位
+      }
+    });
+  }
+
+  aboutToDisappear() {
+    getContext(this).eventHub.off('force_close_domain_keyboard');
+  }
 
   // 扩展到 10 个控制器，完美匹配 MAX_FUNCTIONS 的上限，杜绝越界崩溃
   private tMinControllers: TextInputController[] = [
@@ -150,6 +166,7 @@ export struct GraphingEditSheet {
         if (btn === '确定') {
           activeController?.stopEditing();
           this.editDomainIndex = -1;
+          this.isSmallKeyboardShow = false;
         } else if (btn === 'AC') {
           this.editDomainStr = '0';
           this.currentCaretStart = 1;
@@ -243,6 +260,7 @@ export struct GraphingEditSheet {
     this.editDomainIndex = index;
     this.editDomainField = field;
     this.editDomainStr = (field === 'tMin' ? item.tMin : item.tMax)?.toString() || '0';
+    this.isSmallKeyboardShow = true;
 
     // 3. 体验拉满：像主键盘一样，让被点击的小键盘卡片也丝滑置顶！
     setTimeout(() => {
@@ -257,6 +275,7 @@ export struct GraphingEditSheet {
       let activeController = this.editDomainField === 'tMin' ? this.tMinControllers[this.editDomainIndex] : this.tMaxControllers[this.editDomainIndex];
       activeController?.stopEditing();
       this.editDomainIndex = -1;
+      this.isSmallKeyboardShow = false;
     }
 
     if (this.activeIndex === index && this.activeSubTarget === subTarget && this.isKeyboardShow) return;
@@ -449,6 +468,10 @@ export struct GraphingEditSheet {
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
                           .customKeyboard(this.DomainKeyboardBuilder())
                           .onFocus(() => { this.handleDomainFocus(index, 'tMin', item); })
+                          .onBlur(() => {
+                            this.editDomainIndex = -1;
+                            this.isSmallKeyboardShow = false;
+                          })
                           .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
                             this.currentCaretStart = selectionStart;
                             this.currentCaretEnd = selectionEnd;
@@ -465,6 +488,10 @@ export struct GraphingEditSheet {
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
                           .customKeyboard(this.DomainKeyboardBuilder())
                           .onFocus(() => { this.handleDomainFocus(index, 'tMax', item); })
+                          .onBlur(() => {
+                            this.editDomainIndex = -1;
+                            this.isSmallKeyboardShow = false;
+                          })
                           .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
                             this.currentCaretStart = selectionStart;
                             this.currentCaretEnd = selectionEnd;
@@ -507,6 +534,10 @@ export struct GraphingEditSheet {
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
                           .customKeyboard(this.DomainKeyboardBuilder())
                           .onFocus(() => { this.handleDomainFocus(index, 'tMin', item); })
+                          .onBlur(() => {
+                            this.editDomainIndex = -1;
+                            this.isSmallKeyboardShow = false;
+                          })
                           .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
                             this.currentCaretStart = selectionStart;
                             this.currentCaretEnd = selectionEnd;
@@ -523,6 +554,10 @@ export struct GraphingEditSheet {
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
                           .customKeyboard(this.DomainKeyboardBuilder())
                           .onFocus(() => { this.handleDomainFocus(index, 'tMax', item); })
+                          .onBlur(() => {
+                            this.editDomainIndex = -1;
+                            this.isSmallKeyboardShow = false;
+                          })
                           .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
                             this.currentCaretStart = selectionStart;
                             this.currentCaretEnd = selectionEnd;

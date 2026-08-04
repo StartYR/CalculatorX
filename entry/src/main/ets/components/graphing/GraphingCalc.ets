@@ -26,6 +26,8 @@ export struct GraphingCalc {
   @State isKeyboardShow: boolean = false; // 精准控制底座键盘与引擎显示折叠的核心状态
   @State activeSubTarget: number = 0; // 0 代表主表达式x(t)或f(x), 1 代表伴生表达式y(t)
 
+  @State isSmallKeyboardShow: boolean = false; // 小键盘展开状态
+
   @StorageLink(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS) graphingFunctionsJson: string = '[]';
   @State functionList: GraphFunctionItem[] = [];
   @State activeIndex: number = 0;
@@ -178,6 +180,7 @@ export struct GraphingCalc {
       activeIndex: $activeIndex,
       activeSubTarget: $activeSubTarget,
       isKeyboardShow: $isKeyboardShow,
+      isSmallKeyboardShow: $isSmallKeyboardShow,
       isShift: $isShift,
       isDarkModeUI: $isDarkModeUI,
       saveFunctions: this.saveFunctions,
@@ -380,6 +383,22 @@ export struct GraphingCalc {
       height: '100%',
       dragBar: true,
       backgroundColor: $r('sys.color.background_secondary'),
+
+      // --- 智能拦截返回行为 ---
+      onWillDismiss: ((sheetDismiss: SheetDismiss) => {
+        if (this.isKeyboardShow) {
+          // 情况 A：主键盘开着 -> 抢救数据，收起主键盘，阻止面板关闭
+          let magicId = this.activeIndex + (this.activeSubTarget * 10000);
+          getContext(this).eventHub.emit('request_graphing_data', magicId);
+          this.isKeyboardShow = false;
+        } else if (this.isSmallKeyboardShow) {
+          // 情况 B：小键盘开着 -> 广播信号让面板收起小键盘，阻止面板关闭
+          getContext(this).eventHub.emit('force_close_domain_keyboard');
+        } else {
+          // 情况 C：都没开 -> 直接放行，关掉整个半模态窗口
+          sheetDismiss.dismiss();
+        }
+      }),
 
       // 在即将关闭时抢救数据
       onWillDisappear: () => {
