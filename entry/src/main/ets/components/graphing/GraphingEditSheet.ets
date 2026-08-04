@@ -120,6 +120,8 @@ export struct GraphingEditSheet {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageProp('activeBubbleId') activeBubbleId: string = '';
 
+  private listScroller: Scroller = new Scroller();
+
   // 焦点切换辅助函数
   private switchEditorFocus(index: number, subTarget: number, targetLatex: string) {
     if (this.activeIndex === index && this.activeSubTarget === subTarget && this.isKeyboardShow) return;
@@ -131,8 +133,14 @@ export struct GraphingEditSheet {
     this.activeIndex = index;
     this.activeSubTarget = subTarget;
     this.isKeyboardShow = true;
+    this.isKeyboardShow = true;
     getContext(this).eventHub.emit('wake_web_engines');
     getContext(this).eventHub.emit('load_latex_to_editor', targetLatex || '');
+
+    setTimeout(() => {
+      // 参数解释：目标索引, 是否使用平滑动画, 对齐方式(START 表示贴着屏幕顶部)
+      this.listScroller.scrollToIndex(index, true, ScrollAlign.START);
+    }, 100); // 给 ArkUI 引擎 100 毫秒的时间去计算底部新撑开的高度
   }
 
   // 接收从外层传入的回调，保持原有逻辑调用形式不变
@@ -216,7 +224,7 @@ export struct GraphingEditSheet {
         .backgroundColor('rgba(255, 255, 255, 0.00)')
 
         // 展示列表
-        List({ space: 8 }) {
+        List({ space: 8, scroller: this.listScroller }) {
           ForEach(this.functionList, (item: GraphFunctionItem, index: number) => {
             ListItem() {
               Row() {
