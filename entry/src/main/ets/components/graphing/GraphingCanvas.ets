@@ -193,7 +193,9 @@ export struct GraphingCanvas {
         ast: funcItem.ast || "0",
         ast2: funcItem.ast2 || "0",
         tMin: funcItem.tMin !== undefined ? funcItem.tMin : -10.0,
-        tMax: funcItem.tMax !== undefined ? funcItem.tMax : 10.0
+        tMax: funcItem.tMax !== undefined ? funcItem.tMax : 10.0,
+        yMin: yMin,
+        yMax: yMax
       });
 
       // 传入 payload

@@ -67,5 +67,8 @@ public:
     
     // 独立点 (x, y)
     std::vector<double> generatePoint() const;
+
+    // 隐函数 f(x, y) = 0 (Marching Squares 算法)
+    std::vector<double> generateImplicit(double xMin, double xMax, double yMin, double yMax, int resolution) const;
 };
 

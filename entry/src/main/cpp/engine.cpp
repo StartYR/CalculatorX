@@ -128,6 +128,8 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
             int func_type = item.value("type", 0); // 默认为普通函数
             double tMin = item.value("tMin", -10.0);
             double tMax = item.value("tMax", 10.0);
+            double yMin = item.value("yMin", -10.0);
+            double yMax = item.value("yMax", 10.0);
 
             LOGI("[GraphingDebug] [C++ 解析] func_type: %{public}d, tMin: %f, tMax: %f", func_type, tMin, tMax);
 
@@ -177,7 +179,7 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
                     y_values = engine.generatePoint();
                     break;
                 case 3: // 隐函数 IMPLICIT
-                    // TODO: 下一阶段的终极挑战
+                    y_values = engine.generateImplicit(xMin, xMax, yMin, yMax, 150);
                     break;
                 case 0: // 普通函数 NORMAL
                 default:
