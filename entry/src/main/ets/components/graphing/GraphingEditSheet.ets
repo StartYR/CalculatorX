@@ -174,7 +174,7 @@ export struct GraphingEditSheet {
           this.syncDomainValue();
           setTimeout(() => { activeController?.caretPosition(1); }, 20);
         } else if (typeof btn !== 'string') {
-          // --- ✅ 光标感知的退格删除 ---
+          // --- 光标感知的退格删除 ---
           let targetCaret = this.currentCaretStart; // 锁死目标光标位置
 
           if (this.currentCaretStart === this.currentCaretEnd) {
@@ -668,7 +668,7 @@ export struct GraphingEditSheet {
               .padding({ left: 16, right: 16 }) // 内部卡片的内边距
               // 选中态与未选中态的背景色切换
               .backgroundColor((this.activeIndex === index && this.isKeyboardShow) ? $r('sys.color.comp_background_tertiary') : $r('sys.color.background_primary'))
-              .borderRadius(16) // 与历史记录一致的 16 圆角
+              .borderRadius(16)
             }
             .padding({ left: 16, right: 16 })
             .swipeAction({
