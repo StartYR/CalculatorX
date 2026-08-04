@@ -18,7 +18,7 @@ import { KeyGestureWrapper } from '../common/KeyGestureWrapper';
 // ==================== 按键布局配置 ====================
 export const topShiftButtons: Array<string | Resource> = [
   '', '', '', '', '', '',
-  icon_sqrt3, icon_abs, icon_power3, '', '', 'θ',
+  icon_sqrt3, icon_abs, icon_power3, '', 't', 'θ',
   'sin⁻¹', 'cos⁻¹', 'tan⁻¹', '', '', ''
 ];
 export const topButtons: Array<string | Resource> = [
