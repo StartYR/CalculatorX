@@ -5,7 +5,6 @@
  * @author 易睿 (Yi Rui)
  * @date 2026/8/2 20:52
 */
-
 #include "GraphingEngine.h"
 #include <symengine/add.h>
 #include <symengine/mul.h>
@@ -24,145 +23,159 @@
 using namespace SymEngine;
 
 // ==================== 阶段一：降维编译器 ====================
-void GraphingEngine::compileNode(const RCP<const Basic>& node) {
-//    LOGI("Node type: %{public}s", node->__str__().c_str());
-    // 1. 变量 x
+// ✅ 修改：增加 target_inst 参数，实现多核复用
+void GraphingEngine::compileNode(const RCP<const Basic>& node, std::vector<Instruction>& target_inst) {
+    // 1. ✅ 多变量感知
     if (is_a<Symbol>(*node)) {
-        if (down_cast<const Symbol&>(*node).get_name() == "x") {
-            instructions.push_back({OpCode::VAR_X});
-            return;
-        }
+        std::string name = down_cast<const Symbol&>(*node).get_name();
+        if (name == "x") { target_inst.push_back({OpCode::VAR_X}); return; }
+        if (name == "y") { target_inst.push_back({OpCode::VAR_Y}); return; }
+        if (name == "t") { target_inst.push_back({OpCode::VAR_T}); return; }
+        if (name == "θ") { target_inst.push_back({OpCode::VAR_THETA}); return; } // 支持直接匹配前端的 Unicode
+        
+        // 兜底：遇到不认识的字母直接按 0 处理，防止引擎崩溃
+        target_inst.push_back({OpCode::CONST_VAL, 0.0}); 
+        return;
     }
+    
     // 2. 常数 (数字、Pi、E等)
     if (is_a_Number(*node) || is_a<Constant>(*node)) {
-        instructions.push_back({OpCode::CONST_VAL, eval_double(*node)});
+        target_inst.push_back({OpCode::CONST_VAL, eval_double(*node)});
         return;
     }
-    // 3. 加法 (SymEngine 的 Add 可能有多个子节点)
+    
+    // 3. 加法
     if (is_a<Add>(*node)) {
         auto args = node->get_args();
-        compileNode(args[0]);
+        compileNode(args[0], target_inst);
         for (size_t i = 1; i < args.size(); ++i) {
-            compileNode(args[i]);
-            instructions.push_back({OpCode::ADD});
+            compileNode(args[i], target_inst);
+            target_inst.push_back({OpCode::ADD});
         }
         return;
     }
-    // 4. 乘法 (SymEngine 的 Mul 可能有多个子节点)
+    // 4. 乘法
     if (is_a<Mul>(*node)) {
         auto args = node->get_args();
-        compileNode(args[0]);
+        compileNode(args[0], target_inst);
         for (size_t i = 1; i < args.size(); ++i) {
-            compileNode(args[i]);
-            instructions.push_back({OpCode::MUL});
+            compileNode(args[i], target_inst);
+            target_inst.push_back({OpCode::MUL});
         }
         return;
     }
-        // 5. 幂运算
+    
+    // 5. 幂运算
     if (is_a<Pow>(*node)) {
         auto args = node->get_args();
-        
-        // 检查指数是否为整数常量
         if (is_a<Integer>(*args[1])) {
             int exp = down_cast<const Integer&>(*args[1]).as_int();
-            if (exp == 0) {
-                // x^0 = 1
-                instructions.push_back({OpCode::CONST_VAL, 1.0});
-                return;
-            }
-            if (exp == 1) {
-                // x^1 = x，直接编译底数
-                compileNode(args[0]);
-                return;
-            }
+            if (exp == 0) { target_inst.push_back({OpCode::CONST_VAL, 1.0}); return; }
+            if (exp == 1) { compileNode(args[0], target_inst); return; }
             if (exp == 2) {
-                compileNode(args[0]);
-                compileNode(args[0]);
-                instructions.push_back({OpCode::MUL});
+                compileNode(args[0], target_inst);
+                compileNode(args[0], target_inst);
+                target_inst.push_back({OpCode::MUL});
                 return;
             }
             if (exp == 3) {
-                compileNode(args[0]);
-                compileNode(args[0]);
-                instructions.push_back({OpCode::MUL});
-                compileNode(args[0]);
-                instructions.push_back({OpCode::MUL});
+                compileNode(args[0], target_inst);
+                compileNode(args[0], target_inst);
+                target_inst.push_back({OpCode::MUL});
+                compileNode(args[0], target_inst);
+                target_inst.push_back({OpCode::MUL});
                 return;
             }
-            // 其他小整数次幂也可以按需展开
             if (exp >= 4 && exp <= 8) {
-                compileNode(args[0]);
+                compileNode(args[0], target_inst);
                 for (int i = 1; i < exp; i++) {
-                    compileNode(args[0]);
-                    instructions.push_back({OpCode::MUL});
+                    compileNode(args[0], target_inst);
+                    target_inst.push_back({OpCode::MUL});
                 }
                 return;
             }
         }
-        
-        // 非整数次幂，回退到通用路径
-        compileNode(args[0]);
-        compileNode(args[1]);
-        instructions.push_back({OpCode::POW});
+        compileNode(args[0], target_inst);
+        compileNode(args[1], target_inst);
+        target_inst.push_back({OpCode::POW});
         return;
     }
-    // 6. 一元数学函数映射
-    if (is_a<Sin>(*node)) { compileNode(node->get_args()[0]); instructions.push_back({OpCode::SIN}); return; }
-    if (is_a<Cos>(*node)) { compileNode(node->get_args()[0]); instructions.push_back({OpCode::COS}); return; }
-    if (is_a<Tan>(*node)) { compileNode(node->get_args()[0]); instructions.push_back({OpCode::TAN}); return; }
-    if (is_a<ASin>(*node)) { compileNode(node->get_args()[0]); instructions.push_back({OpCode::ASIN}); return; }
-    if (is_a<ACos>(*node)) { compileNode(node->get_args()[0]); instructions.push_back({OpCode::ACOS}); return; }
-    if (is_a<ATan>(*node)) { compileNode(node->get_args()[0]); instructions.push_back({OpCode::ATAN}); return; }
-    if (is_a<Log>(*node)) { compileNode(node->get_args()[0]); instructions.push_back({OpCode::LN}); return; }
-    if (is_a<Abs>(*node)) { compileNode(node->get_args()[0]); instructions.push_back({OpCode::ABS}); return; }
     
-    // 如果遇到不支持的复杂节点（如积分），兜底回退：将其作为一个求值常数处理
-    instructions.push_back({OpCode::CONST_VAL, eval_double(*node)});
+    // 6. 一元数学函数映射
+    if (is_a<Sin>(*node)) { compileNode(node->get_args()[0], target_inst); target_inst.push_back({OpCode::SIN}); return; }
+    if (is_a<Cos>(*node)) { compileNode(node->get_args()[0], target_inst); target_inst.push_back({OpCode::COS}); return; }
+    if (is_a<Tan>(*node)) { compileNode(node->get_args()[0], target_inst); target_inst.push_back({OpCode::TAN}); return; }
+    if (is_a<ASin>(*node)) { compileNode(node->get_args()[0], target_inst); target_inst.push_back({OpCode::ASIN}); return; }
+    if (is_a<ACos>(*node)) { compileNode(node->get_args()[0], target_inst); target_inst.push_back({OpCode::ACOS}); return; }
+    if (is_a<ATan>(*node)) { compileNode(node->get_args()[0], target_inst); target_inst.push_back({OpCode::ATAN}); return; }
+    if (is_a<Log>(*node))  { compileNode(node->get_args()[0], target_inst); target_inst.push_back({OpCode::LN}); return; }
+    if (is_a<Abs>(*node))  { compileNode(node->get_args()[0], target_inst); target_inst.push_back({OpCode::ABS}); return; }
+    
+    target_inst.push_back({OpCode::CONST_VAL, eval_double(*node)});
 }
 
-void GraphingEngine::compile(const Expression& expr) {
+// 支持双表达式编译，智能寻找求导目标变量
+void GraphingEngine::compile(const Expression& expr1, const Expression& expr2) {
     instructions.clear();
-    instructions.reserve(50); 
-    compileNode(expr.get_basic());
+    deriv_instructions.clear();
+    instructions2.clear();
+    deriv_instructions2.clear();
 
-    // ============ 微积分中枢：自动编译导数伴生虚拟机 ============
+    // 编译主表达式
+    compileNode(expr1.get_basic(), instructions);
+    
+    // 如果有第二表达式 (比如 y(t))，编译之
+    bool has_expr2 = (expr2.get_basic()->__str__() != "0");
+    if (has_expr2) {
+        compileNode(expr2.get_basic(), instructions2);
+    }
+
     try {
-        SymEngine::RCP<const SymEngine::Symbol> x_sym = SymEngine::rcp(new SymEngine::Symbol("x"));
-        // 极速符号求导 f'(x)
-        SymEngine::RCP<const SymEngine::Basic> df = expr.get_basic()->diff(x_sym);
+        // 简单智能推断：用什么变量来求导（针对隐函数和普通函数优先用x，参数方程优先用t，极坐标优先用θ）
+        std::string diff_var = "x";
+        std::string s1 = expr1.get_basic()->__str__();
+        if (s1.find("t") != std::string::npos) diff_var = "t";
+        else if (s1.find("θ") != std::string::npos) diff_var = "θ";
+
+        SymEngine::RCP<const SymEngine::Symbol> diff_sym = SymEngine::rcp(new SymEngine::Symbol(diff_var));
         
-        // 用 instructions 容器编译导数
-        std::vector<Instruction> temp = instructions; 
-        instructions.clear();
-        compileNode(df);
-        deriv_instructions = instructions; // 存入专属容器
-        instructions = temp; // 恢复原指令集
+        // 编译主表达式的导数
+        SymEngine::RCP<const SymEngine::Basic> df1 = expr1.get_basic()->diff(diff_sym);
+        compileNode(df1, deriv_instructions);
+        
+        // 如果有伴生表达式，编译其导数
+        if (has_expr2) {
+            SymEngine::RCP<const SymEngine::Basic> df2 = expr2.get_basic()->diff(diff_sym);
+            compileNode(df2, deriv_instructions2);
+        }
     } catch (...) {
-        // 遇到无法求导的奇异函数，清空伴生指令
+        // 求导失败时静默清空
         deriv_instructions.clear();
+        deriv_instructions2.clear();
     }
 }
 
 // ==================== 极速求值机 ====================
-double GraphingEngine::executeMachine(double x, const std::vector<Instruction>& inst_list) const {
-    if (inst_list.empty()) return std::nan(""); // 降级保护
+double GraphingEngine::executeMachine(double x, double y, double t, double theta, const std::vector<Instruction>& inst_list) const {
+    if (inst_list.empty()) return std::nan("");
 
     double stack[128];
-    int sp = -1; // 栈顶指针
+    int sp = -1; 
 
     for (const auto& inst : inst_list) {
         switch (inst.op) {
             case OpCode::VAR_X:     stack[++sp] = x; break;
+            case OpCode::VAR_Y:     stack[++sp] = y; break;
+            case OpCode::VAR_T:     stack[++sp] = t; break;
+            case OpCode::VAR_THETA: stack[++sp] = theta; break;
             case OpCode::CONST_VAL: stack[++sp] = inst.value; break;
             
-           // 二元操作符
             case OpCode::ADD: sp--; stack[sp] += stack[sp+1]; break;
             case OpCode::SUB: sp--; stack[sp] -= stack[sp+1]; break;
             case OpCode::MUL: sp--; stack[sp] *= stack[sp+1]; break;
             case OpCode::DIV: sp--; stack[sp] /= stack[sp+1]; break;
             case OpCode::POW: sp--; stack[sp] = std::pow(stack[sp], stack[sp+1]); break;
             
-            // 一元操作符
             case OpCode::SIN:  stack[sp] = std::sin(stack[sp]); break;
             case OpCode::COS:  stack[sp] = std::cos(stack[sp]); break;
             case OpCode::TAN:  stack[sp] = std::tan(stack[sp]); break;
@@ -182,13 +195,10 @@ double GraphingEngine::executeMachine(double x, const std::vector<Instruction>& 
     return sp >= 0 ? stack[0] : 0.0;
 }
 
-double GraphingEngine::evaluate(double x) const {
-    return executeMachine(x, instructions);
-}
-
-double GraphingEngine::evaluateDeriv(double x) const {
-    return executeMachine(x, deriv_instructions);
-}
+double GraphingEngine::evaluate(double x, double y, double t, double theta) const { return executeMachine(x, y, t, theta, instructions); }
+double GraphingEngine::evaluateDeriv(double x, double y, double t, double theta) const { return executeMachine(x, y, t, theta, deriv_instructions); }
+double GraphingEngine::evaluate_2(double x, double y, double t, double theta) const { return executeMachine(x, y, t, theta, instructions2); }
+double GraphingEngine::evaluateDeriv_2(double x, double y, double t, double theta) const { return executeMachine(x, y, t, theta, deriv_instructions2); }
 
 // ==================== 自适应递归采样 ====================
 void GraphingEngine::sampleRecursive(double x1, double y1, double x2, double y2, int depth, double error_threshold, double jump_threshold, std::vector<double>& result) const {
