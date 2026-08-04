@@ -415,3 +415,74 @@ std::vector<double> GraphingEngine::generatePointsFast(double xMin, double xMax,
 
     return xy_values;
 }
+
+// ==================== 阶段二：多形态函数专属采样器 ====================
+
+// 1. 参数方程 x(t), y(t)
+std::vector<double> GraphingEngine::generateParametric(double tMin, double tMax, int pointsCount) const {
+    std::vector<double> result;
+    // 参数方程往往会画出复杂的闭合曲线，保证至少 500 个点以确保平滑
+    if (pointsCount < 500) pointsCount = 500; 
+    result.reserve((pointsCount + 1) * 2);
+    
+    double step = (tMax - tMin) / pointsCount;
+    
+    for (int i = 0; i <= pointsCount; ++i) {
+        double t = tMin + i * step;
+        
+        // 核心魔法：将 t 喂入第 3 个参数，分别执行两套指令集
+        // evaluate(x, y, t, theta)
+        double curr_x = this->evaluate(0, 0, t, 0);   // 计算 x(t)
+        double curr_y = this->evaluate_2(0, 0, t, 0); // 计算 y(t)
+        
+        // 如果遇到非法值（如除以 0），推入 NaN 切断线条
+        if (std::isnan(curr_x) || std::isinf(curr_x) || std::isnan(curr_y) || std::isinf(curr_y)) {
+            result.push_back(std::nan(""));
+            result.push_back(std::nan(""));
+        } else {
+            result.push_back(curr_x);
+            result.push_back(curr_y);
+        }
+    }
+    return result;
+}
+
+// 2. 极坐标方程 r(θ)
+std::vector<double> GraphingEngine::generatePolar(double thetaMin, double thetaMax, int pointsCount) const {
+    std::vector<double> result;
+    if (pointsCount < 500) pointsCount = 500;
+    result.reserve((pointsCount + 1) * 2);
+    
+    double step = (thetaMax - thetaMin) / pointsCount;
+    
+    for (int i = 0; i <= pointsCount; ++i) {
+        double theta = thetaMin + i * step;
+        
+        // 核心魔法：将 theta 喂入第 4 个参数，算出半径 r
+        double r = this->evaluate(0, 0, 0, theta); 
+        
+        if (std::isnan(r) || std::isinf(r)) {
+            result.push_back(std::nan(""));
+            result.push_back(std::nan(""));
+        } else {
+            // 极坐标到直角坐标的极速转换
+            result.push_back(r * std::cos(theta)); // X = r * cos(θ)
+            result.push_back(r * std::sin(theta)); // Y = r * sin(θ)
+        }
+    }
+    return result;
+}
+
+// 3. 独立点 (x, y)
+std::vector<double> GraphingEngine::generatePoint() const {
+    std::vector<double> result;
+    
+    // 点不需要循环，直接执行主表达式 (x) 和伴生表达式 (y)
+    double curr_x = this->evaluate(0, 0, 0, 0);
+    double curr_y = this->evaluate_2(0, 0, 0, 0);
+    
+    result.push_back(curr_x);
+    result.push_back(curr_y);
+    
+    return result;
+}

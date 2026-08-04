@@ -12,7 +12,7 @@
 
 // 迷你虚拟机的核心指令集 (RPN 操作码)
 enum class OpCode {
-    VAR_X, VAR_Y, VAR_T, VAR_THETA, CONST_VAL, // ✅ 新增：多变量支持
+    VAR_X, VAR_Y, VAR_T, VAR_THETA, CONST_VAL, // 多变量支持
     ADD, SUB, MUL, DIV, POW,
     SIN, COS, TAN, ASIN, ACOS, ATAN,
     SINH, COSH, TANH,
@@ -27,34 +27,45 @@ struct Instruction {
 
 class GraphingEngine {
 private:
-    // ✅ 双核架构：支持主表达式和伴生表达式
+    // 双核架构：支持主表达式和伴生表达式
     std::vector<Instruction> instructions;
     std::vector<Instruction> deriv_instructions; 
     std::vector<Instruction> instructions2;       // 专用于 y(t) 或独立点的 y
     std::vector<Instruction> deriv_instructions2; 
 
-    // ✅ 修改：让编译器把指令推入指定的容器，而不是写死
+    // 让编译器把指令推入指定的容器，而不是写死
     void compileNode(const SymEngine::RCP<const SymEngine::Basic>& node, std::vector<Instruction>& target_inst);
     
-    // ✅ 修改：执行环境升级，支持同时传入 x, y, t, theta
+    // 支持同时传入 x, y, t, theta
     double executeMachine(double x, double y, double t, double theta, const std::vector<Instruction>& inst_list) const;
 
-    // 自适应递归采样器 (暂时保持原样)
+    // 自适应递归采样器
     void sampleRecursive(double x1, double y1, double x2, double y2, int depth, double error_threshold, double jump_threshold, std::vector<double>& result) const;
     
 public:
-    // ✅ 修改：预编译表达式 (支持传入双表达式，第二个可为空)
+    // 预编译表达式 (支持传入双表达式，第二个可为空)
     void compile(const SymEngine::Expression& expr1, const SymEngine::Expression& expr2 = SymEngine::Expression(0));
     
-    // ✅ 修改：极速求值接口升级
+    // 极速求值接口
     double evaluate(double x, double y = 0, double t = 0, double theta = 0) const;
     double evaluateDeriv(double x, double y = 0, double t = 0, double theta = 0) const; 
     
-    // ✅ 新增：第二套指令的极速求值
+    // 第二套指令的极速求值
     double evaluate_2(double x, double y = 0, double t = 0, double theta = 0) const;
     double evaluateDeriv_2(double x, double y = 0, double t = 0, double theta = 0) const;
     
-    // (保留原有的静态生成接口和单变量快速采样接口)
+    // 原有的静态生成接口和单变量快速采样接口
     static std::vector<double> generatePoints(const SymEngine::Expression& expr, double xMin, double xMax, int pointsCount);
     std::vector<double> generatePointsFast(double xMin, double xMax, int pointsCount) const;
+    
+    // ==================== 多形态函数采样器 ====================
+    // 参数方程 x(t), y(t)
+    std::vector<double> generateParametric(double tMin, double tMax, int pointsCount) const;
+    
+    // 极坐标方程 r(θ)
+    std::vector<double> generatePolar(double thetaMin, double thetaMax, int pointsCount) const;
+    
+    // 独立点 (x, y)
+    std::vector<double> generatePoint() const;
 };
+
