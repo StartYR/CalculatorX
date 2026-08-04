@@ -9,6 +9,7 @@
 import mediaquery from '@ohos.mediaquery';
 import { EngineService, CalcConfig } from '../../utils/EngineService';
 import { GraphFunctionItem } from './GraphingTypes';
+import Logger  from '../../utils/Logger';
 
 @Component
 export struct GraphingCanvas {
@@ -186,14 +187,39 @@ export struct GraphingCanvas {
         xMin: xMin, xMax: xMax, pointsCount: pointsCount
       };
 
-      let points = EngineService.calculateGraphPoints(funcItem.ast, config) as Float64Array;
+      // 打包大 JSON，把类型和伴生表达式全传给 C++
+      let payload = JSON.stringify({
+        type: funcItem.type || 0,
+        ast: funcItem.ast || "0",
+        ast2: funcItem.ast2 || "0",
+        tMin: funcItem.tMin !== undefined ? funcItem.tMin : -10.0,
+        tMax: funcItem.tMax !== undefined ? funcItem.tMax : 10.0
+      });
+
+      // 传入 payload
+      let points = EngineService.calculateGraphPoints(payload, config) as Float64Array;
       if (!points || points.length === 0) continue;
 
       ctx.beginPath();
+
+      // 拦截独立点 (只有 2 个坐标)，直接画一个实心小圆点
+      if (points.length === 2) {
+        let mathX = points[0];
+        let mathY = points[1];
+        if (Number.isFinite(mathX) && Number.isFinite(mathY)) {
+          let px = originX + mathX * this.viewScale;
+          let py = originY - mathY * this.viewScale;
+          ctx.fillStyle = funcItem.color;
+          ctx.arc(px, py, 6, 0, 2 * Math.PI); // 画一个半径为 6 的圆
+          ctx.fill();
+        }
+        continue; // 画完点直接进入下一个函数的渲染
+      }
+
+      // --- 连线渲染逻辑 ---
       ctx.lineWidth = 2.5;
       ctx.strokeStyle = funcItem.color;
 
-      let stepX = (xMax - xMin) / (pointsCount - 1);
       let isFirstPoint = true;
 
       for (let p = 0; p < points.length; p += 2) {
@@ -201,12 +227,12 @@ export struct GraphingCanvas {
         let mathY = points[p + 1];
 
         // 如果底层传来了 NaN，说明这里是断崖/奇点，切断连线
-        if (!Number.isFinite(mathY)) {
+        if (!Number.isFinite(mathY) || !Number.isFinite(mathX)) {
           isFirstPoint = true;
           continue;
         }
 
-        // 使用底层的 mathX 映射物理像素
+        // 使用底层的 mathX 和 mathY 映射物理像素
         let px = originX + mathX * this.viewScale;
         let py = originY - mathY * this.viewScale;
 

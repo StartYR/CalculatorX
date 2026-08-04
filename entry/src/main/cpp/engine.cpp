@@ -114,88 +114,86 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         ctx.hasDMS = false;
         ctx.mode = static_cast<CalcMode>(mode);
         
+        
         // ---------------- 函数图像专属拦截路由 ----------------
         if (mode == 3) {
+
+            LOGI("[GraphingDebug] [C++ 收货] 原始 json_str: %{public}s", json_str.c_str());
+
             // 将 isRad 状态拼接入 Key，防止用户切换弧度制时图象不更新
             std::string cache_key = json_str + (isRad ? "_rad" : "_deg");
-            
-            // 缓存穿透：只有第一次输入新公式时，才会执行昂贵的 JSON 解析和建树！
+
+            // 1. 初步解析前端传来的 GraphFunctionItem 复合 JSON
+            nlohmann::json item = nlohmann::json::parse(json_str);
+            int func_type = item.value("type", 0); // 默认为普通函数
+            double tMin = item.value("tMin", -10.0);
+            double tMax = item.value("tMax", 10.0);
+
+            LOGI("[GraphingDebug] [C++ 解析] func_type: %{public}d, tMin: %f, tMax: %f", func_type, tMin, tMax);
+
+            // 缓存穿透：只有第一次输入新公式时，才会执行昂贵的解析和建树
             if (graphing_cache.find(cache_key) == graphing_cache.end()) {
-                json ast = json::parse(json_str);
-                Expression expr = parseAST(ast, ctx);
                 GraphingEngine engine;
-                engine.compile(expr);
-                graphing_cache[cache_key] = engine; // 存入缓存
+
+                // 提取主表达式 (ast)
+                std::string ast_str = item.value("ast", "0");
+                LOGI("[GraphingDebug] [C++ AST提取] ast_str: %{public}s", ast_str.c_str());
+                SymEngine::Expression expr1(0);
+
+                if (!ast_str.empty() && ast_str != "0") {
+                    nlohmann::json ast_json = nlohmann::json::parse(ast_str);
+                    expr1 = parseAST(ast_json, ctx);
+                }
+                LOGI("[GraphingDebug] [C++ 建树] expr1: %{public}s", expr1.get_basic()->__str__().c_str());
+                // 提取伴生表达式 (ast2)，仅对需要的类型解析，节省性能
+                SymEngine::Expression expr2(0);
+                if (func_type == 1 || func_type == 4) { // 1=PARAMETRIC, 4=POINT
+                    std::string ast2_str = item.value("ast2", "0");
+                    if (!ast2_str.empty() && ast2_str != "0") {
+                        nlohmann::json ast2_json = nlohmann::json::parse(ast2_str);
+                        expr2 = parseAST(ast2_json, ctx);
+                    }
+                }
+                LOGI("[GraphingDebug] [C++ 建树] expr2: %{public}s", expr2.get_basic()->__str__().c_str());
+
+                // 双核编译！
+                engine.compile(expr1, expr2);
+                graphing_cache[cache_key] = engine; 
                 LOGI("[engine.cpp] 缓存未命中，已编译并缓存新函数图像: %{public}s", cache_key.c_str());
             }
 
-            // 直接从缓存中掏出早就编译好的虚拟机，跳过一切解析
-            std::vector<double> y_values = graphing_cache[cache_key].generatePointsFast(xMin, xMax, pointsCount);
-            
-            // N-API：在内存中创建 ArrayBuffer
+            // 2. 取出引擎，根据函数类型分发给不同的采样器
+            std::vector<double> y_values;
+            auto& engine = graphing_cache[cache_key];
+
+            switch (func_type) {
+                case 1: // 参数方程 PARAMETRIC
+                    y_values = engine.generateParametric(tMin, tMax, pointsCount);
+                    break;
+                case 2: // 极坐标 POLAR
+                    y_values = engine.generatePolar(tMin, tMax, pointsCount);
+                    break;
+                case 4: // 独立点 POINT
+                    y_values = engine.generatePoint();
+                    break;
+                case 3: // 隐函数 IMPLICIT
+                    // TODO: 下一阶段的终极挑战
+                    break;
+                case 0: // 普通函数 NORMAL
+                default:
+                    y_values = engine.generatePointsFast(xMin, xMax, pointsCount);
+                    break;
+            }
+
+            // 3. N-API：在内存中创建 ArrayBuffer (保持原有极速传输逻辑)
             size_t byte_length = y_values.size() * sizeof(double);
             napi_value arraybuffer, typedarray;
             void* data_ptr = nullptr;
             napi_create_arraybuffer(env, byte_length, &data_ptr, &arraybuffer);
             memcpy(data_ptr, y_values.data(), byte_length);
             napi_create_typedarray(env, napi_float64_array, y_values.size(), arraybuffer, 0, &typedarray);
-            
+
             return typedarray;
-        }
-        
-        // ---------------- 方程求解专属拦截路由  ----------------
-        if (mode == 2) {
-            std::vector<std::string> expr_strs;
-            
-            // 1. 拆解 List (方程组) 或 解析单一 Equal (一元方程)
-            if (ast.is_array() && !ast.empty() && ast[0] == "List") {
-                for (size_t i = 1; i < ast.size(); ++i) {
-                    Expression e = parseAST(ast[i], ctx);
-                    expr_strs.push_back(e.get_basic()->__str__());
-                }
-            } else {
-                Expression e = parseAST(ast, ctx);
-                expr_strs.push_back(e.get_basic()->__str__());
-            }
-
-            // 2. “六大金刚”未知数嗅探
-            std::vector<std::string> target_vars;
-            std::vector<std::string> candidates = {"x", "y", "z", "u", "v", "w"};
-            std::string combined_exprs = "";
-            for (const auto& s : expr_strs) combined_exprs += s + ",";
-
-            for (const auto& var : candidates) {
-                if (combined_exprs.find(var) != std::string::npos) {
-                    target_vars.push_back(var);
-                }
-            }
-            if (target_vars.empty()) target_vars.push_back("x"); // 兜底
-
-            // 3. 组装 Giac 专属多元指令 csolve([eq1, eq2], [x, y])
-            std::string eqs_str = "[";
-            for (size_t i = 0; i < expr_strs.size(); ++i) {
-                eqs_str += expr_strs[i];
-                if (i < expr_strs.size() - 1) eqs_str += ",";
-            }
-            eqs_str += "]";
-
-            std::string vars_str = "[";
-            for (size_t i = 0; i < target_vars.size(); ++i) {
-                vars_str += target_vars[i];
-                if (i < target_vars.size() - 1) vars_str += ",";
-            }
-            vars_str += "]";
-
-            std::string giacCmd = "latex(csolve(" + eqs_str + ", " + vars_str + "))";
-            std::string rawResult = evaluateWithGiac(giacCmd);
-
-            // 4. 交给 FormatUtils 进行降维美化
-            result_msg = formatEquationResult(rawResult, target_vars);
-            applyGlobalUIFormatting(result_msg);
-
-            napi_value result;
-            napi_create_string_utf8(env, result_msg.c_str(), NAPI_AUTO_LENGTH, &result);
-            return result;
         }
 
         // 非方程模式，继续原有的标准解析流程
