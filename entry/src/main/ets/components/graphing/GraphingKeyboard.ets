@@ -146,6 +146,9 @@ export struct BottomKeyItem {
   btn: string | Resource = '';
   @Link isShift: boolean;
   @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
+
+  customRadius?: number = 16;
+
   onKeyPress: (btn: string | Resource) => void = () => {};
   onMenuSelect: (actionCode: string) => void = () => {};
 
@@ -175,7 +178,7 @@ export struct BottomKeyItem {
         }
       }
       .type(ButtonType.Normal)
-      .borderRadius(16)
+      .borderRadius(this.customRadius)
       .width('100%')
       .height('100%')
       .padding({ left: 4, right: 4 })
@@ -208,6 +211,11 @@ export struct DomainKeyboard {
   // 暴露给外部的回调，专门处理点击事件
   onKeyPress: (btn: string | Resource) => void = () => {};
 
+  // --- 获取全局状态 ---
+  @StorageProp('navBarHeight') navBarHeight: number = 0; // 用于底部避让
+  @StorageProp('vibrationCurve') vibrationCurve: number = 0; // 震动反馈参数
+  @StorageProp('hapticFeedback') hapticFeedback: boolean = true; // 震动开关
+
   build() {
     Column() {
       Grid() {
@@ -215,11 +223,17 @@ export struct DomainKeyboard {
           GridItem() {
             BottomKeyItem({
               btn: btn,
-              isShift: $isShift, // 传入本地的占位状态
-              onKeyPress: this.onKeyPress
+              isShift: $isShift,
+              customRadius: 36,
+              onKeyPress: (b: string | Resource) => {
+                let action = getActionId(b);
+                HapticUtils.playVibration(action, this.hapticFeedback, this.vibrationCurve);
+
+                // 将点击事件向上传递给控制器
+                this.onKeyPress(b);
+              }
             })
           }
-          // 如果是 '0' 键，从第0列跨越到第1列（占据两格）
           .columnStart(btn === '0' ? 0 : undefined)
           .columnEnd(btn === '0' ? 1 : undefined)
         }, (btn: string | Resource) => typeof btn === 'string' ? btn : 'icon_backspace')
@@ -230,9 +244,11 @@ export struct DomainKeyboard {
       .rowsGap(8)
       .width('100%')
       .height(260)
-      .padding({ left: 8, right: 8, top: 8, bottom: 8 })
-      .backgroundColor($r('sys.color.comp_background_tertiary'))
+      .padding({ left: 10, right: 10, top: 12, bottom: 8 })
     }
     .width('100%')
+    .backgroundColor($r('sys.color.comp_background_primary'))
+    .borderRadius({ topLeft: 36, topRight: 36 })
+    .padding({ bottom: this.navBarHeight - 16})
   }
 }
