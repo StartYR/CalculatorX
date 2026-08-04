@@ -212,7 +212,7 @@ export struct GraphingEditSheet {
     })
   }
 
-  // --- ✅ 强制绑定上下文的箭头函数属性（补回刚才丢失的函数） ---
+  // --- 强制绑定上下文的箭头函数属性 ---
   private syncDomainValue = (fallback: number = Number.NaN) => {
     if (this.editDomainIndex >= 0 && this.editDomainIndex < this.functionList.length) {
       let item = this.functionList[this.editDomainIndex];
@@ -229,8 +229,36 @@ export struct GraphingEditSheet {
       this.saveFunctions();
     }
   }
+
+  // --- 定义域获取焦点时的综合调度函数 ---
+  private handleDomainFocus = (index: number, field: 'tMin' | 'tMax', item: GraphFunctionItem) => {
+    // 1. 互斥逻辑：如果主键盘正开着，立刻保存数据并收起主键盘！
+    if (this.isKeyboardShow) {
+      let magicId = this.activeIndex + (this.activeSubTarget * 10000);
+      getContext(this).eventHub.emit('request_graphing_data', magicId);
+      this.isKeyboardShow = false;
+    }
+
+    // 2. 状态交接：激活小键盘
+    this.editDomainIndex = index;
+    this.editDomainField = field;
+    this.editDomainStr = (field === 'tMin' ? item.tMin : item.tMax)?.toString() || '0';
+
+    // 3. 体验拉满：像主键盘一样，让被点击的小键盘卡片也丝滑置顶！
+    setTimeout(() => {
+      this.listScroller.scrollToIndex(index, true, ScrollAlign.START);
+    }, 100);
+  }
+
   // 焦点切换辅助函数
   private switchEditorFocus(index: number, subTarget: number, targetLatex: string) {
+    // --- 互斥：如果小键盘正开着，强制让它失去焦点并收起 ---
+    if (this.editDomainIndex !== -1) {
+      let activeController = this.editDomainField === 'tMin' ? this.tMinControllers[this.editDomainIndex] : this.tMaxControllers[this.editDomainIndex];
+      activeController?.stopEditing();
+      this.editDomainIndex = -1;
+    }
+
     if (this.activeIndex === index && this.activeSubTarget === subTarget && this.isKeyboardShow) return;
     if (this.isKeyboardShow) {
       // 冻结即将失去焦点的状态
@@ -420,18 +448,14 @@ export struct GraphingEditSheet {
                           .width(60).height(28).fontSize(14).textAlign(TextAlign.Center)
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
                           .customKeyboard(this.DomainKeyboardBuilder())
-                          .onFocus(() => {
-                            this.editDomainIndex = index;
-                            this.editDomainField = 'tMin';
-                            this.editDomainStr = item.tMin?.toString() || '0';
-                          })
+                          .onFocus(() => { this.handleDomainFocus(index, 'tMin', item); })
                           .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
                             this.currentCaretStart = selectionStart;
                             this.currentCaretEnd = selectionEnd;
                           })
 
                         Text(" ≤ t ≤ ")
-                          .fontColor($r('sys.color.font_secondary')).fontSize(14)
+                          .fontColor($r('sys.color.font_secondary')).fontSize(14).fontFamily('Cambria Math')
 
                         TextInput({
                           text: (this.editDomainIndex === index && this.editDomainField === 'tMax') ? this.editDomainStr : item.tMax?.toString(),
@@ -440,11 +464,7 @@ export struct GraphingEditSheet {
                           .width(60).height(28).fontSize(14).textAlign(TextAlign.Center)
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
                           .customKeyboard(this.DomainKeyboardBuilder())
-                          .onFocus(() => {
-                            this.editDomainIndex = index;
-                            this.editDomainField = 'tMax';
-                            this.editDomainStr = item.tMax?.toString() || '0';
-                          })
+                          .onFocus(() => { this.handleDomainFocus(index, 'tMax', item); })
                           .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
                             this.currentCaretStart = selectionStart;
                             this.currentCaretEnd = selectionEnd;
@@ -486,18 +506,14 @@ export struct GraphingEditSheet {
                           .width(60).height(28).fontSize(14).textAlign(TextAlign.Center)
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
                           .customKeyboard(this.DomainKeyboardBuilder())
-                          .onFocus(() => {
-                            this.editDomainIndex = index;
-                            this.editDomainField = 'tMin';
-                            this.editDomainStr = item.tMin?.toString() || '0';
-                          })
+                          .onFocus(() => { this.handleDomainFocus(index, 'tMin', item); })
                           .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
                             this.currentCaretStart = selectionStart;
                             this.currentCaretEnd = selectionEnd;
                           })
 
                         Text(" ≤ θ ≤ ")
-                          .fontColor($r('sys.color.font_secondary')).fontSize(14)
+                          .fontColor($r('sys.color.font_secondary')).fontSize(14).fontFamily('Cambria Math')
 
                         TextInput({
                           text: (this.editDomainIndex === index && this.editDomainField === 'tMax') ? this.editDomainStr : item.tMax?.toString(),
@@ -506,11 +522,7 @@ export struct GraphingEditSheet {
                           .width(60).height(28).fontSize(14).textAlign(TextAlign.Center)
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
                           .customKeyboard(this.DomainKeyboardBuilder())
-                          .onFocus(() => {
-                            this.editDomainIndex = index;
-                            this.editDomainField = 'tMax';
-                            this.editDomainStr = item.tMax?.toString() || '0';
-                          })
+                          .onFocus(() => { this.handleDomainFocus(index, 'tMax', item); })
                           .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
                             this.currentCaretStart = selectionStart;
                             this.currentCaretEnd = selectionEnd;
@@ -664,7 +676,7 @@ export struct GraphingEditSheet {
           ListItem() {
             Row()
               .width('100%')
-              .height(this.isKeyboardShow ? 520 : 24)
+              .height(this.isKeyboardShow ? 520 : (this.editDomainIndex !== -1 ? 270 : 16))
           }
         }
         .layoutWeight(1)
