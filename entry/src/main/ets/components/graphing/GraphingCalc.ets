@@ -286,9 +286,9 @@ export struct GraphingCalc {
                     }
                   }
                 } else if (item.type === FunctionType.POINT) {
-                  // --- 坐标点 (x,y) 双行布局 ---
+                  // --- 坐标点 (x,y) ---
                   Row() {
-                    Text("( ")
+                    Text("(")
                       .fontSize(20)
                       .fontFamily('Cambria Math')
                       .fontColor($r('sys.color.font_primary'))
@@ -328,7 +328,7 @@ export struct GraphingCalc {
                         .fontStyle(FontStyle.Italic)
                     }
 
-                    Text(" )")
+                    Text(")")
                       .fontSize(20)
                       .fontFamily('Cambria Math')
                       .fontColor($r('sys.color.font_primary'))

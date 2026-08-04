@@ -121,7 +121,7 @@ export struct GraphingEditSheet {
   private switchEditorFocus(index: number, subTarget: number, targetLatex: string) {
     if (this.activeIndex === index && this.activeSubTarget === subTarget && this.isKeyboardShow) return;
     if (this.isKeyboardShow) {
-      // 🔒 核心修复：冻结即将失去焦点的状态！
+      // 冻结即将失去焦点的状态
       let magicId = this.activeIndex + (this.activeSubTarget * 10000);
       getContext(this).eventHub.emit('request_graphing_data', magicId);
     }
@@ -150,7 +150,7 @@ export struct GraphingEditSheet {
           id: Date.now().toString(),
           type: type,
           latex: '', base64: '', latex2: '', base64_2: '',
-          tMin: -10, tMax: 10, // 默认参数范围 0 到 2π
+          tMin: -10, tMax: 10, // 默认参数范围
           color: nextColor, isVisible: true
         });
 
@@ -178,10 +178,9 @@ export struct GraphingEditSheet {
       .width(40)
       .height(40)
       .backgroundColor('#FF3B30')
-      .shadow({ radius: 8, color: '#33FF3B30', offsetY: 4 }) // 增加悬浮阴影
+      .shadow({ radius: 8, color: '#33FF3B30', offsetY: 4 }) // 悬浮阴影
       .onClick(() => {
         if (this.functionList.length > 1) {
-          // 引入 UniversalHistoryList 同款摩擦力弹簧动画
           animateTo({ duration: 350, curve: Curve.Friction }, () => {
             this.functionList.splice(index, 1);
             if (this.activeIndex >= this.functionList.length) {
@@ -198,7 +197,6 @@ export struct GraphingEditSheet {
   }
 
   build() {
-    // ==================== 终极重构：Stack 层叠布局 + Translate 动画 ====================
     Stack({ alignContent: Alignment.Bottom }) {
 
       // ---------- 第 1 层：全屏列表与顶部标题 ----------
@@ -227,14 +225,14 @@ export struct GraphingEditSheet {
                       id: item.id,
                       color: item.color,
                       isVisible: !item.isVisible, // 唯一改变的状态
-                      type: item.type,            // 必须带上类型
+                      type: item.type,            // 类型
                       latex: item.latex,
                       base64: item.base64,
                       ast: item.ast,
-                      latex2: item.latex2,        // 必须带上第二表达式
+                      latex2: item.latex2,        // 第二表达式
                       base64_2: item.base64_2,
                       ast2: item.ast2,
-                      tMin: item.tMin,            // 必须带上定义域
+                      tMin: item.tMin,            // 定义域
                       tMax: item.tMax
                     };
                     this.functionList[index] = newItem;
@@ -288,7 +286,7 @@ export struct GraphingEditSheet {
                       .width('100%')
                       .justifyContent(FlexAlign.Start)
                       .onClick((event) => {
-                        // 点 y(t) 时，不要触发下方外层的 ListItem 点击事件
+                        // 点 y(t) 时，不触发下方外层的 ListItem 点击事件
                         this.switchEditorFocus(index, 1, item.latex2 || '');
                       })
 
@@ -363,7 +361,7 @@ export struct GraphingEditSheet {
                           .height(28)
                           .fontSize(14)
                           .fontFamily('Cambria Math')
-                          .type(InputType.Normal) // 继承参数方程的完美键盘设置
+                          .type(InputType.Normal)
                           .textAlign(TextAlign.Center)
                           .padding({ top: 0, bottom: 0, left: 4, right: 4 })
                           .onChange((val) => { item.tMin = parseFloat(val) || 0; this.saveFunctions(); })
