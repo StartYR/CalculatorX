@@ -418,6 +418,11 @@ export struct GraphingEditSheet {
         this.saveFunctions();
         getContext(this).eventHub.emit('wake_web_engines');
         getContext(this).eventHub.emit('load_latex_to_editor', '');
+
+        // 滑动到顶端
+        setTimeout(() => {
+          this.listScroller.scrollToIndex(this.activeIndex, true, ScrollAlign.START);
+        }, 100);
       }
     }),
     alignment: DialogAlignment.Center,
