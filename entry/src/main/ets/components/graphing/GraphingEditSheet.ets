@@ -9,7 +9,7 @@
 import { FormulaScreen } from '../FormulaScreen';
 import { GRAPHING_COLORS, getActionId } from '../../utils/CalculatorConfigs';
 import { GraphFunctionItem, FunctionType } from './GraphingTypes';
-import { TopKeyItem, BottomKeyItem, topButtons, bottomButtons, DomainKeyboard } from './GraphingKeyboard';
+import { TopKeyItem, BottomKeyItem, getDynamicTopButtons, bottomButtons, DomainKeyboard } from './GraphingKeyboard';
 import { LengthMetrics } from '@kit.ArkUI';
 
 const MAX_FUNCTIONS = 10; // 面板支持的最大函数数量上限
@@ -152,6 +152,20 @@ export struct GraphingEditSheet {
 
   aboutToDisappear() {
     getContext(this).eventHub.off('force_close_domain_keyboard');
+  }
+
+  // 键盘动态布局辅助函数
+  private getActiveFunctionType(): FunctionType | undefined {
+    if (this.activeIndex >= 0 && this.activeIndex < this.functionList.length) {
+      return this.functionList[this.activeIndex].type;
+    }
+    return undefined;
+  }
+
+  private isSingleVariableMode(): boolean {
+    let type = this.getActiveFunctionType();
+    // 显函数、参数方程、极坐标，拉长占位变量
+    return type === FunctionType.NORMAL || type === FunctionType.PARAMETRIC || type === FunctionType.POLAR;
   }
 
   // ==================== 核心构建器 (Builder) 提取 ====================
@@ -599,15 +613,21 @@ export struct GraphingEditSheet {
           .backgroundColor($r('sys.color.comp_background_primary'))
 
         Grid() {
-          ForEach(topButtons, (btn: string | Resource, index: number) => {
-            GridItem() {
-              TopKeyItem({
-                btn: btn, btnIndex: index, isShift: $isShift,
-                onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
-                onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
-              })
+          ForEach(getDynamicTopButtons(this.getActiveFunctionType()), (btn: string | Resource, index: number) => {
+            // 💡 核心防线：如果是单变量模式，强行丢弃第 17 位的空占位符，防止高度坍塌
+            if (!(index === 17 && this.isSingleVariableMode())) {
+              GridItem() {
+                TopKeyItem({
+                  btn: btn, btnIndex: index, isShift: $isShift,
+                  onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
+                  onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
+                })
+              }
+              // 💡 视觉魔法触发：如果是单一未知数，强行横跨第 4 和第 5 列！
+              .columnStart((index === 16 && this.isSingleVariableMode()) ? 4 : undefined)
+              .columnEnd((index === 16 && this.isSingleVariableMode()) ? 5 : undefined)
+              .zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
             }
-            .zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
           })
         }
         .rowsTemplate('33fr 40fr 40fr')

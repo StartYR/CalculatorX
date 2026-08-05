@@ -5,7 +5,6 @@
  * @author 易睿 (Yi Rui)
  * @date 2026/8/3 19:46
  */
-
 import { HapticUtils } from '../../utils/HapticUtils';
 import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } from '../../utils/CalculatorConfigs';
 import { PreferenceConfigs } from '../../utils/CalculatorConfigs';
@@ -14,18 +13,40 @@ import {
   icon_power, icon_fraction, icon_abs, icon_backspace
 } from '../../utils/CalculatorConfigs';
 import { KeyGestureWrapper } from '../common/KeyGestureWrapper';
+import { FunctionType } from './GraphingTypes'; // 引入函数类型进行动态感知
 
 // ==================== 按键布局配置 ====================
+
+// Shift 层：移除了固定的 t 和 θ，将最后两个坑位彻底留空，维持矩阵稳定
 export const topShiftButtons: Array<string | Resource> = [
   '', '', '', '', '', '',
-  icon_sqrt3, icon_abs, icon_power3, 'y', 't', 'θ',
+  icon_sqrt3, icon_abs, icon_power3, '', '', 'lg',
   'sin⁻¹', 'cos⁻¹', 'tan⁻¹', '', '', ''
 ];
-export const topButtons: Array<string | Resource> = [
-  '⇧Shift', '(', '⇦', '⇨', ')', '关闭',
-  icon_sqrt, icon_sqrtx, icon_power2, icon_power,icon_fraction, 'x',
-  'sin', 'cos', 'tan', 'log', 'ln', 'lg'
-];
+
+// 核心新增：基于当前激活的函数类型，动态生成主键盘矩阵
+export function getDynamicTopButtons(type: FunctionType | undefined): Array<string | Resource> {
+  const base: Array<string | Resource> = [
+    '⇧Shift', '(', '⇦', '⇨', ')', '关闭',
+    icon_sqrt, icon_sqrtx, icon_power2, icon_power,'log', 'ln',
+    'sin', 'cos', 'tan', icon_fraction
+  ];
+
+  switch(type) {
+    case FunctionType.PARAMETRIC:
+      return [...base, 't', '']; // 独占 t
+    case FunctionType.POLAR:
+      return [...base, 'θ', '']; // 独占 θ
+    case FunctionType.IMPLICIT:
+      return [...base, 'x', 'y']; // 双未知数拉满
+    case FunctionType.POINT:
+      return [...base, '', '']; // 纯净点坐标，清空未知数
+    case FunctionType.NORMAL:
+    default:
+      return [...base, 'x', '']; // 默认普通函数独占 x
+  }
+}
+
 export const bottomButtons: Array<string | Resource> = [
   '7', '8', '9', icon_backspace, 'AC',
   '4', '5', '6', '×', '÷',
@@ -48,6 +69,7 @@ function getLocalBgColor(btn: string | Resource, isShift: boolean): ResourceColo
 
 function getLocalFontSize(btn: string | Resource): number {
   if (btn === 'π' || btn === 'e') return getFontSize('0');
+  if (btn === 't' || btn === 'θ' || btn === 'x' || btn === 'y') return getFontSize('0');
   return getFontSize(btn);
 }
 
@@ -66,16 +88,17 @@ export struct TopKeyItem {
 
   build() {
     Column() {
+      // 顶部 Shift 标识渲染逻辑
       if (this.btnIndex >= 6) {
         Row() {
-          if (typeof topShiftButtons[this.btnIndex] === 'string') {
+          if (typeof topShiftButtons[this.btnIndex] === 'string' && topShiftButtons[this.btnIndex] !== '') {
             Text(topShiftButtons[this.btnIndex] as string)
               .fontFamily(getFontFamily(topShiftButtons[this.btnIndex]))
               .fontSize(17)
               .fontColor('#ffac8100')
               .textAlign(TextAlign.Center)
               .width('100%')
-          } else {
+          } else if (typeof topShiftButtons[this.btnIndex] !== 'string') {
             Image(topShiftButtons[this.btnIndex] as Resource)
               .width(30)
               .height(30)
@@ -92,45 +115,57 @@ export struct TopKeyItem {
         Row().width('100%').height(6)
       }
 
+      // 主按键渲染逻辑
       Row() {
-        KeyGestureWrapper({
-          actionId: getLocalActionId(this.btn),
-          targetBtn: this.btn,
-          shiftBtn: topShiftButtons[this.btnIndex] || '',
-          moduleType: 'graphing',
-          isShiftMode: $isShift,
-          onKeyPress: this.onKeyPress,
-          onMenuSelect: this.onMenuSelect
-        }) {
-          Button() {
-            if (typeof this.btn === 'string') {
-              Text(this.btn)
-                .fontFamily(getFontFamily(this.btn))
-                .fontSize(getLocalFontSize(this.btn))
-                .fontWeight(FontWeight.Medium)
-                .fontColor(getLocalFontColor(this.btn))
-            } else {
-              Image(this.btn)
-                .width(36)
-                .height(36)
-                .fillColor($r('sys.color.font_secondary'))
-                .draggable(false)
+        if (this.btn === '') {
+          // 遇到空字符串时，渲染一个透明、禁用的占位符
+          Button()
+            .type(ButtonType.Normal)
+            .borderRadius(12)
+            .width('100%')
+            .height('100%')
+            .backgroundColor(Color.Transparent)
+            .stateEffect(false)
+        } else {
+          KeyGestureWrapper({
+            actionId: getLocalActionId(this.btn),
+            targetBtn: this.btn,
+            shiftBtn: topShiftButtons[this.btnIndex] || '',
+            moduleType: 'graphing',
+            isShiftMode: $isShift,
+            onKeyPress: this.onKeyPress,
+            onMenuSelect: this.onMenuSelect
+          }) {
+            Button() {
+              if (typeof this.btn === 'string') {
+                Text(this.btn)
+                  .fontFamily(getFontFamily(this.btn))
+                  .fontSize(getLocalFontSize(this.btn))
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor(getLocalFontColor(this.btn))
+              } else {
+                Image(this.btn)
+                  .width(36)
+                  .height(36)
+                  .fillColor($r('sys.color.font_secondary'))
+                  .draggable(false)
+              }
             }
+            .type(ButtonType.Normal)
+            .borderRadius(12)
+            .width('100%')
+            .height('100%')
+            .padding({ left: 2, right: 2 })
+            .backgroundColor(getLocalBgColor(this.btn, this.isShift))
+            .shadow(ShadowStyle.OUTER_DEFAULT_SM)
+            .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
+            .borderColor($r('app.color.btn_highlight'))
+            .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
+            .stateStyles({
+              pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
+              normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
+            })
           }
-          .type(ButtonType.Normal)
-          .borderRadius(12)
-          .width('100%')
-          .height('100%')
-          .padding({ left: 2, right: 2 })
-          .backgroundColor(getLocalBgColor(this.btn, this.isShift))
-          .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-          .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
-          .borderColor($r('app.color.btn_highlight'))
-          .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
-          .stateStyles({
-            pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
-            normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
-          })
         }
       }
       .width('100%')
