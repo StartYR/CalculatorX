@@ -370,11 +370,13 @@ export struct GraphingCalc {
             .borderRadius(12)
             .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 12 })
             .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
+            .hitTestBehavior(HitTestMode.None)
           }
         }, (item: GraphFunctionItem) => `${item.id}_${item.latex}_${item.base64.length}_${item.isVisible}_${item.latex2 || ''}_${item.base64_2?.length || 0}`)
       }
       .alignItems(HorizontalAlign.Start)
       .margin({ top: 80, left: 12 })
+      .hitTestBehavior(HitTestMode.None)
     }
     .width('100%')
     .height('100%')
