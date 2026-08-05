@@ -665,11 +665,7 @@ export struct GraphingEditSheet {
       .padding({ bottom: this.navBarHeight - 8})
       .borderRadius({ topLeft: 24, topRight: 24 })
       .clip(true)
-      .border({
-        width: { top: 1, left: 0.5, right: 0.5 },
-        color: $r('sys.color.comp_divider'),
-        radius: { topLeft: 24, topRight: 24 }
-      })
+      .shadow({ radius: 16, color: '#1A000000', offsetY: -12 })
       // 根据状态控制键盘物理隐退与展出
       .translate({ y: this.isKeyboardShow ? 0 : '100%' })
       .animation({ duration: 300, curve: Curve.FastOutSlowIn })

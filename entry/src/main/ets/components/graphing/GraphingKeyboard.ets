@@ -285,6 +285,7 @@ export struct DomainKeyboard {
     .backgroundColor(Color.Transparent)
     .backgroundBlurStyle(BlurStyle.Thin)
     .borderRadius({ topLeft: 36, topRight: 36 })
+    .shadow({ radius: 16, color: '#1A000000', offsetY: -12 })
     .padding({ bottom: this.navBarHeight - 16})
   }
 }
