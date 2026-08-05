@@ -623,7 +623,7 @@ export struct GraphingEditSheet {
                   onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
                 })
               }
-              // 💡 视觉魔法触发：如果是单一未知数，强行横跨第 4 和第 5 列！
+              // 如果是单一未知数，横跨第 4 和第 5 列
               .columnStart((index === 16 && this.isSingleVariableMode()) ? 4 : undefined)
               .columnEnd((index === 16 && this.isSingleVariableMode()) ? 5 : undefined)
               .zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
@@ -663,6 +663,13 @@ export struct GraphingEditSheet {
       .width('100%')
       .backgroundColor($r('sys.color.comp_background_primary'))
       .padding({ bottom: this.navBarHeight - 8})
+      .borderRadius({ topLeft: 24, topRight: 24 })
+      .clip(true)
+      .border({
+        width: { top: 1, left: 0.5, right: 0.5 },
+        color: $r('sys.color.comp_divider'),
+        radius: { topLeft: 24, topRight: 24 }
+      })
       // 根据状态控制键盘物理隐退与展出
       .translate({ y: this.isKeyboardShow ? 0 : '100%' })
       .animation({ duration: 300, curve: Curve.FastOutSlowIn })
