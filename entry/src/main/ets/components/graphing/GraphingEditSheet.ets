@@ -439,15 +439,27 @@ export struct GraphingEditSheet {
       .backgroundColor('#FF3B30')
       .shadow({ radius: 8, color: '#33FF3B30', offsetY: 4 })
       .onClick(() => {
-        if (this.functionList.length > 1) {
-          animateTo({ duration: 350, curve: Curve.Friction }, () => {
-            this.functionList.splice(index, 1);
-            if (this.activeIndex >= this.functionList.length) {
-              this.activeIndex = this.functionList.length - 1;
+        // 允许完全清空列表
+        animateTo({ duration: 350, curve: Curve.Friction }, () => {
+          this.functionList.splice(index, 1);
+
+          // 边界：如果列表空了，全面重置状态并收起键盘
+          if (this.functionList.length === 0) {
+            this.activeIndex = -1;
+            this.isKeyboardShow = false;
+
+            // 互斥安全：确保定义域小键盘也被强制收起
+            if (this.editDomainIndex !== -1) {
+              this.editDomainIndex = -1;
+              this.isSmallKeyboardShow = false;
             }
-          });
-          this.saveFunctions();
-        }
+          }
+          // 如果删除了最后一个元素但列表没空，焦点回退一位
+          else if (this.activeIndex >= this.functionList.length) {
+            this.activeIndex = this.functionList.length - 1;
+          }
+        });
+        this.saveFunctions(); // 数据持久化落盘
       })
     }
     .height('100%')
