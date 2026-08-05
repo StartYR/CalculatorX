@@ -15,8 +15,8 @@ const basicButtons: Array<string | Resource> = [
   '÷', '×', icon_backspace, 'AC',
   '7', '8', '9', '−',
   '4', '5', '6', '+',
-  '1', '2', '3', '',
-  '.', '0', '%', '='
+  '1', '2', '3', '=',
+  '.', '0', '%', ''
 ];
 
 // 字体大小
@@ -118,12 +118,19 @@ export struct BasicCalc {
 
       Column() {
         Grid() {
-          ForEach(basicButtons, (btn: string | Resource) => {
-            GridItem() {
-              BasicKeyItem({
-                btn: btn,
-                onKeyPress: (b: string | Resource): void => { this.handleKeyPress(b); }
-              })
+          ForEach(basicButtons, (btn: string | Resource, index: number) => {
+            if (btn !== '') {
+              GridItem() {
+                BasicKeyItem({
+                  btn: btn,
+                  onKeyPress: (b: string | Resource): void => {
+                    this.handleKeyPress(b);
+                  }
+                })
+              }
+              // 如果是等号 (索引 15)，强制其纵向跨越第 4 行和第 5 行 (索引从 0 开始：3 到 4)
+              .rowStart(index === 15 ? 3 : undefined)
+              .rowEnd(index === 15 ? 4 : undefined)
             }
           })
         }
