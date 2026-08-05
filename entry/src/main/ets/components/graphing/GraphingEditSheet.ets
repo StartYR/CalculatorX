@@ -1,19 +1,18 @@
 /**
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
  * @file GraphingEditSheet.ets
- * @description 图形计算器编辑面板组件：管理函数列表、键盘坞以及编辑交互
+ * @description 图形计算器编辑面板：管理函数列表、状态流转及键盘交互中枢
  * @author 易睿 (Yi Rui)
  * @date 2026/8/3 19:46
  */
 
 import { FormulaScreen } from '../FormulaScreen';
 import { GRAPHING_COLORS, getActionId } from '../../utils/CalculatorConfigs';
-import { GraphFunctionItem } from './GraphingTypes';
+import { GraphFunctionItem, FunctionType } from './GraphingTypes';
 import { TopKeyItem, BottomKeyItem, topButtons, bottomButtons, DomainKeyboard } from './GraphingKeyboard';
-import { FunctionType } from './GraphingTypes';
 import { LengthMetrics } from '@kit.ArkUI';
 
-const MAX_FUNCTIONS = 10; // 最大支持添加的函数数量
+const MAX_FUNCTIONS = 10; // 面板支持的最大函数数量上限
 
 function getLocalActionId(btn: string | Resource): string {
   return getActionId(btn);
@@ -43,10 +42,10 @@ export struct FunctionTypeDialog {
             .borderRadius(12)
             .onClick(() => {
               this.onTypeSelected(FunctionType.NORMAL);
-              this.controller?.close(); // 极致效率：点击即关闭并执行
+              this.controller?.close(); // 极致效率：点击即关闭并执行回调
             })
         }
-        // 极坐标
+
         ListItem() {
           Button("极坐标方程 r(θ)", { type: ButtonType.Normal })
             .width('100%')
@@ -59,7 +58,7 @@ export struct FunctionTypeDialog {
               this.controller?.close();
             })
         }
-        // 参数方程
+
         ListItem() {
           Button("参数方程 x(t), y(t)", { type: ButtonType.Normal })
             .width('100%')
@@ -72,7 +71,7 @@ export struct FunctionTypeDialog {
               this.controller?.close();
             })
         }
-        // 隐函数
+
         ListItem() {
           Button("隐函数 f(x,y)", { type: ButtonType.Normal })
             .width('100%')
@@ -85,7 +84,7 @@ export struct FunctionTypeDialog {
               this.controller?.close();
             })
         }
-        // 点
+
         ListItem() {
           Button("点 (x, y)", { type: ButtonType.Normal })
             .width('100%')
@@ -108,11 +107,12 @@ export struct FunctionTypeDialog {
   }
 }
 
+// ==================== 主编辑面板组件 ====================
 @Component
 export struct GraphingEditSheet {
   @Link functionList: GraphFunctionItem[];
   @Link activeIndex: number;
-  @Link activeSubTarget: number; // 接收子焦点状态
+  @Link activeSubTarget: number; // 焦点追踪：0为主表达式，1为第二表达式
   @Link isKeyboardShow: boolean;
   @Link isSmallKeyboardShow: boolean;
   @Link isShift: boolean;
@@ -122,9 +122,22 @@ export struct GraphingEditSheet {
   @State editDomainIndex: number = -1;
   @State editDomainField: 'tMin' | 'tMax' | '' = '';
   @State editDomainStr: string = '';
-  // 追踪光标位置
-  @State currentCaretStart: number = 0;
-  @State currentCaretEnd: number = 0;
+  @State currentCaretStart: number = 0; // 光标起始追踪
+  @State currentCaretEnd: number = 0;   // 光标结束追踪
+
+  // 扩展到 10 个控制器，完美匹配 MAX_FUNCTIONS 的上限，杜绝越界崩溃
+  private tMinControllers: TextInputController[] = [
+    new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController(),
+    new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController()
+  ];
+  private tMaxControllers: TextInputController[] = [
+    new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController(),
+    new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController()
+  ];
+
+  @StorageProp('navBarHeight') navBarHeight: number = 0;
+  @StorageProp('activeBubbleId') activeBubbleId: string = '';
+  private listScroller: Scroller = new Scroller();
 
   aboutToAppear() {
     getContext(this).eventHub.on('force_close_domain_keyboard', () => {
@@ -141,22 +154,95 @@ export struct GraphingEditSheet {
     getContext(this).eventHub.off('force_close_domain_keyboard');
   }
 
-  // 扩展到 10 个控制器，完美匹配 MAX_FUNCTIONS 的上限，杜绝越界崩溃
-  private tMinControllers: TextInputController[] = [
-    new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController(),
-    new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController()
-  ];
-  private tMaxControllers: TextInputController[] = [
-    new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController(),
-    new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController(), new TextInputController()
-  ];
+  // ==================== 核心构建器 (Builder) 提取 ====================
 
-  @StorageProp('navBarHeight') navBarHeight: number = 0;
-  @StorageProp('activeBubbleId') activeBubbleId: string = '';
+  /**
+   * @description 通用表达式输入行构建器
+   * @param label 表达式前缀标签 (如 "x(t) = ")
+   * @param base64Data 表达式渲染生成的图片数据
+   * @param subTarget 焦点目标索引 (0 or 1)
+   * @param placeholder 缺省时的占位提示文案
+   * @param targetLatex 目标编辑器的底层 LaTeX 源码
+   * @param index 当前卡片在列表中的索引
+   */
+  @Builder
+  ExpressionRowBuilder(label: string, base64Data: string | undefined, subTarget: number, placeholder: string, targetLatex: string, index: number) {
+    Row() {
+      Text(label)
+        .fontColor($r('sys.color.font_primary'))
+        .fontSize(22)
+        .fontFamily('Cambria Math')
+        .fontWeight(FontWeight.Medium)
+      if (base64Data) {
+        Image(base64Data)
+          .height(36)
+          .objectFit(ImageFit.Contain)
+          .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
+      } else {
+        Text((this.activeIndex === index && this.activeSubTarget === subTarget && this.isKeyboardShow) ? "正在编辑..." : placeholder)
+          .fontColor($r('sys.color.font_secondary'))
+          .height(36)
+      }
+    }
+    .width('100%')
+    .justifyContent(FlexAlign.Start)
+    .onClick(() => {
+      this.switchEditorFocus(index, subTarget, targetLatex || '');
+    })
+  }
 
-  private listScroller: Scroller = new Scroller();
+  /**
+   * @description 通用定义域输入行构建器
+   * @param variableSymbol 变量符号 (如 "t" 或 "θ")
+   * @param item 当前函数的完整数据对象
+   * @param index 当前卡片在列表中的索引
+   */
+  @Builder
+  DomainRowBuilder(variableSymbol: string, item: GraphFunctionItem, index: number) {
+    Row() {
+      Text("定义域: ").fontColor($r('sys.color.font_secondary')).fontSize(14)
 
-  // --- 纯净小键盘的构建函数 (带防并发篡改的光标追踪) ---
+      TextInput({
+        text: (this.editDomainIndex === index && this.editDomainField === 'tMin') ? this.editDomainStr : item.tMin?.toString(),
+        controller: this.tMinControllers[index]
+      })
+        .width(60).height(28).fontSize(14).textAlign(TextAlign.Center)
+        .padding({ top: 0, bottom: 0, left: 4, right: 4 })
+        .customKeyboard(this.DomainKeyboardBuilder())
+        .onFocus(() => { this.handleDomainFocus(index, 'tMin', item); })
+        .onBlur(() => {
+          this.editDomainIndex = -1;
+          this.isSmallKeyboardShow = false;
+        })
+        .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
+          this.currentCaretStart = selectionStart;
+          this.currentCaretEnd = selectionEnd;
+        })
+
+      Text(` ≤ ${variableSymbol} ≤ `)
+        .fontColor($r('sys.color.font_secondary')).fontSize(14).fontFamily('Cambria Math')
+
+      TextInput({
+        text: (this.editDomainIndex === index && this.editDomainField === 'tMax') ? this.editDomainStr : item.tMax?.toString(),
+        controller: this.tMaxControllers[index]
+      })
+        .width(60).height(28).fontSize(14).textAlign(TextAlign.Center)
+        .padding({ top: 0, bottom: 0, left: 4, right: 4 })
+        .customKeyboard(this.DomainKeyboardBuilder())
+        .onFocus(() => { this.handleDomainFocus(index, 'tMax', item); })
+        .onBlur(() => {
+          this.editDomainIndex = -1;
+          this.isSmallKeyboardShow = false;
+        })
+        .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
+          this.currentCaretStart = selectionStart;
+          this.currentCaretEnd = selectionEnd;
+        })
+    }
+    .width('100%').justifyContent(FlexAlign.Start).margin({ top: 4 })
+  }
+
+  // --- 纯净小键盘构建器 (含防并发篡改的光标追踪机制) ---
   @Builder
   DomainKeyboardBuilder() {
     DomainKeyboard({
@@ -174,15 +260,15 @@ export struct GraphingEditSheet {
           this.syncDomainValue();
           setTimeout(() => { activeController?.caretPosition(1); }, 20);
         } else if (typeof btn !== 'string') {
-          // --- 光标感知的退格删除 ---
-          let targetCaret = this.currentCaretStart; // 锁死目标光标位置
+          // 光标感知的退格删除逻辑
+          let targetCaret = this.currentCaretStart;
 
           if (this.currentCaretStart === this.currentCaretEnd) {
             if (this.currentCaretStart > 0) {
               let startStr = this.editDomainStr.substring(0, this.currentCaretStart - 1);
               let endStr = this.editDomainStr.substring(this.currentCaretStart);
               this.editDomainStr = startStr + endStr;
-              targetCaret = this.currentCaretStart - 1; // 记录新的正确位置
+              targetCaret = this.currentCaretStart - 1;
             }
           } else {
             let startStr = this.editDomainStr.substring(0, this.currentCaretStart);
@@ -191,7 +277,6 @@ export struct GraphingEditSheet {
             targetCaret = this.currentCaretStart;
           }
 
-          // 同步状态
           this.currentCaretStart = targetCaret;
           this.currentCaretEnd = targetCaret;
 
@@ -201,11 +286,11 @@ export struct GraphingEditSheet {
             this.syncDomainValue();
           }
 
-          // 延迟 20ms 等待 ArkUI 渲染完毕，强制将光标拉回我们锁死的 targetCaret
+          // 延迟等待 ArkUI 渲染完毕，强制修正光标位置
           setTimeout(() => { activeController?.caretPosition(targetCaret); }, 20);
 
         } else {
-          // --- ✅ 光标感知的文本插入 ---
+          // 光标感知的文本插入逻辑
           let targetCaret = this.currentCaretStart;
           let insertStr = (btn === '−') ? '-' : (btn as string);
 
@@ -229,7 +314,12 @@ export struct GraphingEditSheet {
     })
   }
 
-  // --- 强制绑定上下文的箭头函数属性 ---
+  // ==================== 状态同步与焦点调度逻辑 ====================
+
+  /**
+   * @description 强制绑定上下文的定义域值同步
+   * @param fallback 解析失败时的兜底默认值
+   */
   private syncDomainValue = (fallback: number = Number.NaN) => {
     if (this.editDomainIndex >= 0 && this.editDomainIndex < this.functionList.length) {
       let item = this.functionList[this.editDomainIndex];
@@ -241,36 +331,38 @@ export struct GraphingEditSheet {
         item.tMax = val;
       }
 
-      // 强制触发列表刷新
-      this.functionList.splice(this.editDomainIndex, 1, item);
+      this.functionList.splice(this.editDomainIndex, 1, item); // 强制触发视图级刷新
       this.saveFunctions();
     }
   }
 
-  // --- 定义域获取焦点时的综合调度函数 ---
+  /**
+   * @description 定义域输入框获焦时的综合调度
+   */
   private handleDomainFocus = (index: number, field: 'tMin' | 'tMax', item: GraphFunctionItem) => {
-    // 1. 互斥逻辑：如果主键盘正开着，立刻保存数据并收起主键盘！
+    // 互斥：如果主键盘正开启，立刻保存数据并收起主键盘
     if (this.isKeyboardShow) {
       let magicId = this.activeIndex + (this.activeSubTarget * 10000);
       getContext(this).eventHub.emit('request_graphing_data', magicId);
       this.isKeyboardShow = false;
     }
 
-    // 2. 状态交接：激活小键盘
     this.editDomainIndex = index;
     this.editDomainField = field;
     this.editDomainStr = (field === 'tMin' ? item.tMin : item.tMax)?.toString() || '0';
     this.isSmallKeyboardShow = true;
 
-    // 3. 体验拉满：像主键盘一样，让被点击的小键盘卡片也丝滑置顶！
+    // 智能滚动对齐
     setTimeout(() => {
       this.listScroller.scrollToIndex(index, true, ScrollAlign.START);
     }, 100);
   }
 
-  // 焦点切换辅助函数
+  /**
+   * @description 主编辑器焦点切换核心逻辑
+   */
   private switchEditorFocus(index: number, subTarget: number, targetLatex: string) {
-    // --- 互斥：如果小键盘正开着，强制让它失去焦点并收起 ---
+    // 互斥：如果小键盘正开启，强制收起并失焦
     if (this.editDomainIndex !== -1) {
       let activeController = this.editDomainField === 'tMin' ? this.tMinControllers[this.editDomainIndex] : this.tMaxControllers[this.editDomainIndex];
       activeController?.stopEditing();
@@ -279,22 +371,24 @@ export struct GraphingEditSheet {
     }
 
     if (this.activeIndex === index && this.activeSubTarget === subTarget && this.isKeyboardShow) return;
+
+    // 冻结并保存即将失去焦点的编辑状态
     if (this.isKeyboardShow) {
-      // 冻结即将失去焦点的状态
       let magicId = this.activeIndex + (this.activeSubTarget * 10000);
       getContext(this).eventHub.emit('request_graphing_data', magicId);
     }
+
     this.activeIndex = index;
     this.activeSubTarget = subTarget;
     this.isKeyboardShow = true;
 
+    // 唤起底层 CAS 引擎链路并注入源码
     getContext(this).eventHub.emit('wake_web_engines');
     getContext(this).eventHub.emit('load_latex_to_editor', targetLatex || '');
 
     setTimeout(() => {
-      // 参数解释：目标索引, 是否使用平滑动画, 对齐方式(START 表示贴着屏幕顶部)
       this.listScroller.scrollToIndex(index, true, ScrollAlign.START);
-    }, 100); // 给 ArkUI 引擎 100 毫秒的时间去计算底部新撑开的高度
+    }, 100);
   }
 
   // 接收从外层传入的回调，保持原有逻辑调用形式不变
@@ -302,7 +396,7 @@ export struct GraphingEditSheet {
   handleButtonClick: (btn: string | Resource) => void = () => {};
   handleButtonLongPress: (actionCode: string) => void = () => {};
 
-  // 弹窗控制器的实例化
+  // 弹窗控制器初始化
   dialogController: CustomDialogController = new CustomDialogController({
     builder: FunctionTypeDialog({
       onTypeSelected: (type: FunctionType) => {
@@ -315,7 +409,7 @@ export struct GraphingEditSheet {
           id: Date.now().toString(),
           type: type,
           latex: '', base64: '', latex2: '', base64_2: '',
-          tMin: -10, tMax: 10, // 默认参数范围
+          tMin: -10, tMax: 10,
           color: nextColor, isVisible: true
         });
 
@@ -331,11 +425,11 @@ export struct GraphingEditSheet {
     customStyle: true
   });
 
+  // --- 左滑删除专属组件 ---
   @Builder
   DeleteAction(index: number) {
     Row() {
       Button({ type: ButtonType.Circle, stateEffect: true }) {
-        // 垃圾桶图标
         SymbolGlyph($r('sys.symbol.trash_fill'))
           .fontSize(24)
           .fontColor([Color.White])
@@ -343,7 +437,7 @@ export struct GraphingEditSheet {
       .width(40)
       .height(40)
       .backgroundColor('#FF3B30')
-      .shadow({ radius: 8, color: '#33FF3B30', offsetY: 4 }) // 悬浮阴影
+      .shadow({ radius: 8, color: '#33FF3B30', offsetY: 4 })
       .onClick(() => {
         if (this.functionList.length > 1) {
           animateTo({ duration: 350, curve: Curve.Friction }, () => {
@@ -352,21 +446,21 @@ export struct GraphingEditSheet {
               this.activeIndex = this.functionList.length - 1;
             }
           });
-          this.saveFunctions(); // 数据落盘
+          this.saveFunctions();
         }
       })
     }
     .height('100%')
-    .padding({ left: 16, right: 24 }) // 给删除按钮留出贴边的视觉缓冲
+    .padding({ left: 16, right: 24 })
     .justifyContent(FlexAlign.Center)
   }
 
+  // ==================== UI 渲染骨架 ====================
   build() {
     Stack({ alignContent: Alignment.Bottom }) {
 
       // ---------- 第 1 层：全屏列表与顶部标题 ----------
       Column() {
-        // 顶部指示区
         Row() {
           Text("编辑函数图像")
             .fontSize(20)
@@ -377,337 +471,92 @@ export struct GraphingEditSheet {
         .padding({ left: 24, right: 0, top: 24, bottom: 16 })
         .backgroundColor('rgba(255, 255, 255, 0.00)')
 
-        // 展示列表
         List({ space: 8, scroller: this.listScroller }) {
           ForEach(this.functionList, (item: GraphFunctionItem, index: number) => {
             ListItem() {
               Row() {
-                // 左侧颜色标识
+                // 左侧色彩与显隐控制单元
                 Circle({ width: 14, height: 14 })
                   .fill(item.isVisible ? item.color : $r('sys.color.comp_divider'))
                   .margin({ right: 14 })
                   .onClick(() => {
                     let newItem: GraphFunctionItem = {
-                      id: item.id,
-                      color: item.color,
+                      id: item.id, color: item.color, type: item.type,
                       isVisible: !item.isVisible, // 唯一改变的状态
-                      type: item.type,            // 类型
-                      latex: item.latex,
-                      base64: item.base64,
-                      ast: item.ast,
-                      latex2: item.latex2,        // 第二表达式
-                      base64_2: item.base64_2,
-                      ast2: item.ast2,
-                      tMin: item.tMin,            // 定义域
-                      tMax: item.tMax
+                      latex: item.latex, base64: item.base64, ast: item.ast,
+                      latex2: item.latex2, base64_2: item.base64_2, ast2: item.ast2,
+                      tMin: item.tMin, tMax: item.tMax
                     };
                     this.functionList[index] = newItem;
                     this.saveFunctions();
                   })
 
-                /// 右侧内容区
+                // 右侧动态表达式加载区 (重构后极其清爽的判断分支)
                 Column() {
                   if (item.type === FunctionType.PARAMETRIC) {
-                    // --- 参数方程：极其清晰的三排纵向布局 ---
                     Column({ space: 8 }) {
-                      // 1. x(t)
-                      Row() {
-                        Text("x(t) = ")
-                          .fontColor($r('sys.color.font_primary'))
-                          .fontSize(22)
-                          .fontFamily('Cambria Math')
-                          .fontWeight(FontWeight.Medium)
-                        if (item.base64) {
-                          Image(item.base64)
-                            .height(36)
-                            .objectFit(ImageFit.Contain)
-                            .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
-                        } else {
-                          Text((this.activeIndex === index && this.activeSubTarget === 0 && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑...")
-                            .fontColor($r('sys.color.font_secondary'))
-                            .height(36)
-                        }
-                      }
-                      .width('100%')
-                      .justifyContent(FlexAlign.Start)
-
-                      // 2. y(t)
-                      Row() {
-                        Text("y(t) = ")
-                          .fontColor($r('sys.color.font_primary'))
-                          .fontSize(22)
-                          .fontFamily('Cambria Math')
-                          .fontWeight(FontWeight.Medium)
-                        if (item.base64_2) {
-                          Image(item.base64_2)
-                            .height(36)
-                            .objectFit(ImageFit.Contain)
-                            .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
-                        } else {
-                          Text((this.activeIndex === index && this.activeSubTarget === 1 && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑...")
-                            .fontColor($r('sys.color.font_secondary'))
-                            .height(36)
-                        }
-                      }
-                      .width('100%')
-                      .justifyContent(FlexAlign.Start)
-                      .onClick((event) => {
-                        // 点 y(t) 时，不触发下方外层的 ListItem 点击事件
-                        this.switchEditorFocus(index, 1, item.latex2 || '');
-                      })
-
-                      // 3. 定义域
-                      Row() {
-                        Text("定义域: ").fontColor($r('sys.color.font_secondary')).fontSize(14)
-
-                        TextInput({
-                          text: (this.editDomainIndex === index && this.editDomainField === 'tMin') ? this.editDomainStr : item.tMin?.toString(),
-                          controller: this.tMinControllers[index]
-                        })
-                          .width(60).height(28).fontSize(14).textAlign(TextAlign.Center)
-                          .padding({ top: 0, bottom: 0, left: 4, right: 4 })
-                          .customKeyboard(this.DomainKeyboardBuilder())
-                          .onFocus(() => { this.handleDomainFocus(index, 'tMin', item); })
-                          .onBlur(() => {
-                            this.editDomainIndex = -1;
-                            this.isSmallKeyboardShow = false;
-                          })
-                          .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
-                            this.currentCaretStart = selectionStart;
-                            this.currentCaretEnd = selectionEnd;
-                          })
-
-                        Text(" ≤ t ≤ ")
-                          .fontColor($r('sys.color.font_secondary')).fontSize(14).fontFamily('Cambria Math')
-
-                        TextInput({
-                          text: (this.editDomainIndex === index && this.editDomainField === 'tMax') ? this.editDomainStr : item.tMax?.toString(),
-                          controller: this.tMaxControllers[index]
-                        })
-                          .width(60).height(28).fontSize(14).textAlign(TextAlign.Center)
-                          .padding({ top: 0, bottom: 0, left: 4, right: 4 })
-                          .customKeyboard(this.DomainKeyboardBuilder())
-                          .onFocus(() => { this.handleDomainFocus(index, 'tMax', item); })
-                          .onBlur(() => {
-                            this.editDomainIndex = -1;
-                            this.isSmallKeyboardShow = false;
-                          })
-                          .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
-                            this.currentCaretStart = selectionStart;
-                            this.currentCaretEnd = selectionEnd;
-                          })
-                      }
-                      .width('100%').justifyContent(FlexAlign.Start).margin({ top: 4 })
+                      this.ExpressionRowBuilder("x(t) = ", item.base64, 0, "点击此处编辑...", item.latex || '', index)
+                      this.ExpressionRowBuilder("y(t) = ", item.base64_2, 1, "点击此处编辑...", item.latex2 || '', index)
+                      this.DomainRowBuilder("t", item, index)
                     }
                   } else if (item.type === FunctionType.POLAR) {
                     Column({ space: 8 }) {
-                      // 1. r(θ)
-                      Row() {
-                        Text("r(θ) = ")
-                          .fontColor($r('sys.color.font_primary'))
-                          .fontSize(22)
-                          .fontFamily('Cambria Math')
-                          .fontWeight(FontWeight.Medium)
-                        if (item.base64) {
-                          Image(item.base64)
-                            .height(36)
-                            .objectFit(ImageFit.Contain)
-                            .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
-                        } else {
-                          Text((this.activeIndex === index && this.activeSubTarget === 0 && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑...")
-                            .fontColor($r('sys.color.font_secondary'))
-                            .height(36)
-                        }
-                      }
-                      .width('100%')
-                      .justifyContent(FlexAlign.Start)
-
-                      // 2. 极坐标定义域
-                      Row() {
-                        Text("定义域: ").fontColor($r('sys.color.font_secondary')).fontSize(14)
-
-                        TextInput({
-                          text: (this.editDomainIndex === index && this.editDomainField === 'tMin') ? this.editDomainStr : item.tMin?.toString(),
-                          controller: this.tMinControllers[index]
-                        })
-                          .width(60).height(28).fontSize(14).textAlign(TextAlign.Center)
-                          .padding({ top: 0, bottom: 0, left: 4, right: 4 })
-                          .customKeyboard(this.DomainKeyboardBuilder())
-                          .onFocus(() => { this.handleDomainFocus(index, 'tMin', item); })
-                          .onBlur(() => {
-                            this.editDomainIndex = -1;
-                            this.isSmallKeyboardShow = false;
-                          })
-                          .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
-                            this.currentCaretStart = selectionStart;
-                            this.currentCaretEnd = selectionEnd;
-                          })
-
-                        Text(" ≤ θ ≤ ")
-                          .fontColor($r('sys.color.font_secondary')).fontSize(14).fontFamily('Cambria Math')
-
-                        TextInput({
-                          text: (this.editDomainIndex === index && this.editDomainField === 'tMax') ? this.editDomainStr : item.tMax?.toString(),
-                          controller: this.tMaxControllers[index]
-                        })
-                          .width(60).height(28).fontSize(14).textAlign(TextAlign.Center)
-                          .padding({ top: 0, bottom: 0, left: 4, right: 4 })
-                          .customKeyboard(this.DomainKeyboardBuilder())
-                          .onFocus(() => { this.handleDomainFocus(index, 'tMax', item); })
-                          .onBlur(() => {
-                            this.editDomainIndex = -1;
-                            this.isSmallKeyboardShow = false;
-                          })
-                          .onTextSelectionChange((selectionStart: number, selectionEnd: number) => {
-                            this.currentCaretStart = selectionStart;
-                            this.currentCaretEnd = selectionEnd;
-                          })
-                      }
-                      .width('100%').justifyContent(FlexAlign.Start).margin({ top: 4 })
+                      this.ExpressionRowBuilder("r(θ) = ", item.base64, 0, "点击此处编辑...", item.latex || '', index)
+                      this.DomainRowBuilder("θ", item, index)
                     }
                   } else if (item.type === FunctionType.IMPLICIT) {
-                    Row() {
-                      Text("f(x,y): ")
-                        .fontColor($r('sys.color.font_primary'))
-                        .fontSize(22)
-                        .fontFamily('Cambria Math')
-                        .fontWeight(FontWeight.Medium)
-                      if (item.base64) {
-                        Image(item.base64)
-                          .height(36)
-                          .objectFit(ImageFit.Contain)
-                          .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
-                      } else {
-                        Text((this.activeIndex === index && this.activeSubTarget === 0 && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑方程...")
-                          .fontColor($r('sys.color.font_secondary'))
-                          .height(36)
-                      }
-                    }
-                    .width('100%')
-                    .justifyContent(FlexAlign.Start)
-
+                    this.ExpressionRowBuilder("f(x,y): ", item.base64, 0, "点击此处编辑方程...", item.latex || '', index)
                   } else if (item.type === FunctionType.POINT) {
-                    // --- 点 ---
                     Column({ space: 8 }) {
-                      // 1. x 坐标
-                      Row() {
-                        Text("x = ")
-                          .fontColor($r('sys.color.font_primary'))
-                          .fontSize(22)
-                          .fontFamily('Cambria Math')
-                          .fontWeight(FontWeight.Medium)
-                        if (item.base64) {
-                          Image(item.base64)
-                            .height(36)
-                            .objectFit(ImageFit.Contain)
-                            .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
-                        } else {
-                          Text((this.activeIndex === index && this.activeSubTarget === 0 && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑 x 坐标...")
-                            .fontColor($r('sys.color.font_secondary'))
-                            .height(36)
-                        }
-                      }
-                      .width('100%')
-                      .justifyContent(FlexAlign.Start)
-                      .onClick(() => {
-                        this.switchEditorFocus(index, 0, item.latex || '');
-                      })
-
-                      // 2. y 坐标
-                      Row() {
-                        Text("y = ")
-                          .fontColor($r('sys.color.font_primary'))
-                          .fontSize(22)
-                          .fontFamily('Cambria Math')
-                          .fontWeight(FontWeight.Medium)
-                        if (item.base64_2) {
-                          Image(item.base64_2)
-                            .height(36)
-                            .objectFit(ImageFit.Contain)
-                            .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
-                        } else {
-                          Text((this.activeIndex === index && this.activeSubTarget === 1 && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑 y 坐标...")
-                            .fontColor($r('sys.color.font_secondary'))
-                            .height(36)
-                        }
-                      }
-                      .width('100%')
-                      .justifyContent(FlexAlign.Start)
-                      .onClick(() => {
-                        this.switchEditorFocus(index, 1, item.latex2 || '');
-                      })
+                      this.ExpressionRowBuilder("x = ", item.base64, 0, "点击此处编辑 x 坐标...", item.latex || '', index)
+                      this.ExpressionRowBuilder("y = ", item.base64_2, 1, "点击此处编辑 y 坐标...", item.latex2 || '', index)
                     }
-
                   } else {
-                    // --- 普通显函数 ---
-                    Row() {
-                      Text("f(x) = ")
-                        .fontColor($r('sys.color.font_primary'))
-                        .fontSize(22)
-                        .fontFamily('Cambria Math')
-                        .fontWeight(FontWeight.Medium)
-                      if (item.base64) {
-                        Image(item.base64)
-                          .height(36)
-                          .objectFit(ImageFit.Contain)
-                          .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
-                      } else {
-                        Text((this.activeIndex === index && this.activeSubTarget === 0 && this.isKeyboardShow) ? "正在编辑..." : "点击此处编辑表达式...")
-                          .fontColor($r('sys.color.font_secondary'))
-                          .height(36)
-                      }
-                    }
-                    .width('100%')
-                    .justifyContent(FlexAlign.Start)
+                    // 普通显函数兜底
+                    this.ExpressionRowBuilder("f(x) = ", item.base64, 0, "点击此处编辑表达式...", item.latex || '', index)
                   }
                 }
                 .layoutWeight(1)
-                .padding({ top: 12, bottom: 12 }) // 增加上下的呼吸感
+                .padding({ top: 12, bottom: 12 })
               }
               .width('100%')
-              .padding({ left: 16, right: 16 }) // 内部卡片的内边距
-              // 选中态与未选中态的背景色切换
+              .padding({ left: 16, right: 16 })
               .backgroundColor((this.activeIndex === index && this.isKeyboardShow) ? $r('sys.color.comp_background_tertiary') : $r('sys.color.background_primary'))
               .borderRadius(16)
             }
             .padding({ left: 16, right: 16 })
             .swipeAction({
               end: { builder: () => { this.DeleteAction(index) } },
-              edgeEffect: SwipeEdgeEffect.Spring // 引入弹性回弹效果
+              edgeEffect: SwipeEdgeEffect.Spring
             })
             .onClick(() => {
-              // 作为兜底点击，任何未被阻断的点击（比如点到空白处、点到 x(t)），都默认编辑第 0 号主表达式
+              // 兜底点击：点击空白区域时，默认选中第一行主表达式
               this.switchEditorFocus(index, 0, item.latex);
             })
           }, (item: GraphFunctionItem) => `${item.id}_${item.latex}_${item.base64.length}_${item.isVisible}_${item.latex2 || ''}_${item.base64_2?.length || 0}`)
 
-          // 底部添加按钮
+          // 列表尾部：新建函数挂载按钮
           ListItem() {
-            // 1. 状态降级：动态切换文案
-            Button(this.functionList.length >= MAX_FUNCTIONS ? `已达数量上限 (${MAX_FUNCTIONS}/${MAX_FUNCTIONS})` :
-              "+ 添加新的函数", { type: ButtonType.Normal })
+            Button(this.functionList.length >= MAX_FUNCTIONS ? `已达数量上限 (${MAX_FUNCTIONS}/${MAX_FUNCTIONS})` : "+ 添加新的函数",
+              { type: ButtonType.Normal })
               .backgroundColor(Color.Transparent)
-              // 2. 状态降级：动态切换颜色 (达上限时置灰)
               .fontColor(this.functionList.length >= MAX_FUNCTIONS ? $r('sys.color.font_tertiary') : $r('sys.color.brand'))
               .borderRadius(50)
               .width('100%')
               .height(48)
               .onClick(() => {
-                // 3. 如果达到 MAX_FUNCTIONS 条，拦截点击事件
                 if (this.functionList.length >= MAX_FUNCTIONS) return;
 
                 if (this.isKeyboardShow) {
                   let magicId = this.activeIndex + (this.activeSubTarget * 10000);
                   getContext(this).eventHub.emit('request_graphing_data', magicId);
                 }
-
-                // 唤起弹窗，让用户选择要创建的函数类型，剩下的新建逻辑移交给了 Dialog！
                 this.dialogController.open();
               })
           }
-          .padding({ left: 48, right: 48 }) // 保持对齐
+          .padding({ left: 48, right: 48 })
 
-          // --- 底部占位符 ---
+          // 虚拟占位符：用于撑起软键盘遮挡空间
           ListItem() {
             Row()
               .width('100%')
@@ -716,7 +565,6 @@ export struct GraphingEditSheet {
         }
         .layoutWeight(1)
         .width('100%')
-        // 保留跟随键盘上推的底部边距
         .padding({ top: 4, bottom: 0 })
         .animation({ duration: 300, curve: Curve.FastOutSlowIn })
         .fadingEdge(true, { fadingEdgeLength: LengthMetrics.vp(12) })
@@ -724,9 +572,9 @@ export struct GraphingEditSheet {
       .width('100%')
       .height('100%')
 
-      // ---------- 第 2 层：悬浮键盘坞 (常驻内存，仅做物理位移) ----------
+      // ---------- 第 2 层：悬浮键盘坞 (物理位移动画驱动) ----------
       Column() {
-        // 常驻底部的 WebView：永远存活，永远不会被裁切高度
+        // 常驻引擎通信与渲染枢纽 (隐藏式 WebView)
         FormulaScreen({ moduleType: 'graphing' })
           .width('100%')
           .height(64)
@@ -777,16 +625,14 @@ export struct GraphingEditSheet {
       .width('100%')
       .backgroundColor($r('sys.color.comp_background_primary'))
       .padding({ bottom: this.navBarHeight - 8})
-      // 100% 位移。为 0 时在屏幕内，为 '100%' 时刚好完全滑出屏幕底部边界。
+      // 根据状态控制键盘物理隐退与展出
       .translate({ y: this.isKeyboardShow ? 0 : '100%' })
-      // 极其丝滑的阻尼弹簧动画曲线
       .animation({ duration: 300, curve: Curve.FastOutSlowIn })
 
     }
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.comp_background_tertiary'))
-    // 裁剪掉 Stack 溢出底部边缘的部分，避免影响其他 UI
     .clip(true)
   }
 }
