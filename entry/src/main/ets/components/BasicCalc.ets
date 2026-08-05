@@ -12,17 +12,24 @@ import { getActionId, getFontColor, getBgColor, PreferenceConfigs, icon_backspac
 
 // 按键布局
 const basicButtons: Array<string | Resource> = [
-  '×', '÷', icon_backspace, 'AC',
-  '7', '8', '9', '%',
-  '4', '5', '6', '−',
-  '1', '2', '3', '+',
-  '.', '0', 'Ans', '='
+  '÷', '×', icon_backspace, 'AC',
+  '7', '8', '9', '−',
+  '4', '5', '6', '+',
+  '1', '2', '3', '',
+  '.', '0', '%', '='
 ];
 
+// 字体大小
 function getLocalFontSize(btn: string | Resource): number {
   if (btn === '+' || btn === '−' || btn === 'π' || btn === '×' || btn === '÷' || btn === '=') return 40;
-  if (btn === 'Ans' || btn === 'AC') return 26;
+  if (btn === 'AC') return 26;
   return 30;
+}
+
+// 按钮颜色
+function getLocalBgColor(btn: string | Resource, isShift: boolean): ResourceColor {
+  if (btn === '%') return getBgColor('0', false);
+  return getBgColor(btn, isShift);
 }
 
 // 按键
@@ -56,7 +63,7 @@ struct BasicKeyItem {
     .width('100%')
     .height('100%')
     .padding({ left: 4, right: 4 })
-    .backgroundColor(getBgColor(this.btn, false))
+    .backgroundColor(getLocalBgColor(this.btn, false))
     .shadow(ShadowStyle.OUTER_DEFAULT_SM)
     .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
     .borderColor($r('app.color.btn_highlight'))
