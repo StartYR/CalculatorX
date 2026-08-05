@@ -31,7 +31,7 @@ export struct HistorySheet {
   @Builder
   helpDialogBuilder() {
     TipsDialog({
-      imageRes: $r('app.media.image_dialog_help'),
+      imageRes: $rawfile('help/insert_history.webp'),
       imageSize: { width: '100%', height: 180 },
       title: '如何插入历史记录？',
       content: '如图，历史记录分为上下两个区域：\n\n点击表达式区，即可插入表达式；\n点击结果区，即可插入结果。',
@@ -54,7 +54,10 @@ export struct HistorySheet {
     Column() {
       // 1. 顶部实体标题栏
       Row() {
-        Text('历史记录').fontSize(20).fontWeight(FontWeight.Bold).fontColor($r('sys.color.font_primary'))
+        Text('历史记录')
+          .fontSize(20)
+          .fontWeight(FontWeight.Bold)
+          .fontColor($r('sys.color.font_primary'))
 
         // 帮助引导按钮
         Button({ type: ButtonType.Circle, stateEffect: true }) {

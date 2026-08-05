@@ -178,6 +178,20 @@ export function getFontColor(btn: string | Resource): ResourceColor {
   return $r('sys.color.font_primary');
 }
 
+// ==================== 函数图像颜色预设 ====================
+export const GRAPHING_COLORS: string[] = [
+  '#ffff0500', // 红
+  '#ffcb6800', // 橙
+  '#1E88E5', // 蓝
+  '#43A047', // 绿
+  '#8E24AA', // 紫
+  '#FFB300', // 黄
+  '#00ACC1',  // 青
+  '#ffff82b0', // 粉红
+  '#ff604941', // 棕色
+  '#00897B', // 深青/墨绿 ← 补充冷色系
+];
+
 export class PreferenceConfigs {
   static readonly STORE_NAME = 'CalcX_Preferences';
   static readonly KEY_COLOR_MODE = 'colorModeIndex';
@@ -188,6 +202,9 @@ export class PreferenceConfigs {
   static readonly KEY_COMBINATION_SELECT = 'combinationSelectIndex';
   static readonly KEY_PERMUTATION_SELECT = 'permutationSelectIndex';
   static readonly KEY_HAPTIC_FEEDBACK = 'hapticFeedback';
+
+  // 新增：函数图像持久化配置的 Key
+  static readonly KEY_GRAPHING_FUNCTIONS = 'graphingFunctions';
 
   // 启动页面配置
   static readonly KEY_STARTUP_PAGE = 'startupPageMode';

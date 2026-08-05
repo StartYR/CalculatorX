@@ -15,14 +15,18 @@ export class InputTranslator {
   public static translate(action: string, combSelect: number, permSelect: number): string {
     let latexChar = action;
     switch (action) {
+      // 基础
       case '×':        latexChar = "\\times "; break;
       case '÷':        latexChar = "\\div "; break;
       case '−':        latexChar = "-"; break;
       case 'π':        latexChar = "\\pi "; break;
       case '∞':        latexChar = "\\infty "; break;
       case 'i':        latexChar = "i"; break;
+      case '%':        latexChar = '\\%'; break;
       case 'comma':    latexChar = ","; break;
       case 'fraction': latexChar = "\\frac{\\placeholder{}}{\\placeholder{}}"; break;
+
+      // 开根和乘方
       case 'sqrt':     latexChar = "\\sqrt{\\placeholder{}}"; break;
       case 'sqrt3':    latexChar = "\\sqrt[3]{\\placeholder{}}"; break;
       case 'sqrtx':    latexChar = "\\sqrt[\\placeholder{}]{\\placeholder{}}"; break;
@@ -32,55 +36,43 @@ export class InputTranslator {
       case 'inverse':  latexChar = '^{-1}'; break;
       case 'e_power':  latexChar = 'e^{\\placeholder{}}'; break;
       case 'icon_exp': latexChar = '\\times 10^{\\placeholder{}}'; break;
+
       case 'abs':      latexChar = "\\left| \\placeholder{} \\right|"; break;
       case 'fact':     latexChar = "!"; break;
+
+      // 对数
       case 'ln':       latexChar = "\\ln\\left(\\placeholder{}\\right)"; break;
       case 'lg':       latexChar = '\\lg\\left(\\placeholder{}\\right)'; break;
       case 'log':      latexChar = "\\log_{\\placeholder{}}\\left(\\placeholder{}\\right)"; break;
 
+      // 三角函数
       case 'sin':      latexChar = "\\sin\\left(\\placeholder{}\\right)"; break;
       case 'cos':      latexChar = "\\cos\\left(\\placeholder{}\\right)"; break;
       case 'tan':      latexChar = "\\tan\\left(\\placeholder{}\\right)"; break;
-      // case 'sin⁻¹':    latexChar = "\\arcsin\\left(\\placeholder{}\\right)"; break;
-      // case 'cos⁻¹':    latexChar = "\\arccos\\left(\\placeholder{}\\right)"; break;
-      // case 'tan⁻¹':    latexChar = "\\arctan\\left(\\placeholder{}\\right)"; break;
       case 'sinh':      latexChar = "\\sinh\\left(\\placeholder{}\\right)"; break;
       case 'cosh':      latexChar = "\\cosh\\left(\\placeholder{}\\right)"; break;
       case 'tanh':      latexChar = "\\tanh\\left(\\placeholder{}\\right)"; break;
-      // case 'sinh⁻¹':    latexChar = "\\arcsinh\\left(\\placeholder{}\\right)"; break;
-      // case 'cosh⁻¹':    latexChar = "\\arccosh\\left(\\placeholder{}\\right)"; break;
-      // case 'tanh⁻¹':    latexChar = "\\arctanh\\left(\\placeholder{}\\right)"; break;
       case 'csc':      latexChar = "\\csc\\left(\\placeholder{}\\right)"; break;
       case 'sec':      latexChar = "\\sec\\left(\\placeholder{}\\right)"; break;
       case 'cot':      latexChar = "\\cot\\left(\\placeholder{}\\right)"; break;
-      // case 'csc⁻¹':    latexChar = "\\arccsc\\left(\\placeholder{}\\right)"; break;
-      // case 'sec⁻¹':    latexChar = "\\arcsec\\left(\\placeholder{}\\right)"; break;
-      // case 'cot⁻¹':    latexChar = "\\arccot\\left(\\placeholder{}\\right)"; break;
-
-
       case 'sin⁻¹':    latexChar = "\\sin^{-1}\\left(\\placeholder{}\\right)"; break;
       case 'cos⁻¹':    latexChar = "\\cos^{-1}\\left(\\placeholder{}\\right)"; break;
       case 'tan⁻¹':    latexChar = "\\tan^{-1}\\left(\\placeholder{}\\right)"; break;
-
-      // 双曲反函数
       case 'sinh⁻¹':    latexChar = "\\sinh^{-1}\\left(\\placeholder{}\\right)"; break;
       case 'cosh⁻¹':    latexChar = "\\cosh^{-1}\\left(\\placeholder{}\\right)"; break;
       case 'tanh⁻¹':    latexChar = "\\tanh^{-1}\\left(\\placeholder{}\\right)"; break;
-
-      // 倒数三角反函数（这三个如果不改，大概率也会标红）
       case 'csc⁻¹':    latexChar = "\\csc^{-1}\\left(\\placeholder{}\\right)"; break;
       case 'sec⁻¹':    latexChar = "\\sec^{-1}\\left(\\placeholder{}\\right)"; break;
       case 'cot⁻¹':    latexChar = "\\cot^{-1}\\left(\\placeholder{}\\right)"; break;
 
-
-
+      // 微积分
       case 'integral': latexChar = "\\int_{\\placeholder{}}^{\\placeholder{}}\\left(\\placeholder{}\\right)dx"; break;
       case 'indef_integral': latexChar = "\\int\\left(\\placeholder{}\\right)dx"; break;
       case 'sum':      latexChar = "\\sum_{x=\\placeholder{}}^{\\placeholder{}}\\left(\\placeholder{}\\right)"; break;
       case 'product':  latexChar = "\\prod_{x=\\placeholder{}}^{\\placeholder{}}\\left(\\placeholder{}\\right)"; break;
       case 'd/dx':     latexChar = "\\frac{d}{dx}\\left(\\placeholder{}\\right)"; break;
       case 'lim':      latexChar = "\\lim_{x \\to \\placeholder{}}\\left(\\placeholder{}\\right)"; break;
-      case '%':        latexChar = '\\%'; break;
+
       case 'mod':      latexChar = '\\bmod '; break;
       case 'GCD':      latexChar = '\\gcd\\left(\\placeholder{}, \\placeholder{}\\right)'; break;
       case 'LCM':      latexChar = '\\operatorname{lcm}\\left(\\placeholder{}, \\placeholder{}\\right)'; break;
@@ -129,6 +121,9 @@ export class InputTranslator {
       case 'cases_4':  latexChar = "\\begin{cases} \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\end{cases}"; break;
       case 'cases_5':  latexChar = "\\begin{cases} \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\end{cases}"; break;
       case 'cases_6':  latexChar = "\\begin{cases} \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\\\ \\placeholder{} \\end{cases}"; break;
+
+      // 中文
+      case '确定':      latexChar = ""; break;
     }
     return latexChar;
   }
