@@ -15,6 +15,9 @@ export interface CalcConfig {
   isRad: boolean;
   precision: number;
   mode: number; // 0:标准(微积分/常规), 1:矩阵, 2:方程等
+  xMin?: number;
+  xMax?: number;
+  pointsCount?: number;
 }
 
 export class EngineService {
@@ -162,11 +165,32 @@ export class EngineService {
 
     Logger.info(`[EngineService] 清洗后传递给 C++ 的 JSON: ${finalJsonStr}`);
 
-    // 仅调用一次 C++ 引擎
-    let cppResult = testNapi.calculate(finalJsonStr, config);
+    // 调用 C++ 引擎
+    let cppResult = testNapi.calculate(finalJsonStr, config) as string;
 
     Logger.info(`[EngineService] C++ 返回的 LaTeX: ${cppResult}`);
 
+    return cppResult;
+  }
+
+  /**
+   * 5. 供 GraphingCalc 调用的批量采样接口
+   * 接收 C++ 返回的 Float64Array (二进制共享内存)，零解析开销直接返回给 Canvas 画线
+   */
+  public static calculateGraphPoints(jsonStr: string, config: CalcConfig): Float64Array {
+    let astObj = JSON.parse(jsonStr) as Object;
+    let cleanedAstObj = EngineService.unwrapMWrap(astObj);
+    let finalJsonStr = JSON.stringify(cleanedAstObj);
+
+    // 此时 cppResult 的类型是 string | Float64Array
+    let cppResult = testNapi.calculate(finalJsonStr, config);
+
+    // 类型守卫：如果是字符串，说明发生了错误（返回了 "Error..."），触发兜底
+    if (typeof cppResult === 'string') {
+      return new Float64Array(0);
+    }
+
+    // 既然不是字符串，那在 ArkTS 的类型推导里，它必定是 Float64Array，直接返回！
     return cppResult;
   }
 

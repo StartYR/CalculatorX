@@ -89,7 +89,7 @@ export struct HistoryManager {
       this.createTabItem('全部', $r('sys.symbol.list_bullet_square_fill_1')),
       this.createTabItem('计算', $r('sys.symbol.calculator_fill')),
       this.createTabItem('方程', $r('sys.symbol.exponentiation')),
-      this.createTabItem('绘图', $r('sys.symbol.foldline_screen_fill')),
+      // this.createTabItem('绘图', $r('sys.symbol.foldline_screen_fill')),
       this.createTabItem('矩阵', $r('sys.symbol.square_fill_grid_2x2')),
       this.createTabItem('转换', $r('sys.symbol.arrow_left_arrow_right')),
       this.createTabItem('更多', $r('sys.symbol.more_fill'))

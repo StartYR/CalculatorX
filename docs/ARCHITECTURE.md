@@ -278,7 +278,7 @@ CalculatorX 采用**单页面应用 (SPA) + 壳与插件**架构，不使用传�
 ### 5.3 占位模块（开发中）
 
 以下组件的 `build()` 仅渲染 "当前模块正在开发中..." 文本：
-- [GraphingCalc.ets](../entry/src/main/ets/components/GraphingCalc.ets) — 函数图像
+- [GraphingCalc.ets](../entry/src/main/ets/components/graphing/GraphingCalc.ets) — 函数图像
 - [StatisticsCalc.ets](../entry/src/main/ets/components/StatisticsCalc.ets) — 统计分析
 - [UnitConverter.ets](../entry/src/main/ets/components/UnitConverter.ets) — 单位转换
 - [BaseConverter.ets](../entry/src/main/ets/components/BaseConverter.ets) — 进制转换
@@ -668,7 +668,12 @@ entry/src/main/
 │   │   ├── BasicCalc.ets                   # 基础计算器插件：5×4 大圆按钮，四则运算/百分数/Ans/长按连续退格
 │   │   ├── MatrixCalc.ets                  # 矩阵与向量插件：6×5 键盘(Shift)，维度和类型网格选择器(1×1 到 6×6)
 │   │   ├── EquationSolver.ets              # 方程求解插件：3×6 上键盘(Shift)+5×5 下键盘，方程组模板(2-6行)，8个未知数变量
-│   │   ├── GraphingCalc.ets                # 函数图像插件（占位，开发中）
+│   │   ├── graphing/                       # 函数图像组件
+│   │   │   ├── GraphingCalc.ets            # 主枢纽：状态管理、事件调度、组合子组件
+│   │   │   ├── GraphingCanvas.ets          # 核心画布：坐标系渲染、引擎对接、手势处理
+│   │   │   ├── GraphingEditSheet.ets       # 编辑面板：函数列表管理与交互
+│   │   │   ├── GraphingKeyboard.ets        # 专属键盘：顶底键盘组件与按键布局配置
+│   │   │   └── GraphingTypes.ets           # 类型声明：GraphFunctionItem 等接口定义
 │   │   ├── StatisticsCalc.ets              # 统计分析插件（占位，开发中）
 │   │   ├── UnitConverter.ets               # 单位转换插件（占位，开发中）
 │   │   ├── BaseConverter.ets               # 进制转换插件（占位，开发中）
@@ -700,6 +705,7 @@ entry/src/main/
 │   │   ├── parser.cpp/.h                   # AST 递归下降解析器：MathJSON → SymEngine Expression，角度/弧度转换，DMS/矩阵/排列组合/微积分特殊节点
 │   │   ├── MatrixParser.cpp/.h             # 矩阵 AST 解析：JSON Matrix → 二维数组 → Giac 矩阵指令
 │   │   ├── giac_bridge.cpp/.h              # Giac CAS 桥接：符号积分/极限/方程/矩阵运算/Romberg 数值积分降级
+│   │   ├── GraphingEngine.cpp/.h           # 函数渲染核心 (集成符号伴生导数雷达、极限边界嗅探与 RPN 自适应递归采样)
 │   │   └── ErrorHandler.h                  # 异常状态机：6 种业务错误码(DIV_BY_ZERO/DOMAIN/OVERFLOW/SYNTAX/TIMEOUT/DMS) → 前端友好信息
 │   ├── utils/
 │   │   ├── FastMath.cpp/.h                 # 极速超大数运算：O(1) 阶乘/幂运算(10^10^19 级)，幽灵变量 MAGICBASETEN 传递精确基数
@@ -708,12 +714,8 @@ entry/src/main/
 │   ├── include/
 │   │   ├── json.hpp                        # nlohmann/json 单头文件 JSON 库
 │   │   └── gmp.h                           # GNU Multiple Precision 大数库头文件
-│   ├── libs/arm64-v8a/
-│   │   └── libgmp.a                        # GMP 预编译静态库
+│   ├── libs/arm64-v8a/libgmp.a             # GMP 预编译静态库
 │   ├── third_party/                        # 第三方依赖源码包 (静态链接)
-│   │   ├── giac-1.9.0.tar.gz
-│   │   ├── symengine-0.11.2.tar.gz
-│   │   └── boost_1_82_0.tar.gz
 │   └── types/libentry/                     # N-API 类型声明 (供 ArkTS 侧导入)
 │       ├── Index.d.ts
 │       └── oh-package.json5
@@ -724,41 +726,9 @@ entry/src/main/
 │   ├── compute-engine.min.js               # MathJSON 计算引擎 (Cortex JS)
 │   ├── mathlive.min.js                     # MathLive 数学排版引擎
 │   ├── html2canvas.min.js                  # HTML→Canvas 截图库 (用于历史记录缩略图)
-│   ├── mathlive-fonts.css                  # MathLive 官方字体样式
-│   ├── mathlive-static.css                 # MathLive 官方静态样式
 │   ├── fonts/                              # 数学字体 (WOFF2 + TTF)
-│   │   ├── KaTeX_*.woff2                   # KaTeX 全套字体 (Main/Math/AMS/Caligraphic/Fraktur/SansSerif/Script/Size/Typewriter)
-│   │   ├── Cambria Math.ttf                # 微软 Cambria Math (数学符号)
-│   │   └── Cambria Italic.ttf              # 微软 Cambria Italic (变量斜体)
 │   ├── icons/                              # 自定义 SVG 数学图标
-│   │   ├── math/                           # 通用数学符号 (分数/根号/幂/积分/求和/求积/绝对值/阶乘/∞/e^x/偏导/nabla...)
-│   │   │   ├── comb/                       # 组合数 5 种样式图标 (binom/subsup/calc/calc2/inline)
-│   │   │   └── perm/                       # 排列数 5 种样式图标 (A/P/calc/calc2/inline)
-│   │   ├── matrix/                         # 矩阵专属图标 (M_power/abs/dim)
-│   │   ├── equation/                       # 方程专属图标 (cases)
-│   │   └── icon_backspace.svg              # 退格图标
 │   └── docs/                               # Nextra 静态帮助文档站点 (_next/ + HTML 页面)
-│       ├── index.html                      # 文档首页
-│       ├── basics/                         # 基础使用指南 (arithmetic/history/interface)
-│       ├── scientific/                     # 科学计算指南 (algebra/calculus/equations/exponents/fractions/intro/trigonometry)
-│       ├── historys/                       # 历史记录使用指南
-│       ├── support/                        # 支持页面 (changelog/privacy)
-│       ├── about.html / faq.html           # 关于与常见问题
-│       └── images/                         # 文档截图资源
-│
-├── resources/base/                         # 🎨 基础资源
-│   ├── element/
-│   │   ├── color.json                      # 颜色资源定义
-│   │   ├── float.json                      # 浮点数值资源
-│   │   └── string.json                     # 字符串资源 (应用名等)
-│   ├── media/                              # 媒体资源 (应用图标/启动图/帮助图片)
-│   └── profile/
-│       ├── main_pages.json                 # 页面路由注册表
-│       └── backup_config.json              # 备份配置
-│
-├── resources/dark/                         # 🌙 深色模式资源
-│   └── element/
-│       └── color.json                      # 深色模式颜色覆盖
 │
 └── module.json5                            # 模块配置：abilities 声明、权限、包名等
 ```
