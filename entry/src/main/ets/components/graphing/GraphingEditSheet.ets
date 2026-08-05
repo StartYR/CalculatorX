@@ -459,24 +459,46 @@ export struct GraphingEditSheet {
       .backgroundColor('#FF3B30')
       .shadow({ radius: 8, color: '#33FF3B30', offsetY: 4 })
       .onClick(() => {
+        // 提前记录删除前的状态分布，为后续的状态转移做准备
+        let isDeletingActive = (this.activeIndex === index);
+        let isDeletingAboveActive = (index < this.activeIndex);
+
+        let isDeletingDomain = (this.editDomainIndex === index);
+        let isDeletingAboveDomain = (index < this.editDomainIndex);
+
         // 允许完全清空列表
         animateTo({ duration: 350, curve: Curve.Friction }, () => {
           this.functionList.splice(index, 1);
 
-          // 边界：如果列表空了，全面重置状态并收起键盘
+          // 边界 1：如果列表空了，全面重置状态并收起所有键盘
           if (this.functionList.length === 0) {
             this.activeIndex = -1;
             this.isKeyboardShow = false;
+            this.editDomainIndex = -1;
+            this.isSmallKeyboardShow = false;
+          } else {
+            // 💡 核心状态转移逻辑 (主键盘)：
+            if (isDeletingActive) {
+              // 删除了正在编辑的项：失去焦点，直接收起键盘，切断数据污染链条！
+              this.activeIndex = -1;
+              this.isKeyboardShow = false;
+            } else if (isDeletingAboveActive) {
+              // 删除了上方项：当前编辑的项在数组中的索引 -1，必须同步调整 activeIndex 才能锁死原目标
+              this.activeIndex -= 1;
+            } else if (this.activeIndex >= this.functionList.length) {
+              // 兜底防越界
+              this.activeIndex = this.functionList.length - 1;
+            }
 
-            // 互斥安全：确保定义域小键盘也被强制收起
-            if (this.editDomainIndex !== -1) {
+            // 💡 核心状态转移逻辑 (定义域小键盘)：
+            if (isDeletingDomain) {
+              // 删除了正在编辑定义域的项：收起小键盘
               this.editDomainIndex = -1;
               this.isSmallKeyboardShow = false;
+            } else if (isDeletingAboveDomain) {
+              // 焦点跟随上移
+              this.editDomainIndex -= 1;
             }
-          }
-          // 如果删除了最后一个元素但列表没空，焦点回退一位
-          else if (this.activeIndex >= this.functionList.length) {
-            this.activeIndex = this.functionList.length - 1;
           }
         });
         this.saveFunctions(); // 数据持久化落盘
