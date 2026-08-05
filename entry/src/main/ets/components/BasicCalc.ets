@@ -12,17 +12,24 @@ import { getActionId, getFontColor, getBgColor, PreferenceConfigs, icon_backspac
 
 // 按键布局
 const basicButtons: Array<string | Resource> = [
-  '×', '÷', icon_backspace, 'AC',
-  '7', '8', '9', '%',
-  '4', '5', '6', '−',
-  '1', '2', '3', '+',
-  '.', '0', 'Ans', '='
+  '÷', '×', icon_backspace, 'AC',
+  '7', '8', '9', '−',
+  '4', '5', '6', '+',
+  '1', '2', '3', '=',
+  '.', '0', '%', ''
 ];
 
+// 字体大小
 function getLocalFontSize(btn: string | Resource): number {
   if (btn === '+' || btn === '−' || btn === 'π' || btn === '×' || btn === '÷' || btn === '=') return 40;
-  if (btn === 'Ans' || btn === 'AC') return 26;
+  if (btn === 'AC') return 26;
   return 30;
+}
+
+// 按钮颜色
+function getLocalBgColor(btn: string | Resource, isShift: boolean): ResourceColor {
+  if (btn === '%') return getBgColor('0', false);
+  return getBgColor(btn, isShift);
 }
 
 // 按键
@@ -56,7 +63,7 @@ struct BasicKeyItem {
     .width('100%')
     .height('100%')
     .padding({ left: 4, right: 4 })
-    .backgroundColor(getBgColor(this.btn, false))
+    .backgroundColor(getLocalBgColor(this.btn, false))
     .shadow(ShadowStyle.OUTER_DEFAULT_SM)
     .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
     .borderColor($r('app.color.btn_highlight'))
@@ -111,12 +118,19 @@ export struct BasicCalc {
 
       Column() {
         Grid() {
-          ForEach(basicButtons, (btn: string | Resource) => {
-            GridItem() {
-              BasicKeyItem({
-                btn: btn,
-                onKeyPress: (b: string | Resource): void => { this.handleKeyPress(b); }
-              })
+          ForEach(basicButtons, (btn: string | Resource, index: number) => {
+            if (btn !== '') {
+              GridItem() {
+                BasicKeyItem({
+                  btn: btn,
+                  onKeyPress: (b: string | Resource): void => {
+                    this.handleKeyPress(b);
+                  }
+                })
+              }
+              // 如果是等号 (索引 15)，强制其纵向跨越第 4 行和第 5 行 (索引从 0 开始：3 到 4)
+              .rowStart(index === 15 ? 3 : undefined)
+              .rowEnd(index === 15 ? 4 : undefined)
             }
           })
         }
@@ -133,6 +147,7 @@ export struct BasicCalc {
       .height('55%')
       .backgroundColor($r('sys.color.comp_background_primary')) // 主背景色
       .borderRadius(40)
+      .shadow({ radius: 16, color: '#1A000000', offsetY: -12 })
       .padding({ bottom: this.navBarHeight - 8 })
     }
     .width('100%')
