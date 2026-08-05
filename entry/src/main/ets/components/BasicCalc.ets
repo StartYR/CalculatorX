@@ -147,6 +147,7 @@ export struct BasicCalc {
       .height('55%')
       .backgroundColor($r('sys.color.comp_background_primary')) // 主背景色
       .borderRadius(40)
+      .shadow({ radius: 16, color: '#1A000000', offsetY: -12 })
       .padding({ bottom: this.navBarHeight - 8 })
     }
     .width('100%')

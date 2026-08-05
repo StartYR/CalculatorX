@@ -240,6 +240,7 @@ export struct MatrixCalc {
       .height('45%')
       .backgroundColor($r('sys.color.comp_background_primary'))
       .borderRadius(24)
+      .shadow({ radius: 16, color: '#1A000000', offsetY: -4 })
       .padding({ bottom: this.navBarHeight - 8 })
     }
     .width('100%')
