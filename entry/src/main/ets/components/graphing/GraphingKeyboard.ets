@@ -282,7 +282,6 @@ export struct DomainKeyboard {
       .padding({ left: 10, right: 10, top: 12, bottom: 8 })
     }
     .width('100%')
-    // .backgroundColor($r('sys.color.comp_background_primary'))
     .backgroundColor(Color.Transparent)
     .backgroundBlurStyle(BlurStyle.Thin)
     .borderRadius({ topLeft: 36, topRight: 36 })
