@@ -181,14 +181,14 @@ export function getFontColor(btn: string | Resource): ResourceColor {
 // ==================== 函数图像颜色预设 ====================
 export const GRAPHING_COLORS: string[] = [
   '#ffff0500', // 红
-  '#ffff6600', // 橙
+  '#ffcb6800', // 橙
   '#1E88E5', // 蓝
   '#43A047', // 绿
   '#8E24AA', // 紫
   '#FFB300', // 黄
   '#00ACC1',  // 青
   '#ffff82b0', // 粉红
-  '#6D4C41', // 棕色
+  '#ff604941', // 棕色
   '#00897B', // 深青/墨绿 ← 补充冷色系
 ];
 
