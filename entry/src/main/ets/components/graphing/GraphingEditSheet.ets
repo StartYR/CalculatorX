@@ -177,6 +177,7 @@ export struct GraphingEditSheet {
         Image(base64Data)
           .height(36)
           .objectFit(ImageFit.Contain)
+          .flexShrink(1)
           .colorFilter(this.isDarkModeUI ? [ -1,0,0,0,255, 0,-1,0,0,255, 0,0,-1,0,255, 0,0,0,1,0 ] : undefined)
       } else {
         Text((this.activeIndex === index && this.activeSubTarget === subTarget && this.isKeyboardShow) ? "正在编辑..." : placeholder)
