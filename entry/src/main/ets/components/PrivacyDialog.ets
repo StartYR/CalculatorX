@@ -42,10 +42,12 @@ export struct PrivacyDialog {
           .fontColor($r('sys.color.font_primary'))
           .margin({ top: 24 })
 
-        // ================= 富文本正文 =================
+        // 正文
         Text() {
-          Span(
-            '欢迎使用 CalcX 计算器！\n\n我们非常重视保护您的隐私和个人信息。在您使用本应用前，请您务必仔细阅读并透彻理解')
+          Span('欢迎使用 ')
+          Span('CalcX 计算器')
+            .fontWeight(FontWeight.Bold)
+          Span('！\n\n我们非常重视保护您的隐私和个人信息。在您使用本应用前，请您务必仔细阅读并透彻理解')
           // 高亮并绑定点击事件的用户协议
           Span('《用户协议》')
             .fontWeight(FontWeight.Medium)
@@ -61,12 +63,15 @@ export struct PrivacyDialog {
             .onClick(() => {
               this.openWebBrowser('https://calcx.startyi.com/privacy/');
             })
-          Span('。\n\n如果您同意以上协议内容，请点击“同意”开始使用我们的产品与服务。')
+          Span('。\n\n如果您同意以上内容，请点击“')
+          Span('同意')
+            .fontWeight(FontWeight.Bold)
+          Span('”开始使用我们的产品与服务。')
         }
         .fontSize(15)
         .fontColor($r('sys.color.font_primary'))
         .lineHeight(24)
-        .textAlign(TextAlign.Start)
+        .textAlign(TextAlign.JUSTIFY)
         .margin({
           left: 20,
           right: 20,
