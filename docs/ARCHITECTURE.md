@@ -40,6 +40,7 @@ CalculatorX 是一款基于**鸿蒙 Next (HarmonyOS)** 的科学计算器应用�
 - **科学计算**：三角函数/反三角、双曲函数、对数、指数、阶乘、排列组合、微积分（求导/定积分/不定积分/极限）、求和求积、GCD/LCM、度分秒
 - **矩阵计算**：矩阵创建（1×1 到 6×6）、四则运算、求逆、转置、共轭转置、行列式、特征值、秩、rref、迹、乘方
 - **方程求解**：一元方程、多元方程组（最多 6 元），支持 x/y/z/u/v/w 为未知数
+- **函数图像**：5 种函数类型（显函数/参数方程/极坐标/隐函数/点）、多函数叠加（最多 10 条）、颜色区分、图例显示、双指缩放与拖拽平移、定义域自定义、函数列表持久化
 - **设置**：深浅色模式、角度制切换、答案输出格式（自动/小数/分数/带分数/度分秒）、排列组合显示样式、振动反馈强度、启动页面、小数精度
 - **历史记录**：按模块分类存储计算图文，支持插入表达式/结果、单条滑动删除、按模块清空
 
@@ -107,6 +108,14 @@ CalculatorX 采用**单页面应用 (SPA) + 壳与插件**架构，不使用传�
 | `event_math_insert` | Index (历史记录点击) | FormulaScreen | 从历史记录回填公式到屏幕 |
 | `event_math_undo` | Index (TopBar 撤销按钮) | FormulaScreen | 触发 MathLive 的 undo 命令 |
 | `event_math_redo` | Index (TopBar 重做按钮) | FormulaScreen | 触发 MathLive 的 redo 命令 |
+| `request_graphing_data` | GraphingEditSheet（确认/切换焦点） | FormulaScreen | 请求提取当前编辑器的 LaTeX + AST，附带 reqId 编码（index + subTarget×10000） |
+| `temp_graph_ast_ready` | FormulaScreen（AST 提取完成） | GraphingCalc、GraphingCanvas | 传递 reqId + rawLatex + AST，触发函数列表更新和画布重绘 |
+| `response_graph_base64_ready` | FormulaScreen（PNG 渲染完成） | GraphingCalc | 传递 reqId + Base64 PNG，更新函数项的预览图 |
+| `wake_web_engines` | GraphingEditSheet（焦点切换） | FormulaScreen | 唤醒 WebView（从 onInactive 恢复），准备公式编辑 |
+| `sleep_web_engines` | GraphingCalc（面板关闭） | FormulaScreen | 休眠 WebView（调用 onInactive），释放 GPU 资源 |
+| `load_latex_to_editor` | GraphingEditSheet（切换焦点） | FormulaScreen | 将指定 LaTeX 源码加载到隐藏 math-field 编辑器 |
+| `open_graphing_edit_sheet` | GraphingCanvas / 外部 | GraphingCalc | 打开编辑面板 bindSheet |
+| `force_close_domain_keyboard` | GraphingCalc（面板返回拦截） | GraphingEditSheet | 收起定义域小键盘输入框 |
 
 ### 3.2 AppStorage（全局状态）
 
@@ -124,6 +133,7 @@ CalculatorX 采用**单页面应用 (SPA) + 壳与插件**架构，不使用传�
 | `activeBubbleId` | string | KeyGestureWrapper | 各 *Calc GridItem (zIndex 提权) |
 | `KEY_COMBINATION_SELECT` | number | PreferenceManager | InputTranslator (组合数样式)、ScientificCalc 键盘图标 |
 | `KEY_PERMUTATION_SELECT` | number | PreferenceManager | InputTranslator (排列数样式)、ScientificCalc 键盘图标 |
+| `KEY_GRAPHING_FUNCTIONS` | string (JSON) | PreferenceManager | GraphingCalc（函数列表持久化，含表达式 AST/颜色/可见性） |
 
 ### 3.3 @State / @Prop / @Link（局部状态）
 
@@ -275,10 +285,78 @@ CalculatorX 采用**单页面应用 (SPA) + 壳与插件**架构，不使用传�
 - FormulaScreen 中 `=` 键走 `insertToWeb('=')`，`EXE` 键走 `executeCalculation()`
 - FormulaScreen 的 `moduleType='equation'` → `getCalcMode()` 返回 2（方程模式），触发 C++ 引擎的 Giac `csolve()` 路由
 
+#### GraphingCalc（函数图像）
+
+[GraphingCalc.ets](../entry/src/main/ets/components/graphing/GraphingCalc.ets) 是图形计算器的顶层枢纽，组合 4 个子组件形成完整功能闭环。
+
+**架构概览**：
+
+```
+GraphingCalc (顶层枢纽)
+├── GraphingCanvas       ← 核心画布：Canvas 渲染 + 手势交互
+├── GraphingEditSheet    ← 编辑面板 (bindSheet)：函数列表管理
+│   ├── FormulaScreen    ←   隐藏式 WebView 引擎（LaTeX ↔ AST 转换）
+│   ├── TopKeyItem / BottomKeyItem ← 专属键盘
+│   └── DomainKeyboard   ←   定义域数字小键盘
+└── 左上角图例           ←   函数颜色 + 表达式预览
+```
+
+**5 种函数类型**（[GraphingTypes.ets](../entry/src/main/ets/components/graphing/GraphingTypes.ets) 中的 `FunctionType` 枚举）：
+
+| 类型 | 枚举值 | 特征 |
+|------|--------|------|
+| 普通显函数 f(x) | NORMAL (0) | 单一 x 变量 |
+| 参数方程 x(t), y(t) | PARAMETRIC (1) | 双表达式，变量 t，可设定义域 [tMin, tMax] |
+| 极坐标 r(θ) | POLAR (2) | 单表达式，变量 θ，可设定义域 |
+| 隐函数 f(x,y)=0 | IMPLICIT (3) | 单表达式，双变量 x/y |
+| 独立点 (x,y) | POINT (4) | 双表达式（x 坐标 + y 坐标） |
+
+**核心子组件**：
+
+- **[GraphingCanvas.ets](../entry/src/main/ets/components/graphing/GraphingCanvas.ets)** — 核心画布：
+  - 使用 ArkUI `Canvas` 组件 + `CanvasRenderingContext2D` 进行 2D 绘制
+  - 坐标系渲染：自适应步长网格（`minSpacingPx=40` → 智能选择 1/2/5/10 倍数）、坐标轴、刻度标签、原点标记 "0"
+  - 函数曲线绘制：遍历 `functionList`，对每条可见函数调用 `EngineService.calculateGraphPoints()` 获取 `Float64Array` 采样点，通过 `ctx.lineTo()` 连线；遇到 NaN 自动断线（处理渐近线/奇点）
+  - 独立点处理：当采样结果仅 2 个坐标时，绘制实心圆点而非连线
+  - 手势交互：`PanGesture`（拖拽平移，增量式 offsetX/Y 累加）+ `PinchGesture`（双指缩放，以手势中心为锚点的几何补偿，缩放范围 [10⁻⁵, 10⁷]），两种手势通过 `GestureGroup(GestureMode.Parallel)` 并行
+  - 避震机制：Pinch 结束后设置 `justEndedPinch=true`，Pan 检测到此标志时跳过首帧位移，吸收单指抬起时的重心跳跃
+  - 帧率节流：`isRenderPending` 标志 + `setTimeout` 确保每帧最多一次重绘
+  - 自适应深色模式：网格颜色/坐标轴颜色/文字颜色根据 `colorModeIndex` 动态切换
+  - 监听 `temp_graph_ast_ready` 事件自动触发重绘
+
+- **[GraphingEditSheet.ets](../entry/src/main/ets/components/graphing/GraphingEditSheet.ets)** — 编辑面板：
+  - 通过 `bindSheet` 从底部弹出，支持 dragBar 和返回拦截（`onWillDismiss` 智能判断：键盘开着→抢救数据收起键盘、小键盘开着→收起小键盘、都没开→直接关闭）
+  - 函数列表：最多 10 条（`MAX_FUNCTIONS = 10`），每条显示颜色圆点（点击切换可见性）+ 动态表达式行（根据函数类型渲染不同布局）+ 可选定义域行（参数方程/极坐标）
+  - 焦点管理：`switchEditorFocus()` 在切换表达式编辑行时，先保存当前焦点数据（`request_graphing_data`），再唤醒引擎（`wake_web_engines`）并加载新 LaTeX（`load_latex_to_editor`）
+  - 定义域编辑：`TextInput` 组件 + 自定义 `DomainKeyboard`（纯数字键盘），含光标感知的插入/删除逻辑和值同步
+  - 新建函数：`FunctionTypeDialog` 自定义弹窗，5 种类型可选，自动分配未使用的颜色
+  - 左滑删除：`SwipeAction` + 智能状态转移（同步调整 activeIndex 和编辑焦点，防止数据污染）
+  - 底部键盘坞：`translate({ y: isKeyboardShow ? 0 : '100%' })` 动画滑入/滑出，内嵌 `FormulaScreen`（隐藏式引擎）+ 上下键盘 Grid
+
+- **[GraphingKeyboard.ets](../entry/src/main/ets/components/graphing/GraphingKeyboard.ets)** — 专属键盘：
+  - 上键盘 6×3：`getDynamicTopButtons()` 根据当前函数类型动态生成按键矩阵（普通函数独占 x，参数方程独占 t，极坐标独占 θ，隐函数双变量 x/y，点坐标无变量）
+  - 下键盘 5×4：固定数字/运算符键盘，`确定` 键触发数据保存并收起键盘，`关闭` 键收起键盘
+  - Shift 层：三角函数反函数、√³、|x|、x³、lg
+  - `DomainKeyboard`：定义域专用的 4×4 纯数字小键盘（0-9 + 小数点 + 负号 + 退格 + AC + 确定），毛玻璃背景 + 圆角
+  - 所有按键复用 `KeyGestureWrapper`，支持震动反馈
+
+- **[GraphingTypes.ets](../entry/src/main/ets/components/graphing/GraphingTypes.ets)** — 类型定义：
+  - `FunctionType` 枚举（5 种类型）
+  - `GraphFunctionItem` 接口：id、color、isVisible、type、主表达式（latex/base64/ast）、伴生表达式（latex2/base64_2/ast2）、定义域边界（tMin/tMax）
+
+**数据持久化**：
+- `graphingFunctionsJson` 通过 `@StorageLink` 绑定到 AppStorage 的 `KEY_GRAPHING_FUNCTIONS`
+- `saveFunctions()` 方法在每次修改后自动调用 `PreferenceManager.set()` 落盘
+- 启动时从 JSON 反序列化恢复函数列表，空列表自动创建默认空项
+
+**引擎休眠/唤醒机制**：
+- GraphingCalc 复用 `FormulaScreen`（`moduleType='graphing'`）作为隐藏的 LaTeX→AST 转换引擎
+- 面板关闭时发送 `sleep_web_engines` → FormulaScreen 调用 `webviewController.onInactive()` 释放 GPU 资源
+- 面板打开/焦点切换时发送 `wake_web_engines` → FormulaScreen 调用 `webviewController.onActive()` 恢复渲染
+
 ### 5.3 占位模块（开发中）
 
 以下组件的 `build()` 仅渲染 "当前模块正在开发中..." 文本：
-- [GraphingCalc.ets](../entry/src/main/ets/components/graphing/GraphingCalc.ets) — 函数图像
 - [StatisticsCalc.ets](../entry/src/main/ets/components/StatisticsCalc.ets) — 统计分析
 - [UnitConverter.ets](../entry/src/main/ets/components/UnitConverter.ets) — 单位转换
 - [BaseConverter.ets](../entry/src/main/ets/components/BaseConverter.ets) — 进制转换
@@ -297,6 +375,9 @@ CalculatorX 采用**单页面应用 (SPA) + 壳与插件**架构，不使用传�
   - `screen_handle_action`：接收来自各 *Calc 键盘的按键指令
   - `event_math_insert`：从历史记录回填
   - `event_math_undo` / `event_math_redo`：撤销/重做
+  - `request_graphing_data`：图形模块请求提取当前编辑器的 LaTeX + AST（含 reqId 编码）
+  - `sleep_web_engines` / `wake_web_engines`：图形面板关闭/打开时的 GPU 资源管理
+  - `load_latex_to_editor`：图形模块切换焦点时加载目标 LaTeX 到隐藏编辑器
 - **内部状态**：
   - `lastAnsLatex`：上一次计算结果（供 `Ans` 键调用）
   - `lastValidJson`：上一次合法的 AST（供 `S⇄D` 重新计算）
@@ -309,6 +390,7 @@ CalculatorX 采用**单页面应用 (SPA) + 壳与插件**架构，不使用传�
   - Ans：插入上一步结果
 - **`getCalcMode()` 方法**：将 `moduleType` 映射为 C++ 引擎的 `CalcMode`：
   - `matrix` → 1, `equation` → 2, `graphing` → 3, 其余 → 0 (STANDARD)
+  - mode=3 时不会走标准计算流程，而是在 `engine.cpp` 中被**函数图像专属拦截路由**接管
 - **JavaScript 代理 `arktsBridge`**：`render.html` 中的 `html2canvas` 生成图片后，通过 `arktsBridge.onImageReady(jsonStr)` 回调 ArkTS 端，触发 `HistoryRepository.insertRecord()`
 
 #### KeyGestureWrapper（手势包装器）
@@ -412,15 +494,20 @@ entry/src/main/cpp/
 - **暴露函数**：`calculate(jsonStr: string, config: {isRad, precision, mode}) → string`
 - **核心流程**：
   1. 解析 JSON 输入和配置参数
-  2. 如果 `mode === 2`（方程模式）→ **专属拦截路由**：
+  2. 如果 `mode === 3`（函数图像模式）→ **专属拦截路由**：
+     - 解析复合 JSON payload（type/ast/ast2/tMin/tMax/yMin/yMax）
+     - 缓存穿透：以 `json_str + (isRad ? "_rad" : "_deg")` 为 key 查 `graphing_cache`，命中直接复用编译好的 RPN 虚拟机
+     - 未命中则调用 `parseAST()` 解析主表达式和伴生表达式（仅 PARAMETRIC/POINT 需要），`engine.compile(expr1, expr2)` 编译为 RPN 指令序列
+     - 根据 func_type 分发给 5 种采样器 → 返回 `Float64Array`（N-API 零拷贝 ArrayBuffer）
+  3. 如果 `mode === 2`（方程模式）→ **专属拦截路由**：
      - 拆解 `List`（方程组）或解析单一 `Equal`（一元方程）
      - 嗅探未知数（x/y/z/u/v/w），有多少检测多少
      - 组装 Giac 指令 `csolve([eq1,eq2,...], [x,y,...])`
      - 调用 `evaluateWithGiac()` 求解
      - 通过 `formatEquationResult()` 美化输出
-  3. 否则走**标准解析流程**：`parseAST(ast, ctx)` → SymEngine Expression
-  4. 检测是否需要 Giac 接管（积分/极限/求和/求积/GCD/LCM/导数/矩阵运算/根号化简）→ 如果命中则走 Giac 管道
-  5. 根据 `precision` 参数分发输出格式
+  4. 否则走**标准解析流程**：`parseAST(ast, ctx)` → SymEngine Expression
+  5. 检测是否需要 Giac 接管（积分/极限/求和/求积/GCD/LCM/导数/矩阵运算/根号化简）→ 如果命中则走 Giac 管道
+  6. 根据 `precision` 参数分发输出格式
 
 - **精度控制码 (`precision`)**：
 
@@ -452,6 +539,35 @@ entry/src/main/cpp/
 - **用途**：符号积分/极限/求和/求积、矩阵运算（det/rank/rref/eigenvals）、方程求解（csolve）、GCD/LCM、根号深度化简
 - Giac 引擎作为全局单例初始化，避免重复创建上下文
 - 积分失败时自动降级为 Romberg 数值积分，并对结果区间取中值
+
+#### GraphingEngine.cpp/.h — 函数图像渲染引擎
+
+[GraphingEngine.h](../entry/src/main/cpp/core/GraphingEngine.h) / [GraphingEngine.cpp](../entry/src/main/cpp/core/GraphingEngine.cpp)
+
+专为函数图像设计的**极速采样引擎**，核心思想是"预编译 → 批量求值"，避免逐点调用 SymEngine 求值的开销。
+
+**RPN 虚拟机架构**：
+- **26 种指令操作码** (`OpCode` 枚举)：VAR_X/VAR_Y/VAR_T/VAR_THETA（多变量加载）、CONST_VAL（常数压栈）、ADD/SUB/MUL/DIV/POW（算术）、SIN/COS/TAN/ASIN/ACOS/ATAN/SINH/COSH/TANH/LN/LOG10/SQRT/ABS（数学函数）
+- **`compileNode()`**：递归下降遍历 SymEngine AST，将表达式树编译为 RPN 指令序列。含整数次幂优化（x²→MUL、x³→MUL+MUL、x⁴⁻⁸→循环展开）
+- **`compile(expr1, expr2)`**：双核编译 — 同时编译主表达式和伴生表达式的指令序列 + 导数指令序列。智能推断求导变量（参数方程用 t、极坐标用 θ、其余用 x）
+- **`executeMachine(x, y, t, theta, inst_list)`**：128 深度栈式虚拟机，单次求值仅包含 switch 分发和栈操作，无函数调用开销
+
+**5 种采样器**（在 `engine.cpp` 的 mode=3 路由中按 func_type 分发）：
+
+| 采样器 | 对应类型 | 算法 |
+|--------|---------|------|
+| `generatePointsFast(xMin, xMax, n)` | 显函数 f(x) | **自适应递归采样**：基准网格（每 4px 一个探测点）→ 导数雷达检测极值点（二分法锁定 x_peak）→ 弯曲误差阈值（视口宽度/1000）→ 深度 8 递归细分 → 奇点断崖自动 NaN 断线 |
+| `generateParametric(tMin, tMax, n)` | 参数方程 | 均匀步进采样（最少 500 点），evaluate() 取 x(t)，evaluate_2() 取 y(t) |
+| `generatePolar(θMin, θMax, n)` | 极坐标 | 均匀步进采样（最少 500 点），evaluate() 取 r(θ)，直角坐标转换 (r·cos θ, r·sin θ) |
+| `generatePoint()` | 独立点 | 直接求值一次 → 返回单个 (x, y) 坐标对 |
+| `generateImplicit(xMin, xMax, yMin, yMax, res)` | 隐函数 | **Marching Squares**：150×150 网格采样 → 4 位状态编码（16 种零值线拓扑）→ 线性插值定位零点 → 分段线段输出（NaN 断线） |
+
+**关键设计**：
+- **全局缓存**：`engine.cpp` 中维护 `static unordered_map<string, GraphingEngine> graphing_cache`，key 为 `json_str + (isRad ? "_rad" : "_deg")`，避免重复解析和编译同一表达式
+- **导数雷达**：`compile()` 阶段自动用 SymEngine 符号求导，生成 `deriv_instructions`。`generatePointsFast()` 在相邻采样点导数异号时，二分法定位极值点并强制插入采样
+- **极限边界嗅探**：`generatePointsFast()` 在定义域边界（如 sqrt(x) 跨过 x=0）使用 20 次二分法逼近精确边界，注入 NaN 切断脏线
+- **零拷贝传输**：采样结果 `vector<double>` 通过 N-API `napi_create_arraybuffer` 直接在共享内存中创建 `Float64Array`，ArkTS 端零解析开销直接传给 Canvas 绘图
+- **奇点断崖检测**（`sampleRecursive` depth≥8 时）：符号穿越检测（y1×y2<0）+ 40 次二分法锁定奇点 x 坐标 → 注入 NaN 断开连线
 
 #### ErrorHandler.h — 业务异常系统
 
@@ -534,6 +650,16 @@ entry/src/main/cpp/
 - `icons/`：自定义 SVG 数学符号图标（组合/排列/矩阵/方程模板/通用数学符号）
 - `docs/`：应用的 Nextra 静态帮助文档站点（包含数学功能使用指南、界面说明、FAQ、隐私政策等）
 
+### 函数图像的 WebView 复用
+
+函数图像模块**不直接显示** `calculator.html` 的 math-field，而是将 `FormulaScreen` 作为隐藏的**纯 LaTeX↔AST 转换引擎**使用：
+
+- `FormulaScreen({ moduleType: 'graphing' })` 仅在 `GraphingEditSheet` 的键盘坞中占 64px 高度，用户不可见
+- 当用户编辑函数表达式时，按键通过 `screen_handle_action` 事件发送到隐藏 WebView 完成公式编辑
+- 当用户点击"确定"或切换焦点时，`request_graphing_data` 触发：`getFormula()` → 清洗 → `generateInjectJs()` → AST 提取 → `temp_graph_ast_ready` 事件
+- 同时调用 `render.html` 的 `exportLatexToPng()` 生成表达式预览图 → `response_graph_base64_ready` 事件
+- 引擎休眠/唤醒：面板关闭时 `onInactive()` 释放 WebView GPU 资源，打开时 `onActive()` 恢复，确保不影响前台 Canvas 渲染性能
+
 ---
 
 ## 8. 数据持久化层
@@ -586,6 +712,7 @@ entry/src/main/cpp/
 | KEY_HAPTIC_FEEDBACK | true | 振动总开关 |
 | KEY_STARTUP_PAGE | 0 | 0=上次使用, 1-9=指定模块 |
 | KEY_LAST_USED_MODULE | 'scientific' | 上次使用的模块 ID |
+| KEY_GRAPHING_FUNCTIONS | '[]' | 函数图像列表持久化（JSON 序列化的 GraphFunctionItem 数组） |
 
 ---
 
@@ -668,12 +795,12 @@ entry/src/main/
 │   │   ├── BasicCalc.ets                   # 基础计算器插件：5×4 大圆按钮，四则运算/百分数/Ans/长按连续退格
 │   │   ├── MatrixCalc.ets                  # 矩阵与向量插件：6×5 键盘(Shift)，维度和类型网格选择器(1×1 到 6×6)
 │   │   ├── EquationSolver.ets              # 方程求解插件：3×6 上键盘(Shift)+5×5 下键盘，方程组模板(2-6行)，8个未知数变量
-│   │   ├── graphing/                       # 函数图像组件
-│   │   │   ├── GraphingCalc.ets            # 主枢纽：状态管理、事件调度、组合子组件
-│   │   │   ├── GraphingCanvas.ets          # 核心画布：坐标系渲染、引擎对接、手势处理
-│   │   │   ├── GraphingEditSheet.ets       # 编辑面板：函数列表管理与交互
-│   │   │   ├── GraphingKeyboard.ets        # 专属键盘：顶底键盘组件与按键布局配置
-│   │   │   └── GraphingTypes.ets           # 类型声明：GraphFunctionItem 等接口定义
+│   │   ├── graphing/                       # 📈 函数图像子系统 (5 种函数类型，10 条上限，多函数叠加)
+│   │   │   ├── GraphingCalc.ets            # 顶层枢纽：状态管理、事件调度、图例渲染、bindSheet 生命周期控制
+│   │   │   ├── GraphingCanvas.ets          # 核心画布：Canvas 坐标系渲染、Float64Array 零拷贝绘图、Pan/Pinch 手势交互
+│   │   │   ├── GraphingEditSheet.ets       # 编辑面板：函数列表 CRUD、焦点切换、定义域编辑、类型选择弹窗
+│   │   │   ├── GraphingKeyboard.ets        # 专属键盘：动态变量布局(按函数类型)、Shift 层、定义域数字小键盘
+│   │   │   └── GraphingTypes.ets           # 类型声明：FunctionType 枚举(5 种)、GraphFunctionItem 接口
 │   │   ├── StatisticsCalc.ets              # 统计分析插件（占位，开发中）
 │   │   ├── UnitConverter.ets               # 单位转换插件（占位，开发中）
 │   │   ├── BaseConverter.ets               # 进制转换插件（占位，开发中）
@@ -700,12 +827,12 @@ entry/src/main/
 │
 ├── cpp/                                    # ⚙️ C++ 计算机代数系统引擎层
 │   ├── CMakeLists.txt                      # N-API 构建脚本：静态链接 Giac 1.9.0 + SymEngine 0.11.2 + Boost 1.82.0
-│   ├── engine.cpp                          # N-API 唯一入口: calculate()，全局路由(方程拦截 → Giac csolve / 标准 → parseAST + 精度分发)
+│   ├── engine.cpp                          # N-API 唯一入口: calculate()，全局路由(图像拦截→ GraphingEngine 采样 / 方程拦截→ Giac csolve / 标准→ parseAST + 精度分发)
 │   ├── core/
 │   │   ├── parser.cpp/.h                   # AST 递归下降解析器：MathJSON → SymEngine Expression，角度/弧度转换，DMS/矩阵/排列组合/微积分特殊节点
 │   │   ├── MatrixParser.cpp/.h             # 矩阵 AST 解析：JSON Matrix → 二维数组 → Giac 矩阵指令
 │   │   ├── giac_bridge.cpp/.h              # Giac CAS 桥接：符号积分/极限/方程/矩阵运算/Romberg 数值积分降级
-│   │   ├── GraphingEngine.cpp/.h           # 函数渲染核心 (集成符号伴生导数雷达、极限边界嗅探与 RPN 自适应递归采样)
+│   │   ├── GraphingEngine.cpp/.h           # 函数渲染引擎：RPN 虚拟机(26 指令)、符号导数雷达、自适应递归采样、Marching Squares 隐函数
 │   │   └── ErrorHandler.h                  # 异常状态机：6 种业务错误码(DIV_BY_ZERO/DOMAIN/OVERFLOW/SYNTAX/TIMEOUT/DMS) → 前端友好信息
 │   ├── utils/
 │   │   ├── FastMath.cpp/.h                 # 极速超大数运算：O(1) 阶乘/幂运算(10^10^19 级)，幽灵变量 MAGICBASETEN 传递精确基数
@@ -746,6 +873,9 @@ entry/src/main/
 | LaTeX 显示异常 | `calculator.html`（MathLive 渲染）、`InputTranslator.ets`（LaTeX 翻译是否正确） |
 | 矩阵/向量报错 | `EngineService.ets`（MWrap 包装/矩阵清洗）、`MatrixParser.cpp`（矩阵 AST 解析）、`giac_bridge.cpp`（Giac 矩阵运算） |
 | 方程求解报错 | `engine.cpp`（方程独占路由）、`giac_bridge.cpp`（csolve 调用） |
+| 函数图像不显示/曲线错误 | `GraphingCanvas.ets`（Canvas 绘制逻辑）、`GraphingEngine.cpp`（采样器/编译）、`engine.cpp`（mode=3 路由、缓存） |
+| 函数图像手势异常 | `GraphingCanvas.ets`（PanGesture/PinchGesture 处理、避震逻辑） |
+| 函数编辑/焦点切换问题 | `GraphingEditSheet.ets`（焦点管理、switchEditorFocus）、`FormulaScreen.ets`（graphing 事件处理） |
 | 历史记录问题 | `HistoryRepository.ets`（数据库操作）、`render.html`（截图生成）、`FormulaScreen.ets`（arktsBridge 回调）、`UniversalHistoryList.ets`（列表渲染） |
 | 设置不生效 | `PreferenceManager.ets`（读写）、`EntryAbility.ets`（初始化）、`Settings.ets`（UI 设置项） |
 | 侧边栏/顶栏 UI 问题 | `SideBarMenu.ets`、`TopBar.ets`、`Index.ets`（全局布局） |
@@ -760,6 +890,7 @@ entry/src/main/
 | 基础计算 | `BasicCalc.ets` → `FormulaScreen.ets` → `EngineService.ets` → `engine.cpp` |
 | 矩阵运算 | `MatrixCalc.ets` → `FormulaScreen.ets` → `EngineService.ets` → `engine.cpp` → `MatrixParser.cpp` → `giac_bridge.cpp` |
 | 方程求解 | `EquationSolver.ets` → `FormulaScreen.ets` → `EngineService.ets` → `engine.cpp`(mode=2) → `giac_bridge.cpp`(csolve) |
+| 函数图像 | `GraphingCalc.ets` → `GraphingEditSheet.ets` → `FormulaScreen.ets`(graphing 模式) → `EngineService.calculateGraphPoints()` → `engine.cpp`(mode=3) → `GraphingEngine.cpp`(RPN 采样器) → `GraphingCanvas.ets`(Canvas 绘制) |
 | S⇄D 格式切换 | `FormulaScreen.ets`(handleAction/recalculateWithPrecision) → `engine.cpp`(precision 控制码) → `FormatUtils.cpp` |
 | 历史记录存取 | `FormulaScreen.ets`(arktsBridge.onImageReady) → `HistoryRepository.ets` → `UniversalHistoryList.ets` / `HistorySheet.ets` / `HistoryManager.ets` |
 | 全局状态管理 | `PreferenceManager.ets` + `EntryAbility.ets`（初始化） + `CalculatorConfigs.ets`（键名定义） + 各 `*Calc.ets`（AppStorage 消费） |
