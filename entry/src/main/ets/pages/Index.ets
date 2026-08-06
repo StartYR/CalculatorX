@@ -11,6 +11,7 @@ import router from '@ohos.router';
 import { common } from '@kit.AbilityKit';
 import { RoutePath, PreferenceConfigs } from '../utils/CalculatorConfigs';
 import { PreferenceManager } from '../utils/PreferenceManager';
+import { PrivacyDialog } from '../components/PrivacyDialog';
 import { TopBar } from '../components/TopBar';
 import { SideBarMenu } from '../components/SideBarMenu';
 import { HistorySheet } from '../components/HistorySheet';
@@ -39,6 +40,14 @@ struct Index {
   @State currentModule: string = 'scientific'; // 默认值，将在 aboutToAppear 中被接管
   @State topBarIsShift: boolean = false;
 
+  // 定义隐私弹窗控制器
+  privacyDialogController: CustomDialogController = new CustomDialogController({
+    builder: PrivacyDialog(),
+    autoCancel: false, // 禁止点击弹窗外部的遮罩层关闭，必须显式点击“同意”或“不同意”
+    alignment: DialogAlignment.Center,
+    customStyle: true  // 允许使用在 PrivacyDialog 内部定义的背景色和圆角
+  });
+
   // 历史记录面板的生成器 (作为全局遮罩，保留在主入口)
   @Builder HistorySheetBuilder() {
     HistorySheet({
@@ -60,6 +69,15 @@ struct Index {
 
     PreferenceManager.init(getContext(this) as common.UIAbilityContext);
     PreferenceManager.loadAllToAppStorage();
+
+    // 隐私声明弹窗
+    let isPrivacyAgreed = AppStorage.get<boolean>(PreferenceConfigs.KEY_PRIVACY_AGREED);
+    if (!isPrivacyAgreed) {
+      // 加上极短的延迟（100ms），确保 Index 页面的根节点已经完成初始化挂载，防止弹窗丢失
+      setTimeout(() => {
+        this.privacyDialogController.open();
+      }, 100);
+    }
 
     const MODULE_MAP: string[] = [
       '',
