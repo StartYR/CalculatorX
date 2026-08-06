@@ -11,6 +11,7 @@ import { HistoryRepository } from '../database/HistoryRepository';
 import { EngineService, CalcConfig } from '../utils/EngineService';
 import { InputTranslator } from '../utils/InputTranslator';
 import { PreferenceConfigs } from '../utils/CalculatorConfigs';
+import Logger from '../utils/Logger';
 
 @Component
 export struct FormulaScreen {
@@ -36,72 +37,87 @@ export struct FormulaScreen {
   private pendingLatex: string | null = null;
 
   aboutToAppear() {
+    Logger.info(`[FormulaScreen] aboutToAppear 触发, 当前 moduleType: ${this.moduleType}`);
     let eventHub = getContext(this).eventHub;
-
 
     // ---------- 基础编辑监听 ----------
     eventHub.on('event_math_insert', (str: string) => {
+      Logger.info(`[FormulaScreen] 收到 event_math_insert 事件`);
       this.insertToWeb(str);
     });
     eventHub.on('event_math_undo', () => {
+      Logger.info(`[FormulaScreen] 收到 event_math_undo 事件`);
       this.webviewController.runJavaScript(`document.querySelector('math-field').executeCommand('undo')`);
     });
     eventHub.on('event_math_redo', () => {
+      Logger.info(`[FormulaScreen] 收到 event_math_redo 事件`);
       this.webviewController.runJavaScript(`document.querySelector('math-field').executeCommand('redo')`);
     });
     eventHub.on('screen_handle_action', (action: string, isShift: boolean) => {
+      Logger.info(`[FormulaScreen] 收到 screen_handle_action 事件, action: ${action}, isShift: ${isShift}`);
       this.handleAction(action, isShift);
     });
 
     // ==================== 新增：底层引擎的硬件级休眠与唤醒控制 ====================
     eventHub.on('sleep_web_engines', () => {
+      Logger.info(`[FormulaScreen] 收到 sleep_web_engines 休眠指令`);
       try {
         this.webviewController.onInactive();
         this.renderWebController.onInactive();
-      } catch (e) {}
+      } catch (e) {
+        Logger.error(`[FormulaScreen] 休眠执行异常: ${e.message}`);
+      }
     });
 
     eventHub.on('wake_web_engines', () => {
+      Logger.info(`[FormulaScreen] 收到 wake_web_engines 唤醒指令`);
       try {
         this.webviewController.onActive();
         this.renderWebController.onActive();
-      } catch (e) {}
+      } catch (e) {
+        Logger.error(`[FormulaScreen] 唤醒执行异常: ${e.message}`);
+      }
     });
 
     // ==================== 对象池复用，接收新公式并重置输入框 ====================
     eventHub.on('load_latex_to_editor', (latex: string) => {
-      // 1. 如果 Web 的 HTML 还没加载完（比如刚启动应用），把任务存起来
+      Logger.info(`[FormulaScreen] 收到 load_latex_to_editor 事件`);
       if (!this.isWebReady) {
+        Logger.info(`[FormulaScreen] Web 尚未就绪，存入 pendingLatex`);
         this.pendingLatex = latex;
         return;
       }
-
-      // 2. 将清空和插入合并为一条原子级 JS 指令，消灭跨语言回调丢失的隐患
       let safeString = JSON.stringify(latex);
       let script = latex ? `clearMath(); insertMath(${safeString});` : `clearMath();`;
-
       try {
         this.webviewController.runJavaScript(script);
-      } catch (e) {}
+      } catch (e) {
+        Logger.error(`[FormulaScreen] load_latex_to_editor 异常: ${e.message}`);
+      }
     });
 
     // ==================== 画图数据提取 ====================
     eventHub.on('request_graphing_data', (reqId: number) => {
+      Logger.info(`[FormulaScreen] 收到 request_graphing_data 事件, reqId: ${reqId}`);
       this.webviewController.runJavaScript('window.getFormula()', (error, rawLatexResult) => {
-        if (error) return;
+        if (error) {
+          Logger.error(`[FormulaScreen] request_graphing_data getFormula 失败: ${error.message}`);
+          return;
+        }
         let rawLatex = rawLatexResult.replace(/^"|"$/g, '').replace(/\\\\/g, '\\');
         let cleanedLatex = EngineService.cleanRawLatex(rawLatexResult);
         let injectJs = EngineService.generateInjectJs(cleanedLatex);
 
         this.webviewController.runJavaScript(injectJs, (err, jsonResult) => {
-          if (err) return;
+          if (err) {
+            Logger.error(`[FormulaScreen] request_graphing_data injectJs 失败: ${err.message}`);
+            return;
+          }
           let cleanJsonString = EngineService.parseWebJsonResult(jsonResult);
           let graphHookTag = `GRAPH_HOOK_${reqId}`;
 
-          // 用户已经输入完毕并触发了提取，DOM 必定是稳定渲染状态，直接单次自信调用截图！
+          Logger.info(`[FormulaScreen] 画图提取，下发 exportLatexToPng`);
           this.renderWebController.runJavaScript(`window.exportLatexToPng(${JSON.stringify(rawLatex)}, ${JSON.stringify(graphHookTag)})`);
-
-          // AST 无需等待，直接起飞
           getContext(this).eventHub.emit('temp_graph_ast_ready', reqId, rawLatex, cleanJsonString);
         });
       });
@@ -109,6 +125,7 @@ export struct FormulaScreen {
   }
 
   aboutToDisappear() {
+    Logger.info(`[FormulaScreen] aboutToDisappear 触发, 卸载全部事件监听`);
     let eventHub = getContext(this).eventHub;
     eventHub.off('event_math_insert');
     eventHub.off('event_math_undo');
@@ -174,12 +191,14 @@ export struct FormulaScreen {
       }
       this.recalculateWithPrecision(cppPrecisionMode);
     } else if (action === '=') {
+      Logger.info(`[FormulaScreen] 处理 = 按键`);
       if (this.moduleType === 'equation') {
         this.insertToWeb('=');
       } else {
         this.executeCalculation();
       }
     } else if (action === 'EXE') {
+      Logger.info(`[FormulaScreen] 处理 EXE 按键`);
       this.executeCalculation();
     } else {
       let latexChar = InputTranslator.translate(action, this.combSelect, this.permSelect);
@@ -197,15 +216,24 @@ export struct FormulaScreen {
   }
 
   private executeCalculation() {
+    Logger.info(`[FormulaScreen] 开始执行 executeCalculation，准备提取输入公式`);
     this.webviewController.runJavaScript('window.getFormula()', (error, rawLatexResult) => {
-      if (error) return;
+      if (error) {
+        Logger.error(`[FormulaScreen] getFormula 失败: ${error.message}`);
+        return;
+      }
+      Logger.info(`[FormulaScreen] 成功提取原始 LaTeX`);
 
       let rawLatex = rawLatexResult.replace(/^"|"$/g, '').replace(/\\\\/g, '\\');
       let cleanedLatex = EngineService.cleanRawLatex(rawLatexResult);
       let injectJs = EngineService.generateInjectJs(cleanedLatex);
 
       this.webviewController.runJavaScript(injectJs, (err, jsonResult) => {
-        if (err) return;
+        if (err) {
+          Logger.error(`[FormulaScreen] AST 转换 JS 执行失败: ${err.message}`);
+          return;
+        }
+        Logger.info(`[FormulaScreen] 成功获取 MathJSON AST`);
 
         let cleanJsonString = EngineService.parseWebJsonResult(jsonResult);
         this.lastValidJson = cleanJsonString;
@@ -222,13 +250,25 @@ export struct FormulaScreen {
           precision: cppPrecisionMode,
           mode: this.getCalcMode()
         };
+
+        Logger.info(`[FormulaScreen] 准备调用 N-API 计算引擎`);
         let cppResponse: string = EngineService.calculateNative(cleanJsonString, config);
+        Logger.info(`[FormulaScreen] C++ 引擎返回结果，长度: ${cppResponse.length}`);
 
         if (cppResponse.includes("Error")) {
+          Logger.error(`[FormulaScreen] C++ 计算出现异常: ${cppResponse}`);
           this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
         } else {
           this.lastAnsLatex = cppResponse;
-          this.renderWebController.runJavaScript(`window.exportLatexToPng(${JSON.stringify(rawLatex)}, ${JSON.stringify(cppResponse)})`);
+
+          Logger.info(`[FormulaScreen] 准备向暗房下发截图指令，原始公式与结果均就绪`);
+          this.renderWebController.runJavaScript(`window.exportLatexToPng(${JSON.stringify(rawLatex)}, ${JSON.stringify(cppResponse)})`, (err, res) => {
+            if (err) {
+              Logger.error(`[FormulaScreen] 暗房截图指令下发失败: ${err.message}`);
+            } else {
+              Logger.info(`[FormulaScreen] 暗房截图指令已成功送达 Web`);
+            }
+          });
 
           if (cppPrecisionMode === -1) {
             this.isTempDecimal = cppResponse.includes('.');
@@ -267,8 +307,13 @@ export struct FormulaScreen {
         .width('100%')
         .height('100%')
         .backgroundColor(Color.Transparent)
+        .onConsole((event) => {
+          Logger.info(`[Web Input Console] ${event?.message.getMessage()}`);
+          return false;
+        })
         // 加载完毕后消费积压的任务
         .onPageEnd(() => {
+          Logger.info(`[FormulaScreen] calculator.html 页面加载完毕`);
           this.isWebReady = true;
           if (this.pendingLatex !== null) {
             let safeString = JSON.stringify(this.pendingLatex);
@@ -289,23 +334,32 @@ export struct FormulaScreen {
         .backgroundColor(Color.Transparent)
         .javaScriptAccess(true)
         .domStorageAccess(true)
+        .onConsole((event) => {
+          Logger.info(`[Web Render Console] ${event?.message.getMessage()}`);
+          return false;
+        })
         .javaScriptProxy({
           object: {
             onImageReady: (jsonStr: string) => {
+              Logger.info(`[FormulaScreen] 收到 onImageReady 回调，数据长度: ${jsonStr.length}`);
               try {
                 let parsed = JSON.parse(jsonStr) as Record<string, string>;
-                if (parsed['error']) return;
+                if (parsed['error']) {
+                  Logger.error(`[FormulaScreen] 渲染内部返回 Error: ${parsed['error']}`);
+                  return;
+                }
 
                 let outLatex = parsed['outputLatex'];
                 if (outLatex && outLatex.startsWith("GRAPH_HOOK_")) {
                   let reqId = parseInt(outLatex.replace("GRAPH_HOOK_", ""));
                   let inputBase64 = parsed['inputBase64'];
-
+                  Logger.info(`[FormulaScreen] 拦截为 GRAPH_HOOK 流程，分发事件`);
                   // 完美闭环
                   getContext(this).eventHub.emit('response_graph_base64_ready', reqId, inputBase64);
                   return;
                 }
 
+                Logger.info(`[FormulaScreen] 开始组装数据调用 HistoryRepository.insertRecord，当前 moduleType: ${this.moduleType}`);
                 HistoryRepository.insertRecord({
                   moduleType: this.moduleType,
                   inputContent: parsed['inputLatex'],
@@ -314,7 +368,10 @@ export struct FormulaScreen {
                   outputBase64: parsed['outputBase64'],
                   timestamp: Date.now(),
                 });
-              } catch (e) {}
+                Logger.info(`[FormulaScreen] HistoryRepository.insertRecord 调用完成`);
+              } catch (e) {
+                Logger.error(`[FormulaScreen] onImageReady 执行异常: ${e.message}`);
+              }
             }
           },
           name: "arktsBridge",
