@@ -218,4 +218,4 @@ export class PreferenceConfigs {
  * 当前 App 内置的隐私协议版本号
  * 版本整数 = 主版本号 × 10000 + 次版本号 × 100 + 修订号
  */
-export const CURRENT_PRIVACY_VERSION = 10001;
+export const CURRENT_PRIVACY_VERSION = 10100;
