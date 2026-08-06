@@ -16,6 +16,7 @@ import {
   hdsMaterial
 } from '@kit.UIDesignKit';
 import Logger from '../../utils/Logger'
+import bundleManager from '@ohos.bundle.bundleManager';
 
 // 定义鸣谢数据结构
 interface CreditItem {
@@ -89,6 +90,10 @@ struct CreditsDialog {
 @Component
 struct About {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
+
+  // 定义版本号状态变量
+  @State appVersion: string = 'v0.0.0';
+
   private scrollerForScroll: Scroller = new Scroller();
 
   // 获取当前 UIAbility 的上下文，用于拉起外部应用
@@ -123,6 +128,19 @@ struct About {
     });
   }
 
+  // 在页面即将挂载时，动态获取当前应用的版本号
+  aboutToAppear() {
+    bundleManager.getBundleInfoForSelf(bundleManager.BundleFlag.GET_BUNDLE_INFO_WITH_APPLICATION)
+      .then((bundleInfo) => {
+        // 成功获取后，将其赋值给状态变量，UI 会自动刷新
+        this.appVersion = bundleInfo.versionName;
+      })
+      .catch((err: Error) => {
+        Logger.error(`获取版本号失败: ${err.message}`);
+        this.appVersion = '未知版本'; // 容错处理
+      });
+  }
+
   build() {
     HdsNavigation() {
       Scroll(this.scrollerForScroll) {
@@ -150,7 +168,7 @@ struct About {
             }
             .padding({top: 32})
 
-            Text('Version 1.1.0 Beta (HarmonyOS)')
+            Text(`Version ${this.appVersion} (HarmonyOS)`)
               .fontSize(14)
               .fontColor($r('sys.color.font_tertiary'))
               .margin({ top: 6, bottom: 40 })
