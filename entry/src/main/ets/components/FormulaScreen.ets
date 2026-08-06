@@ -5,13 +5,6 @@
  * * @author 易睿 (Yi Rui)
  * @date 2026/6/26 21:12
  */
-/**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
- * * @file FormulaScreen.ets
- * @description 全能公式屏幕，负责渲染、引擎通信及入库闭环 (对象池与休眠重构版)
- * * @author 易睿 (Yi Rui)
- * @date 2026
- */
 
 import web_webview from '@ohos.web.webview';
 import { HistoryRepository } from '../database/HistoryRepository';
