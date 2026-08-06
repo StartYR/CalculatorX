@@ -33,46 +33,48 @@ export struct PrivacyDialog {
 
   build() {
     Column({ space: 16 }) {
-      Text('温馨提示')
-        .fontSize(22)
+      Text('隐私声明')
+        .fontSize(24)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('sys.color.font_primary'))
-        .margin({ top: 20 })
+        .margin({ top: 24 })
 
       // ================= 富文本正文 =================
       Text() {
-        Span('欢迎使用 CalculatorX！我们非常重视您的隐私保护和个人信息安全。在您使用本应用前，请您务必仔细阅读并透彻理解')
+        Span('欢迎使用 CalcX 计算器！\n\n我们非常重视保护您的隐私和个人信息。在您使用本应用前，请您务必仔细阅读并透彻理解')
         // 高亮并绑定点击事件的用户协议
         Span('《用户协议》')
-          .fontColor($r('sys.color.brand')) // 使用全局品牌强调色（通常是蓝色或主题色）
+          .fontWeight(FontWeight.Medium)
+          .fontColor($r('sys.color.brand'))
           .onClick(() => {
             this.openWebBrowser('https://calcx.startyi.com/agreement/');
           })
         Span('与')
         // 高亮并绑定点击事件的隐私政策
         Span('《隐私政策》')
+          .fontWeight(FontWeight.Medium)
           .fontColor($r('sys.color.brand'))
           .onClick(() => {
             this.openWebBrowser('https://calcx.startyi.com/privacy/');
           })
-        Span('。如果您同意以上协议内容，请点击“同意”开始使用我们的产品与服务。')
+        Span('。\n\n如果您同意以上协议内容，请点击“同意”开始使用我们的产品与服务。')
       }
       .fontSize(15)
-      .fontColor($r('sys.color.font_secondary'))
-      .lineHeight(24) // 增加行高，提升阅读舒适度
+      .fontColor($r('sys.color.font_primary'))
+      .lineHeight(24)
       .textAlign(TextAlign.Start)
       .margin({ left: 20, right: 20, top: 4, bottom: 8 })
 
       // ================= 底部操作按钮 =================
       Row({ space: 16 }) {
-        // “不同意”按钮（透明背景，降低视觉权重，符合合规无诱导要求）
-        Button('不同意')
+        // “拒绝”按钮
+        Button('拒绝')
           .type(ButtonType.Capsule)
           .backgroundColor(Color.Transparent)
           .fontColor($r('sys.color.font_secondary'))
           .layoutWeight(1)
           .onClick(() => {
-            // 极其冷酷且合规的操作：直接杀掉自身进程
+            // 杀掉自身进程
             this.context.terminateSelf();
           })
 
