@@ -27,19 +27,16 @@
 
 ## ✨ 核心亮点 (Highlights)
 
-* ⚡ **工业级双引擎**：静态链接 **Giac** 与 **SymEngine**，提供无可匹敌的代数化简与符号求导积分能力。
-* 🌌 **O(1) 大数极速解析**：独立的 `FastMath` 降维模块，瞬间计算 $10^{9000000000000000000}$ 级别的极限数字。
-* 🖨️ **LaTeX 渲染**：深度定制 Web 容器，完美呈现复杂的嵌套根号、极限与积分等各种数学公式排版。
-* 🧩 **可插拔的架构设计**：严格遵循单页面应用 (SPA) 逻辑，科学计算、基础计算、历史记录等面板均作为独立组件动态挂载。
-* 🧮 **全能矩阵与线性代数**：支持多维矩阵操作，轻松应对行列式、逆矩阵、转置、特征值提取及向量点乘/叉乘等复杂线代需求。
+- ⚡ **工业级双引擎**：静态链接 **Giac** 与 **SymEngine**，提供无可匹敌的代数化简与符号求导积分能力。
+- 🌌 **O(1) 大数极速解析**：独立的 `FastMath` 降维模块，瞬间计算 $10^{9000000000000000000}$ 级别的极限数字。
+- 🖨️ **LaTeX 渲染**：深度定制 Web 容器，完美呈现复杂的嵌套根号、极限与积分等各种数学公式排版。
+- 🧮 **科学计算**：支持求导、积分、极限、排列组合、求和求积、三角函数与反三角函数、互余函数与双曲函数、复数、分数、取余等多种高级运算。
+- 🔢 **矩阵与线性代数**：支持多维矩阵操作，轻松应对行列式、逆矩阵、转置、特征值提取及向量点乘/叉乘等复杂线代需求。
+- 📈 **函数图像绘制**：支持多种图像：普通显函数 $f(x)$ 、极坐标方程 $r(\theta)$ 、参数方程 $x(t),y(t)$ 、隐函数 $f(x,y)$ 四种图像绘制，支持同时显示 $10$ 个函数图像，以不同颜色区分。
 
 ## 🖼️ 视觉效果
 
 <div align="center">
-  <!-- Home 图片 -->
-  <picture>
-    <img src="https://img.startyi.com/CalcX/Home.webp" width="30%" />
-  </picture>
   <!-- AdvMath 图片 -->
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/AdvMath_dark.webp">
@@ -50,8 +47,13 @@
     <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/Matrix_dark.webp">
     <img src="https://img.startyi.com/CalcX/Matrix.webp" width="30%" />
   </picture>
+  <!-- Graph 图片 -->
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/Graph_dark.webp">
+    <img src="https://img.startyi.com/CalcX/Graph.webp" width="30%" />
+  </picture>
 
-  <p><em>（深浅模式切换 | 高等数学微积分计算 | 矩阵与向量运算）</em></p>
+  <p><em>高等数学微积分计算&#8195;&#8195;&#8195;|&#8195;&#8195;&#8195;&#8195;矩阵与向量运算&#8195;&#8195;&#8195;|&#8195;&#8195;&#8195;&#8195;函数图像&#8195;&#8195;&#8195;&#8195;</em></p>
 </div>
 
 
