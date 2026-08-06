@@ -57,6 +57,9 @@ export class PreferenceManager {
       Logger.error(`[PreferenceManager] 无法同步到 AppStorage，未初始化！`);
       return;
     }
+    // 隐私同意状态加载到内存 (默认值为 false，未同意)
+    AppStorage.setOrCreate(PreferenceConfigs.KEY_PRIVACY_VERSION, PreferenceManager.get(PreferenceConfigs.KEY_PRIVACY_VERSION, 0));
+
     AppStorage.setOrCreate('isRad', PreferenceManager.get(PreferenceConfigs.KEY_IS_RAD, false));
     AppStorage.setOrCreate('hapticFeedback', PreferenceManager.get(PreferenceConfigs.KEY_HAPTIC_FEEDBACK, true));
     AppStorage.setOrCreate('vibrationCurve', PreferenceManager.get(PreferenceConfigs.KEY_VIBRATION_CURVE, 0));
@@ -65,12 +68,7 @@ export class PreferenceManager {
     AppStorage.setOrCreate('answerOutputMode', PreferenceManager.get(PreferenceConfigs.KEY_ANSWER_OUTPUT_MODE, 0));
     AppStorage.setOrCreate(PreferenceConfigs.KEY_COMBINATION_SELECT, PreferenceManager.get(PreferenceConfigs.KEY_COMBINATION_SELECT, 1));
     AppStorage.setOrCreate(PreferenceConfigs.KEY_PERMUTATION_SELECT, PreferenceManager.get(PreferenceConfigs.KEY_PERMUTATION_SELECT, 1));
-
     AppStorage.setOrCreate(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS, PreferenceManager.get(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS, '[]'));
-
-    // 隐私同意状态加载到内存 (默认值为 false，未同意)
-    AppStorage.setOrCreate(PreferenceConfigs.KEY_PRIVACY_AGREED, PreferenceManager.get(PreferenceConfigs.KEY_PRIVACY_AGREED, false));
-
     Logger.info(`[PreferenceManager] 所有配置已成功加载到 AppStorage`);
   }
 }

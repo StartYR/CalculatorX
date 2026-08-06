@@ -9,7 +9,7 @@
 import font from '@ohos.font';
 import router from '@ohos.router';
 import { common } from '@kit.AbilityKit';
-import { RoutePath, PreferenceConfigs } from '../utils/CalculatorConfigs';
+import { RoutePath, PreferenceConfigs, CURRENT_PRIVACY_VERSION } from '../utils/CalculatorConfigs';
 import { PreferenceManager } from '../utils/PreferenceManager';
 import { PrivacyDialog } from '../components/PrivacyDialog';
 import { TopBar } from '../components/TopBar';
@@ -70,10 +70,11 @@ struct Index {
     PreferenceManager.init(getContext(this) as common.UIAbilityContext);
     PreferenceManager.loadAllToAppStorage();
 
-    // 隐私声明弹窗
-    let isPrivacyAgreed = AppStorage.get<boolean>(PreferenceConfigs.KEY_PRIVACY_AGREED);
-    if (!isPrivacyAgreed) {
-      // 加上极短的延迟（100ms），确保 Index 页面的根节点已经完成初始化挂载，防止弹窗丢失
+    // 隐私声明弹窗，版本号比对
+    let storedPrivacyVersion = AppStorage.get<number>(PreferenceConfigs.KEY_PRIVACY_VERSION) || 0;
+
+    // 如果本地记录的版本号 小于 当前应用要求的版本号（新用户 0 < 10000），则唤起弹窗
+    if (storedPrivacyVersion < CURRENT_PRIVACY_VERSION) {
       setTimeout(() => {
         this.privacyDialogController.open();
       }, 100);
