@@ -209,4 +209,7 @@ export class PreferenceConfigs {
   // 启动页面配置
   static readonly KEY_STARTUP_PAGE = 'startupPageMode';
   static readonly KEY_LAST_USED_MODULE = 'lastUsedModule';
+
+  // 隐私声明同意状态标识
+  static readonly KEY_PRIVACY_AGREED = 'privacyAgreed';
 }

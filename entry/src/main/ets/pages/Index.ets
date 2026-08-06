@@ -16,7 +16,7 @@ import { SideBarMenu } from '../components/SideBarMenu';
 import { HistorySheet } from '../components/HistorySheet';
 import { HistoryRepository } from '../database/HistoryRepository';
 
-// ================= [引入所有功能模块组件] =================
+// 所有功能模块组件
 import { ScientificCalc } from '../components/ScientificCalc';
 import { BasicCalc } from '../components/BasicCalc';
 import { MatrixCalc } from '../components/MatrixCalc';

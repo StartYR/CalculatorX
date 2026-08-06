@@ -68,6 +68,9 @@ export class PreferenceManager {
 
     AppStorage.setOrCreate(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS, PreferenceManager.get(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS, '[]'));
 
+    // 隐私同意状态加载到内存 (默认值为 false，未同意)
+    AppStorage.setOrCreate(PreferenceConfigs.KEY_PRIVACY_AGREED, PreferenceManager.get(PreferenceConfigs.KEY_PRIVACY_AGREED, false));
+
     Logger.info(`[PreferenceManager] 所有配置已成功加载到 AppStorage`);
   }
 }
