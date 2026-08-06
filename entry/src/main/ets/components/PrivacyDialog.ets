@@ -8,7 +8,7 @@
 
 import { common, Want } from '@kit.AbilityKit';
 import { PreferenceManager } from '../utils/PreferenceManager';
-import { PreferenceConfigs } from '../utils/CalculatorConfigs';
+import { PreferenceConfigs, CURRENT_PRIVACY_VERSION } from '../utils/CalculatorConfigs';
 
 @CustomDialog
 export struct PrivacyDialog {
@@ -83,10 +83,10 @@ export struct PrivacyDialog {
           .fontColor(Color.White)
           .layoutWeight(1)
           .onClick(() => {
-            // 1. 状态落盘持久化
-            PreferenceManager.set(PreferenceConfigs.KEY_PRIVACY_AGREED, true);
-            // 2. 同步状态到内存（虽然目前可能用不到，但保持数据同步是个好习惯）
-            AppStorage.setOrCreate(PreferenceConfigs.KEY_PRIVACY_AGREED, true);
+            // 1. 将最新的版本号落盘持久化
+            PreferenceManager.set(PreferenceConfigs.KEY_PRIVACY_VERSION, CURRENT_PRIVACY_VERSION);
+            // 2. 同步最新版本号到内存
+            AppStorage.setOrCreate(PreferenceConfigs.KEY_PRIVACY_VERSION, CURRENT_PRIVACY_VERSION);
             // 3. 关闭弹窗放行
             this.controller.close();
           })
