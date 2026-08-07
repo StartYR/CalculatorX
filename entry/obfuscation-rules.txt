@@ -25,3 +25,13 @@
 # 保护 N-API 导出的接口名不被混淆
 -keep-property-name
 calculateExpress
+
+# 保留 ArkWeb javaScriptProxy 桥接的方法名不被混淆
+-keep-property-name onImageReady
+
+# 保留与底层 C++ 引擎 (N-API) 和 JS 通信时涉及到的关键 JSON 字段名
+-keep-property-name inputLatex
+-keep-property-name outputLatex
+-keep-property-name inputBase64
+-keep-property-name outputBase64
+-keep-property-name error
