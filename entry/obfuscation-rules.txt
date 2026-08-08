@@ -35,3 +35,12 @@ calculateExpress
 -keep-property-name inputBase64
 -keep-property-name outputBase64
 -keep-property-name error
+
+# 保留 GraphingCanvas 传递给 C++ 引擎的 JSON 键名不被混淆
+-keep-property-name type
+-keep-property-name ast
+-keep-property-name ast2
+-keep-property-name tMin
+-keep-property-name tMax
+-keep-property-name yMin
+-keep-property-name yMax
