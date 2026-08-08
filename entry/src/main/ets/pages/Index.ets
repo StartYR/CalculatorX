@@ -32,7 +32,7 @@ import { ExchangeRate } from '../components/ExchangeRate';
 @Component
 struct Index {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
-  @StorageProp('isRad') isRad: boolean = false;
+  @StorageProp('isRad') isRad: boolean = true;
 
   @State isSidebarOpen: boolean = false;
   @State isShowHistorySheet: boolean = false;
