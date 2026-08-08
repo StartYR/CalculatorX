@@ -60,7 +60,7 @@ export class PreferenceManager {
     // 隐私同意状态加载到内存 (默认值为 false，未同意)
     AppStorage.setOrCreate(PreferenceConfigs.KEY_PRIVACY_VERSION, PreferenceManager.get(PreferenceConfigs.KEY_PRIVACY_VERSION, 0));
 
-    AppStorage.setOrCreate('isRad', PreferenceManager.get(PreferenceConfigs.KEY_IS_RAD, false));
+    AppStorage.setOrCreate('isRad', PreferenceManager.get(PreferenceConfigs.KEY_IS_RAD, true));
     AppStorage.setOrCreate('hapticFeedback', PreferenceManager.get(PreferenceConfigs.KEY_HAPTIC_FEEDBACK, true));
     AppStorage.setOrCreate('vibrationCurve', PreferenceManager.get(PreferenceConfigs.KEY_VIBRATION_CURVE, 0));
     AppStorage.setOrCreate('decimalPrecision', PreferenceManager.get(PreferenceConfigs.KEY_DECIMAL_PRECISION, 6));
