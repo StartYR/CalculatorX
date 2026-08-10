@@ -99,7 +99,7 @@ git clone https://github.com/StarHeartY/CalculatorX.git
 ## 📥 获取 (Get)
 
 <p align="center">
-  <a href="https://appgallery.huawei.com/" target="_blank">
+  <a href="https://appgallery.huawei.com/app/detail?id=com.startyi.calcx" target="_blank">
     <img src="https://img.startyi.com/CalcX/AppGallery.webp" alt="Explore it on AppGallery" height="64" />
   </a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <a href="https://github.com/StarHeartY/CalculatorX/releases" target="_blank">
