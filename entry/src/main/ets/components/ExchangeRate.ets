@@ -135,7 +135,7 @@ export struct ExchangeRate {
     Logger.info(`[ExchangeRate] 选择货币 ${code} 替换列表项 ${this.selectingId}`);
     let index = this.currencyList.findIndex(item => item.id === this.selectingId);
     if (index !== -1) {
-      this.currencyList[index].code = code;
+      this.currencyList.splice(index, 1, new CurrencyListItem(this.selectingId, code));
     }
     this.isSelectorShow = false;
   }
@@ -288,7 +288,7 @@ export struct ExchangeRate {
             })
           }
           .swipeAction({ end: this.deleteButton(item.id) })
-        }, (item: CurrencyListItem) => item.id)
+        }, (item: CurrencyListItem) => item.id + '_' + item.code)
 
         // 列表尾部：添加货币按钮
         ListItem() {
