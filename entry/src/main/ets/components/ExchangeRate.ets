@@ -7,6 +7,9 @@
  */
 
 import Logger from '../utils/Logger';
+import { HapticUtils } from '../utils/HapticUtils';
+import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor, icon_backspace, PreferenceConfigs } from '../utils/CalculatorConfigs';
+import { KeyGestureWrapper } from './common/KeyGestureWrapper';
 
 // ==================== 1. 模拟数据层 (Mock) ====================
 // TODO: 未来将被 API 真实数据替换
@@ -26,7 +29,31 @@ const MOCK_CURRENCIES: Record<string, CurrencyInfo> = {
   'HKD': { code: 'HKD', name: '港币', symbol: 'HK$', rate: 7.82 },
 };
 
-// ==================== 2. 主件 ====================
+// ==================== 局部样式函数 (完全照搬) ====================
+function getLocalFontColor(btn: string | Resource): ResourceColor {
+  if (btn === 'π' || btn === 'e') return getFontColor('0');
+  if (btn === '确定' || btn === '关闭') return getFontColor('=');
+  return getFontColor(btn);
+}
+
+function getLocalBgColor(btn: string | Resource, isShift: boolean): ResourceColor {
+  if (btn === 'π' || btn === 'e') return getBgColor('0', false);
+  if (btn === '确定') return getBgColor('=', false);
+  if (btn === '关闭') return Color.Red;
+  return getBgColor(btn, isShift);
+}
+
+function getLocalFontSize(btn: string | Resource): number {
+  if (btn === 'π' || btn === 'e') return getFontSize('0');
+  if (btn === 't' || btn === 'θ' || btn === 'x' || btn === 'y') return getFontSize('0');
+  return getFontSize(btn);
+}
+
+function getLocalActionId(btn: string | Resource): string {
+  return getActionId(btn);
+}
+
+// ==================== 2. 主组件 ====================
 @Component
 export struct ExchangeRate {
   // --- 状态变量 ---
@@ -50,25 +77,24 @@ export struct ExchangeRate {
 
   // --- 核心计算逻辑 ---
   calculateRate() {
-    if (!this.amountFrom || this.amountFrom === 'Error') {
-      this.amountTo = '';
+    if (!this.amountFrom || this.amountFrom === 'Error' || this.amountFrom === '0') {
+      this.amountTo = '0';
       return;
     }
 
     try {
       let inputVal = parseFloat(this.amountFrom);
       if (isNaN(inputVal)) {
-        this.amountTo = '';
+        this.amountTo = '0';
         return;
       }
 
       let rateFrom = MOCK_CURRENCIES[this.currencyFrom].rate;
       let rateTo = MOCK_CURRENCIES[this.currencyTo].rate;
 
-      // 交叉汇率计算公式：目标金额 = 输入金额 * (目标汇率 / 源汇率)
       let result = inputVal * (rateTo / rateFrom);
 
-      // 保留合理的小数位数，避免精度浮点问题
+      // 避免出现无意义的长小数，最多保留4位小数，并去掉末尾的0
       this.amountTo = parseFloat(result.toFixed(4)).toString();
     } catch (err) {
       Logger.error(`[ExchangeRate] 计算异常: ${err}`);
@@ -82,20 +108,22 @@ export struct ExchangeRate {
     let temp = this.currencyFrom;
     this.currencyFrom = this.currencyTo;
     this.currencyTo = temp;
+
+    // 互换时，将下方的结果变成上方的输入，体验更好
+    this.amountFrom = this.amountTo;
     this.calculateRate();
   }
 
   openSelector(target: 'from' | 'to') {
     Logger.info(`[ExchangeRate] 打开货币选择器: ${target}`);
     this.selectingTarget = target;
-    this.searchQuery = ''; // 打开时清空搜索
+    this.searchQuery = '';
     this.isSelectorShow = true;
   }
 
   selectCurrency(code: string) {
     Logger.info(`[ExchangeRate] 选择货币 ${code} 作为 ${this.selectingTarget}`);
     if (this.selectingTarget === 'from') {
-      // 如果选的货币和另一边一样，触发互换保护机制
       if (code === this.currencyTo) {
         this.handleSwap();
       } else {
@@ -114,7 +142,37 @@ export struct ExchangeRate {
 
   handleRefresh() {
     Logger.info('[ExchangeRate] 用户点击手动刷新');
-    // TODO: 未来接入 Cloudflare Worker 代理，发起 HTTP 请求拉取最新 JSON 并缓存
+    // TODO: 接入真实 API 请求
+  }
+
+  // --- 键盘输入处理 ---
+  handleKeyboardInput(btn: string | Resource) {
+    let action = getLocalActionId(btn);
+
+    if (action === 'AC') {
+      this.amountFrom = '0';
+    } else if (action === '⌫') {
+      if (this.amountFrom.length > 1) {
+        this.amountFrom = this.amountFrom.slice(0, -1);
+      } else {
+        this.amountFrom = '0';
+      }
+    } else if (action === '确定' || action === '−') {
+      // 汇率转换中不需要减号，确定键也没有特定提交动作，仅作震动反馈
+    } else {
+      // 处理数字和小数点输入
+      if (this.amountFrom === '0' && action !== '.') {
+        this.amountFrom = action;
+      } else {
+        // 防止输入多个小数点
+        if (action === '.' && this.amountFrom.includes('.')) return;
+        // 限制长度，防止溢出
+        if (this.amountFrom.length < 15) {
+          this.amountFrom += action;
+        }
+      }
+    }
+    this.calculateRate();
   }
 
   // ==================== 3. 页面渲染 ====================
@@ -124,7 +182,6 @@ export struct ExchangeRate {
       Column() {
         // [源货币区]
         Row() {
-          // 点击左侧打开选择器
           Row() {
             Text(this.currencyFrom)
               .fontSize(28)
@@ -142,7 +199,6 @@ export struct ExchangeRate {
 
           Blank()
 
-          // 输入金额显示
           Text(`${MOCK_CURRENCIES[this.currencyFrom].symbol} ${this.amountFrom}`)
             .fontSize(32)
             .fontWeight(FontWeight.Medium)
@@ -169,7 +225,6 @@ export struct ExchangeRate {
 
         // [目标货币区]
         Row() {
-          // 点击左侧打开选择器
           Row() {
             Text(this.currencyTo)
               .fontSize(28)
@@ -187,11 +242,10 @@ export struct ExchangeRate {
 
           Blank()
 
-          // 转换结果显示
           Text(`${MOCK_CURRENCIES[this.currencyTo].symbol} ${this.amountTo}`)
             .fontSize(32)
             .fontWeight(FontWeight.Medium)
-            .fontColor($r('sys.color.font_secondary')) // 结果使用次要颜色区分
+            .fontColor($r('sys.color.font_secondary'))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -201,10 +255,9 @@ export struct ExchangeRate {
       .width('100%')
       .backgroundColor($r('sys.color.comp_background_primary'))
 
-      // --- 信息提示条 (基准汇率与刷新时间) ---
+      // --- 信息提示条 ---
       Row() {
         Column() {
-          // 显示 1源货币 = X目标货币 的快捷参考
           Text(`1 ${this.currencyFrom} = ${(MOCK_CURRENCIES[this.currencyTo].rate / MOCK_CURRENCIES[this.currencyFrom].rate).toFixed(4)} ${this.currencyTo}`)
             .fontSize(14)
             .fontColor($r('sys.color.font_secondary'))
@@ -213,11 +266,10 @@ export struct ExchangeRate {
             .fontColor($r('sys.color.font_tertiary'))
             .margin({ top: 4 })
         }
-        .alignItems(HorizontalAlign.Start)
+        .alignItems(HorizontalAlign.Start) // 已修复属性方法调用
 
         Blank()
 
-        // 手动刷新按钮
         Button('更新')
           .fontSize(14)
           .fontColor($r('sys.color.font_emphasize'))
@@ -229,18 +281,15 @@ export struct ExchangeRate {
 
       Blank()
 
-      // ==================== TODO: 自定义键盘区 ====================
-      // 等待你贴入键盘 UI 代码。可以通过操作 this.amountFrom 来输入数字
-      Text('（这里预留给键盘 UI）')
-        .width('100%')
-        .height(300)
-        .textAlign(TextAlign.Center)
-        .backgroundColor($r('sys.color.comp_background_tertiary'))
-
+      // ==================== 键盘区 (完全搬运自 DomainKeyboard) ====================
+      ExchangeKeyboard({
+        onKeyPress: (btn: string | Resource) => {
+          this.handleKeyboardInput(btn);
+        }
+      })
     }
     .width('100%')
     .height('100%')
-    // 绑定货币选择器半模态面板
     .bindSheet($$this.isSelectorShow, this.CurrencySelectorBuilder(), {
       height: SheetSize.MEDIUM,
       dragBar: true,
@@ -248,11 +297,9 @@ export struct ExchangeRate {
     })
   }
 
-  // --- 货币选择器弹窗 UI (Builder) ---
   @Builder
   CurrencySelectorBuilder() {
     Column() {
-      // 搜索框
       Search({ placeholder: '搜索货币代码或名称...', value: $$this.searchQuery })
         .width('100%')
         .margin({ bottom: 16 })
@@ -260,7 +307,6 @@ export struct ExchangeRate {
           this.searchQuery = val.toUpperCase();
         })
 
-      // 货币列表
       List() {
         ForEach(Object.values(MOCK_CURRENCIES).filter(item =>
         item.code.includes(this.searchQuery) || item.name.includes(this.searchQuery)
@@ -280,7 +326,6 @@ export struct ExchangeRate {
 
               Blank()
 
-              // 选中状态标识
               if ((this.selectingTarget === 'from' && this.currencyFrom === currency.code) ||
                 (this.selectingTarget === 'to' && this.currencyTo === currency.code)) {
                 Image($r('sys.media.ohos_ic_public_ok'))
@@ -295,10 +340,118 @@ export struct ExchangeRate {
         }, (item: CurrencyInfo) => item.code)
       }
       .width('100%')
-      .layoutWeight(1) // 占满剩余空间，可滚动
+      .layoutWeight(1)
     }
     .width('100%')
     .height('100%')
     .padding({ left: 24, right: 24, top: 16 })
+  }
+}
+
+// ==================== 底层键盘组件 (完全照搬) ====================
+@Component
+export struct BottomKeyItem {
+  btn: string | Resource = '';
+  @Link isShift: boolean;
+  @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
+
+  customRadius?: number = 16;
+
+  onKeyPress: (btn: string | Resource) => void = () => {};
+  onMenuSelect: (actionCode: string) => void = () => {};
+
+  build() {
+    KeyGestureWrapper({
+      actionId: getLocalActionId(this.btn),
+      targetBtn: this.btn,
+      shiftBtn: '',
+      moduleType: 'graphing',
+      isShiftMode: $isShift,
+      onKeyPress: this.onKeyPress,
+      onMenuSelect: this.onMenuSelect
+    }) {
+      Button() {
+        if (typeof this.btn === 'string') {
+          Text(this.btn)
+            .fontFamily(getFontFamily(this.btn))
+            .fontSize(getLocalFontSize(this.btn))
+            .fontWeight(FontWeight.Medium)
+            .fontColor(getLocalFontColor(this.btn))
+        } else {
+          Image(this.btn)
+            .width(48)
+            .height(40)
+            .fillColor(getFontColor(this.btn))
+            .draggable(false)
+        }
+      }
+      .type(ButtonType.Normal)
+      .borderRadius(this.customRadius)
+      .width('100%')
+      .height('100%')
+      .padding({ left: 4, right: 4 })
+      .backgroundColor(getLocalBgColor(this.btn, false))
+      .shadow(ShadowStyle.OUTER_DEFAULT_SM)
+      .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
+      .borderColor($r('app.color.btn_highlight'))
+      .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
+      .stateStyles({
+        pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
+        normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
+      })
+    }
+  }
+}
+
+export const domainButtons: Array<string | Resource> = [
+  '7', '8', '9', icon_backspace,
+  '4', '5', '6', 'AC',
+  '1', '2', '3', '−',
+  '0', '.', '确定'
+];
+
+@Component
+export struct ExchangeKeyboard {
+  @State private isShift: boolean = false;
+  onKeyPress: (btn: string | Resource) => void = () => {};
+
+  @StorageProp('navBarHeight') navBarHeight: number = 0;
+  @StorageProp('vibrationCurve') vibrationCurve: number = 0;
+  @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
+
+  build() {
+    Column() {
+      Grid() {
+        ForEach(domainButtons, (btn: string | Resource) => {
+          GridItem() {
+            BottomKeyItem({
+              btn: btn,
+              isShift: $isShift,
+              customRadius: 36,
+              onKeyPress: (b: string | Resource) => {
+                let action = getActionId(b);
+                HapticUtils.playVibration(action, this.hapticFeedback, this.vibrationCurve);
+                this.onKeyPress(b);
+              }
+            })
+          }
+          .columnStart(btn === '0' ? 0 : undefined)
+          .columnEnd(btn === '0' ? 1 : undefined)
+        }, (btn: string | Resource) => typeof btn === 'string' ? btn : 'icon_backspace')
+      }
+      .columnsTemplate('1fr 1fr 1fr 1fr')
+      .rowsTemplate('1fr 1fr 1fr 1fr')
+      .columnsGap(8)
+      .rowsGap(8)
+      .width('100%')
+      .height(260)
+      .padding({ left: 10, right: 10, top: 12, bottom: 8 })
+    }
+    .width('100%')
+    .backgroundColor(Color.Transparent)
+    .backgroundBlurStyle(BlurStyle.Thin)
+    .borderRadius({ topLeft: 36, topRight: 36 })
+    .shadow({ radius: 16, color: '#1A000000', offsetY: -12 })
+    .padding({ bottom: this.navBarHeight - 16})
   }
 }
