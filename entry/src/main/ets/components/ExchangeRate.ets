@@ -69,6 +69,7 @@ export struct ExchangeRate {
   @State isSelectorShow: boolean = false;
   @State selectingTarget: 'from' | 'to' = 'from'; // 当前正在为哪个输入框选择货币
   @State searchQuery: string = ''; // 搜索关键字
+  @StorageProp('topRectHeight') topRectHeight: number = 80; // 预留顶部安全距离
 
   aboutToAppear() {
     Logger.info('[ExchangeRate] 模块初始化');
@@ -178,123 +179,145 @@ export struct ExchangeRate {
   // ==================== 3. 页面渲染 ====================
   build() {
     Column() {
-      // --- 顶部汇率展示区 ---
-      Column() {
-        // [源货币区]
-        Row() {
-          Row() {
-            Text(this.currencyFrom)
-              .fontSize(28)
-              .fontWeight(FontWeight.Bold)
-              .fontColor($r('sys.color.font_primary'))
-            Image($r('sys.media.ohos_ic_public_arrow_down'))
-              .width(20).height(20)
-              .fillColor($r('sys.color.font_secondary'))
-              .margin({ left: 8 })
-          }
-          .padding(8)
-          .borderRadius(8)
-          .backgroundColor($r('sys.color.comp_background_tertiary'))
-          .onClick(() => this.openSelector('from'))
-
-          Blank()
-
-          Text(`${MOCK_CURRENCIES[this.currencyFrom].symbol} ${this.amountFrom}`)
-            .fontSize(32)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('sys.color.font_primary'))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .width('100%')
-        .padding({ left: 24, right: 24, top: 32, bottom: 16 })
-
-        // [互换按钮与分割线]
-        Stack() {
-          Divider().color($r('sys.color.comp_divider')).strokeWidth(1)
-          Button({ type: ButtonType.Circle, stateEffect: true }) {
-            Image($r('sys.symbol.slider_horizontal_2_1')) // 这里暂时用系统的排序图标替代互换图标
-              .width(24).height(24)
-              .fillColor($r('sys.color.font_emphasize'))
-          }
-          .width(48).height(48)
-          .backgroundColor($r('sys.color.comp_background_secondary'))
-          .shadow({ radius: 4, color: '#1A000000', offsetY: 2 })
-          .onClick(() => this.handleSwap())
-        }.width('100%')
-
-        // [目标货币区]
-        Row() {
-          Row() {
-            Text(this.currencyTo)
-              .fontSize(28)
-              .fontWeight(FontWeight.Bold)
-              .fontColor($r('sys.color.font_primary'))
-            Image($r('sys.media.ohos_ic_public_arrow_down'))
-              .width(20).height(20)
-              .fillColor($r('sys.color.font_secondary'))
-              .margin({ left: 8 })
-          }
-          .padding(8)
-          .borderRadius(8)
-          .backgroundColor($r('sys.color.comp_background_tertiary'))
-          .onClick(() => this.openSelector('to'))
-
-          Blank()
-
-          Text(`${MOCK_CURRENCIES[this.currencyTo].symbol} ${this.amountTo}`)
-            .fontSize(32)
-            .fontWeight(FontWeight.Medium)
-            .fontColor($r('sys.color.font_secondary'))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .width('100%')
-        .padding({ left: 24, right: 24, top: 16, bottom: 24 })
-      }
-      .width('100%')
-      .backgroundColor($r('sys.color.comp_background_primary'))
-
-      // --- 信息提示条 ---
-      Row() {
+      Scroll() {
         Column() {
-          Text(`1 ${this.currencyFrom} = ${(MOCK_CURRENCIES[this.currencyTo].rate / MOCK_CURRENCIES[this.currencyFrom].rate).toFixed(4)} ${this.currencyTo}`)
-            .fontSize(14)
-            .fontColor($r('sys.color.font_secondary'))
-          Text(`上次更新: ${this.lastUpdateTime}`)
-            .fontSize(12)
-            .fontColor($r('sys.color.font_tertiary'))
-            .margin({ top: 4 })
+          Row().width('100%').height(this.topRectHeight)
+          // --- 顶部汇率展示区 ---
+          Column() {
+            // [源货币区]
+            Row() {
+              Row() {
+                Text(this.currencyFrom)
+                  .fontSize(28)
+                  .fontWeight(FontWeight.Bold)
+                  .fontColor($r('sys.color.font_primary'))
+                Image($r('sys.media.ohos_ic_public_arrow_down'))
+                  .width(20).height(20)
+                  .fillColor($r('sys.color.font_secondary'))
+                  .margin({ left: 8 })
+              }
+              .padding(8)
+              .borderRadius(8)
+              .backgroundColor($r('sys.color.comp_background_tertiary'))
+              .onClick(() => this.openSelector('from'))
+
+              Blank()
+
+              Text(`${MOCK_CURRENCIES[this.currencyFrom].symbol} ${this.amountFrom}`)
+                .fontSize(32)
+                .fontWeight(FontWeight.Medium)
+                .fontColor($r('sys.color.font_primary'))
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+            }
+            .width('100%')
+            .padding({
+              left: 24,
+              right: 24,
+              top: 32,
+              bottom: 16
+            })
+
+            // [互换按钮与分割线]
+            Stack() {
+              Divider().color($r('sys.color.comp_divider')).strokeWidth(1)
+              Button({ type: ButtonType.Circle, stateEffect: true }) {
+                Image($r('sys.symbol.slider_horizontal_2_1')) // 这里暂时用系统的排序图标替代互换图标
+                  .width(24).height(24)
+                  .fillColor($r('sys.color.font_emphasize'))
+              }
+              .width(48)
+              .height(48)
+              .backgroundColor($r('sys.color.comp_background_secondary'))
+              .shadow({ radius: 4, color: '#1A000000', offsetY: 2 })
+              .onClick(() => this.handleSwap())
+            }.width('100%')
+
+            // [目标货币区]
+            Row() {
+              Row() {
+                Text(this.currencyTo)
+                  .fontSize(28)
+                  .fontWeight(FontWeight.Bold)
+                  .fontColor($r('sys.color.font_primary'))
+                Image($r('sys.media.ohos_ic_public_arrow_down'))
+                  .width(20).height(20)
+                  .fillColor($r('sys.color.font_secondary'))
+                  .margin({ left: 8 })
+              }
+              .padding(8)
+              .borderRadius(8)
+              .backgroundColor($r('sys.color.comp_background_tertiary'))
+              .onClick(() => this.openSelector('to'))
+
+              Blank()
+
+              Text(`${MOCK_CURRENCIES[this.currencyTo].symbol} ${this.amountTo}`)
+                .fontSize(32)
+                .fontWeight(FontWeight.Medium)
+                .fontColor($r('sys.color.font_secondary'))
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+            }
+            .width('100%')
+            .padding({
+              left: 24,
+              right: 24,
+              top: 16,
+              bottom: 24
+            })
+          }
+          .width('100%')
+          .backgroundColor($r('sys.color.comp_background_primary'))
+
+          // --- 信息提示条 ---
+          Row() {
+            Column() {
+              Text(`1 ${this.currencyFrom} = ${(MOCK_CURRENCIES[this.currencyTo].rate /
+                MOCK_CURRENCIES[this.currencyFrom].rate).toFixed(4)} ${this.currencyTo}`)
+                .fontSize(14)
+                .fontColor($r('sys.color.font_secondary'))
+              Text(`上次更新: ${this.lastUpdateTime}`)
+                .fontSize(12)
+                .fontColor($r('sys.color.font_tertiary'))
+                .margin({ top: 4 })
+            }
+            .alignItems(HorizontalAlign.Start) // 已修复属性方法调用
+
+            Blank()
+
+            Button('更新')
+              .fontSize(14)
+              .fontColor($r('sys.color.font_emphasize'))
+              .backgroundColor(Color.Transparent)
+              .onClick(() => this.handleRefresh())
+          }
+          .width('100%')
+          .padding({
+            left: 24,
+            right: 24,
+            top: 12,
+            bottom: 12
+          })
+
+          Blank()
+
+          // ==================== 键盘区 (完全搬运自 DomainKeyboard) ====================
+          ExchangeKeyboard({
+            onKeyPress: (btn: string | Resource) => {
+              this.handleKeyboardInput(btn);
+            }
+          })
         }
-        .alignItems(HorizontalAlign.Start) // 已修复属性方法调用
-
-        Blank()
-
-        Button('更新')
-          .fontSize(14)
-          .fontColor($r('sys.color.font_emphasize'))
-          .backgroundColor(Color.Transparent)
-          .onClick(() => this.handleRefresh())
+        .width('100%')
+        .height('100%')
+        .bindSheet($$this.isSelectorShow, this.CurrencySelectorBuilder(), {
+          height: SheetSize.MEDIUM,
+          dragBar: true,
+          title: { title: '选择货币' }
+        })
       }
-      .width('100%')
-      .padding({ left: 24, right: 24, top: 12, bottom: 12 })
-
-      Blank()
-
-      // ==================== 键盘区 (完全搬运自 DomainKeyboard) ====================
-      ExchangeKeyboard({
-        onKeyPress: (btn: string | Resource) => {
-          this.handleKeyboardInput(btn);
-        }
-      })
     }
-    .width('100%')
-    .height('100%')
-    .bindSheet($$this.isSelectorShow, this.CurrencySelectorBuilder(), {
-      height: SheetSize.MEDIUM,
-      dragBar: true,
-      title: { title: '选择货币' }
-    })
   }
 
   @Builder
