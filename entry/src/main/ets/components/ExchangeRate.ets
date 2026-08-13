@@ -224,32 +224,27 @@ export struct ExchangeRate {
   // ==================== 3. 页面渲染 ====================
   build() {
     Column() {
-      // 信息提示条 (保持在顶部，不会随列表滚动)
-      Row() {
-        Column() {
-          Text(this.getActiveCurrencyText())
-            .fontSize(14)
-            .fontColor($r('sys.color.font_secondary'))
-          Text(`上次更新: ${this.lastUpdateTime}`)
-            .fontSize(12)
-            .fontColor($r('sys.color.font_tertiary'))
-            .margin({ top: 4 })
-        }
-        .alignItems(HorizontalAlign.Start)
-
-        Blank()
-
-        Button('更新')
-          .fontSize(14)
-          .fontColor($r('sys.color.font_emphasize'))
-          .backgroundColor(Color.Transparent)
-          .onClick(() => this.handleRefresh())
-      }
-      .width('100%')
-      .padding({ left: 24, right: 24, top: this.topRectHeight + 12, bottom: 12 })
-
       // 动态货币列表
       List({ space: 8 }) {
+        // 将更新时间作为普通列表项，随列表滚动，彻底移除基准货币提示
+        ListItem() {
+          Row() {
+            Text(`上次更新: ${this.lastUpdateTime}`)
+              .fontSize(12)
+              .fontColor($r('sys.color.font_tertiary'))
+
+            Blank()
+
+            Button('更新')
+              .fontSize(14)
+              .fontColor($r('sys.color.font_emphasize'))
+              .backgroundColor(Color.Transparent)
+              .onClick(() => this.handleRefresh())
+          }
+          .width('100%')
+          .padding({ left: 24, right: 24, top: this.topRectHeight + 12, bottom: 12 })
+        }
+
         ForEach(this.currencyList, (item: CurrencyListItem, index: number) => {
           ListItem() {
             Row() {
@@ -285,7 +280,12 @@ export struct ExchangeRate {
             .borderRadius(16)
             .borderWidth(this.activeId === item.id ? 1 : 0)
             .borderColor($r('app.color.btn_highlight'))
-            .onClick(() => { this.activeId = item.id; })
+            .onClick(() => {
+              if (this.activeId !== item.id) {
+                this.baseAmount = this.getConvertedAmount(item.code, false);
+                this.activeId = item.id;
+              }
+            })
           }
           .swipeAction({ end: this.deleteButton(item.id) })
         }, (item: CurrencyListItem) => item.id)
