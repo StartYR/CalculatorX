@@ -372,6 +372,7 @@ export struct ExchangeRate {
     }
     .width('100%')
     .height('100%')
+    .backgroundColor($r('sys.color.background_secondary'))
     .bindSheet($$this.isSelectorShow, this.CurrencySelectorBuilder(), {
       height: SheetSize.MEDIUM,
       dragBar: true,
