@@ -10,14 +10,14 @@ import Logger from '../utils/Logger';
 import { HapticUtils } from '../utils/HapticUtils';
 import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor, icon_backspace, PreferenceConfigs } from '../utils/CalculatorConfigs';
 import { KeyGestureWrapper } from './common/KeyGestureWrapper';
+import { LengthMetrics } from '@kit.ArkUI';
 
-// ==================== 1. 模拟数据层 (Mock) ====================
-// TODO: 未来将被 API 真实数据替换
+// ==================== 1. 模拟数据层 ====================
 interface CurrencyInfo {
-  code: string;    // 货币代码 (如 USD)
-  name: string;    // 货币名称 (如 美元)
-  symbol: string;  // 符号 (如 $)
-  rate: number;    // 相对基准货币(如USD)的汇率
+  code: string;
+  name: string;
+  symbol: string;
+  rate: number;
 }
 
 const MOCK_CURRENCIES: Record<string, CurrencyInfo> = {
@@ -29,7 +29,6 @@ const MOCK_CURRENCIES: Record<string, CurrencyInfo> = {
   'HKD': { code: 'HKD', name: '港币', symbol: 'HK$', rate: 7.82 },
 };
 
-// 显式声明类
 export class CurrencyListItem {
   id: string;
   code: string;
@@ -39,7 +38,7 @@ export class CurrencyListItem {
   }
 }
 
-// ==================== 局部样式函数 (完全照搬) ====================
+// ==================== 局部样式辅助函数 ====================
 function getLocalFontColor(btn: string | Resource): ResourceColor {
   if (btn === 'π' || btn === 'e') return getFontColor('0');
   if (btn === '确定' || btn === '关闭') return getFontColor('=');
@@ -66,31 +65,27 @@ function getLocalActionId(btn: string | Resource): string {
 // ==================== 2. 主组件 ====================
 @Component
 export struct ExchangeRate {
-  // --- 状态变量 ---
   @State currencyList: Array<CurrencyListItem> = [
     new CurrencyListItem('1', 'USD'),
     new CurrencyListItem('2', 'CNY')
   ];
-  @State activeId: string = '1'; // 当前正在输入的目标 ID
-  @State baseAmount: string = '100'; // 当前激活项的输入金额
+  @State activeId: string = '1';
+  @State baseAmount: string = '100';
 
-  @State lastUpdateTime: string = '刚刚 (Mock)'; // 最后更新时间显示
-
-  // --- 货币选择器 (bindSheet) 状态 ---
+  @State lastUpdateTime: string = '刚刚';
   @State isSelectorShow: boolean = false;
-  @State selectingId: string = ''; // 当前正在为哪个列表项选择货币
-  @State searchQuery: string = ''; // 搜索关键字
+  @State selectingId: string = '';
+  @State searchQuery: string = '';
 
-  private draggedIndex: number = -1; // 用于记录拖拽项当前的实时下标
+  private draggedIndex: number = -1;
 
-  // 预留顶部安全距离（包含状态栏与 TopBar），具体 key 名请根据实际情况微调
   @StorageProp('topRectHeight') topRectHeight: number = 80;
 
   aboutToAppear() {
     Logger.info('[ExchangeRate] 模块初始化');
   }
 
-  // --- 核心计算逻辑 ---
+  // --- 核心换算与状态管理逻辑 ---
   getConvertedAmount(targetCode: string, isEditing: boolean): string {
     if (isEditing) return this.baseAmount;
     if (!this.baseAmount || this.baseAmount === 'Error' || this.baseAmount === '0') return '0';
@@ -113,28 +108,26 @@ export struct ExchangeRate {
     }
   }
 
-  // 获取当前激活项的提示文本
-  getActiveCurrencyText(): string {
-    let activeItem = this.currencyList.find(i => i.id === this.activeId);
-    return activeItem ? `基准货币: 1 ${activeItem.code}` : '当前无选中项';
-  }
-
-  // 判断选择器中的某一项是否为当前正在选择的项
   isCurrencySelected(code: string): boolean {
     let selectingItem = this.currencyList.find(c => c.id === this.selectingId);
     return selectingItem ? selectingItem.code === code : false;
   }
 
-  // --- 交互处理函数 ---
+  setActiveCurrency(id: string, code: string) {
+    if (this.activeId !== id) {
+      this.baseAmount = this.getConvertedAmount(code, false);
+      this.activeId = id;
+    }
+  }
+
+  // --- 列表交互操作 ---
   openSelector(id: string) {
-    Logger.info(`[ExchangeRate] 打开货币选择器: ${id}`);
     this.selectingId = id;
     this.searchQuery = '';
     this.isSelectorShow = true;
   }
 
   selectCurrency(code: string) {
-    Logger.info(`[ExchangeRate] 选择货币 ${code} 替换列表项 ${this.selectingId}`);
     let index = this.currencyList.findIndex(item => item.id === this.selectingId);
     if (index !== -1) {
       this.currencyList.splice(index, 1, new CurrencyListItem(this.selectingId, code));
@@ -143,29 +136,31 @@ export struct ExchangeRate {
   }
 
   deleteCurrency(id: string) {
-    Logger.info(`[ExchangeRate] 删除货币项: ${id}`);
-    let index = this.currencyList.findIndex(item => item.id === id);
-    if (index !== -1) {
-      this.currencyList.splice(index, 1);
-      // 如果删除了当前激活项，将焦点转移给第一个（如果还有剩余）
-      if (this.activeId === id && this.currencyList.length > 0) {
-        this.activeId = this.currencyList[0].id;
+    // 启动物理阻尼动画，平滑移除元素并使下方项自动补位
+    animateTo({ duration: 350, curve: Curve.Friction }, () => {
+      let index = this.currencyList.findIndex(item => item.id === id);
+      if (index !== -1) {
+        this.currencyList.splice(index, 1);
+        if (this.activeId === id && this.currencyList.length > 0) {
+          this.activeId = this.currencyList[0].id;
+          this.baseAmount = '0';
+        }
       }
-    }
+    });
   }
 
   addCurrency() {
     let newId = new Date().getTime().toString();
-    Logger.info(`[ExchangeRate] 新增货币项: ${newId}`);
-    this.currencyList.push(new CurrencyListItem(newId, 'USD'));
+    // 启动物理阻尼动画，确保新元素自然滑入列表尾部
+    animateTo({ duration: 350, curve: Curve.Friction }, () => {
+      this.currencyList.push(new CurrencyListItem(newId, 'USD'));
+    });
   }
 
   handleRefresh() {
-    Logger.info('[ExchangeRate] 用户点击手动刷新');
-    // TODO: 接入真实 API 请求
+    Logger.info('[ExchangeRate] 触发汇率刷新任务');
   }
 
-  // --- 键盘输入处理 ---
   handleKeyboardInput(btn: string | Resource) {
     let action = getLocalActionId(btn);
 
@@ -178,7 +173,7 @@ export struct ExchangeRate {
         this.baseAmount = '0';
       }
     } else if (action === '确定' || action === '−') {
-      // 仅作震动反馈
+      // 保留作为纯震动反馈键
     } else {
       if (this.baseAmount === '0' && action !== '.') {
         this.baseAmount = action;
@@ -191,45 +186,50 @@ export struct ExchangeRate {
     }
   }
 
-  // --- UI 构建器：左滑删除按钮 ---
+  // --- UI 构建器区 ---
+
+  // 侧滑删除操作区：复用组件统一样式
   @Builder
-  deleteButton(id: string) {
-    Button({ type: ButtonType.Circle, stateEffect: true }) {
-      Image($r('sys.symbol.trash_fill'))
-        .width(24).height(24)
-        .fillColor(Color.White)
+  deleteAction(id: string) {
+    Row() {
+      Button({ type: ButtonType.Circle, stateEffect: true }) {
+        SymbolGlyph($r('sys.symbol.trash_fill'))
+          .fontSize(24)
+          .fontColor([Color.White])
+      }
+      .width(48)
+      .height(48)
+      .backgroundColor('#FF3B30')
+      .shadow({ radius: 8, color: '#33FF3B30', offsetY: 4 })
+      .onClick(() => {
+        this.deleteCurrency(id);
+      })
     }
-    .width(48).height(48)
-    .backgroundColor(Color.Red)
-    .margin({ left: 16, right: 16 })
-    .onClick(() => this.deleteCurrency(id))
+    .height('100%')
+    .padding({ left: 16, right: 24 })
+    .justifyContent(FlexAlign.Center)
   }
 
-  // --- UI 构建器：拖拽时的视觉反馈 ---
+  // 拖拽占位符：利用透明视图完全屏蔽原生拖拽视觉残留
   @Builder
   dragFeedback() {
-    // 采用截图2的核心魔法：彻底隐藏多余的拖拽阴影
-    // 让系统纯靠 onItemDragMove 的数据实时换位来提供视觉反馈
     Column()
       .width('100%')
-      .height(80) // 给个大概的卡片高度占位即可
-      .opacity(0) // 绝对的精髓：透明度设为 0
+      .height(84)
+      .opacity(0)
   }
 
-  // ==================== 3. 页面渲染 ====================
   build() {
     Column() {
-      // 动态货币列表
+      // 全局数据渲染列表
       List({ space: 8 }) {
-        // 将更新时间作为普通列表项，随列表滚动，彻底移除基准货币提示
+        // 列表头部：非货币项，避免干扰主数据序列
         ListItem() {
           Row() {
             Text(`上次更新: ${this.lastUpdateTime}`)
               .fontSize(12)
               .fontColor($r('sys.color.font_tertiary'))
-
             Blank()
-
             Button('更新')
               .fontSize(14)
               .fontColor($r('sys.color.font_emphasize'))
@@ -237,108 +237,133 @@ export struct ExchangeRate {
               .onClick(() => this.handleRefresh())
           }
           .width('100%')
-          .padding({ left: 24, right: 24, top: this.topRectHeight + 12, bottom: 12 })
+          .padding({ left: 24, right: 24, top: this.topRectHeight + 12, bottom: 4 })
         }
 
+        // 核心循环：采用一维拍平结构提升性能与交互可塑性
         ForEach(this.currencyList, (item: CurrencyListItem, index: number) => {
           ListItem() {
             Row() {
-              // 货币选择器按钮
+              // 左侧功能区：货币类型选择器
               Row() {
                 Text(item.code)
-                  .fontSize(28)
+                  .fontSize(22)
                   .fontWeight(FontWeight.Bold)
                   .fontColor(this.activeId === item.id ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
                 Image($r('sys.media.ohos_ic_public_arrow_down'))
-                  .width(20).height(20)
-                  .fillColor($r('sys.color.font_secondary'))
-                  .margin({ left: 8 })
+                  .width(16).height(16)
+                  .fillColor(this.activeId === item.id ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
+                  .margin({ left: 4 })
               }
-              .padding(8)
-              .borderRadius(8)
+              .padding({ top: 8, bottom: 8, left: 12, right: 12 })
+              .borderRadius(12)
               .backgroundColor(this.activeId === item.id ? $r('sys.color.comp_background_tertiary') : Color.Transparent)
               .onClick(() => this.openSelector(item.id))
+              .margin({ right: 14 })
+              .alignSelf(ItemAlign.Center)
 
-              Blank()
+              // 右侧内容区：两行式布局（输入区/输出区映射）
+              Column() {
+                Column() {
+                  Text(MOCK_CURRENCIES[item.code].name)
+                    .fontSize(14)
+                    .fontColor($r('sys.color.font_secondary'))
+                    .width('100%')
+                    .textAlign(TextAlign.Start)
+                }
+                .width('100%')
+                .padding({ top: 12, bottom: 2 })
+                .onClick(() => this.setActiveCurrency(item.id, item.code))
 
-              // 转换结果显示区
-              Text(`${MOCK_CURRENCIES[item.code].symbol} ${this.getConvertedAmount(item.code, this.activeId === item.id)}`)
-                .fontSize(32)
-                .fontWeight(FontWeight.Medium)
-                .fontColor(this.activeId === item.id ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                Column() {
+                  Text(`${MOCK_CURRENCIES[item.code].symbol} ${this.getConvertedAmount(item.code, this.activeId === item.id)}`)
+                    .fontSize(24)
+                    .fontWeight(FontWeight.Medium)
+                    .fontColor(this.activeId === item.id ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
+                    .width('100%')
+                    .textAlign(TextAlign.End)
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                }
+                .width('100%')
+                .padding({ top: 2, bottom: 12 })
+                .onClick(() => this.setActiveCurrency(item.id, item.code))
+              }
+              .layoutWeight(1)
             }
             .width('100%')
-            .padding({ left: 24, right: 24, top: 20, bottom: 20 })
-            .backgroundColor(this.activeId === item.id ? $r('sys.color.comp_background_primary') : Color.Transparent)
+            .padding({ left: 16, right: 16 })
+            .backgroundColor($r('sys.color.comp_background_primary'))
             .borderRadius(16)
-            .borderWidth(this.activeId === item.id ? 1 : 0)
-            .borderColor($r('app.color.btn_highlight'))
-            .onClick(() => {
-              if (this.activeId !== item.id) {
-                this.baseAmount = this.getConvertedAmount(item.code, false);
-                this.activeId = item.id;
-              }
-            })
           }
-          .swipeAction({ end: this.deleteButton(item.id) })
-        }, (item: CurrencyListItem) => item.id + '_' + item.code)
+          .padding({ left: 16, right: 16 })
+          .swipeAction({
+            end: { builder: () => { this.deleteAction(item.id) } },
+            edgeEffect: SwipeEdgeEffect.Spring
+          })
+        }, (item: CurrencyListItem) => item.id)
 
-        // 列表尾部：添加货币按钮
+        // 列表尾部：追加新项
         ListItem() {
           Row() {
-            Button('+ 添加货币')
-              .fontSize(16)
-              .fontColor($r('sys.color.font_emphasize'))
-              .backgroundColor($r('sys.color.comp_background_tertiary'))
-              .width('60%')
-              .height(48)
-              .onClick(() => this.addCurrency())
+            Button() {
+              Row() {
+                SymbolGlyph($r('sys.symbol.plus'))
+                  .fontSize(20)
+                  .fontColor([$r('sys.color.font_emphasize')])
+                  .margin({ right: 8 })
+                Text('添加货币')
+                  .fontSize(16)
+                  .fontColor($r('sys.color.font_emphasize'))
+              }
+              .justifyContent(FlexAlign.Center)
+            }
+            .type(ButtonType.Normal)
+            .borderRadius(16)
+            .backgroundColor($r('sys.color.comp_background_tertiary'))
+            .width('100%')
+            .height(56)
+            .onClick(() => this.addCurrency())
           }
           .width('100%')
-          .justifyContent(FlexAlign.Center)
-          .padding({ top: 16, bottom: 32 })
+          .padding({ left: 16, right: 16, top: 8, bottom: 32 })
         }
       }
+      .layoutWeight(1)
       .width('100%')
-      .layoutWeight(1) // 占满键盘上方空间
+      .padding({ top: 0, bottom: 0 })
+      .scrollBar(BarState.Off)
+      .edgeEffect(EdgeEffect.Spring)
+      .fadingEdge(true, { fadingEdgeLength: LengthMetrics.vp(12) })
+      // 启用拖拽排序拦截
       .onItemDragStart((event: ItemDragInfo, itemIndex: number) => {
-        let actualIndex = itemIndex - 1; // 减去顶部的“更新时间”项
+        let actualIndex = itemIndex - 1;
         if (actualIndex < 0 || actualIndex >= this.currencyList.length) return undefined;
 
-        this.draggedIndex = actualIndex; // 记录初始下标
+        this.draggedIndex = actualIndex;
         return this.dragFeedback();
       })
       .onItemDragMove((event: ItemDragInfo, itemIndex: number, insertIndex: number) => {
         let actualInsertIndex = insertIndex - 1;
-
-        // 边界限制：防止拖拽到非货币数据区域
         if (actualInsertIndex < 0) actualInsertIndex = 0;
         if (actualInsertIndex >= this.currencyList.length) actualInsertIndex = this.currencyList.length - 1;
 
-        // 如果位置没变，直接返回
-        if (this.draggedIndex === actualInsertIndex) {
-          return;
-        }
+        if (this.draggedIndex === actualInsertIndex) return;
 
-        // 核心魔法：手指滑动过程中，带动画实时交换数据位置
-        animateTo({ duration: 400, curve: Curve.FastOutSlowIn }, () => {
-          // 这里使用 splice 保证跨行拖动时数组也能正确挤位，而不是单纯换位
+        // 核心交互：通过响应式状态绑定阻尼曲线，在手指拖拽区间实现列表项动态规避
+        animateTo({ duration: 350, curve: Curve.Friction }, () => {
           let item = this.currencyList.splice(this.draggedIndex, 1)[0];
           this.currencyList.splice(actualInsertIndex, 0, item);
-
-          this.draggedIndex = actualInsertIndex; // 更新实时下标
+          this.draggedIndex = actualInsertIndex;
         });
       })
       .onItemDrop((event: ItemDragInfo, itemIndex: number, insertIndex: number, isSuccess: boolean) => {
-        // 数据已经在移动中处理完毕，这里只需要重置下标
         this.draggedIndex = -1;
       })
 
       Blank()
 
-      // ==================== 键盘区 ====================
+      // ==================== 底部输入键盘 ====================
       ExchangeKeyboard({
         onKeyPress: (btn: string | Resource) => {
           this.handleKeyboardInput(btn);
@@ -403,7 +428,8 @@ export struct ExchangeRate {
     .padding({ left: 24, right: 24, top: 16 })
   }
 }
-// ==================== 底层键盘组件 (完全照搬) ====================
+
+// ==================== 底层键盘组件 ====================
 @Component
 export struct BottomKeyItem {
   btn: string | Resource = '';
