@@ -81,6 +81,8 @@ export struct ExchangeRate {
   @State selectingId: string = ''; // 当前正在为哪个列表项选择货币
   @State searchQuery: string = ''; // 搜索关键字
 
+  private draggedIndex: number = -1; // 用于记录拖拽项当前的实时下标
+
   // 预留顶部安全距离（包含状态栏与 TopBar），具体 key 名请根据实际情况微调
   @StorageProp('topRectHeight') topRectHeight: number = 80;
 
@@ -205,20 +207,13 @@ export struct ExchangeRate {
 
   // --- UI 构建器：拖拽时的视觉反馈 ---
   @Builder
-  dragFeedback(item: CurrencyListItem) {
-    Row() {
-      Text(item.code)
-        .fontSize(28).fontWeight(FontWeight.Bold).fontColor($r('sys.color.font_primary'))
-      Blank()
-      Text(`${MOCK_CURRENCIES[item.code].symbol} ${this.getConvertedAmount(item.code, this.activeId === item.id)}`)
-        .fontSize(32).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_primary'))
-    }
-    .width('90%')
-    .padding({ left: 24, right: 24, top: 20, bottom: 20 })
-    .backgroundColor($r('sys.color.comp_background_primary'))
-    .borderRadius(16)
-    .shadow({ radius: 20, color: '#33000000', offsetY: 10 })
-    .scale({ x: 1.05, y: 1.05 })
+  dragFeedback() {
+    // 采用截图2的核心魔法：彻底隐藏多余的拖拽阴影
+    // 让系统纯靠 onItemDragMove 的数据实时换位来提供视觉反馈
+    Column()
+      .width('100%')
+      .height(80) // 给个大概的卡片高度占位即可
+      .opacity(0) // 绝对的精髓：透明度设为 0
   }
 
   // ==================== 3. 页面渲染 ====================
@@ -309,15 +304,36 @@ export struct ExchangeRate {
       .width('100%')
       .layoutWeight(1) // 占满键盘上方空间
       .onItemDragStart((event: ItemDragInfo, itemIndex: number) => {
-        if (itemIndex >= this.currencyList.length) return undefined;
-        return this.dragFeedback(this.currencyList[itemIndex]);
+        let actualIndex = itemIndex - 1; // 减去顶部的“更新时间”项
+        if (actualIndex < 0 || actualIndex >= this.currencyList.length) return undefined;
+
+        this.draggedIndex = actualIndex; // 记录初始下标
+        return this.dragFeedback();
+      })
+      .onItemDragMove((event: ItemDragInfo, itemIndex: number, insertIndex: number) => {
+        let actualInsertIndex = insertIndex - 1;
+
+        // 边界限制：防止拖拽到非货币数据区域
+        if (actualInsertIndex < 0) actualInsertIndex = 0;
+        if (actualInsertIndex >= this.currencyList.length) actualInsertIndex = this.currencyList.length - 1;
+
+        // 如果位置没变，直接返回
+        if (this.draggedIndex === actualInsertIndex) {
+          return;
+        }
+
+        // 核心魔法：手指滑动过程中，带动画实时交换数据位置
+        animateTo({ duration: 400, curve: Curve.FastOutSlowIn }, () => {
+          // 这里使用 splice 保证跨行拖动时数组也能正确挤位，而不是单纯换位
+          let item = this.currencyList.splice(this.draggedIndex, 1)[0];
+          this.currencyList.splice(actualInsertIndex, 0, item);
+
+          this.draggedIndex = actualInsertIndex; // 更新实时下标
+        });
       })
       .onItemDrop((event: ItemDragInfo, itemIndex: number, insertIndex: number, isSuccess: boolean) => {
-        if (!isSuccess || itemIndex === insertIndex || itemIndex >= this.currencyList.length) return;
-        // 原生拖拽释放，交换数组项位置
-        let draggedItem = this.currencyList.splice(itemIndex, 1)[0];
-        let actualInsertIndex = insertIndex > itemIndex ? insertIndex - 1 : insertIndex;
-        this.currencyList.splice(actualInsertIndex, 0, draggedItem);
+        // 数据已经在移动中处理完毕，这里只需要重置下标
+        this.draggedIndex = -1;
       })
 
       Blank()
