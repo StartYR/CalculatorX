@@ -301,7 +301,7 @@ export struct ExchangeRate {
             end: { builder: () => { this.deleteAction(item.id) } },
             edgeEffect: SwipeEdgeEffect.Spring
           })
-        }, (item: CurrencyListItem) => item.id)
+        }, (item: CurrencyListItem) => item.id + '_' + item.code)
 
         // 列表尾部：追加新项
         ListItem() {
