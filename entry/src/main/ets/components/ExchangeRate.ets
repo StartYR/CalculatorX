@@ -286,6 +286,8 @@ export struct ExchangeRate {
       Column() {
         this.CurrencyCardView(item)
       }
+      .backgroundColor($r('sys.color.background_primary'))
+      .borderRadius(16)
       .scale({ x: 1.05, y: 1 }) // 轻微放大，产生“拿起来”的视觉差
     }
     .width('100%')
@@ -333,7 +335,7 @@ export struct ExchangeRate {
             Button() {
               Row() {
                 SymbolGlyph($r('sys.symbol.plus'))
-                  .fontSize(20)
+                  .fontSize(18)
                   .fontColor([$r('sys.color.font_emphasize')])
                   .margin({ right: 8 })
                 Text('添加货币')
@@ -343,13 +345,14 @@ export struct ExchangeRate {
               .justifyContent(FlexAlign.Center)
             }
             .type(ButtonType.Normal)
-            .borderRadius(16)
+            .borderRadius(24)
             .backgroundColor($r('sys.color.comp_background_tertiary'))
-            .width('100%')
-            .height(56)
+            .width('60%')
+            .height(48)
             .onClick(() => this.addCurrency())
           }
           .width('100%')
+          .justifyContent(FlexAlign.Center)
           .padding({ left: 16, right: 16, top: 8, bottom: 32 })
         }
       }
