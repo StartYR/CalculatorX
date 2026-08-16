@@ -664,7 +664,7 @@ export struct ExchangeRate {
     .height('100%')
     .backgroundColor($r('sys.color.background_secondary'))
     .bindSheet($$this.isSelectorShow, this.CurrencySelectorBuilder(), {
-      height: SheetSize.MEDIUM,
+      height: SheetSize.LARGE,
       dragBar: true,
       title: { title: '选择货币' }
     })
@@ -711,6 +711,13 @@ export struct ExchangeRate {
           }
           .onClick(() => this.selectCurrency(currency.code))
         }, (item: CurrencyInfo) => item.code)
+
+        // 底部安全区占位项
+        ListItem() {
+          Row()
+            .width('100%')
+            .height(40)
+        }
       }
       .width('100%')
       .layoutWeight(1)
