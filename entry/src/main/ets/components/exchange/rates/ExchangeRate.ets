@@ -672,16 +672,16 @@ export struct ExchangeRate {
 
   @Builder
   CurrencySelectorBuilder() {
-    Column() {
-      Search({ placeholder: '搜索货币代码或名称...', value: $$this.searchQuery })
-        .width('100%')
-        .margin({ bottom: 16 })
-        .onChange((val: string) => {
-          this.searchQuery = val.toUpperCase();
-        })
+    Stack({ alignContent: Alignment.Top }) {
 
+      // ================= 层级 1 (底层)：全屏滚动的列表 =================
       List() {
-        // 直接使用 CURRENCY_WHITELIST 作为数据源进行遍历与过滤
+        // 顶部幽灵占位项：高度 = 搜索框 top margin(16) + 搜索框高度(40) + 搜索框底部预留间距(16) = 72
+        ListItem() {
+          Row().width('100%').height(72)
+        }
+
+        // 真实数据遍历
         ForEach(CURRENCY_WHITELIST.filter(item =>
         item.code.includes(this.searchQuery) || item.name.includes(this.searchQuery)
         ), (currency: CurrencyInfo) => {
@@ -714,16 +714,31 @@ export struct ExchangeRate {
 
         // 底部安全区占位项
         ListItem() {
-          Row()
-            .width('100%')
-            .height(40)
+          Row().width('100%').height(40)
         }
       }
       .width('100%')
-      .layoutWeight(1)
+      .height('100%')
+      .padding({ left: 24, right: 24 })
+      .scrollBar(BarState.Off)
+      .edgeEffect(EdgeEffect.Spring)
+
+      // ================= 层级 2 (上层)：纯粹悬浮的药丸形搜索框 =================
+      Column() {
+        Search({ placeholder: '搜索货币代码或名称...', value: $$this.searchQuery })
+          .width('100%')
+          .height(40)
+          .backgroundColor(Color.Transparent)
+          // 毛玻璃材质只贴在搜索框上
+          .backgroundBlurStyle(BlurStyle.Thin)
+          .onChange((val: string) => {
+            this.searchQuery = val.toUpperCase();
+          })
+      }
+      .width('100%')
+      .padding({ left: 24, right: 24, top: 16 })
     }
     .width('100%')
     .height('100%')
-    .padding({ left: 24, right: 24, top: 16 })
   }
 }
