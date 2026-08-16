@@ -6,14 +6,14 @@
  * @date 2026/7/24 22:53
  */
 
-import Logger from '../utils/Logger';
-import { HapticUtils } from '../utils/HapticUtils';
-import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor, icon_backspace, PreferenceConfigs } from '../utils/CalculatorConfigs';
-import { KeyGestureWrapper } from './common/KeyGestureWrapper';
+import Logger from '../../../utils/Logger';
+import { HapticUtils } from '../../../utils/HapticUtils';
+import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor, icon_backspace, PreferenceConfigs } from '../../../utils/CalculatorConfigs';
+import { KeyGestureWrapper } from '../../common/KeyGestureWrapper';
 import { LengthMetrics } from '@kit.ArkUI';
-import { PreferenceManager } from '../utils/PreferenceManager';
+import { PreferenceManager } from '../../../utils/PreferenceManager';
 import http from '@ohos.net.http';
-import { ApiConfig } from '../utils/ApiConfig';
+import { ApiConfig } from '../../../utils/ApiConfig';
 
 // ==================== 1. 模拟数据层 ====================
 interface CurrencyInfo {
