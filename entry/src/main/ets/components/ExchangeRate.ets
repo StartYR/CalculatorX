@@ -295,9 +295,9 @@ export struct ExchangeRate {
             .padding({ left: 16, right: 16 })
             .backgroundColor(this.activeId === item.id ? $r('sys.color.comp_background_tertiary') : $r('sys.color.comp_background_primary'))
             .borderRadius(16)
-            .borderWidth(this.activeId === item.id ? 1.5 : 0.5)
-            .borderColor($r('app.color.btn_highlight')) // 强调色
-            .animation({ duration: 200, curve: Curve.EaseInOut })
+            .borderWidth(this.activeId === item.id ? 1.0 : 0.5)
+            .borderColor($r('sys.color.comp_divider'))
+            .animation({ duration: 200, curve: Curve.Smooth })
             .borderRadius(16)
           }
           .padding({ left: 16, right: 16 })
