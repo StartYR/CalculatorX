@@ -85,7 +85,10 @@ export struct ExchangeRate {
 
   // --- 核心换算与状态管理逻辑 ---
   getConvertedAmount(targetCode: string, isEditing: boolean): string {
+    // 1. 状态拦截：如果正在被编辑，直接显示用户输入的原始内容
     if (isEditing) return this.baseAmount;
+
+    // 2. 空值与异常拦截：输入为空、为 0 或错误状态，直接返回 '0'
     if (!this.baseAmount || this.baseAmount === 'Error' || this.baseAmount === '0') return '0';
 
     try {
@@ -95,14 +98,28 @@ export struct ExchangeRate {
       let activeItem = this.currencyList.find(item => item.id === this.activeId);
       if (!activeItem) return '0';
 
-      // 从预留的动态字典取值，若无数据默认按 1:1 处理防崩溃
-      let rateFrom = this.rateMap[activeItem.code] || 1;
-      let rateTo = this.rateMap[targetCode] || 1;
-      let result = inputVal * (rateTo / rateFrom);
+      // 3. 获取汇率值，并进行极其严格的安全兜底
+      // 如果字典中没有查到，或者查到的是 0（防止除零异常），则默认赋为 1
+      let rateFrom = this.rateMap[activeItem.code];
+      let rateTo = this.rateMap[targetCode];
 
+      // 针对 API 可能不返回基准货币本身的特殊处理
+      if (activeItem.code === 'USD') rateFrom = 1;
+      if (targetCode === 'USD') rateTo = 1;
+
+      // 彻底的防崩溃兜底
+      if (!rateFrom || rateFrom === 0) rateFrom = 1;
+      if (!rateTo) rateTo = 1;
+
+      // 4. 交叉换算核心公式：
+      // (输入金额 / 源货币兑USD汇率) * 目标货币兑USD汇率
+      let amountInUSD = inputVal / rateFrom;
+      let result = amountInUSD * rateTo;
+
+      // 5. 精度控制：最多保留 4 位小数，并通过 parseFloat 去除末尾无意义的 0 (如 1.5000 -> 1.5)
       return parseFloat(result.toFixed(4)).toString();
     } catch (err) {
-      Logger.error(`[ExchangeRate] 计算异常: ${err}`);
+      Logger.error(`[ExchangeRate] 计算引擎异常: ${err}`);
       return 'Error';
     }
   }
