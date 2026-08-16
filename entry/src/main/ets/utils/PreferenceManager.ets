@@ -69,6 +69,9 @@ export class PreferenceManager {
     AppStorage.setOrCreate(PreferenceConfigs.KEY_COMBINATION_SELECT, PreferenceManager.get(PreferenceConfigs.KEY_COMBINATION_SELECT, 1));
     AppStorage.setOrCreate(PreferenceConfigs.KEY_PERMUTATION_SELECT, PreferenceManager.get(PreferenceConfigs.KEY_PERMUTATION_SELECT, 1));
     AppStorage.setOrCreate(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS, PreferenceManager.get(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS, '[]'));
+    AppStorage.setOrCreate(PreferenceConfigs.KEY_EXCHANGE_CURRENCY_LIST, PreferenceManager.get(PreferenceConfigs.KEY_EXCHANGE_CURRENCY_LIST, '[]'));
+    AppStorage.setOrCreate(PreferenceConfigs.KEY_EXCHANGE_ACTIVE_ID, PreferenceManager.get(PreferenceConfigs.KEY_EXCHANGE_ACTIVE_ID, '1'));
+    AppStorage.setOrCreate(PreferenceConfigs.KEY_EXCHANGE_BASE_AMOUNT, PreferenceManager.get(PreferenceConfigs.KEY_EXCHANGE_BASE_AMOUNT, '100'));
     Logger.info(`[PreferenceManager] 所有配置已成功加载到 AppStorage`);
   }
 }

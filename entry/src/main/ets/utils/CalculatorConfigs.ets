@@ -203,15 +203,20 @@ export class PreferenceConfigs {
   static readonly KEY_PERMUTATION_SELECT = 'permutationSelectIndex';
   static readonly KEY_HAPTIC_FEEDBACK = 'hapticFeedback';
 
-  // 函数图像持久化配置的 Key
+  // 隐私声明同意状态标识
+  static readonly KEY_PRIVACY_VERSION = 'privacyVersion';
+
+  // 函数图像配置
   static readonly KEY_GRAPHING_FUNCTIONS = 'graphingFunctions';
 
   // 启动页面配置
   static readonly KEY_STARTUP_PAGE = 'startupPageMode';
   static readonly KEY_LAST_USED_MODULE = 'lastUsedModule';
 
-  // 隐私声明同意状态标识
-  static readonly KEY_PRIVACY_VERSION = 'privacyVersion';
+  // 汇率模块
+  static readonly KEY_EXCHANGE_CURRENCY_LIST = 'exchangeCurrencyList';
+  static readonly KEY_EXCHANGE_ACTIVE_ID = 'exchangeActiveId';
+  static readonly KEY_EXCHANGE_BASE_AMOUNT = 'exchangeBaseAmount';
 }
 
 /**

@@ -11,6 +11,7 @@ import { HapticUtils } from '../utils/HapticUtils';
 import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor, icon_backspace, PreferenceConfigs } from '../utils/CalculatorConfigs';
 import { KeyGestureWrapper } from './common/KeyGestureWrapper';
 import { LengthMetrics } from '@kit.ArkUI';
+import { PreferenceManager } from '../utils/PreferenceManager';
 
 // ==================== 1. 模拟数据层 ====================
 interface CurrencyInfo {
@@ -65,13 +66,9 @@ function getLocalActionId(btn: string | Resource): string {
 // ==================== 2. 主组件 ====================
 @Component
 export struct ExchangeRate {
-  @State currencyList: Array<CurrencyListItem> = [
-    new CurrencyListItem('1', 'USD'),
-    new CurrencyListItem('2', 'CNY')
-  ];
-  @State activeId: string = '1';
-  @State baseAmount: string = '100';
-
+  @State currencyList: Array<CurrencyListItem> = [];
+  @State @Watch('saveData') activeId: string = '';
+  @State @Watch('saveData') baseAmount: string = '';
   @State lastUpdateTime: string = '刚刚';
   @State isSelectorShow: boolean = false;
   @State selectingId: string = '';
@@ -86,6 +83,36 @@ export struct ExchangeRate {
 
   aboutToAppear() {
     Logger.info('[ExchangeRate] 模块初始化');
+    this.loadData();
+  }
+
+  // 读取缓存数据
+  loadData() {
+    let listStr = AppStorage.get<string>(PreferenceConfigs.KEY_EXCHANGE_CURRENCY_LIST) || '[]';
+    try {
+      let parsedList = JSON.parse(listStr) as Array<CurrencyListItem>;
+      if (parsedList && parsedList.length > 0) {
+        this.currencyList = parsedList;
+      } else {
+        // 无缓存时的默认兜底数据
+        this.currencyList = [
+          new CurrencyListItem('1', 'USD'),
+          new CurrencyListItem('2', 'CNY')
+        ];
+      }
+    } catch (err) {
+      this.currencyList = [new CurrencyListItem('1', 'USD'), new CurrencyListItem('2', 'CNY')];
+    }
+
+    this.activeId = AppStorage.get<string>(PreferenceConfigs.KEY_EXCHANGE_ACTIVE_ID) || this.currencyList[0].id;
+    this.baseAmount = AppStorage.get<string>(PreferenceConfigs.KEY_EXCHANGE_BASE_AMOUNT) || '100';
+  }
+
+  // 统一下发落盘指令
+  saveData() {
+    PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_CURRENCY_LIST, JSON.stringify(this.currencyList));
+    PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_ACTIVE_ID, this.activeId);
+    PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_BASE_AMOUNT, this.baseAmount);
   }
 
   // --- 核心换算与状态管理逻辑 ---
@@ -398,6 +425,8 @@ export struct ExchangeRate {
         // 拖拽结束，重置所有状态，透明项瞬间恢复实体
         this.draggedIndex = -1;
         this.draggingId = '';
+        // 拖拽结束，列表顺序已定，此时调用保存
+        this.saveData();
       })
 
       Blank()
