@@ -175,9 +175,7 @@ export struct ExchangeRate {
 
   // --- 网络请求与数据更新 ---
   async handleRefresh() {
-    Logger.info('[ExchangeRate] 触发汇率刷新任务，开始请求 api.startyi.com...');
-
-    // 1. 创建 HTTP 请求任务
+    Logger.info('[ExchangeRate] 触发汇率刷新任务，开始请求 API...');
     let httpRequest = http.createHttp();
 
     try {
@@ -186,10 +184,7 @@ export struct ExchangeRate {
         'https://api.startyi.com/rates',
         {
           method: http.RequestMethod.GET,
-          header: {
-            'x-token': ApiConfig.EXCHANGE_API_TOKEN
-          },
-          // 设置 10 秒超时
+          header: { 'x-token': ApiConfig.EXCHANGE_API_TOKEN },
           connectTimeout: 10000,
           readTimeout: 10000
         }
@@ -197,29 +192,39 @@ export struct ExchangeRate {
 
       // 3. 判断 HTTP 状态码并打印日志
       if (response.responseCode === http.ResponseCode.OK) {
-        Logger.info(`[ExchangeRate] 网络请求成功！获取到的 JSON 字符串如下：\n${response.result}`);
-        let resData = JSON.parse(response.result as string) as ExchangeApiResponse;
+        // 智能兼容：如果系统没解析，手动 Parse；如果系统已解析为 Object，直接接管
+        let resObj = (typeof response.result === 'string'
+          ? JSON.parse(response.result)
+          : response.result) as Record<string, Object>;
 
-        // 1. 提取 rates 字典
-        if (resData && resData.rates) {
-          this.rateMap = resData.rates;
-          // 将字典转为字符串后持久化落盘
+        // 括号提取
+        let rawRates = resObj['rates'] as Record<string, number>;
+
+        if (rawRates) {
+          // 规避 ArkTS 对象展开语法禁令，手动重组字典以触发 @State 刷新
+          let newRateMap: Record<string, number> = {};
+          let rateKeys = Object.keys(rawRates);
+
+          for (let i = 0; i < rateKeys.length; i++) {
+            newRateMap[rateKeys[i]] = Number(rawRates[rateKeys[i]]);
+          }
+
+          this.rateMap = newRateMap;
+          Logger.info(`[ExchangeRate] 更新成功！已缓存 ${rateKeys.length} 种货币汇率。`);
+
+          // 持久化落盘与时间戳更新
           PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_RATES, JSON.stringify(this.rateMap));
-
-          // 2. 提取并更新时间戳 (采用本地系统时间，或者使用 API 返回的 resData.timestamp * 1000)
-          // 推荐使用本地获取成功这一刻的系统时间，对用户来说更直观
           this.lastUpdateTimeStamp = new Date().getTime();
           PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_LAST_UPDATE, this.lastUpdateTimeStamp);
+        } else {
+          Logger.error(`[ExchangeRate] 数据结构异常，未能提取到 rates 字段`);
         }
       } else {
-        Logger.error(`[ExchangeRate] 网络请求失败，被服务器拒绝或路径错误，状态码: ${response.responseCode}`);
+        Logger.error(`[ExchangeRate] 网络请求失败，状态码: ${response.responseCode}`);
       }
-
     } catch (err) {
-      // 4. 捕获断网、DNS 错误等底层网络异常
-      Logger.error(`[ExchangeRate] 网络请求引发底层异常: ${JSON.stringify(err)}`);
+      Logger.error(`[ExchangeRate] 网络请求底层异常: ${JSON.stringify(err)}`);
     } finally {
-      // 5. 必须销毁请求对象，释放系统资源
       httpRequest.destroy();
     }
   }
