@@ -40,6 +40,9 @@ export struct ExchangeRate {
   aboutToAppear() {
     Logger.info('[ExchangeRate] 模块初始化');
     this.loadData();
+    // 每次打开汇率模块时，先更新时间显示文字，然后静默检查是否需要刷新
+    this.updateTimeDisplay();
+    this.checkAndRefreshHourly();
   }
 
   // 读取缓存数据
@@ -74,6 +77,51 @@ export struct ExchangeRate {
 
     // 3. 加载上次更新时间戳
     this.lastUpdateTimeStamp = AppStorage.get<number>(PreferenceConfigs.KEY_EXCHANGE_LAST_UPDATE) || 0;
+  }
+
+  // ======== 缓存失效与时间格式化逻辑 ========
+  // 检查是否跨越了整点，如果是则静默刷新
+  checkAndRefreshHourly() {
+    if (this.lastUpdateTimeStamp === 0) {
+      Logger.info('[ExchangeRate] 本地无缓存，准备发起首次数据请求');
+      this.handleRefresh();
+      return;
+    }
+
+    let now = new Date();
+    let cachedDate = new Date(this.lastUpdateTimeStamp);
+
+    // 拼装年-月-日-时字符串进行绝对比对
+    let nowHourStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}`;
+    let cachedHourStr = `${cachedDate.getFullYear()}-${cachedDate.getMonth()}-${cachedDate.getDate()}-${cachedDate.getHours()}`;
+
+    if (nowHourStr !== cachedHourStr) {
+      Logger.info(`[ExchangeRate] 缓存已跨越整点失效 (旧: ${cachedHourStr}, 新: ${nowHourStr})，触发静默拉取...`);
+      this.handleRefresh();
+    } else {
+      Logger.info('[ExchangeRate] 缓存仍在当前整点有效期内，跳过网络请求。');
+    }
+  }
+
+  // 更新顶部 UI 显示的“上次更新”时间文本
+  updateTimeDisplay() {
+    if (this.lastUpdateTimeStamp === 0) {
+      this.lastUpdateTime = '从未更新';
+      return;
+    }
+
+    let date = new Date(this.lastUpdateTimeStamp);
+    let hours = date.getHours().toString().padStart(2, '0');
+    let minutes = date.getMinutes().toString().padStart(2, '0');
+
+    let today = new Date();
+    if (date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear()) {
+      this.lastUpdateTime = `今天 ${hours}:${minutes}`;
+    } else {
+      let month = (date.getMonth() + 1).toString().padStart(2, '0');
+      let day = date.getDate().toString().padStart(2, '0');
+      this.lastUpdateTime = `${month}-${day} ${hours}:${minutes}`;
+    }
   }
 
   // 统一下发落盘指令
@@ -216,6 +264,9 @@ export struct ExchangeRate {
           PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_RATES, JSON.stringify(this.rateMap));
           this.lastUpdateTimeStamp = new Date().getTime();
           PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_LAST_UPDATE, this.lastUpdateTimeStamp);
+
+          // 更新顶部提示文本
+          this.updateTimeDisplay();
         } else {
           Logger.error(`[ExchangeRate] 数据结构异常，未能提取到 rates 字段`);
         }
