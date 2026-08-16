@@ -293,12 +293,17 @@ export struct ExchangeRate {
             }
             .width('100%')
             .padding({ left: 16, right: 16 })
-            .backgroundColor(this.activeId === item.id ? $r('sys.color.comp_background_tertiary') : $r('sys.color.comp_background_primary'))
+            .stateStyles({
+              normal: {
+                .backgroundColor(this.activeId === item.id ? $r('sys.color.comp_background_tertiary') : $r('sys.color.comp_background_primary'))
+              },
+              pressed: {
+                .backgroundColor($r('sys.color.interactive_pressed'))
+              }
+            })
             .borderRadius(16)
             .borderWidth(this.activeId === item.id ? 1.0 : 0.5)
             .borderColor($r('sys.color.comp_divider'))
-            .animation({ duration: 200, curve: Curve.Smooth })
-            .borderRadius(16)
           }
           .padding({ left: 16, right: 16 })
           .swipeAction({
