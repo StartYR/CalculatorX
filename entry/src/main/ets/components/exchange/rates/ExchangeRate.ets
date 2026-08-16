@@ -354,33 +354,6 @@ export struct ExchangeRate {
     }
   }
 
-  // 统一的反馈状态清除器（3秒后自动淡出）
-  // triggerFeedbackTimer() {
-  //   // 如果之前还有没跑完的定时器，立刻掐断，防止快速点击时状态错乱
-  //   if (this.feedbackTimer !== -1) {
-  //     clearTimeout(this.feedbackTimer);
-  //   }
-  //
-  //   this.feedbackTimer = setTimeout(() => {
-  //     // 加上闭眼动画，让文字平滑消失
-  //     animateTo({ duration: 300, curve: Curve.EaseInOut }, () => {
-  //       this.isUpdateFailed = false;
-  //       this.isUpdateSuccess = false;
-  //     });
-  //   }, 3000);
-  // }
-
-  // 错误反馈触发器
-  // triggerErrorFeedback(toastMsg: string) {
-  //   this.isUpdateFailed = true;
-  //   this.triggerFeedbackTimer(); // 触发 3 秒自动消失
-  //   promptAction.showToast({
-  //     message: toastMsg,
-  //     duration: 2500,
-  //     bottom: '100vp'
-  //   });
-  // }
-
   // 统一的 UI 状态反馈与动画触发器
   handleFeedback(isSuccess: boolean, toastMsg?: string) {
     // 掐断未完成的定时器，防止狂点导致状态错乱
