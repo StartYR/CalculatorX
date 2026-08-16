@@ -77,6 +77,8 @@ export struct ExchangeRate {
   @State selectingId: string = '';
   @State searchQuery: string = '';
 
+  @State draggingId: string = ''; // 记录当前正在被拖拽的项
+
   private draggedIndex: number = -1;
 
   @StorageProp('topRectHeight') topRectHeight: number = 80;
@@ -227,7 +229,7 @@ export struct ExchangeRate {
       }
       .padding({ top: 8, bottom: 8, left: 12, right: 12 })
       .borderRadius(12)
-      .backgroundColor(this.activeId === item.id ? $r('sys.color.comp_background_primary') : $r('sys.color.background_secondary'))
+      .backgroundColor(this.activeId === item.id ? $r('sys.color.comp_background_primary') : $r('sys.color.comp_background_secondary'))
       .onClick(() => this.openSelector(item.id))
       .margin({ right: 14 })
       .alignSelf(ItemAlign.Center)
@@ -276,13 +278,16 @@ export struct ExchangeRate {
     .borderColor($r('sys.color.comp_divider'))
   }
 
-  // 拖拽占位符：利用透明视图完全屏蔽原生拖拽视觉残留
+  // 拖拽占位符：带有轻微放大和高级阴影的跟手虚影
   @Builder
-  dragFeedback() {
-    Column()
-      .width('100%')
-      .height(84)
-      .opacity(0)
+  dragFeedback(item: CurrencyListItem) {
+    Column() {
+      this.CurrencyCardView(item)
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16 }) // 保持和 ListItem 一样的内边距
+    .scale({ x: 1.1, y: 1.1 }) // 轻微放大，产生“拿起来”的视觉差
+    .shadow({ radius: 16, color: '#1A000000', offsetY: 8 }) // 添加外阴影，拉开Z轴空间感
   }
 
   build() {
@@ -313,6 +318,7 @@ export struct ExchangeRate {
             this.CurrencyCardView(item)
           }
           .padding({ left: 16, right: 16 })
+          .opacity(this.draggingId === item.id ? 0 : 1) // 如果是被拖拽的项，直接变透明作为占位符
           .swipeAction({
             end: { builder: () => { this.deleteAction(item.id) } },
             edgeEffect: SwipeEdgeEffect.Spring
@@ -351,13 +357,18 @@ export struct ExchangeRate {
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.Spring)
       .fadingEdge(true, { fadingEdgeLength: LengthMetrics.vp(12) })
-      // 启用拖拽排序拦截
       .onItemDragStart((event: ItemDragInfo, itemIndex: number) => {
         let actualIndex = itemIndex - 1;
         if (actualIndex < 0 || actualIndex >= this.currencyList.length) return undefined;
 
         this.draggedIndex = actualIndex;
-        return this.dragFeedback();
+        let draggedItem = this.currencyList[actualIndex];
+
+        // 触发重绘：让列表中的原项变透明
+        this.draggingId = draggedItem.id;
+
+        // 返回我们刚刚写好的高级复印件
+        return this.dragFeedback(draggedItem);
       })
       .onItemDragMove((event: ItemDragInfo, itemIndex: number, insertIndex: number) => {
         let actualInsertIndex = insertIndex - 1;
@@ -366,7 +377,7 @@ export struct ExchangeRate {
 
         if (this.draggedIndex === actualInsertIndex) return;
 
-        // 核心交互：通过响应式状态绑定阻尼曲线，在手指拖拽区间实现列表项动态规避
+        // 透明占位符在列表中实时挤位
         animateTo({ duration: 350, curve: Curve.Friction }, () => {
           let item = this.currencyList.splice(this.draggedIndex, 1)[0];
           this.currencyList.splice(actualInsertIndex, 0, item);
@@ -374,7 +385,9 @@ export struct ExchangeRate {
         });
       })
       .onItemDrop((event: ItemDragInfo, itemIndex: number, insertIndex: number, isSuccess: boolean) => {
+        // 拖拽结束，重置所有状态，透明项瞬间恢复实体
         this.draggedIndex = -1;
+        this.draggingId = '';
       })
 
       Blank()
