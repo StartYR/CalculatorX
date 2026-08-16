@@ -210,6 +210,72 @@ export struct ExchangeRate {
     .justifyContent(FlexAlign.Center)
   }
 
+  // --- 抽离的独立货币卡片 UI ---
+  @Builder
+  CurrencyCardView(item: CurrencyListItem) {
+    Row() {
+      // 左侧功能区：货币类型选择器
+      Row() {
+        Text(item.code)
+          .fontSize(22)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(this.activeId === item.id ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
+        Image($r('sys.media.ohos_ic_public_arrow_down'))
+          .width(16).height(16)
+          .fillColor(this.activeId === item.id ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
+          .margin({ left: 4 })
+      }
+      .padding({ top: 8, bottom: 8, left: 12, right: 12 })
+      .borderRadius(12)
+      .backgroundColor(this.activeId === item.id ? $r('sys.color.comp_background_primary') : $r('sys.color.background_secondary'))
+      .onClick(() => this.openSelector(item.id))
+      .margin({ right: 14 })
+      .alignSelf(ItemAlign.Center)
+
+      // 右侧内容区：两行式布局（输入区/输出区映射）
+      Column() {
+        Column() {
+          Text(MOCK_CURRENCIES[item.code].name)
+            .fontSize(14)
+            .fontColor($r('sys.color.font_secondary'))
+            .width('100%')
+            .textAlign(TextAlign.Start)
+        }
+        .width('100%')
+        .padding({ top: 12, bottom: 2 })
+        .onClick(() => this.setActiveCurrency(item.id, item.code))
+
+        Column() {
+          Text(`${MOCK_CURRENCIES[item.code].symbol} ${this.getConvertedAmount(item.code, this.activeId === item.id)}`)
+            .fontSize(24)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(this.activeId === item.id ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
+            .width('100%')
+            .textAlign(TextAlign.End)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .width('100%')
+        .padding({ top: 2, bottom: 12 })
+        .onClick(() => this.setActiveCurrency(item.id, item.code))
+      }
+      .layoutWeight(1)
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16 })
+    .stateStyles({
+      normal: {
+        .backgroundColor(this.activeId === item.id ? $r('sys.color.comp_background_tertiary') : $r('sys.color.comp_background_primary'))
+      },
+      pressed: {
+        .backgroundColor($r('sys.color.interactive_pressed'))
+      }
+    })
+    .borderRadius(16)
+    .borderWidth(this.activeId === item.id ? 1.0 : 0.5)
+    .borderColor($r('sys.color.comp_divider'))
+  }
+
   // 拖拽占位符：利用透明视图完全屏蔽原生拖拽视觉残留
   @Builder
   dragFeedback() {
@@ -243,67 +309,8 @@ export struct ExchangeRate {
         // 核心循环：采用一维拍平结构提升性能与交互可塑性
         ForEach(this.currencyList, (item: CurrencyListItem, index: number) => {
           ListItem() {
-            Row() {
-              // 左侧功能区：货币类型选择器
-              Row() {
-                Text(item.code)
-                  .fontSize(22)
-                  .fontWeight(FontWeight.Bold)
-                  .fontColor(this.activeId === item.id ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
-                Image($r('sys.media.ohos_ic_public_arrow_down'))
-                  .width(16).height(16)
-                  .fillColor(this.activeId === item.id ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
-                  .margin({ left: 4 })
-              }
-              .padding({ top: 8, bottom: 8, left: 12, right: 12 })
-              .borderRadius(12)
-              .backgroundColor(this.activeId === item.id ? $r('sys.color.comp_background_primary') : $r('sys.color.background_secondary'))
-              .onClick(() => this.openSelector(item.id))
-              .margin({ right: 14 })
-              .alignSelf(ItemAlign.Center)
-
-              // 右侧内容区：两行式布局（输入区/输出区映射）
-              Column() {
-                Column() {
-                  Text(MOCK_CURRENCIES[item.code].name)
-                    .fontSize(14)
-                    .fontColor($r('sys.color.font_secondary'))
-                    .width('100%')
-                    .textAlign(TextAlign.Start)
-                }
-                .width('100%')
-                .padding({ top: 12, bottom: 2 })
-                .onClick(() => this.setActiveCurrency(item.id, item.code))
-
-                Column() {
-                  Text(`${MOCK_CURRENCIES[item.code].symbol} ${this.getConvertedAmount(item.code, this.activeId === item.id)}`)
-                    .fontSize(24)
-                    .fontWeight(FontWeight.Medium)
-                    .fontColor(this.activeId === item.id ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
-                    .width('100%')
-                    .textAlign(TextAlign.End)
-                    .maxLines(1)
-                    .textOverflow({ overflow: TextOverflow.Ellipsis })
-                }
-                .width('100%')
-                .padding({ top: 2, bottom: 12 })
-                .onClick(() => this.setActiveCurrency(item.id, item.code))
-              }
-              .layoutWeight(1)
-            }
-            .width('100%')
-            .padding({ left: 16, right: 16 })
-            .stateStyles({
-              normal: {
-                .backgroundColor(this.activeId === item.id ? $r('sys.color.comp_background_tertiary') : $r('sys.color.comp_background_primary'))
-              },
-              pressed: {
-                .backgroundColor($r('sys.color.interactive_pressed'))
-              }
-            })
-            .borderRadius(16)
-            .borderWidth(this.activeId === item.id ? 1.0 : 0.5)
-            .borderColor($r('sys.color.comp_divider'))
+            // 直接调用抽离的 Builder，传入当前项的数据
+            this.CurrencyCardView(item)
           }
           .padding({ left: 16, right: 16 })
           .swipeAction({
