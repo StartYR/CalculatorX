@@ -16,6 +16,7 @@ import { ApiConfig } from '../../../utils/ApiConfig';
 import { CURRENCY_WHITELIST, CURRENCY_MAP, CurrencyInfo } from './CurrencyData';
 import { CurrencyListItem, ExchangeApiResponse } from './ExchangeTypes';
 import { ExchangeKeyboard } from './ExchangeKeyboard';
+import promptAction from '@ohos.promptAction';
 
 // ==================== 主组件 ====================
 @Component
@@ -29,6 +30,10 @@ export struct ExchangeRate {
   @State selectingId: string = '';
   @State searchQuery: string = '';
   @State lastUpdateTimeStamp: number = 0; // 记录最后成功联网获取的系统时间戳
+
+  // UI 交互反馈状态
+  @State isRefreshing: boolean = false; // 是否正在请求中（防抖控制）
+  @State isUpdateFailed: boolean = false; // 上次更新是否失败
 
   @State draggingId: string = ''; // 记录当前正在被拖拽的项
   @State isDragGhostReady: boolean = false; // 控制拖拽虚影的出场动画状态
@@ -223,6 +228,12 @@ export struct ExchangeRate {
 
   // --- 网络请求与数据更新 ---
   async handleRefresh() {
+    // 防抖：如果正在刷新中，直接拦截，防止用户狂点
+    if (this.isRefreshing) return;
+
+    this.isRefreshing = true;
+    this.isUpdateFailed = false; // 每次重新请求时，先重置失败状态
+
     Logger.info('[ExchangeRate] 触发汇率刷新任务，开始请求 API...');
     let httpRequest = http.createHttp();
 
@@ -265,19 +276,37 @@ export struct ExchangeRate {
           this.lastUpdateTimeStamp = new Date().getTime();
           PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_LAST_UPDATE, this.lastUpdateTimeStamp);
 
-          // 更新顶部提示文本
+          // 更新顶部 UI 显示的“上次更新”时间
           this.updateTimeDisplay();
+
+          // 可选：成功后也可以弹一个极轻量的提示
+          // promptAction.showToast({ message: '汇率已更新', duration: 1500 });
         } else {
           Logger.error(`[ExchangeRate] 数据结构异常，未能提取到 rates 字段`);
+          this.triggerErrorFeedback('数据解析异常，已使用本地缓存');
         }
       } else {
         Logger.error(`[ExchangeRate] 网络请求失败，状态码: ${response.responseCode}`);
+        this.triggerErrorFeedback(`更新失败 (错误码: ${response.responseCode})`);
       }
     } catch (err) {
       Logger.error(`[ExchangeRate] 网络请求底层异常: ${JSON.stringify(err)}`);
+      this.triggerErrorFeedback('网络连接异常，请检查网络设置');
     } finally {
+      // 无论成功还是失败，都必须释放请求并关闭刷新状态
       httpRequest.destroy();
+      this.isRefreshing = false;
     }
+  }
+
+  // 【新增】抽离的错误反馈触发器
+  triggerErrorFeedback(toastMsg: string) {
+    this.isUpdateFailed = true;
+    promptAction.showToast({
+      message: toastMsg,
+      duration: 2500,
+      bottom: '100vp'
+    });
   }
 
   handleKeyboardInput(btn: string | Resource) {
@@ -427,11 +456,25 @@ export struct ExchangeRate {
             Text(`上次更新: ${this.lastUpdateTime}`)
               .fontSize(12)
               .fontColor($r('sys.color.font_tertiary'))
+
             Blank()
-            Button('更新')
+
+            // 如果更新失败，在按钮左侧显示红色提示文字
+            if (this.isUpdateFailed) {
+              Text('更新失败')
+                .fontSize(12)
+                .fontColor(Color.Red)
+                .margin({ right: 8 })
+                // 简单的出场动画
+                .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
+            }
+
+            // 根据状态动态切换文字和颜色
+            Button(this.isRefreshing ? '更新中...' : (this.isUpdateFailed ? '重试' : '更新'))
               .fontSize(14)
-              .fontColor($r('sys.color.font_emphasize'))
+              .fontColor(this.isUpdateFailed ? Color.Red : $r('sys.color.font_emphasize'))
               .backgroundColor(Color.Transparent)
+              .opacity(this.isRefreshing ? 0.5 : 1.0)
               .onClick(() => this.handleRefresh())
           }
           .width('100%')
