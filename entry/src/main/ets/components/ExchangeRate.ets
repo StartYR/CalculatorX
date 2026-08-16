@@ -257,7 +257,7 @@ export struct ExchangeRate {
               }
               .padding({ top: 8, bottom: 8, left: 12, right: 12 })
               .borderRadius(12)
-              .backgroundColor(this.activeId === item.id ? $r('sys.color.comp_background_tertiary') : Color.Transparent)
+              .backgroundColor(this.activeId === item.id ? $r('sys.color.comp_background_primary') : $r('sys.color.background_secondary'))
               .onClick(() => this.openSelector(item.id))
               .margin({ right: 14 })
               .alignSelf(ItemAlign.Center)
@@ -293,7 +293,11 @@ export struct ExchangeRate {
             }
             .width('100%')
             .padding({ left: 16, right: 16 })
-            .backgroundColor($r('sys.color.comp_background_primary'))
+            .backgroundColor(this.activeId === item.id ? $r('sys.color.comp_background_tertiary') : $r('sys.color.comp_background_primary'))
+            .borderRadius(16)
+            .borderWidth(this.activeId === item.id ? 1.5 : 0.5)
+            .borderColor($r('app.color.btn_highlight')) // 强调色
+            .animation({ duration: 200, curve: Curve.EaseInOut })
             .borderRadius(16)
           }
           .padding({ left: 16, right: 16 })
