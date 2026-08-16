@@ -359,8 +359,8 @@ GraphingCalc (顶层枢纽)
 以下组件的 `build()` 仅渲染 "当前模块正在开发中..." 文本：
 - [StatisticsCalc.ets](../entry/src/main/ets/components/StatisticsCalc.ets) — 统计分析
 - [UnitConverter.ets](../entry/src/main/ets/components/UnitConverter.ets) — 单位转换
-- [BaseConverter.ets](../entry/src/main/ets/components/BaseConverter.ets) — 进制转换
-- [ExchangeRate.ets](../entry/src/main/ets/components/ExchangeRate.ets) — 汇率
+- [BaseConverter.ets](../entry/src/main/ets/components/exchange/BaseConverter.ets) — 进制转换
+- [ExchangeRate.ets](../entry/src/main/ets/components/exchange/rates/ExchangeRate.ets) — 汇率
 
 ### 5.4 共享组件
 
@@ -801,10 +801,13 @@ entry/src/main/
 │   │   │   ├── GraphingEditSheet.ets       # 编辑面板：函数列表 CRUD、焦点切换、定义域编辑、类型选择弹窗
 │   │   │   ├── GraphingKeyboard.ets        # 专属键盘：动态变量布局(按函数类型)、Shift 层、定义域数字小键盘
 │   │   │   └── GraphingTypes.ets           # 类型声明：FunctionType 枚举(5 种)、GraphFunctionItem 接口
+│   │   ├── exchange/
+│   │   │   ├── rates/
+│   │   │   │   ├── ExchangeRate.ets        # 汇率插件（占位，开发中）
+│   │   │   │   └── CurrencyData.ets        # 汇率模块静态白名单，包含所有支持的货币代码、名称与符号
+│   │   │   ├── BaseConverter.ets           # 进制转换插件（占位，开发中）
+│   │   │   └── UnitConverter.ets           # 单位转换插件（占位，开发中）
 │   │   ├── StatisticsCalc.ets              # 统计分析插件（占位，开发中）
-│   │   ├── UnitConverter.ets               # 单位转换插件（占位，开发中）
-│   │   ├── BaseConverter.ets               # 进制转换插件（占位，开发中）
-│   │   ├── ExchangeRate.ets                # 汇率插件（占位，开发中）
 │   │   ├── FormulaScreen.ets               # 全能公式屏幕：双 WebView 中枢，事件监听/按键分发/计算调度/结果入库闭环
 │   │   ├── TopBar.ets                      # 顶部悬浮控制栏：动态状态岛(模块名+RAD/DEG/Shift徽章)，毛玻璃胶囊按钮
 │   │   ├── SideBarMenu.ets                 # 手势驱动侧边栏：模式/进阶/转换/参考四组菜单，滑动关闭+弹性回弹
