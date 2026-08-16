@@ -389,24 +389,24 @@ export struct ExchangeRate {
       Button() {
         Row() {
           Text(item.code)
-            .fontSize(22)
+            .fontSize(16)
             .fontWeight(FontWeight.Bold)
             .fontColor(this.activeId === item.id ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
           Image($r('sys.media.ohos_ic_public_arrow_down'))
-            .width(16).height(16)
+            .width(16)
+            .height(16)
             .fillColor(this.activeId === item.id ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
             .margin({ left: 4 })
         }
       }
-      .type(ButtonType.Normal) // 必须指定为 Normal，保留我们自定义的矩形和圆角
+      .type(ButtonType.Normal) // 指定为 Normal，保留自定义的矩形和圆角
       .padding({ top: 8, bottom: 8, left: 12, right: 12 })
       .borderRadius(12)
       .backgroundColor(this.activeId === item.id ? $r('sys.color.comp_background_primary') : $r('sys.color.background_secondary'))
       .onClick(() => this.openSelector(item.id))
       .margin({ right: 14 })
       .alignSelf(ItemAlign.Center)
-      // 加上这个，点击时会有一个非常轻微且顺滑的向内缩放效果
-      .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.95 })
+      .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.95 }) // 轻微且顺滑的向内缩放效果
 
       // 右侧内容区：两行式布局
       Column() {
@@ -492,7 +492,6 @@ export struct ExchangeRate {
             } else if (this.isUpdateSuccess) {
               Text('🗸 更新成功')
                 .fontSize(12)
-                // .fontColor('#34C759') // 绿色
                 .fontColor(Color.Green)
                 .margin({ right: 8 })
                 .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
