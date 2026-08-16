@@ -78,6 +78,7 @@ export struct ExchangeRate {
   @State searchQuery: string = '';
 
   @State draggingId: string = ''; // 记录当前正在被拖拽的项
+  @State isDragGhostReady: boolean = false; // 控制拖拽虚影的出场动画状态
 
   private draggedIndex: number = -1;
 
@@ -281,13 +282,15 @@ export struct ExchangeRate {
   // 拖拽占位符：带有轻微放大和高级阴影的跟手虚影
   @Builder
   dragFeedback(item: CurrencyListItem) {
-    Column() {
-      this.CurrencyCardView(item)
+    Stack() {
+      Column() {
+        this.CurrencyCardView(item)
+      }
+        .scale({ x: 1.05, y: 1 }) // 轻微放大，产生“拿起来”的视觉差
+      .shadow({ radius: 16, color: '#1A000000', offsetY: 8 }) // 添加外阴影，拉开Z轴空间感
     }
     .width('100%')
-    .padding({ left: 16, right: 16 }) // 保持和 ListItem 一样的内边距
-    .scale({ x: 1.1, y: 1.1 }) // 轻微放大，产生“拿起来”的视觉差
-    .shadow({ radius: 16, color: '#1A000000', offsetY: 8 }) // 添加外阴影，拉开Z轴空间感
+    .padding({ left: 16, right: 16 }) // 和 ListItem 一样的内边距
   }
 
   build() {
