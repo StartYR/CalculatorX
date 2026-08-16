@@ -12,6 +12,8 @@ import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor, icon
 import { KeyGestureWrapper } from './common/KeyGestureWrapper';
 import { LengthMetrics } from '@kit.ArkUI';
 import { PreferenceManager } from '../utils/PreferenceManager';
+import http from '@ohos.net.http';
+import { ApiConfig } from '../utils/ApiConfig';
 
 // ==================== 1. 模拟数据层 ====================
 interface CurrencyInfo {
@@ -187,8 +189,42 @@ export struct ExchangeRate {
     });
   }
 
-  handleRefresh() {
-    Logger.info('[ExchangeRate] 触发汇率刷新任务');
+  // --- 列表交互操作 ---
+  async handleRefresh() {
+    Logger.info('[ExchangeRate] 触发汇率刷新任务，开始请求 api.startyi.com...');
+
+    // 1. 创建 HTTP 请求任务
+    let httpRequest = http.createHttp();
+
+    try {
+      // 2. 发起 GET 请求，携带 Cloudflare WAF 要求的 x-token
+      let response = await httpRequest.request(
+        'https://api.startyi.com/rates',
+        {
+          method: http.RequestMethod.GET,
+          header: {
+            'x-token': ApiConfig.EXCHANGE_API_TOKEN
+          },
+          // 设置 10 秒超时
+          connectTimeout: 10000,
+          readTimeout: 10000
+        }
+      );
+
+      // 3. 判断 HTTP 状态码并打印日志
+      if (response.responseCode === http.ResponseCode.OK) {
+        Logger.info(`[ExchangeRate] 网络请求成功！获取到的 JSON 字符串如下：\n${response.result}`);
+      } else {
+        Logger.error(`[ExchangeRate] 网络请求失败，被服务器拒绝或路径错误，状态码: ${response.responseCode}`);
+      }
+
+    } catch (err) {
+      // 4. 捕获断网、DNS 错误等底层网络异常
+      Logger.error(`[ExchangeRate] 网络请求引发底层异常: ${JSON.stringify(err)}`);
+    } finally {
+      // 5. 必须销毁请求对象，释放系统资源
+      httpRequest.destroy();
+    }
   }
 
   handleKeyboardInput(btn: string | Resource) {
