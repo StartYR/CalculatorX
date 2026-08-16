@@ -14,6 +14,7 @@ import { LengthMetrics } from '@kit.ArkUI';
 import { PreferenceManager } from '../../../utils/PreferenceManager';
 import http from '@ohos.net.http';
 import { ApiConfig } from '../../../utils/ApiConfig';
+import { CURRENCY_WHITELIST, CURRENCY_MAP } from './CurrencyData';
 
 // ==================== 1. 模拟数据层 ====================
 interface CurrencyInfo {
@@ -71,6 +72,7 @@ export struct ExchangeRate {
   @State currencyList: Array<CurrencyListItem> = [];
   @State @Watch('saveData') activeId: string = '';
   @State @Watch('saveData') baseAmount: string = '';
+  @State rateMap: Record<string, number> = {};
   @State lastUpdateTime: string = '刚刚';
   @State isSelectorShow: boolean = false;
   @State selectingId: string = '';
@@ -129,8 +131,9 @@ export struct ExchangeRate {
       let activeItem = this.currencyList.find(item => item.id === this.activeId);
       if (!activeItem) return '0';
 
-      let rateFrom = MOCK_CURRENCIES[activeItem.code].rate;
-      let rateTo = MOCK_CURRENCIES[targetCode].rate;
+      // 从预留的动态字典取值，若无数据默认按 1:1 处理防崩溃
+      let rateFrom = this.rateMap[activeItem.code] || 1;
+      let rateTo = this.rateMap[targetCode] || 1;
       let result = inputVal * (rateTo / rateFrom);
 
       return parseFloat(result.toFixed(4)).toString();
@@ -303,10 +306,11 @@ export struct ExchangeRate {
       // 加上这个，点击时会有一个非常轻微且顺滑的向内缩放效果
       .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.95 })
 
-      // 右侧内容区：两行式布局（输入区/输出区映射）
+      // 右侧内容区：两行式布局
       Column() {
         Column() {
-          Text(MOCK_CURRENCIES[item.code].name)
+          // 查表获取中文名，找不到就直接显示代码
+          Text(CURRENCY_MAP[item.code]?.name || item.code)
             .fontSize(14)
             .fontColor($r('sys.color.font_secondary'))
             .width('100%')
@@ -317,7 +321,8 @@ export struct ExchangeRate {
         .onClick(() => this.setActiveCurrency(item.id, item.code))
 
         Column() {
-          Text(`${MOCK_CURRENCIES[item.code].symbol} ${this.getConvertedAmount(item.code, this.activeId === item.id)}`)
+          // 查表获取符号，找不到就留空
+          Text(`${CURRENCY_MAP[item.code]?.symbol || ''} ${this.getConvertedAmount(item.code, this.activeId === item.id)}`)
             .fontSize(24)
             .fontWeight(FontWeight.Medium)
             .fontColor(this.activeId === item.id ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
@@ -495,9 +500,10 @@ export struct ExchangeRate {
         })
 
       List() {
-        ForEach(Object.values(MOCK_CURRENCIES).filter(item =>
+        // 直接使用 CURRENCY_WHITELIST 作为数据源进行遍历与过滤
+        ForEach(CURRENCY_WHITELIST.filter(item =>
         item.code.includes(this.searchQuery) || item.name.includes(this.searchQuery)
-        ), (currency: CurrencyInfo) => {
+        ), (currency: CurrencyInfo) => { // 注意这里的类型变成了刚刚从 CurrencyData 导入的 CurrencyInfo
           ListItem() {
             Row() {
               Text(currency.code)
