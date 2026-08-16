@@ -32,8 +32,10 @@ export struct ExchangeRate {
   @State lastUpdateTimeStamp: number = 0; // 记录最后成功联网获取的系统时间戳
 
   // UI 交互反馈状态
-  @State isRefreshing: boolean = false; // 是否正在请求中（防抖控制）
+  @State isRefreshing: boolean = false; // 是否正在请求中
   @State isUpdateFailed: boolean = false; // 上次更新是否失败
+  @State isUpdateSuccess: boolean = false; // 上次更新是否成功
+  private feedbackTimer: number = -1; // 记录提示文本的自动消失定时器 ID
 
   @State draggingId: string = ''; // 记录当前正在被拖拽的项
   @State isDragGhostReady: boolean = false; // 控制拖拽虚影的出场动画状态
@@ -279,6 +281,10 @@ export struct ExchangeRate {
           // 更新顶部 UI 显示的“上次更新”时间
           this.updateTimeDisplay();
 
+          // 触发更新成功状态与自动消失定时器
+          this.isUpdateSuccess = true;
+          this.triggerFeedbackTimer();
+
           // 可选：成功后也可以弹一个极轻量的提示
           // promptAction.showToast({ message: '汇率已更新', duration: 1500 });
         } else {
@@ -299,9 +305,26 @@ export struct ExchangeRate {
     }
   }
 
-  // 【新增】抽离的错误反馈触发器
+  // 统一的反馈状态清除器（3秒后自动淡出）
+  triggerFeedbackTimer() {
+    // 如果之前还有没跑完的定时器，立刻掐断，防止快速点击时状态错乱
+    if (this.feedbackTimer !== -1) {
+      clearTimeout(this.feedbackTimer);
+    }
+
+    this.feedbackTimer = setTimeout(() => {
+      // 加上闭眼动画，让文字平滑消失
+      animateTo({ duration: 300, curve: Curve.EaseInOut }, () => {
+        this.isUpdateFailed = false;
+        this.isUpdateSuccess = false;
+      });
+    }, 3000);
+  }
+
+  // 错误反馈触发器
   triggerErrorFeedback(toastMsg: string) {
     this.isUpdateFailed = true;
+    this.triggerFeedbackTimer(); // 触发 3 秒自动消失
     promptAction.showToast({
       message: toastMsg,
       duration: 2500,
@@ -459,22 +482,28 @@ export struct ExchangeRate {
 
             Blank()
 
-            // 如果更新失败，在按钮左侧显示红色提示文字
+            // 状态反馈区：失败显示红字，成功显示绿字
             if (this.isUpdateFailed) {
-              Text('更新失败')
+              Text('✘ 更新失败')
                 .fontSize(12)
                 .fontColor(Color.Red)
                 .margin({ right: 8 })
-                // 简单的出场动画
+                .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
+            } else if (this.isUpdateSuccess) {
+              Text('🗸 更新成功')
+                .fontSize(12)
+                // .fontColor('#34C759') // 绿色
+                .fontColor(Color.Green)
+                .margin({ right: 8 })
                 .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
             }
 
             // 根据状态动态切换文字和颜色
-            Button(this.isRefreshing ? '更新中...' : (this.isUpdateFailed ? '重试' : '更新'))
+            Button(this.isRefreshing ? '更新中...' : (this.isUpdateFailed ? '重试 ↻' : '更新 ↻'))
               .fontSize(14)
-              .fontColor(this.isUpdateFailed ? Color.Red : $r('sys.color.font_emphasize'))
+              // 更新中显示次级灰色，失败显示红色，正常状态显示主题强调色
+              .fontColor(this.isRefreshing ? $r('sys.color.font_tertiary') : (this.isUpdateFailed ? Color.Red : $r('sys.color.font_emphasize')))
               .backgroundColor(Color.Transparent)
-              .opacity(this.isRefreshing ? 0.5 : 1.0)
               .onClick(() => this.handleRefresh())
           }
           .width('100%')
