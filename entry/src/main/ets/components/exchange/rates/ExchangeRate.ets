@@ -17,6 +17,7 @@ import { CURRENCY_WHITELIST, CURRENCY_MAP, CurrencyInfo } from './CurrencyData';
 import { CurrencyListItem, ExchangeApiResponse } from './ExchangeTypes';
 import { ExchangeKeyboard } from './ExchangeKeyboard';
 import promptAction from '@ohos.promptAction';
+import connection from '@ohos.net.connection'; // 网络检测
 
 // ==================== 主组件 ====================
 @Component
@@ -50,6 +51,18 @@ export struct ExchangeRate {
     // 每次打开汇率模块时，先更新时间显示文字，然后静默检查是否需要刷新
     this.updateTimeDisplay();
     this.checkAndRefreshHourly();
+  }
+
+  // 判断当前缓存是否在整点有效期内
+  isCacheValid(): boolean {
+    if (this.lastUpdateTimeStamp === 0) return false;
+    let now = new Date();
+    let cachedDate = new Date(this.lastUpdateTimeStamp);
+
+    let nowHourStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}`;
+    let cachedHourStr = `${cachedDate.getFullYear()}-${cachedDate.getMonth()}-${cachedDate.getDate()}-${cachedDate.getHours()}`;
+
+    return nowHourStr === cachedHourStr;
   }
 
   // 读取缓存数据
@@ -90,9 +103,13 @@ export struct ExchangeRate {
   // 检查是否跨越了整点，如果是则静默刷新
   checkAndRefreshHourly() {
     if (this.lastUpdateTimeStamp === 0) {
-      Logger.info('[ExchangeRate] 本地无缓存，准备发起首次数据请求');
-      this.handleRefresh();
-      return;
+      if (!this.isCacheValid()) {
+        Logger.info('[ExchangeRate] 缓存跨越整点失效或无缓存，触发静默拉取...');
+        // 传入 true，强制发起真实网络请求
+        this.handleRefresh(true);
+      } else {
+        Logger.info('[ExchangeRate] 缓存仍在当前整点有效期内，跳过开屏网络请求。');
+      }
     }
 
     let now = new Date();
@@ -229,18 +246,57 @@ export struct ExchangeRate {
   }
 
   // --- 网络请求与数据更新 ---
-  async handleRefresh() {
+  async handleRefresh(isForceNetwork: boolean = false) {
     // 防抖：如果正在刷新中，直接拦截，防止用户狂点
     if (this.isRefreshing) return;
 
-    this.isRefreshing = true;
-    this.isUpdateFailed = false; // 每次重新请求时，先重置失败状态
+    // 1. 探网：判断当前是否有可用网络
+    let hasNet = false;
+    let isNetCheckSuccess = true; // 标记底层探网是否成功执行
 
-    Logger.info('[ExchangeRate] 触发汇率刷新任务，开始请求 API...');
+    try {
+      hasNet = connection.hasDefaultNetSync();
+    } catch (e) {
+      // 极少情况下的底层 API 兼容性降级
+      isNetCheckSuccess = false;
+      Logger.warn(`[ExchangeRate] 底层探网 API 异常，降级为 HTTP 真实探测: ${JSON.stringify(e)}`);
+    }
+
+    // 2. 缓存有效且非强制刷新时的前端拦截
+    if (!isForceNetwork && this.isCacheValid()) {
+
+      // 核心防御：只有在明确知道探网 API 成功的情况下，才敢执行障眼法或提前拦截
+      if (isNetCheckSuccess) {
+        if (!hasNet) {
+          Logger.info('[ExchangeRate] 明确无网，拦截假装更新，防止穿帮');
+          this.handleFeedback(false, '网络连接异常，请检查网络设置');
+          return;
+        }
+
+        Logger.info('[ExchangeRate] 明确有网且缓存有效，执行视觉障眼法...');
+        this.isRefreshing = true;
+        // 挂起一个 400ms 的定时器模拟网络延迟，让交互更逼真
+        setTimeout(() => {
+          this.handleFeedback(true);
+          this.isRefreshing = false;
+        }, 400);
+        return;
+      }
+    }
+
+    // 真实网络请求
+    if (isNetCheckSuccess && !hasNet) {
+      Logger.info('[ExchangeRate] 准备发起真实请求，但检测到无网络，直接拦截。');
+      this.handleFeedback(false, '网络连接异常，请检查网络设置');
+      return;
+    }
+
+    this.isRefreshing = true;
+    Logger.info('[ExchangeRate] 触发真实汇率刷新任务，开始请求 API...');
     let httpRequest = http.createHttp();
 
     try {
-      // 2. 发起 GET 请求，携带 Cloudflare WAF 要求的 x-token
+      // 发起 GET 请求，携带 Cloudflare WAF 要求的 x-token
       let response = await httpRequest.request(
         'https://api.startyi.com/rates',
         {
@@ -251,7 +307,7 @@ export struct ExchangeRate {
         }
       );
 
-      // 3. 判断 HTTP 状态码并打印日志
+      // 判断 HTTP 状态码并打印日志
       if (response.responseCode === http.ResponseCode.OK) {
         // 智能兼容：如果系统没解析，手动 Parse；如果系统已解析为 Object，直接接管
         let resObj = (typeof response.result === 'string'
@@ -271,33 +327,26 @@ export struct ExchangeRate {
           }
 
           this.rateMap = newRateMap;
-          Logger.info(`[ExchangeRate] 更新成功！已缓存 ${rateKeys.length} 种货币汇率。`);
+          Logger.info(`[ExchangeRate] 真实更新成功！已缓存 ${rateKeys.length} 种货币汇率。`);
 
-          // 持久化落盘与时间戳更新
+          // 核心：只有真实请求成功后，才真正更新底层的时间戳基准并落盘
           PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_RATES, JSON.stringify(this.rateMap));
           this.lastUpdateTimeStamp = new Date().getTime();
           PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_LAST_UPDATE, this.lastUpdateTimeStamp);
 
-          // 更新顶部 UI 显示的“上次更新”时间
-          this.updateTimeDisplay();
-
-          // 触发更新成功状态与自动消失定时器
-          this.isUpdateSuccess = true;
-          this.triggerFeedbackTimer();
-
-          // 可选：成功后也可以弹一个极轻量的提示
-          // promptAction.showToast({ message: '汇率已更新', duration: 1500 });
+          // 触发成功反馈（会帮你把 UI 文字自动变成最新时间）
+          this.handleFeedback(true);
         } else {
           Logger.error(`[ExchangeRate] 数据结构异常，未能提取到 rates 字段`);
-          this.triggerErrorFeedback('数据解析异常，已使用本地缓存');
+          this.handleFeedback(false, '数据解析异常，已使用本地缓存');
         }
       } else {
         Logger.error(`[ExchangeRate] 网络请求失败，状态码: ${response.responseCode}`);
-        this.triggerErrorFeedback(`更新失败 (错误码: ${response.responseCode})`);
+        this.handleFeedback(false, `更新失败 (错误码: ${response.responseCode})`);
       }
     } catch (err) {
       Logger.error(`[ExchangeRate] 网络请求底层异常: ${JSON.stringify(err)}`);
-      this.triggerErrorFeedback('网络连接异常，请检查网络设置');
+      this.handleFeedback(false, '网络连接异常，请检查网络设置');
     } finally {
       // 无论成功还是失败，都必须释放请求并关闭刷新状态
       httpRequest.destroy();
@@ -306,30 +355,68 @@ export struct ExchangeRate {
   }
 
   // 统一的反馈状态清除器（3秒后自动淡出）
-  triggerFeedbackTimer() {
-    // 如果之前还有没跑完的定时器，立刻掐断，防止快速点击时状态错乱
+  // triggerFeedbackTimer() {
+  //   // 如果之前还有没跑完的定时器，立刻掐断，防止快速点击时状态错乱
+  //   if (this.feedbackTimer !== -1) {
+  //     clearTimeout(this.feedbackTimer);
+  //   }
+  //
+  //   this.feedbackTimer = setTimeout(() => {
+  //     // 加上闭眼动画，让文字平滑消失
+  //     animateTo({ duration: 300, curve: Curve.EaseInOut }, () => {
+  //       this.isUpdateFailed = false;
+  //       this.isUpdateSuccess = false;
+  //     });
+  //   }, 3000);
+  // }
+
+  // 错误反馈触发器
+  // triggerErrorFeedback(toastMsg: string) {
+  //   this.isUpdateFailed = true;
+  //   this.triggerFeedbackTimer(); // 触发 3 秒自动消失
+  //   promptAction.showToast({
+  //     message: toastMsg,
+  //     duration: 2500,
+  //     bottom: '100vp'
+  //   });
+  // }
+
+  // 统一的 UI 状态反馈与动画触发器
+  handleFeedback(isSuccess: boolean, toastMsg?: string) {
+    // 掐断未完成的定时器，防止狂点导致状态错乱
     if (this.feedbackTimer !== -1) {
       clearTimeout(this.feedbackTimer);
     }
 
+    if (isSuccess) {
+      // 成功：只更新界面显示的视觉时间字符串，绝不触碰底层的 lastUpdateTimeStamp
+      let now = new Date();
+      let hours = now.getHours().toString().padStart(2, '0');
+      let minutes = now.getMinutes().toString().padStart(2, '0');
+      this.lastUpdateTime = `今天 ${hours}:${minutes}`;
+
+      this.isUpdateSuccess = true;
+      this.isUpdateFailed = false;
+    } else {
+      // 失败：显示错误状态并弹窗
+      this.isUpdateFailed = true;
+      this.isUpdateSuccess = false;
+      if (toastMsg) {
+        promptAction.showToast({
+          message: toastMsg,
+          duration: 2500,
+          bottom: '100vp'
+        });
+      }
+    }
+
+    // 3秒后平滑重置状态，让文字温柔淡出
     this.feedbackTimer = setTimeout(() => {
-      // 加上闭眼动画，让文字平滑消失
       animateTo({ duration: 300, curve: Curve.EaseInOut }, () => {
         this.isUpdateFailed = false;
         this.isUpdateSuccess = false;
       });
     }, 3000);
-  }
-
-  // 错误反馈触发器
-  triggerErrorFeedback(toastMsg: string) {
-    this.isUpdateFailed = true;
-    this.triggerFeedbackTimer(); // 触发 3 秒自动消失
-    promptAction.showToast({
-      message: toastMsg,
-      duration: 2500,
-      bottom: '100vp'
-    });
   }
 
   handleKeyboardInput(btn: string | Resource) {
