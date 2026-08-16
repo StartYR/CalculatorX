@@ -66,6 +66,16 @@ function getLocalActionId(btn: string | Resource): string {
   return getActionId(btn);
 }
 
+// 定义网络请求返回的 JSON 结构
+interface ExchangeApiResponse {
+  disclaimer?: string;
+  license?: string;
+  timestamp?: number;
+  base?: string;
+  rates: Record<string, number>; // 核心数据：键是字符串(货币代码)，值是数字(汇率)
+}
+
+
 // ==================== 2. 主组件 ====================
 @Component
 export struct ExchangeRate {
@@ -77,6 +87,7 @@ export struct ExchangeRate {
   @State isSelectorShow: boolean = false;
   @State selectingId: string = '';
   @State searchQuery: string = '';
+  @State lastUpdateTimeStamp: number = 0; // 记录最后成功联网获取的系统时间戳
 
   @State draggingId: string = ''; // 记录当前正在被拖拽的项
   @State isDragGhostReady: boolean = false; // 控制拖拽虚影的出场动画状态
@@ -92,6 +103,7 @@ export struct ExchangeRate {
 
   // 读取缓存数据
   loadData() {
+    // 1. 加载 UI 状态（列表、选中项、金额等）
     let listStr = AppStorage.get<string>(PreferenceConfigs.KEY_EXCHANGE_CURRENCY_LIST) || '[]';
     try {
       let parsedList = JSON.parse(listStr) as Array<CurrencyListItem>;
@@ -110,6 +122,17 @@ export struct ExchangeRate {
 
     this.activeId = AppStorage.get<string>(PreferenceConfigs.KEY_EXCHANGE_ACTIVE_ID) || this.currencyList[0].id;
     this.baseAmount = AppStorage.get<string>(PreferenceConfigs.KEY_EXCHANGE_BASE_AMOUNT) || '100';
+
+    // 2. 加载网络动态汇率字典
+    let ratesStr = AppStorage.get<string>(PreferenceConfigs.KEY_EXCHANGE_RATES) || '{}';
+    try {
+      this.rateMap = JSON.parse(ratesStr);
+    } catch (err) {
+      this.rateMap = {};
+    }
+
+    // 3. 加载上次更新时间戳
+    this.lastUpdateTimeStamp = AppStorage.get<number>(PreferenceConfigs.KEY_EXCHANGE_LAST_UPDATE) || 0;
   }
 
   // 统一下发落盘指令
@@ -217,6 +240,19 @@ export struct ExchangeRate {
       // 3. 判断 HTTP 状态码并打印日志
       if (response.responseCode === http.ResponseCode.OK) {
         Logger.info(`[ExchangeRate] 网络请求成功！获取到的 JSON 字符串如下：\n${response.result}`);
+        let resData = JSON.parse(response.result as string) as ExchangeApiResponse;
+
+        // 1. 提取 rates 字典
+        if (resData && resData.rates) {
+          this.rateMap = resData.rates;
+          // 将字典转为字符串后持久化落盘
+          PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_RATES, JSON.stringify(this.rateMap));
+
+          // 2. 提取并更新时间戳 (采用本地系统时间，或者使用 API 返回的 resData.timestamp * 1000)
+          // 推荐使用本地获取成功这一刻的系统时间，对用户来说更直观
+          this.lastUpdateTimeStamp = new Date().getTime();
+          PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_LAST_UPDATE, this.lastUpdateTimeStamp);
+        }
       } else {
         Logger.error(`[ExchangeRate] 网络请求失败，被服务器拒绝或路径错误，状态码: ${response.responseCode}`);
       }
