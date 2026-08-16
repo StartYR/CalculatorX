@@ -217,6 +217,8 @@ export class PreferenceConfigs {
   static readonly KEY_EXCHANGE_CURRENCY_LIST = 'exchangeCurrencyList';
   static readonly KEY_EXCHANGE_ACTIVE_ID = 'exchangeActiveId';
   static readonly KEY_EXCHANGE_BASE_AMOUNT = 'exchangeBaseAmount';
+  static readonly KEY_EXCHANGE_RATES = 'exchangeRates';
+  static readonly KEY_EXCHANGE_LAST_UPDATE = 'exchangeLastUpdateTime';
 }
 
 /**
