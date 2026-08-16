@@ -378,7 +378,7 @@ export struct ExchangeRate {
         promptAction.showToast({
           message: toastMsg,
           duration: 2500,
-          bottom: '100vp'
+          bottom: '270vp'
         });
       }
     }
