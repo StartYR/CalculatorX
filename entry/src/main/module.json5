@@ -10,7 +10,10 @@
     ],
     "requestPermissions": [
       {
-        "name": "ohos.permission.INTERNET",
+        "name": "ohos.permission.INTERNET", // 获取联网权限
+      },
+      {
+        "name": "ohos.permission.GET_NETWORK_INFO" // 获取网络状态权限
       },
       {
         "name": "ohos.permission.VIBRATE"
