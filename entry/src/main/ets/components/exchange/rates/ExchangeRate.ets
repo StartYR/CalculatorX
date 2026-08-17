@@ -690,7 +690,39 @@ export struct ExchangeRate {
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.Spring)
 
-      // ================= 层级 2 (上层)：纯粹悬浮的药丸形搜索框 =================
+      // ================= 层级 2 (中层)：真正的渐变毛玻璃特效引擎 =================
+      Stack() {
+        // 2.1 毛玻璃实体层
+        Column()
+          .width('100%')
+          .height(84)
+          .backgroundBlurStyle(BlurStyle.Thin)
+
+        // 2.2 渐变透明度遮罩层 (Alpha Mask)
+        Column()
+          .width('100%')
+          .height(84)
+          .linearGradient({
+            angle: 180,
+            colors: [
+              // 顶部到搜索框下半部分：100% 纯白（完整保留底层毛玻璃效果）
+              ['#FFFFFFFF', 0.0],
+              ['#FFFFFFFF', 0.4],
+              // 指定透明色，底部边缘：过渡到 100% 透明白（让毛玻璃平滑羽化溶解）
+              ['#32ffffff', 1.0]
+            ]
+          })
+          // 将自己的透明度通道作为蒙版，扣除下方的毛玻璃
+          .blendMode(BlendMode.DST_IN)
+      }
+      .width('100%')
+      .height(84)
+      // 开启离屏渲染，隔离混合作用域，确保蒙版只作用于内部的毛玻璃，不破坏底部的 List
+      .blendMode(BlendMode.SRC_OVER, BlendApplyType.OFFSCREEN)
+      // 中层特效无需接收点击事件，放行给底部的列表滑动
+      .hitTestBehavior(HitTestMode.None)
+
+      // ================= 层级 3 (上层)：纯粹悬浮的药丸形搜索框 =================
       Column() {
         // 标题
         Text('选择货币')
