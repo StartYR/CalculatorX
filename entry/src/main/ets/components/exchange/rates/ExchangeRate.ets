@@ -258,31 +258,6 @@ export struct ExchangeRate {
     }, 3000);
   }
 
-  handleKeyboardInput(btn: string | Resource) {
-    let action = getActionId(btn);
-
-    if (action === 'AC') {
-      this.baseAmount = '0';
-    } else if (action === '⌫') {
-      if (this.baseAmount.length > 1) {
-        this.baseAmount = this.baseAmount.slice(0, -1);
-      } else {
-        this.baseAmount = '0';
-      }
-    } else if (action === '确定' || action === '−') {
-      // 保留作为纯震动反馈键
-    } else {
-      if (this.baseAmount === '0' && action !== '.') {
-        this.baseAmount = action;
-      } else {
-        if (action === '.' && this.baseAmount.includes('.')) return;
-        if (this.baseAmount.length < 15) {
-          this.baseAmount += action;
-        }
-      }
-    }
-  }
-
   // 统一下发落盘指令
   saveData() {
     PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_CURRENCY_LIST, JSON.stringify(this.currencyList));
@@ -378,6 +353,31 @@ export struct ExchangeRate {
     animateTo({ duration: 350, curve: Curve.Friction }, () => {
       this.currencyList.push(new CurrencyListItem(newId, 'USD'));
     });
+  }
+
+  handleKeyboardInput(btn: string | Resource) {
+    let action = getActionId(btn);
+
+    if (action === 'AC') {
+      this.baseAmount = '0';
+    } else if (action === '⌫') {
+      if (this.baseAmount.length > 1) {
+        this.baseAmount = this.baseAmount.slice(0, -1);
+      } else {
+        this.baseAmount = '0';
+      }
+    } else if (action === '确定' || action === '−') {
+      // 保留作为纯震动反馈键
+    } else {
+      if (this.baseAmount === '0' && action !== '.') {
+        this.baseAmount = action;
+      } else {
+        if (action === '.' && this.baseAmount.includes('.')) return;
+        if (this.baseAmount.length < 15) {
+          this.baseAmount += action;
+        }
+      }
+    }
   }
 
   // --- UI 构建器区 ---
