@@ -624,7 +624,7 @@ export struct ExchangeRate {
           Row().width('100%').height(56)
         }
 
-        // 【新增空状态逻辑】预先计算过滤后的数组
+        // 空状态逻辑：预先计算过滤后的数组
         if (CURRENCY_WHITELIST.filter(item =>
         item.code.includes(this.searchQuery) || item.name.includes(this.searchQuery)
         ).length === 0) {
