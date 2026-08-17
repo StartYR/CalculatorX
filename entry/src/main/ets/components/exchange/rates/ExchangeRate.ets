@@ -699,10 +699,14 @@ export struct ExchangeRate {
                       Text(currency.symbol)
                         .width(32)
                         .height(32)
-                        .backgroundColor($r('sys.color.comp_background_tertiary')) // 浅灰/浅主题色底板
+                        .backgroundColor(this.isCurrencySelected(currency.code)
+                          ? $r('sys.color.background_emphasize')
+                          : $r('sys.color.comp_background_tertiary'))
                         .borderRadius(20) // 高度一半，完美圆形
                         .textAlign(TextAlign.Center)
-                        .fontColor($r('sys.color.font_primary'))
+                        .fontColor(this.isCurrencySelected(currency.code)
+                          ? Color.White
+                          : $r('sys.color.font_primary'))
                         .fontWeight(FontWeight.Medium)
                         // 自适应缩放
                         .maxLines(1)
@@ -714,14 +718,23 @@ export struct ExchangeRate {
                       // 货币代码
                       Text(currency.code)
                         .fontSize(18)
-                        .fontWeight(FontWeight.Medium)
-                        .fontColor($r('sys.color.font_primary'))
+                        .fontWeight(this.isCurrencySelected(currency.code)
+                          ? FontWeight.Bold
+                          : FontWeight.Medium)
+                        .fontColor(this.isCurrencySelected(currency.code)
+                          ? $r('sys.color.font_emphasize')
+                          : $r('sys.color.font_primary'))
                         .width(60)
 
                       // 货币名称
                       Text(currency.name)
                         .fontSize(16)
-                        .fontColor($r('sys.color.font_secondary'))
+                        .fontWeight(this.isCurrencySelected(currency.code)
+                          ? FontWeight.Medium
+                          : FontWeight.Regular)
+                        .fontColor(this.isCurrencySelected(currency.code)
+                          ? $r('sys.color.font_emphasize_contrary')
+                          : $r('sys.color.font_secondary'))
                         .margin({ left: 16 })
 
                       Blank() // 中间空白
