@@ -29,28 +29,29 @@ export struct ExchangeRate {
   // [核心数据状态]
   @State currencyList: Array<CurrencyListItem> = [];
   @State rateMap: Record<string, number> = {};
-  @State lastUpdateTimeStamp: number = 0; // 底层记录最后一次成功联网获取数据的真实时间戳
+  @State lastUpdateTimeStamp: number = 0;           // 底层记录最后一次成功联网获取数据的真实时间戳
 
   // [UI 交互与双向绑定状态]
   @State activeId: string = '';
   @State baseAmount: string = '';
-  @State lastUpdateTime: string = '加载中...'; // 顶部显示的格式化时间文本
-  @State searchQuery: string = ''; // 货币搜索框的输入关键字
+  @State lastUpdateTime: string = '加载中...';       // 顶部显示的格式化时间文本
+  @State searchQuery: string = '';                  // 货币搜索框的输入关键字
 
   // [视图控制状态]
-  @State isSelectorShow: boolean = false; // 控制货币选择半模态窗口的显隐
-  @State selectingId: string = ''; // 记录当前正在选择货币的列表项 ID
+  @State isSelectorShow: boolean = false;           // 控制货币选择半模态窗口的显隐
+  @State selectingId: string = '';                  // 记录当前正在选择货币的列表项 ID
 
   // [网络与反馈动效状态]
-  @State isRefreshing: boolean = false; // 是否处于更新（或模拟更新）状态
-  @State isUpdateFailed: boolean = false; // 控制失败提示 UI 的显隐
-  @State isUpdateSuccess: boolean = false; // 控制成功提示 UI 的显隐
-  private feedbackTimer: number = -1; // 反馈动画淡出定时器句柄，用于防抖
+  @State isRefreshing: boolean = false;             // 是否处于更新（或模拟更新）状态
+  @State isUpdateFailed: boolean = false;           // 控制失败提示 UI 的显隐
+  @State isUpdateSuccess: boolean = false;          // 控制成功提示 UI 的显隐
+  private feedbackTimer: number = -1;               // 反馈动画淡出定时器句柄，用于防抖
+  private keyboardSaveTimer: number = -1;           // 键盘输入的高频写盘防抖定时器
 
   // [拖拽排序状态]
-  @State draggingId: string = ''; // 当前被拖拽的列表项 ID
-  @State isDragGhostReady: boolean = false; // 控制拖拽跟手虚影的出场动画状态
-  private draggedIndex: number = -1; // 当前被拖拽项的原始索引
+  @State draggingId: string = '';                   // 当前被拖拽的列表项 ID
+  @State isDragGhostReady: boolean = false;         // 控制拖拽跟手虚影的出场动画状态
+  private draggedIndex: number = -1;                // 当前被拖拽项的原始索引
 
   // [系统环境变量]
   @StorageProp('topRectHeight') topRectHeight: number = 80; // 顶部状态栏避让高度
@@ -391,11 +392,13 @@ export struct ExchangeRate {
 
   /**
    * 处理自定义数字键盘的输入事件
+   * 采用 500ms 防抖机制，避免连续输入时引发高频的文件 I/O 操作
    * @param btn - 按下的按键值或资源标识
    */
   handleKeyboardInput(btn: string | Resource) {
     let action = getActionId(btn);
 
+    // 1. 处理按键核心逻辑
     if (action === 'AC') {
       this.baseAmount = '0';
     } else if (action === '⌫') {
@@ -416,7 +419,17 @@ export struct ExchangeRate {
         }
       }
     }
-    this.saveData();
+
+    // 2. 500ms 防抖写盘
+    // 如果之前已经有一个正在倒计时的写盘任务，掐断
+    if (this.keyboardSaveTimer !== -1) {
+      clearTimeout(this.keyboardSaveTimer);
+    }
+    // 重新开启一个 500ms 的倒计时
+    this.keyboardSaveTimer = setTimeout(() => {
+      this.saveData();
+      this.keyboardSaveTimer = -1; // 执行完毕后重置状态
+    }, 500);
   }
 
   /**
