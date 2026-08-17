@@ -17,53 +17,66 @@ import { CURRENCY_WHITELIST, CURRENCY_MAP, CurrencyInfo } from './CurrencyData';
 import { CurrencyListItem, ExchangeApiResponse } from './ExchangeTypes';
 import { ExchangeKeyboard } from './ExchangeKeyboard';
 import promptAction from '@ohos.promptAction';
-import connection from '@ohos.net.connection'; // 网络检测
+import connection from '@ohos.net.connection';
 
 // ==================== 主组件 ====================
 @Component
 export struct ExchangeRate {
+  // ---------------------------------------------------------
+  // 1. 状态管理与变量声明 (State & Properties)
+  // ---------------------------------------------------------
+
+  // [核心数据状态]
   @State currencyList: Array<CurrencyListItem> = [];
+  @State rateMap: Record<string, number> = {};
+  @State lastUpdateTimeStamp: number = 0; // 底层记录最后一次成功联网获取数据的真实时间戳
+
+  // [UI 交互与双向绑定状态]
   @State @Watch('saveData') activeId: string = '';
   @State @Watch('saveData') baseAmount: string = '';
-  @State rateMap: Record<string, number> = {};
-  @State lastUpdateTime: string = '加载中...';
-  @State isSelectorShow: boolean = false;
-  @State selectingId: string = '';
-  @State searchQuery: string = '';
-  @State lastUpdateTimeStamp: number = 0; // 记录最后成功联网获取的系统时间戳
+  @State lastUpdateTime: string = '加载中...'; // 顶部显示的格式化时间文本
+  @State searchQuery: string = ''; // 货币搜索框的输入关键字
 
-  // UI 交互反馈状态
-  @State isRefreshing: boolean = false; // 是否正在请求中
-  @State isUpdateFailed: boolean = false; // 上次更新是否失败
-  @State isUpdateSuccess: boolean = false; // 上次更新是否成功
-  private feedbackTimer: number = -1; // 记录提示文本的自动消失定时器 ID
+  // [视图控制状态]
+  @State isSelectorShow: boolean = false; // 控制货币选择半模态窗口的显隐
+  @State selectingId: string = ''; // 记录当前正在选择货币的列表项 ID
 
-  @State draggingId: string = ''; // 记录当前正在被拖拽的项
-  @State isDragGhostReady: boolean = false; // 控制拖拽虚影的出场动画状态
+  // [网络与反馈动效状态]
+  @State isRefreshing: boolean = false; // 是否处于更新（或模拟更新）状态
+  @State isUpdateFailed: boolean = false; // 控制失败提示 UI 的显隐
+  @State isUpdateSuccess: boolean = false; // 控制成功提示 UI 的显隐
+  private feedbackTimer: number = -1; // 反馈动画淡出定时器句柄，用于防抖
 
-  private draggedIndex: number = -1;
+  // [拖拽排序状态]
+  @State draggingId: string = ''; // 当前被拖拽的列表项 ID
+  @State isDragGhostReady: boolean = false; // 控制拖拽跟手虚影的出场动画状态
+  private draggedIndex: number = -1; // 当前被拖拽项的原始索引
 
-  @StorageProp('topRectHeight') topRectHeight: number = 80;
+  // [系统环境变量]
+  @StorageProp('topRectHeight') topRectHeight: number = 80; // 顶部状态栏避让高度
 
+  // ---------------------------------------------------------
+  // 2. 生命周期 (Lifecycle)
+  // ---------------------------------------------------------
+
+  /**
+   * 组件即将出现时触发
+   * 负责调度初始化数据的加载，并触发统一的刷新中枢
+   */
   aboutToAppear() {
     Logger.info('[ExchangeRate] 模块初始化');
     this.loadData();
     this.handleRefresh();
   }
 
-  // 判断当前缓存是否在整点有效期内
-  isCacheValid(): boolean {
-    if (this.lastUpdateTimeStamp === 0) return false;
-    let now = new Date();
-    let cachedDate = new Date(this.lastUpdateTimeStamp);
+  // ---------------------------------------------------------
+  // 3. 数据初始化与持久化 (Data & Persistence)
+  // ---------------------------------------------------------
 
-    let nowHourStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}`;
-    let cachedHourStr = `${cachedDate.getFullYear()}-${cachedDate.getMonth()}-${cachedDate.getDate()}-${cachedDate.getHours()}`;
-
-    return nowHourStr === cachedHourStr;
-  }
-
-  // 读取缓存数据
+  /**
+   * 从本地首选项 (Preferences) 中读取货币列表、汇率字典和时间戳
+   * 加载完成后同步触发 UI 时间的初始渲染
+   */
   loadData() {
     // 1. 加载 UI 状态（列表、选中项、金额等）
     let listStr = AppStorage.get<string>(PreferenceConfigs.KEY_EXCHANGE_CURRENCY_LIST) || '[]';
@@ -98,29 +111,25 @@ export struct ExchangeRate {
     this.updateTimeDisplay();
   }
 
-  // ======== 缓存失效与时间格式化逻辑 ========
-  // 更新顶部 UI 显示的“上次更新”时间文本
-  updateTimeDisplay() {
-    if (this.lastUpdateTimeStamp === 0) {
-      this.lastUpdateTime = '从未更新';
-      return;
-    }
-
-    let date = new Date(this.lastUpdateTimeStamp);
-    let hours = date.getHours().toString().padStart(2, '0');
-    let minutes = date.getMinutes().toString().padStart(2, '0');
-
-    let today = new Date();
-    if (date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear()) {
-      this.lastUpdateTime = `今天 ${hours}:${minutes}`;
-    } else {
-      let month = (date.getMonth() + 1).toString().padStart(2, '0');
-      let day = date.getDate().toString().padStart(2, '0');
-      this.lastUpdateTime = `${month}-${day} ${hours}:${minutes}`;
-    }
+  /**
+   * 监听关键状态变化，统一下发落盘指令
+   * 保证内存状态与本地存储的一致性
+   */
+  saveData() {
+    PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_CURRENCY_LIST, JSON.stringify(this.currencyList));
+    PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_ACTIVE_ID, this.activeId);
+    PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_BASE_AMOUNT, this.baseAmount);
   }
 
-  // --- 网络请求与数据更新 ---
+
+  // ---------------------------------------------------------
+  // 4. 网络请求与状态调度 (Network & State Dispatching)
+  // ---------------------------------------------------------
+
+  /**
+   * 统一的刷新调度中枢 (Single Source of Truth)
+   * 负责网络连通性探测、缓存校验拦截、发起 HTTP 请求，以及分发状态反馈
+   */
   async handleRefresh() {
     // 防抖拦截
     if (this.isRefreshing) return;
@@ -218,7 +227,27 @@ export struct ExchangeRate {
     }
   }
 
-  // 统一的状态提交与动画触发器
+  /**
+   * 判断当前汇率缓存是否在整点有效期内
+   * @returns {boolean} 缓存有效返回 true，跨越整点或无缓存返回 false
+   */
+  isCacheValid(): boolean {
+    if (this.lastUpdateTimeStamp === 0) return false;
+    let now = new Date();
+    let cachedDate = new Date(this.lastUpdateTimeStamp);
+
+    let nowHourStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}`;
+    let cachedHourStr = `${cachedDate.getFullYear()}-${cachedDate.getMonth()}-${cachedDate.getDate()}-${cachedDate.getHours()}`;
+
+    return nowHourStr === cachedHourStr;
+  }
+
+  /**
+   * 统一的状态提交与动画触发器
+   * 负责拦截冗余定时器、下发时间戳落盘、调用时间格式化，并执行 UI 视觉反馈
+   * @param isSuccess - 更新是否成功（无论是真实联网成功还是模拟拦截成功）
+   * @param toastMsg - 失败时展示的错误提示信息
+   */
   commitUpdateState(isSuccess: boolean, toastMsg?: string) {
     // 掐断未完成的定时器，防止狂点导致状态错乱
     if (this.feedbackTimer !== -1) {
@@ -257,14 +286,40 @@ export struct ExchangeRate {
     }, 3000);
   }
 
-  // 统一下发落盘指令
-  saveData() {
-    PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_CURRENCY_LIST, JSON.stringify(this.currencyList));
-    PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_ACTIVE_ID, this.activeId);
-    PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_BASE_AMOUNT, this.baseAmount);
+  /**
+   * 格式化最后更新时间戳，并更新顶部 UI 显示的文本
+   * 内部包含当天、跨天及补零等日期处理逻辑
+   */
+  updateTimeDisplay() {
+    if (this.lastUpdateTimeStamp === 0) {
+      this.lastUpdateTime = '从未更新';
+      return;
+    }
+
+    let date = new Date(this.lastUpdateTimeStamp);
+    let hours = date.getHours().toString().padStart(2, '0');
+    let minutes = date.getMinutes().toString().padStart(2, '0');
+
+    let today = new Date();
+    if (date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear()) {
+      this.lastUpdateTime = `今天 ${hours}:${minutes}`;
+    } else {
+      let month = (date.getMonth() + 1).toString().padStart(2, '0');
+      let day = date.getDate().toString().padStart(2, '0');
+      this.lastUpdateTime = `${month}-${day} ${hours}:${minutes}`;
+    }
   }
 
-  // --- 核心换算与状态管理逻辑 ---
+  // ---------------------------------------------------------
+  // 5. 核心业务逻辑计算 (Business Logic)
+  // ---------------------------------------------------------
+
+  /**
+   * 实时计算目标货币的折算金额
+   * @param targetCode - 目标货币代码 (如 "CNY")
+   * @param isEditing - 该项是否为当前正在被编辑的基准项
+   * @returns {string} 格式化后的金额字符串
+   */
   getConvertedAmount(targetCode: string, isEditing: boolean): string {
     // 1. 状态拦截：如果正在被编辑，直接显示用户输入的原始内容
     if (isEditing) return this.baseAmount;
@@ -305,11 +360,27 @@ export struct ExchangeRate {
     }
   }
 
+  /**
+   * 判断某个货币代码是否为当前正在选择/修改的列表项的原有货币
+   * 用于在半模态选择窗口中渲染高亮或打钩状态
+   * @param code - 需要比对的货币代码
+   * @returns {boolean} 如果匹配则返回 true
+   */
   isCurrencySelected(code: string): boolean {
     let selectingItem = this.currencyList.find(c => c.id === this.selectingId);
     return selectingItem ? selectingItem.code === code : false;
   }
 
+  // ---------------------------------------------------------
+  // 6. 用户交互与事件处理 (Event Handlers)
+  // ---------------------------------------------------------
+
+  /**
+   * 设置指定的货币项为当前激活（输入）状态
+   * 切换时会自动将该项当前的折算结果反写为新的基准金额，确保视觉上的平滑过渡
+   * @param id - 被点击激活的列表项 ID
+   * @param code - 被点击激活的列表项的货币代码
+   */
   setActiveCurrency(id: string, code: string) {
     if (this.activeId !== id) {
       this.baseAmount = this.getConvertedAmount(code, false);
@@ -317,43 +388,10 @@ export struct ExchangeRate {
     }
   }
 
-  // --- 列表交互操作 ---
-  openSelector(id: string) {
-    this.selectingId = id;
-    this.searchQuery = '';
-    this.isSelectorShow = true;
-  }
-
-  selectCurrency(code: string) {
-    let index = this.currencyList.findIndex(item => item.id === this.selectingId);
-    if (index !== -1) {
-      this.currencyList.splice(index, 1, new CurrencyListItem(this.selectingId, code));
-    }
-    this.isSelectorShow = false;
-  }
-
-  deleteCurrency(id: string) {
-    // 启动物理阻尼动画，平滑移除元素并使下方项自动补位
-    animateTo({ duration: 350, curve: Curve.Friction }, () => {
-      let index = this.currencyList.findIndex(item => item.id === id);
-      if (index !== -1) {
-        this.currencyList.splice(index, 1);
-        if (this.activeId === id && this.currencyList.length > 0) {
-          this.activeId = this.currencyList[0].id;
-          this.baseAmount = '0';
-        }
-      }
-    });
-  }
-
-  addCurrency() {
-    let newId = new Date().getTime().toString();
-    // 启动物理阻尼动画，确保新元素自然滑入列表尾部
-    animateTo({ duration: 350, curve: Curve.Friction }, () => {
-      this.currencyList.push(new CurrencyListItem(newId, 'USD'));
-    });
-  }
-
+  /**
+   * 处理自定义数字键盘的输入事件
+   * @param btn - 按下的按键值或资源标识
+   */
   handleKeyboardInput(btn: string | Resource) {
     let action = getActionId(btn);
 
@@ -379,9 +417,65 @@ export struct ExchangeRate {
     }
   }
 
-  // --- UI 构建器区 ---
+  /**
+   * 打开货币选择半模态窗口，并记录当前操作的项 ID
+   * @param id - 触发选择的列表项 ID
+   */
+  openSelector(id: string) {
+    this.selectingId = id;
+    this.searchQuery = '';
+    this.isSelectorShow = true;
+  }
 
-  // 侧滑删除操作区：复用组件统一样式
+  /**
+   * 确认选择货币，并更新对应项的货币代码
+   * @param code - 选中的货币代码
+   */
+  selectCurrency(code: string) {
+    let index = this.currencyList.findIndex(item => item.id === this.selectingId);
+    if (index !== -1) {
+      this.currencyList.splice(index, 1, new CurrencyListItem(this.selectingId, code));
+    }
+    this.isSelectorShow = false;
+  }
+
+  /**
+   * 在列表尾部新增一条货币转换项
+   */
+  addCurrency() {
+    let newId = new Date().getTime().toString();
+    // 启动物理阻尼动画，确保新元素自然滑入列表尾部
+    animateTo({ duration: 350, curve: Curve.Friction }, () => {
+      this.currencyList.push(new CurrencyListItem(newId, 'USD'));
+    });
+  }
+
+  /**
+   * 删除指定的货币转换项
+   * @param id - 要删除的列表项 ID
+   */
+  deleteCurrency(id: string) {
+    // 启动物理阻尼动画，平滑移除元素并使下方项自动补位
+    animateTo({ duration: 350, curve: Curve.Friction }, () => {
+      let index = this.currencyList.findIndex(item => item.id === id);
+      if (index !== -1) {
+        this.currencyList.splice(index, 1);
+        if (this.activeId === id && this.currencyList.length > 0) {
+          this.activeId = this.currencyList[0].id;
+          this.baseAmount = '0';
+        }
+      }
+    });
+  }
+
+  // ---------------------------------------------------------
+  // 7. UI 构建器 (UI Builders)
+  // ---------------------------------------------------------
+
+  /**
+   * 侧滑删除操作区：复用组件统一样式
+   * @param id - 绑定的列表项 ID
+   */
   @Builder
   deleteAction(id: string) {
     Row() {
@@ -403,7 +497,28 @@ export struct ExchangeRate {
     .justifyContent(FlexAlign.Center)
   }
 
-  // --- 抽离的独立货币卡片 UI ---
+  /**
+   * 拖拽占位符：带有轻微放大和高级阴影的跟手虚影
+   * @param item - 正在拖拽的货币项数据
+   */
+  @Builder
+  dragFeedback(item: CurrencyListItem) {
+    Stack() {
+      Column() {
+        this.CurrencyCardView(item)
+      }
+      .backgroundColor($r('sys.color.background_primary'))
+      .borderRadius(16)
+      .scale({ x: 1.05, y: 1 }) // 轻微放大，产生“拿起来”的视觉差
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16, top: 16, bottom: 16 })
+  }
+
+  /**
+   * 独立的货币转换卡片 UI 封装
+   * @param item - 当前渲染的货币项数据
+   */
   @Builder
   CurrencyCardView(item: CurrencyListItem) {
     Row() {
@@ -476,21 +591,88 @@ export struct ExchangeRate {
     .borderColor($r('sys.color.comp_divider'))
   }
 
-  // 拖拽占位符：带有轻微放大和高级阴影的跟手虚影
+  /**
+   * 带有搜索框的货币选择半模态窗口内容
+   */
   @Builder
-  dragFeedback(item: CurrencyListItem) {
-    Stack() {
-      Column() {
-        this.CurrencyCardView(item)
+  CurrencySelectorBuilder() {
+    Stack({ alignContent: Alignment.Top }) {
+
+      // ================= 层级 1 (底层)：全屏滚动的列表 =================
+      List() {
+        // 顶部幽灵占位项：高度 = 搜索框 top margin(16) + 搜索框高度(40) + 搜索框底部预留间距(16) = 72
+        ListItem() {
+          Row().width('100%').height(72)
+        }
+
+        // 真实数据遍历
+        ForEach(CURRENCY_WHITELIST.filter(item =>
+        item.code.includes(this.searchQuery) || item.name.includes(this.searchQuery)
+        ), (currency: CurrencyInfo) => {
+          ListItem() {
+            Row() {
+              Text(currency.code)
+                .fontSize(18)
+                .fontWeight(FontWeight.Medium)
+                .fontColor($r('sys.color.font_primary'))
+                .width(60)
+
+              Text(currency.name)
+                .fontSize(16)
+                .fontColor($r('sys.color.font_secondary'))
+                .margin({ left: 16 })
+
+              Blank()
+
+              if (this.isCurrencySelected(currency.code)) {
+                SymbolGlyph($r('sys.symbol.checkmark'))
+                  .fontColor([$r('sys.color.font_emphasize')])
+                  .fontSize(20)
+              }
+            }
+            .width('100%')
+            .padding({ top: 16, bottom: 16, left: 8, right: 8 })
+          }
+          .onClick(() => this.selectCurrency(currency.code))
+        }, (item: CurrencyInfo) => item.code)
+
+        // 底部安全区占位项
+        ListItem() {
+          Row().width('100%').height(40)
+        }
       }
-      .backgroundColor($r('sys.color.background_primary'))
-      .borderRadius(16)
-      .scale({ x: 1.05, y: 1 }) // 轻微放大，产生“拿起来”的视觉差
+      .width('100%')
+      .height('100%')
+      .padding({ left: 24, right: 24 })
+      .scrollBar(BarState.Off)
+      .edgeEffect(EdgeEffect.Spring)
+
+      // ================= 层级 2 (上层)：纯粹悬浮的药丸形搜索框 =================
+      Column() {
+        Search({ placeholder: '搜索货币代码或名称...', value: $$this.searchQuery })
+          .width('100%')
+          .height(40)
+          .backgroundColor(Color.Transparent)
+          // 毛玻璃材质只贴在搜索框上
+          .backgroundBlurStyle(BlurStyle.Thin)
+          .onChange((val: string) => {
+            this.searchQuery = val.toUpperCase();
+          })
+      }
+      .width('100%')
+      .padding({ left: 24, right: 24, top: 16 })
     }
     .width('100%')
-    .padding({ left: 16, right: 16, top: 16, bottom: 16 })
+    .height('100%')
   }
 
+  // ---------------------------------------------------------
+  // 8. 主界面渲染 (Main Build)
+  // ---------------------------------------------------------
+
+  /**
+   * 主界面渲染 (Main Build)
+   */
   build() {
     Column() {
       // 全局数据渲染列表
@@ -630,77 +812,5 @@ export struct ExchangeRate {
       dragBar: true,
       title: { title: '选择货币' }
     })
-  }
-
-  @Builder
-  CurrencySelectorBuilder() {
-    Stack({ alignContent: Alignment.Top }) {
-
-      // ================= 层级 1 (底层)：全屏滚动的列表 =================
-      List() {
-        // 顶部幽灵占位项：高度 = 搜索框 top margin(16) + 搜索框高度(40) + 搜索框底部预留间距(16) = 72
-        ListItem() {
-          Row().width('100%').height(72)
-        }
-
-        // 真实数据遍历
-        ForEach(CURRENCY_WHITELIST.filter(item =>
-        item.code.includes(this.searchQuery) || item.name.includes(this.searchQuery)
-        ), (currency: CurrencyInfo) => {
-          ListItem() {
-            Row() {
-              Text(currency.code)
-                .fontSize(18)
-                .fontWeight(FontWeight.Medium)
-                .fontColor($r('sys.color.font_primary'))
-                .width(60)
-
-              Text(currency.name)
-                .fontSize(16)
-                .fontColor($r('sys.color.font_secondary'))
-                .margin({ left: 16 })
-
-              Blank()
-
-              if (this.isCurrencySelected(currency.code)) {
-                SymbolGlyph($r('sys.symbol.checkmark'))
-                  .fontColor([$r('sys.color.font_emphasize')])
-                  .fontSize(20)
-              }
-            }
-            .width('100%')
-            .padding({ top: 16, bottom: 16, left: 8, right: 8 })
-          }
-          .onClick(() => this.selectCurrency(currency.code))
-        }, (item: CurrencyInfo) => item.code)
-
-        // 底部安全区占位项
-        ListItem() {
-          Row().width('100%').height(40)
-        }
-      }
-      .width('100%')
-      .height('100%')
-      .padding({ left: 24, right: 24 })
-      .scrollBar(BarState.Off)
-      .edgeEffect(EdgeEffect.Spring)
-
-      // ================= 层级 2 (上层)：纯粹悬浮的药丸形搜索框 =================
-      Column() {
-        Search({ placeholder: '搜索货币代码或名称...', value: $$this.searchQuery })
-          .width('100%')
-          .height(40)
-          .backgroundColor(Color.Transparent)
-          // 毛玻璃材质只贴在搜索框上
-          .backgroundBlurStyle(BlurStyle.Thin)
-          .onChange((val: string) => {
-            this.searchQuery = val.toUpperCase();
-          })
-      }
-      .width('100%')
-      .padding({ left: 24, right: 24, top: 16 })
-    }
-    .width('100%')
-    .height('100%')
   }
 }
