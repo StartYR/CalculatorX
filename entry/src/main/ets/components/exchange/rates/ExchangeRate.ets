@@ -730,8 +730,8 @@ export struct ExchangeRate {
           .fontWeight(FontWeight.Bold)
           .fontColor($r('sys.color.font_primary'))
           .width('100%')
-          .textAlign(TextAlign.Center)
-          .margin({ bottom: 16 })
+          .textAlign(TextAlign.Start)
+          .margin({ left: 20, top: 4, bottom: 8 })
 
         // 搜索框
         Search({ placeholder: '搜索货币代码或名称...', value: $$this.searchQuery })
