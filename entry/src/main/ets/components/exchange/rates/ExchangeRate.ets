@@ -695,12 +695,30 @@ export struct ExchangeRate {
 
                     // 3. 横向排版
                     Row() {
+                      // 货币符号圆形头像图标
+                      Text(currency.symbol)
+                        .width(40)
+                        .height(40)
+                        .backgroundColor($r('sys.color.comp_background_tertiary')) // 浅灰/浅主题色底板
+                        .borderRadius(20) // 高度一半，完美圆形
+                        .textAlign(TextAlign.Center)
+                        .fontColor($r('sys.color.font_primary'))
+                        .fontWeight(FontWeight.Medium)
+                        // 【核心魔法】：自适应缩放机制
+                        .maxLines(1)
+                        .fontSize(18)           // 默认字号 (适合 $, ¥, €)
+                        .minFontSize(10)        // 极限最小字号 (适合 FCFA, د.ك 自动缩放)
+                        .padding({ left: 4, right: 4 }) // 给长字符留一点安全内边距，防止贴死边缘
+                        .margin({ right: 16 })  // 与右侧的代码拉开距离
+
+                      // 货币代码
                       Text(currency.code)
                         .fontSize(18)
                         .fontWeight(FontWeight.Medium)
                         .fontColor($r('sys.color.font_primary'))
                         .width(60)
 
+                      // 货币名称
                       Text(currency.name)
                         .fontSize(16)
                         .fontColor($r('sys.color.font_secondary'))
