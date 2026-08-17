@@ -121,103 +121,6 @@ export struct ExchangeRate {
     }
   }
 
-  // 统一下发落盘指令
-  saveData() {
-    PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_CURRENCY_LIST, JSON.stringify(this.currencyList));
-    PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_ACTIVE_ID, this.activeId);
-    PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_BASE_AMOUNT, this.baseAmount);
-  }
-
-  // --- 核心换算与状态管理逻辑 ---
-  getConvertedAmount(targetCode: string, isEditing: boolean): string {
-    // 1. 状态拦截：如果正在被编辑，直接显示用户输入的原始内容
-    if (isEditing) return this.baseAmount;
-
-    // 2. 空值与异常拦截：输入为空、为 0 或错误状态，直接返回 '0'
-    if (!this.baseAmount || this.baseAmount === 'Error' || this.baseAmount === '0') return '0';
-
-    try {
-      let inputVal = parseFloat(this.baseAmount);
-      if (isNaN(inputVal)) return '0';
-
-      let activeItem = this.currencyList.find(item => item.id === this.activeId);
-      if (!activeItem) return '0';
-
-      // 3. 获取汇率值，并进行极其严格的安全兜底
-      // 如果字典中没有查到，或者查到的是 0（防止除零异常），则默认赋为 1
-      let rateFrom = this.rateMap[activeItem.code];
-      let rateTo = this.rateMap[targetCode];
-
-      // 针对 API 可能不返回基准货币本身的特殊处理
-      if (activeItem.code === 'USD') rateFrom = 1;
-      if (targetCode === 'USD') rateTo = 1;
-
-      // 彻底的防崩溃兜底
-      if (!rateFrom || rateFrom === 0) rateFrom = 1;
-      if (!rateTo) rateTo = 1;
-
-      // 4. 交叉换算核心公式：
-      // (输入金额 / 源货币兑USD汇率) * 目标货币兑USD汇率
-      let amountInUSD = inputVal / rateFrom;
-      let result = amountInUSD * rateTo;
-
-      // 5. 精度控制：最多保留 4 位小数，并通过 parseFloat 去除末尾无意义的 0 (如 1.5000 -> 1.5)
-      return parseFloat(result.toFixed(4)).toString();
-    } catch (err) {
-      Logger.error(`[ExchangeRate] 计算引擎异常: ${err}`);
-      return 'Error';
-    }
-  }
-
-  isCurrencySelected(code: string): boolean {
-    let selectingItem = this.currencyList.find(c => c.id === this.selectingId);
-    return selectingItem ? selectingItem.code === code : false;
-  }
-
-  setActiveCurrency(id: string, code: string) {
-    if (this.activeId !== id) {
-      this.baseAmount = this.getConvertedAmount(code, false);
-      this.activeId = id;
-    }
-  }
-
-  // --- 列表交互操作 ---
-  openSelector(id: string) {
-    this.selectingId = id;
-    this.searchQuery = '';
-    this.isSelectorShow = true;
-  }
-
-  selectCurrency(code: string) {
-    let index = this.currencyList.findIndex(item => item.id === this.selectingId);
-    if (index !== -1) {
-      this.currencyList.splice(index, 1, new CurrencyListItem(this.selectingId, code));
-    }
-    this.isSelectorShow = false;
-  }
-
-  deleteCurrency(id: string) {
-    // 启动物理阻尼动画，平滑移除元素并使下方项自动补位
-    animateTo({ duration: 350, curve: Curve.Friction }, () => {
-      let index = this.currencyList.findIndex(item => item.id === id);
-      if (index !== -1) {
-        this.currencyList.splice(index, 1);
-        if (this.activeId === id && this.currencyList.length > 0) {
-          this.activeId = this.currencyList[0].id;
-          this.baseAmount = '0';
-        }
-      }
-    });
-  }
-
-  addCurrency() {
-    let newId = new Date().getTime().toString();
-    // 启动物理阻尼动画，确保新元素自然滑入列表尾部
-    animateTo({ duration: 350, curve: Curve.Friction }, () => {
-      this.currencyList.push(new CurrencyListItem(newId, 'USD'));
-    });
-  }
-
   // --- 网络请求与数据更新 ---
   async handleRefresh() {
     // 防抖拦截
@@ -316,7 +219,7 @@ export struct ExchangeRate {
     }
   }
 
-  // 统一的状态提交与动画触发器（原 handleFeedback）
+  // 统一的状态提交与动画触发器
   commitUpdateState(isSuccess: boolean, toastMsg?: string) {
     // 掐断未完成的定时器，防止狂点导致状态错乱
     if (this.feedbackTimer !== -1) {
@@ -378,6 +281,103 @@ export struct ExchangeRate {
         }
       }
     }
+  }
+
+  // 统一下发落盘指令
+  saveData() {
+    PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_CURRENCY_LIST, JSON.stringify(this.currencyList));
+    PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_ACTIVE_ID, this.activeId);
+    PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_BASE_AMOUNT, this.baseAmount);
+  }
+
+  // --- 核心换算与状态管理逻辑 ---
+  getConvertedAmount(targetCode: string, isEditing: boolean): string {
+    // 1. 状态拦截：如果正在被编辑，直接显示用户输入的原始内容
+    if (isEditing) return this.baseAmount;
+
+    // 2. 空值与异常拦截：输入为空、为 0 或错误状态，直接返回 '0'
+    if (!this.baseAmount || this.baseAmount === 'Error' || this.baseAmount === '0') return '0';
+
+    try {
+      let inputVal = parseFloat(this.baseAmount);
+      if (isNaN(inputVal)) return '0';
+
+      let activeItem = this.currencyList.find(item => item.id === this.activeId);
+      if (!activeItem) return '0';
+
+      // 3. 获取汇率值，并进行极其严格的安全兜底
+      // 如果字典中没有查到，或者查到的是 0（防止除零异常），则默认赋为 1
+      let rateFrom = this.rateMap[activeItem.code];
+      let rateTo = this.rateMap[targetCode];
+
+      // 针对 API 可能不返回基准货币本身的特殊处理
+      if (activeItem.code === 'USD') rateFrom = 1;
+      if (targetCode === 'USD') rateTo = 1;
+
+      // 彻底的防崩溃兜底
+      if (!rateFrom || rateFrom === 0) rateFrom = 1;
+      if (!rateTo) rateTo = 1;
+
+      // 4. 交叉换算核心公式：
+      // (输入金额 / 源货币兑USD汇率) * 目标货币兑USD汇率
+      let amountInUSD = inputVal / rateFrom;
+      let result = amountInUSD * rateTo;
+
+      // 5. 精度控制：最多保留 4 位小数，并通过 parseFloat 去除末尾无意义的 0 (如 1.5000 -> 1.5)
+      return parseFloat(result.toFixed(4)).toString();
+    } catch (err) {
+      Logger.error(`[ExchangeRate] 计算引擎异常: ${err}`);
+      return 'Error';
+    }
+  }
+
+  isCurrencySelected(code: string): boolean {
+    let selectingItem = this.currencyList.find(c => c.id === this.selectingId);
+    return selectingItem ? selectingItem.code === code : false;
+  }
+
+  setActiveCurrency(id: string, code: string) {
+    if (this.activeId !== id) {
+      this.baseAmount = this.getConvertedAmount(code, false);
+      this.activeId = id;
+    }
+  }
+
+  // --- 列表交互操作 ---
+  openSelector(id: string) {
+    this.selectingId = id;
+    this.searchQuery = '';
+    this.isSelectorShow = true;
+  }
+
+  selectCurrency(code: string) {
+    let index = this.currencyList.findIndex(item => item.id === this.selectingId);
+    if (index !== -1) {
+      this.currencyList.splice(index, 1, new CurrencyListItem(this.selectingId, code));
+    }
+    this.isSelectorShow = false;
+  }
+
+  deleteCurrency(id: string) {
+    // 启动物理阻尼动画，平滑移除元素并使下方项自动补位
+    animateTo({ duration: 350, curve: Curve.Friction }, () => {
+      let index = this.currencyList.findIndex(item => item.id === id);
+      if (index !== -1) {
+        this.currencyList.splice(index, 1);
+        if (this.activeId === id && this.currencyList.length > 0) {
+          this.activeId = this.currencyList[0].id;
+          this.baseAmount = '0';
+        }
+      }
+    });
+  }
+
+  addCurrency() {
+    let newId = new Date().getTime().toString();
+    // 启动物理阻尼动画，确保新元素自然滑入列表尾部
+    animateTo({ duration: 350, curve: Curve.Friction }, () => {
+      this.currencyList.push(new CurrencyListItem(newId, 'USD'));
+    });
   }
 
   // --- UI 构建器区 ---
