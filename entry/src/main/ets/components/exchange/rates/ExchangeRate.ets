@@ -435,6 +435,7 @@ export struct ExchangeRate {
     let index = this.currencyList.findIndex(item => item.id === this.selectingId);
     if (index !== -1) {
       this.currencyList.splice(index, 1, new CurrencyListItem(this.selectingId, code));
+      this.saveData();
     }
     this.isSelectorShow = false;
   }
@@ -448,6 +449,7 @@ export struct ExchangeRate {
     animateTo({ duration: 350, curve: Curve.Friction }, () => {
       this.currencyList.push(new CurrencyListItem(newId, 'USD'));
     });
+    this.saveData();
   }
 
   /**
@@ -466,6 +468,7 @@ export struct ExchangeRate {
         }
       }
     });
+    this.saveData();
   }
 
   // ---------------------------------------------------------
