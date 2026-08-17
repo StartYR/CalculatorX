@@ -329,12 +329,9 @@ export struct ExchangeRate {
           this.rateMap = newRateMap;
           Logger.info(`[ExchangeRate] 真实更新成功！已缓存 ${rateKeys.length} 种货币汇率。`);
 
-          // 核心：只有真实请求成功后，才真正更新底层的时间戳基准并落盘
           PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_RATES, JSON.stringify(this.rateMap));
-          this.lastUpdateTimeStamp = new Date().getTime();
-          PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_LAST_UPDATE, this.lastUpdateTimeStamp);
 
-          // 触发成功反馈（会帮你把 UI 文字自动变成最新时间）
+          // 触发成功反馈
           this.handleFeedback(true);
         } else {
           Logger.error(`[ExchangeRate] 数据结构异常，未能提取到 rates 字段`);
@@ -362,11 +359,12 @@ export struct ExchangeRate {
     }
 
     if (isSuccess) {
-      // 成功：只更新界面显示的视觉时间字符串，绝不触碰底层的 lastUpdateTimeStamp
-      let now = new Date();
-      let hours = now.getHours().toString().padStart(2, '0');
-      let minutes = now.getMinutes().toString().padStart(2, '0');
-      this.lastUpdateTime = `今天 ${hours}:${minutes}`;
+      // 统一下发最新时间戳并落盘
+      this.lastUpdateTimeStamp = new Date().getTime();
+      PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_LAST_UPDATE, this.lastUpdateTimeStamp);
+
+      // 更新顶部 UI 显示
+      this.updateTimeDisplay();
 
       this.isUpdateSuccess = true;
       this.isUpdateFailed = false;
