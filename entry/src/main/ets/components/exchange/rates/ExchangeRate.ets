@@ -26,7 +26,7 @@ export struct ExchangeRate {
   @State @Watch('saveData') activeId: string = '';
   @State @Watch('saveData') baseAmount: string = '';
   @State rateMap: Record<string, number> = {};
-  @State lastUpdateTime: string = '刚刚';
+  @State lastUpdateTime: string = '加载中...';
   @State isSelectorShow: boolean = false;
   @State selectingId: string = '';
   @State searchQuery: string = '';
