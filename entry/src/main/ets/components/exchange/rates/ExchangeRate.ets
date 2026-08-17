@@ -692,89 +692,61 @@ export struct ExchangeRate {
                 // 2. 渲染统一的卡片底板
                 MenuGroup() {
                   ForEach(group.data, (currency: CurrencyInfo, index: number) => {
-                    Column() {
-                      // 复用标准菜单按钮
-                      MenuButton({
-                        title: currency.code,
-                        subTitle: currency.name,
-                        showRightArrow: false, // 隐藏默认右侧箭头
-                        onClickAction: (): void => {
-                          this.selectCurrency(currency.code);
-                        },
-                        // 传入自定义的打钩插槽
-                        rightContent: () => { this.SelectedCheckmark(currency.code) }
-                      })
 
-                      // 3. 分隔线控制：如果是本组的最后一条数据，则不渲染分隔线
-                      if (index < group.data.length - 1) {
-                        // marginLeft: 12 是为了与 MenuButton 内部左侧 12vp 的内边距对齐
-                        ItemDivider({ marginLeft: 12 })
+                    // 3. 横向排版
+                    Row() {
+                      Text(currency.code)
+                        .fontSize(18)
+                        .fontWeight(FontWeight.Medium)
+                        .fontColor($r('sys.color.font_primary'))
+                        .width(60)
+
+                      Text(currency.name)
+                        .fontSize(16)
+                        .fontColor($r('sys.color.font_secondary'))
+                        .margin({ left: 16 })
+
+                      Blank() // 中间空白
+
+                      // 选中打钩状态
+                      if (this.isCurrencySelected(currency.code)) {
+                        SymbolGlyph($r('sys.symbol.checkmark'))
+                          .fontColor([$r('sys.color.font_emphasize')])
+                          .fontSize(20)
                       }
                     }
+                    .width('100%')
+                    .constraintSize({ minHeight: 46 }) // 最小点击高度
+                    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+                    .borderRadius(16) // 内部条目圆角，配合按压反馈
+                    // 添加点击变色的交互反馈
+                    .stateStyles({
+                      pressed: {
+                        .backgroundColor($r('sys.color.comp_background_secondary'))
+                      },
+                      normal: {
+                        .backgroundColor(Color.Transparent)
+                      }
+                    })
+                    .onClick(() => {
+                      this.selectCurrency(currency.code);
+                    })
+
+                    // 4. 分隔线控制
+                    if (index < group.data.length - 1) {
+                      // marginLeft 设为 16，与文字左侧完美对齐
+                      ItemDivider({ marginLeft: 16 })
+                    }
+
                   }, (item: CurrencyInfo) => item.code)
                 }
               }
               .width('100%')
-              .padding({ bottom: 16 }) // 不同的字母分组之间留出空间
+              .padding({ bottom: 8 }) // 不同的字母分组之间留出呼吸空间
             }
           }, (group: CurrencyGroup) => group.letter)
         }
 
-        // // 空状态逻辑：预先计算过滤后的数组
-        // if (CURRENCY_WHITELIST.filter(item =>
-        // item.code.includes(this.searchQuery) || item.name.includes(this.searchQuery)
-        // ).length === 0) {
-        //
-        //   // 如果没有匹配结果，显示空状态提示
-        //   ListItem() {
-        //     Column() {
-        //       Text('未找到匹配的货币')
-        //         .fontSize(16)
-        //         .fontColor($r('sys.color.font_tertiary'))
-        //         .margin({ top: 30 }) // 距离顶部
-        //     }
-        //     .width('100%')
-        //     .alignItems(HorizontalAlign.Center)
-        //   }
-        //
-        // } else {
-        //
-        //   // 真实数据遍历
-        //   ForEach(CURRENCY_WHITELIST.filter(item =>
-        //   item.code.includes(this.searchQuery) || item.name.includes(this.searchQuery)
-        //   ), (currency: CurrencyInfo) => {
-        //     ListItem() {
-        //       Row() {
-        //         Text(currency.code)
-        //           .fontSize(18)
-        //           .fontWeight(FontWeight.Medium)
-        //           .fontColor($r('sys.color.font_primary'))
-        //           .width(60)
-        //
-        //         Text(currency.name)
-        //           .fontSize(16)
-        //           .fontColor($r('sys.color.font_secondary'))
-        //           .margin({ left: 16 })
-        //
-        //         Blank()
-        //
-        //         if (this.isCurrencySelected(currency.code)) {
-        //           SymbolGlyph($r('sys.symbol.checkmark'))
-        //             .fontColor([$r('sys.color.font_emphasize')])
-        //             .fontSize(20)
-        //         }
-        //       }
-        //       .width('100%')
-        //       .padding({
-        //         top: 16,
-        //         bottom: 16,
-        //         left: 8,
-        //         right: 8
-        //       })
-        //     }
-        //     .onClick(() => this.selectCurrency(currency.code))
-        //   }, (item: CurrencyInfo) => item.code)
-        // }
         // 底部安全区占位项
         ListItem() {
           Row().width('100%').height(this.keyboardAvoidHeight)
@@ -782,7 +754,7 @@ export struct ExchangeRate {
       }
       .width('100%')
       .height('100%')
-      .padding({ left: 16, right: 16 })
+      .padding({ left: 24, right: 24 })
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.Spring)
 
