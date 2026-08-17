@@ -726,7 +726,7 @@ export struct ExchangeRate {
       Column() {
         // 标题
         Text('选择货币')
-          .fontSize(20)
+          .fontSize(22)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('sys.color.font_primary'))
           .width('100%')
@@ -745,7 +745,7 @@ export struct ExchangeRate {
           })
           // 监听焦点，动态撑开底部空间
           .onFocus(() => {
-            // 键盘弹出时，用动画将底部留白撑高 (320 约等于大多数系统键盘的高度)
+            // 键盘弹出时，用动画将底部留白撑高
             animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
               this.keyboardAvoidHeight = 340;
             });
