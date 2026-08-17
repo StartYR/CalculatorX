@@ -687,10 +687,6 @@ export struct ExchangeRate {
 
       // ================= 层级 1 (底层)：全屏滚动的列表 =================
       List({ scroller: this.listScroller }) {
-        // 顶部占位项：高度 = 搜索框高度(40) + 搜索框底部预留间距(16)
-        ListItem() {
-          Row().width('100%').height(122)
-        }
 
         // 调用刚刚写好的分组函数获取数据
         if (this.getGroupedCurrencies().length === 0) {
@@ -808,7 +804,8 @@ export struct ExchangeRate {
       }
       .width('100%')
       .height('100%')
-      .padding({ left: 24, right: 36 })
+      .padding({ left: 24, right: 36, top: 122})
+      .clip(false)
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.Spring)
       // 监听列表滚动事件，实现反向联动 (滑动列表 -> 点亮字母)
@@ -917,13 +914,12 @@ export struct ExchangeRate {
           .popupPosition({ x: 48, y: 0 })    // 气泡向左偏移，防止被手指遮挡
           .selectedBackgroundColor($r('sys.color.background_emphasize')) // 选中项底色
           .selectedColor(Color.White)        // 选中项文字颜色
-          .popupColor(Color.White)           // 气泡文字颜色
-          .popupBackground($r('sys.color.background_emphasize')) // 气泡底色
+          .popupColor($r('sys.color.font_emphasize'))          // 气泡文字颜色
+          // .popupBackground($r('sys.color.background_emphasize')) // 气泡底色
           .onSelect((index: number) => {
             // 手按索引条，列表跟随跳转
             this.selectedIndex = index;
-            // List 的第 0 项是 122vp 的空白占位，所以目标索引应当 +1
-            this.listScroller.scrollToIndex(index + 1);
+            this.listScroller.scrollToIndex(index);
           })
       }
     }
