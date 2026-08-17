@@ -56,6 +56,8 @@ export struct ExchangeRate {
   @State isSelectorShow: boolean = false;           // 控制货币选择半模态窗口的显隐
   @State selectingId: string = '';                  // 记录当前正在选择货币的列表项 ID
   @State keyboardAvoidHeight: number = 40;          // 底部键盘避让占位高度
+  private listScroller: Scroller = new Scroller();  // 列表滚动控制器
+  @State selectedIndex: number = 0;                 // 当前索引状态
 
   // [网络与反馈动效状态]
   @State isRefreshing: boolean = false;             // 是否处于更新（或模拟更新）状态
@@ -806,7 +808,7 @@ export struct ExchangeRate {
       }
       .width('100%')
       .height('100%')
-      .padding({ left: 24, right: 24 })
+      .padding({ left: 24, right: 36 })
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.Spring)
 
@@ -881,6 +883,31 @@ export struct ExchangeRate {
       }
       .width('100%')
       .padding({ left: 24, right: 24, top: 24 })
+
+      // ================= 层级 4 (最上层)：右侧字母索引条 =================
+      // 只有在非搜索状态下才显示索引条
+      if (!this.searchQuery) {
+        AlphabetIndexer({
+          // 动态映射数据源，把“常用”替换成星星图标，保持右侧字母表的窄宽度
+          arrayValue: this.getGroupedCurrencies().map(group => group.letter === '常用' ? '★' : group.letter),
+          selected: this.selectedIndex
+        })
+          .alignStyle(IndexerAlign.Right)    // 右侧对齐
+          .position({ right: 4, top: 150 })  // 避开顶部的搜索框和毛玻璃区域
+          .itemSize(18)                      // 字母触控热区大小
+          .usingPopup(true)                  // 放大气泡反馈
+          .popupPosition({ x: 48, y: 0 })    // 气泡向左偏移，防止被手指遮挡
+          .selectedBackgroundColor($r('sys.color.background_emphasize')) // 选中项底色
+          .selectedColor(Color.White)        // 选中项文字颜色
+          .popupColor(Color.White)           // 气泡文字颜色
+          .popupBackground($r('sys.color.background_emphasize')) // 气泡底色
+          .onSelect((index: number) => {
+            // 手按索引条，列表跟随跳转
+            this.selectedIndex = index;
+            // List 的第 0 项是 122vp 的空白占位，所以目标索引应当 +1
+            this.listScroller.scrollToIndex(index + 1);
+          })
+      }
     }
     .width('100%')
     .height('100%')
@@ -1041,9 +1068,7 @@ export struct ExchangeRate {
     .height('100%')
     .backgroundColor($r('sys.color.background_secondary'))
     .bindSheet($$this.isSelectorShow, this.CurrencySelectorBuilder(), {
-      height: SheetSize.LARGE,
-      // dragBar: true,
-      // title: { title: '选择货币' }
+      height: SheetSize.LARGE
     })
   }
 }
