@@ -811,6 +811,24 @@ export struct ExchangeRate {
       .padding({ left: 24, right: 36 })
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.Spring)
+      // 监听列表滚动事件，实现反向联动 (滑动列表 -> 点亮字母)
+      .onScrollIndex((firstIndex: number) => {
+        // 如果处于搜索状态，右侧索引条是隐藏的，不需要进行任何计算
+        if (this.searchQuery) return;
+
+        // List 第 0 项是空白占位项，所以是是 firstIndex - 1
+        let activeGroupIndex = firstIndex - 1;
+
+        // 越界安全兜底：防止用户在最顶部使劲往下拉，导致 firstIndex 小于0
+        if (activeGroupIndex < 0) {
+          activeGroupIndex = 0;
+        }
+
+        // 只有当索引真正发生变化时才更新状态，避免无意义的 UI 重绘
+        if (this.selectedIndex !== activeGroupIndex) {
+          this.selectedIndex = activeGroupIndex;
+        }
+      })
 
       // ================= 层级 2 (中层)：真正的渐变毛玻璃特效引擎 =================
       Stack() {
