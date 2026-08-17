@@ -701,9 +701,9 @@ export struct ExchangeRate {
               Blank()
 
               if (this.isCurrencySelected(currency.code)) {
-                Image($r('sys.media.ohos_ic_public_ok'))
-                  .width(20).height(20)
-                  .fillColor($r('sys.color.font_emphasize'))
+                SymbolGlyph($r('sys.symbol.checkmark'))
+                  .fontColor([$r('sys.color.font_emphasize')])
+                  .fontSize(20)
               }
             }
             .width('100%')

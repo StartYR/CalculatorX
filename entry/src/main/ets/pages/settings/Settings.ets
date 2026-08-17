@@ -78,7 +78,7 @@ struct MathStyleSheet {
               (this.styleType === 'perm' && this.currentPerm === item.id)) {
               SymbolGlyph($r('sys.symbol.checkmark'))
                 .fontSize(20)
-                .fontColor([$r('sys.color.brand')])
+                .fontColor([$r('sys.color.font_emphasize')])
             } else {
               Blank().width(20)
             }
