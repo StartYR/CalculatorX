@@ -48,8 +48,6 @@ export struct ExchangeRate {
   aboutToAppear() {
     Logger.info('[ExchangeRate] 模块初始化');
     this.loadData();
-    // 每次打开汇率模块时，先更新时间显示文字，然后静默检查是否需要刷新
-    this.updateTimeDisplay();
     this.handleRefresh();
   }
 
@@ -97,6 +95,7 @@ export struct ExchangeRate {
 
     // 3. 加载上次更新时间戳
     this.lastUpdateTimeStamp = AppStorage.get<number>(PreferenceConfigs.KEY_EXCHANGE_LAST_UPDATE) || 0;
+    this.updateTimeDisplay();
   }
 
   // ======== 缓存失效与时间格式化逻辑 ========
