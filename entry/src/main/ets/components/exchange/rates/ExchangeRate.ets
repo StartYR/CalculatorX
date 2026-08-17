@@ -697,19 +697,19 @@ export struct ExchangeRate {
                     Row() {
                       // 货币符号圆形头像图标
                       Text(currency.symbol)
-                        .width(40)
-                        .height(40)
+                        .width(32)
+                        .height(32)
                         .backgroundColor($r('sys.color.comp_background_tertiary')) // 浅灰/浅主题色底板
                         .borderRadius(20) // 高度一半，完美圆形
                         .textAlign(TextAlign.Center)
                         .fontColor($r('sys.color.font_primary'))
                         .fontWeight(FontWeight.Medium)
-                        // 【核心魔法】：自适应缩放机制
+                        // 自适应缩放
                         .maxLines(1)
-                        .fontSize(18)           // 默认字号 (适合 $, ¥, €)
-                        .minFontSize(10)        // 极限最小字号 (适合 FCFA, د.ك 自动缩放)
-                        .padding({ left: 4, right: 4 }) // 给长字符留一点安全内边距，防止贴死边缘
-                        .margin({ right: 16 })  // 与右侧的代码拉开距离
+                        .maxFontSize(16)       // 默认字号 ($, ¥, €)
+                        .minFontSize(4)        // 最小字号
+                        .padding({ left: 6, right: 6 }) // 安全内边距，防止贴死边缘
+                        .margin({ right: 24 })  // 与右侧的代码距离
 
                       // 货币代码
                       Text(currency.code)
@@ -735,7 +735,7 @@ export struct ExchangeRate {
                     }
                     .width('100%')
                     .constraintSize({ minHeight: 46 }) // 最小点击高度
-                    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+                    .padding({ left: 10, right: 16, top: 10, bottom: 10 })
                     .borderRadius(16) // 内部条目圆角，配合按压反馈
                     // 添加点击变色的交互反馈
                     .stateStyles({
@@ -752,8 +752,7 @@ export struct ExchangeRate {
 
                     // 4. 分隔线控制
                     if (index < group.data.length - 1) {
-                      // marginLeft 设为 16，与文字左侧完美对齐
-                      ItemDivider({ marginLeft: 16 })
+                      ItemDivider({ marginLeft: 60 })
                     }
 
                   }, (item: CurrencyInfo) => item.code)
@@ -848,6 +847,7 @@ export struct ExchangeRate {
     }
     .width('100%')
     .height('100%')
+    .backgroundColor($r('sys.color.background_secondary'))
   }
 
   /**
