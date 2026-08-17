@@ -621,7 +621,7 @@ export struct ExchangeRate {
       List() {
         // 顶部占位项：高度 = 搜索框高度(40) + 搜索框底部预留间距(16)
         ListItem() {
-          Row().width('100%').height(56)
+          Row().width('100%').height(122)
         }
 
         // 空状态逻辑：预先计算过滤后的数组
@@ -692,6 +692,16 @@ export struct ExchangeRate {
 
       // ================= 层级 2 (上层)：纯粹悬浮的药丸形搜索框 =================
       Column() {
+        // 标题
+        Text('选择货币')
+          .fontSize(20)
+          .fontWeight(FontWeight.Bold)
+          .fontColor($r('sys.color.font_primary'))
+          .width('100%')
+          .textAlign(TextAlign.Center)
+          .margin({ bottom: 16 })
+
+        // 搜索框
         Search({ placeholder: '搜索货币代码或名称...', value: $$this.searchQuery })
           .width('100%')
           .height(40)
@@ -716,7 +726,7 @@ export struct ExchangeRate {
           })
       }
       .width('100%')
-      .padding({ left: 24, right: 24, top: 0 })
+      .padding({ left: 24, right: 24, top: 24 })
     }
     .width('100%')
     .height('100%')
@@ -865,8 +875,8 @@ export struct ExchangeRate {
     .backgroundColor($r('sys.color.background_secondary'))
     .bindSheet($$this.isSelectorShow, this.CurrencySelectorBuilder(), {
       height: SheetSize.LARGE,
-      dragBar: true,
-      title: { title: '选择货币' }
+      // dragBar: true,
+      // title: { title: '选择货币' }
     })
   }
 }
