@@ -857,6 +857,8 @@ export struct ExchangeRate {
         Search({ placeholder: '搜索货币代码或名称...', value: $$this.searchQuery })
           .width('100%')
           .height(40)
+          .borderWidth(0.1)
+          .borderColor($r('sys.color.comp_divider'))
           .backgroundColor(Color.Transparent)
           // 毛玻璃材质只贴在搜索框上
           .backgroundBlurStyle(BlurStyle.Thin)
