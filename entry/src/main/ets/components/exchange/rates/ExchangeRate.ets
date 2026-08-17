@@ -686,7 +686,7 @@ export struct ExchangeRate {
     Stack({ alignContent: Alignment.Top }) {
 
       // ================= 层级 1 (底层)：全屏滚动的列表 =================
-      List() {
+      List({ scroller: this.listScroller }) {
         // 顶部占位项：高度 = 搜索框高度(40) + 搜索框底部预留间距(16)
         ListItem() {
           Row().width('100%').height(122)
