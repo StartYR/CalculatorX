@@ -31,6 +31,9 @@ class CurrencyGroup {
   }
 }
 
+// 定义高频货币白名单
+const POPULAR_CURRENCIES: string[] = ['USD', 'EUR', 'CNY', 'GBP', 'JPY', 'HKD', 'AUD', 'CAD', 'CHF', 'SGD', 'KRW'];
+
 // ==================== 主组件 ====================
 @Component
 export struct ExchangeRate {
@@ -503,32 +506,51 @@ export struct ExchangeRate {
    * 分组逻辑
    */
   getGroupedCurrencies(): CurrencyGroup[] {
-    const filtered = CURRENCY_WHITELIST.filter(item =>
-    item.code.includes(this.searchQuery) || item.name.includes(this.searchQuery)
-    );
-
-    if (filtered.length === 0) return [];
-
-    // 如果处于搜索状态，将所有结果归为统一的“搜索结果”组
+    // 场景一：搜索状态 (极简逻辑，直接从全量数据过滤，天然去重)
     if (this.searchQuery) {
+      const query = this.searchQuery.toLowerCase();
+      const filtered = CURRENCY_WHITELIST.filter(currency =>
+      currency.code.toLowerCase().includes(query) ||
+        currency.name.includes(query) ||
+        (currency.symbol && currency.symbol.includes(query)) // 顺便支持符号搜索
+      );
       return [new CurrencyGroup('搜索结果', filtered)];
     }
 
-    // 如果是默认状态，则按首字母 A-Z 动态分组
-    const map = new Map<string, CurrencyInfo[]>();
-    filtered.forEach(item => {
-      // 提取货币代码的第一个字母作为组名
-      const letter = item.code.charAt(0).toUpperCase();
-      if (!map.has(letter)) {
-        map.set(letter, []);
+    // 场景二：默认状态 (热门分组 + A-Z 分组)
+    const groups: CurrencyGroup[] = [];
+
+    // 【新增】：1. 构建“热门货币”分组
+    const popularData: CurrencyInfo[] = [];
+    POPULAR_CURRENCIES.forEach(code => {
+      const currency = CURRENCY_WHITELIST.find(c => c.code === code);
+      if (currency) {
+        popularData.push(currency);
       }
-      map.get(letter)?.push(item);
     });
 
-    // 提取所有的组名 (A, B, C...) 并进行字母表排序
-    const sortedKeys = Array.from(map.keys()).sort();
-    return sortedKeys.map((key: string) => new CurrencyGroup(key, map.get(key) || []));
+    if (popularData.length > 0) {
+      groups.push(new CurrencyGroup('常用', popularData));
+    }
 
+    // 2. 构建标准的 A-Z 分组 (原有逻辑保持不变，因为我们要保留重复项)
+    // 假设这里是你原有的 A-Z 归类逻辑
+    const azMap = new Map<string, CurrencyInfo[]>();
+    CURRENCY_WHITELIST.forEach(currency => {
+      const firstLetter = currency.code.charAt(0).toUpperCase();
+      if (!azMap.has(firstLetter)) {
+        azMap.set(firstLetter, []);
+      }
+      azMap.get(firstLetter)?.push(currency);
+    });
+
+    // 排序 A-Z 分组并追加到总组中
+    const sortedKeys = Array.from(azMap.keys()).sort();
+    sortedKeys.forEach(key => {
+      groups.push(new CurrencyGroup(key, azMap.get(key) || []));
+    });
+
+    return groups;
   }
 
   // ---------------------------------------------------------
@@ -702,7 +724,7 @@ export struct ExchangeRate {
                         .backgroundColor(this.isCurrencySelected(currency.code)
                           ? $r('sys.color.background_emphasize')
                           : $r('sys.color.comp_background_tertiary'))
-                        .borderRadius(20) // 高度一半，完美圆形
+                        .borderRadius(16) // 高度一半，完美圆形
                         .textAlign(TextAlign.Center)
                         .fontColor(this.isCurrencySelected(currency.code)
                           ? Color.White
@@ -768,7 +790,7 @@ export struct ExchangeRate {
                       ItemDivider({ marginLeft: 60 })
                     }
 
-                  }, (item: CurrencyInfo) => item.code)
+                  }, (currency: CurrencyInfo) => `${group.letter}_${currency.code}`)
                 }
               }
               .width('100%')
