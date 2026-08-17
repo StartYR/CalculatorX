@@ -619,42 +619,66 @@ export struct ExchangeRate {
 
       // ================= 层级 1 (底层)：全屏滚动的列表 =================
       List() {
-        // 顶部幽灵占位项：高度 = 搜索框 top margin(16) + 搜索框高度(40) + 搜索框底部预留间距(16) = 72
+        // 顶部占位项：高度 = 搜索框高度(40) + 搜索框底部预留间距(16)
         ListItem() {
-          Row().width('100%').height(72)
+          Row().width('100%').height(56)
         }
 
-        // 真实数据遍历
-        ForEach(CURRENCY_WHITELIST.filter(item =>
+        // 【新增空状态逻辑】预先计算过滤后的数组
+        if (CURRENCY_WHITELIST.filter(item =>
         item.code.includes(this.searchQuery) || item.name.includes(this.searchQuery)
-        ), (currency: CurrencyInfo) => {
+        ).length === 0) {
+
+          // 如果没有匹配结果，显示空状态提示
           ListItem() {
-            Row() {
-              Text(currency.code)
-                .fontSize(18)
-                .fontWeight(FontWeight.Medium)
-                .fontColor($r('sys.color.font_primary'))
-                .width(60)
-
-              Text(currency.name)
+            Column() {
+              Text('未找到匹配的货币')
                 .fontSize(16)
-                .fontColor($r('sys.color.font_secondary'))
-                .margin({ left: 16 })
-
-              Blank()
-
-              if (this.isCurrencySelected(currency.code)) {
-                SymbolGlyph($r('sys.symbol.checkmark'))
-                  .fontColor([$r('sys.color.font_emphasize')])
-                  .fontSize(20)
-              }
+                .fontColor($r('sys.color.font_tertiary'))
+                .margin({ top: 30 }) // 距离顶部
             }
             .width('100%')
-            .padding({ top: 16, bottom: 16, left: 8, right: 8 })
+            .alignItems(HorizontalAlign.Center)
           }
-          .onClick(() => this.selectCurrency(currency.code))
-        }, (item: CurrencyInfo) => item.code)
 
+        } else {
+
+          // 真实数据遍历
+          ForEach(CURRENCY_WHITELIST.filter(item =>
+          item.code.includes(this.searchQuery) || item.name.includes(this.searchQuery)
+          ), (currency: CurrencyInfo) => {
+            ListItem() {
+              Row() {
+                Text(currency.code)
+                  .fontSize(18)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor($r('sys.color.font_primary'))
+                  .width(60)
+
+                Text(currency.name)
+                  .fontSize(16)
+                  .fontColor($r('sys.color.font_secondary'))
+                  .margin({ left: 16 })
+
+                Blank()
+
+                if (this.isCurrencySelected(currency.code)) {
+                  SymbolGlyph($r('sys.symbol.checkmark'))
+                    .fontColor([$r('sys.color.font_emphasize')])
+                    .fontSize(20)
+                }
+              }
+              .width('100%')
+              .padding({
+                top: 16,
+                bottom: 16,
+                left: 8,
+                right: 8
+              })
+            }
+            .onClick(() => this.selectCurrency(currency.code))
+          }, (item: CurrencyInfo) => item.code)
+        }
         // 底部安全区占位项
         ListItem() {
           Row().width('100%').height(this.keyboardAvoidHeight)
@@ -692,7 +716,7 @@ export struct ExchangeRate {
           })
       }
       .width('100%')
-      .padding({ left: 24, right: 24, top: 16 })
+      .padding({ left: 24, right: 24, top: 0 })
     }
     .width('100%')
     .height('100%')
