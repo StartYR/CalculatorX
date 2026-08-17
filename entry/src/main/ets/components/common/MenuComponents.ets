@@ -1,10 +1,11 @@
 /**
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
- * * @file MenuComponents.ets
+ * @file MenuComponents.ets
  * @description 菜单组件库，提供无状态的纯 UI 积木
  * @author 易睿 (Yi Rui)
  * @date 2026
  */
+
 // ==================== UI 组件库 ====================
 
 @Component
@@ -39,7 +40,7 @@ export struct ItemDivider {
   }
 }
 
-// 菜单项 (支持无图标、支持副标题、支持自定义右侧内容)
+// 菜单项 (支持无图标、支持副标题)
 @Component
 export struct MenuButton {
   icon?: Resource; // 可选图标
@@ -47,9 +48,6 @@ export struct MenuButton {
   subTitle?: string; // 可选副标题
   @Prop isCustomSvg: boolean = false;
   onClickAction?: () => void;
-
-  @Prop showRightArrow: boolean = true; // 可选右侧箭头
-  @BuilderParam rightContent?: () => void; // 允许外部传入自定义的右侧内容（如打钩图标、Switch开关等）
 
   build() {
     Row() {
@@ -74,7 +72,7 @@ export struct MenuButton {
       Column() {
         Text(this.title)
           .fontSize(16)
-          .fontWeight(FontWeight.Regular)
+          .fontWeight(this.subTitle ? FontWeight.Medium : FontWeight.Regular) // 如果有副标题，主标题稍微加粗一点，层级更分明
           .fontColor($r('sys.color.font_primary'))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -89,23 +87,18 @@ export struct MenuButton {
         }
       }
       .alignItems(HorizontalAlign.Start)
+
       .layoutWeight(1) // 让文本容器占据所有剩余空间
 
-      // 3. 右侧内容区
-      if (this.rightContent) {
-        // 如果外部传入了自定义内容，优先渲染自定义内容
-        this.rightContent()
-      } else if (this.showRightArrow) {
-        // 否则根据布尔值决定是否渲染默认箭头
-        SymbolGlyph($r('sys.symbol.chevron_right'))
-          .fontSize(16)
-          .fontColor([$r('sys.color.icon_tertiary')])
-          .margin({ left: 12 })
-      }
+      // 3. 箭头区
+      SymbolGlyph($r('sys.symbol.chevron_right'))
+        .fontSize(16)
+        .fontColor([$r('sys.color.icon_tertiary')])
+        .margin({ left: 12 })
     }
     .width('100%')
-    .constraintSize({ minHeight: 46 })
-    .padding({ left: 12, right: 12, top: 12, bottom: 12 })
+    .constraintSize({ minHeight: 46 }) // 使用最小高度，如果副标题很长，卡片会自动被撑高
+    .padding({ left: 12, right: 12, top: 12, bottom: 12 }) // 增加上下内边距，让双行文本呼吸感更好
     .margin(0)
     .borderRadius(16)
     .stateStyles({
