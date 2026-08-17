@@ -32,8 +32,8 @@ export struct ExchangeRate {
   @State lastUpdateTimeStamp: number = 0; // 底层记录最后一次成功联网获取数据的真实时间戳
 
   // [UI 交互与双向绑定状态]
-  @State @Watch('saveData') activeId: string = '';
-  @State @Watch('saveData') baseAmount: string = '';
+  @State activeId: string = '';
+  @State baseAmount: string = '';
   @State lastUpdateTime: string = '加载中...'; // 顶部显示的格式化时间文本
   @State searchQuery: string = ''; // 货币搜索框的输入关键字
 
@@ -385,6 +385,7 @@ export struct ExchangeRate {
     if (this.activeId !== id) {
       this.baseAmount = this.getConvertedAmount(code, false);
       this.activeId = id;
+      this.saveData();
     }
   }
 
@@ -415,6 +416,7 @@ export struct ExchangeRate {
         }
       }
     }
+    this.saveData();
   }
 
   /**
