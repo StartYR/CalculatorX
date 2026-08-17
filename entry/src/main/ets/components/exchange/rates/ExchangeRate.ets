@@ -40,6 +40,7 @@ export struct ExchangeRate {
   // [视图控制状态]
   @State isSelectorShow: boolean = false;           // 控制货币选择半模态窗口的显隐
   @State selectingId: string = '';                  // 记录当前正在选择货币的列表项 ID
+  @State keyboardAvoidHeight: number = 40;          // 底部键盘避让占位高度
 
   // [网络与反馈动效状态]
   @State isRefreshing: boolean = false;             // 是否处于更新（或模拟更新）状态
@@ -656,7 +657,7 @@ export struct ExchangeRate {
 
         // 底部安全区占位项
         ListItem() {
-          Row().width('100%').height(40)
+          Row().width('100%').height(this.keyboardAvoidHeight)
         }
       }
       .width('100%')
@@ -675,6 +676,19 @@ export struct ExchangeRate {
           .backgroundBlurStyle(BlurStyle.Thin)
           .onChange((val: string) => {
             this.searchQuery = val.toUpperCase();
+          })
+          // 监听焦点，动态撑开底部空间
+          .onFocus(() => {
+            // 键盘弹出时，用动画将底部留白撑高 (320 约等于大多数系统键盘的高度)
+            animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+              this.keyboardAvoidHeight = 340;
+            });
+          })
+          .onBlur(() => {
+            // 键盘收起时，恢复原本的安全区高度
+            animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+              this.keyboardAvoidHeight = 40;
+            });
           })
       }
       .width('100%')
