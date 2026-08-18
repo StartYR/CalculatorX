@@ -71,9 +71,6 @@ export struct ExchangeRate {
   @State isDragGhostReady: boolean = false;         // 控制拖拽跟手虚影的出场动画状态
   private draggedIndex: number = -1;                // 当前被拖拽项的原始索引
 
-  // [系统环境变量]
-  // @StorageProp('topRectHeight') topRectHeight: number = 80; // 顶部状态栏避让高度
-
   // ---------------------------------------------------------
   // 2. 生命周期 (Lifecycle)
   // ---------------------------------------------------------

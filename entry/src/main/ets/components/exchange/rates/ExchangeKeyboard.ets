@@ -136,7 +136,9 @@ export struct ExchangeKeyboard {
     .width('100%')
     .backgroundColor(Color.Transparent)
     .backgroundBlurStyle(BlurStyle.Thin)
-    .borderRadius({ topLeft: 36, topRight: 36 })
+    .borderRadius({ topLeft: 36, topRight: 36})
+    .borderWidth(0.7)
+    .borderColor($r('sys.color.comp_divider'))
     .shadow({ radius: 16, color: '#1A000000', offsetY: -12 })
     .padding({ bottom: this.navBarHeight - 16})
   }
