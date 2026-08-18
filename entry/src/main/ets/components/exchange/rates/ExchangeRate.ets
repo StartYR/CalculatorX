@@ -696,7 +696,7 @@ export struct ExchangeRate {
               Text('未找到匹配的货币')
                 .fontSize(16)
                 .fontColor($r('sys.color.font_tertiary'))
-                .margin({ top: 80 })
+                .margin({ top: 40 })
             }
             .width('100%')
             .alignItems(HorizontalAlign.Center)
@@ -733,7 +733,7 @@ export struct ExchangeRate {
                         .maxFontSize(16)       // 默认字号 ($, ¥, €)
                         .minFontSize(4)        // 最小字号
                         .padding({ left: 6, right: 6 }) // 安全内边距，防止贴死边缘
-                        .margin({ right: 24 })  // 与右侧的代码距离
+                        .margin({ right: 20 })  // 与右侧的代码距离
 
                       // 货币代码
                       Text(currency.code)
@@ -745,6 +745,7 @@ export struct ExchangeRate {
                           ? $r('sys.color.font_emphasize')
                           : $r('sys.color.font_primary'))
                         .width(60)
+                        .margin({ right: 8 })
 
                       // 货币名称
                       Text(currency.name)
@@ -755,9 +756,12 @@ export struct ExchangeRate {
                         .fontColor(this.isCurrencySelected(currency.code)
                           ? $r('sys.color.font_emphasize_contrary')
                           : $r('sys.color.font_secondary'))
-                        .margin({ left: 16 })
+                        .layoutWeight(1)
+                        .maxLines(1)
+                        .textOverflow({ overflow: TextOverflow.Ellipsis })
+                        .margin({ right: 4 })
 
-                      Blank() // 中间空白
+                      // Blank() // 中间空白
 
                       // 选中打钩状态
                       if (this.isCurrencySelected(currency.code)) {
