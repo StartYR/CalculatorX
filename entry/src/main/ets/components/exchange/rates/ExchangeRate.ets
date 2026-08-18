@@ -508,16 +508,23 @@ export struct ExchangeRate {
    * 分组逻辑
    */
   getGroupedCurrencies(): CurrencyGroup[] {
-    // 场景一：搜索状态 (从全量数据过滤)
+    // 场景一：搜索状态
     if (this.searchQuery) {
-      const query = this.searchQuery.toLowerCase();
+      // 1. 安全转义：防止用户输入 \、*、? 等正则特殊字符导致引擎崩溃
+      const safeQuery = this.searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      // 2. 模糊正则匹配
+      const regexPattern = safeQuery.split('').join('.*');
+      const searchRegex = new RegExp(regexPattern, 'i'); // 无视大小写
+
       const filtered = CURRENCY_WHITELIST.filter(currency =>
-      currency.code.toLowerCase().includes(query) ||
-        currency.name.includes(query) ||
-        (currency.symbol && currency.symbol.includes(query)) // 顺便支持符号搜索
+      // 3. 将原本的 includes 升级为正则的 test() 方法
+      searchRegex.test(currency.name) ||
+        searchRegex.test(currency.code) ||
+        (currency.symbol && searchRegex.test(currency.symbol))
       );
 
-      // 如果一条匹配的数据都没有，返回空数组，让 UI 触发空状态视图
+      // 如果连一条匹配的数据都没有，直接返回真正的空数组，触发 UI 空状态
       if (filtered.length === 0) {
         return [];
       }
@@ -525,10 +532,10 @@ export struct ExchangeRate {
       return [new CurrencyGroup('搜索结果', filtered)];
     }
 
-    // 场景二：默认状态 (热门分组 + A-Z 分组)
+    // 场景二：默认状态 (常用分组 + A-Z 分组)
     const groups: CurrencyGroup[] = [];
 
-    // 【新增】：1. 构建“热门货币”分组
+    // 1. “常用”分组
     const popularData: CurrencyInfo[] = [];
     POPULAR_CURRENCIES.forEach(code => {
       const currency = CURRENCY_WHITELIST.find(c => c.code === code);
@@ -541,8 +548,7 @@ export struct ExchangeRate {
       groups.push(new CurrencyGroup('常用', popularData));
     }
 
-    // 2. 构建标准的 A-Z 分组 (原有逻辑保持不变，因为我们要保留重复项)
-    // 假设这里是你原有的 A-Z 归类逻辑
+    // 2. 标准的 A-Z 分组
     const azMap = new Map<string, CurrencyInfo[]>();
     CURRENCY_WHITELIST.forEach(currency => {
       const firstLetter = currency.code.charAt(0).toUpperCase();
