@@ -804,7 +804,7 @@ export struct ExchangeRate {
       }
       .width('100%')
       .height('100%')
-      .padding({ left: 24, right: 36, top: 122})
+      .padding({ left: 24, right: 36, top: 120})
       .clip(false)
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.Spring)
