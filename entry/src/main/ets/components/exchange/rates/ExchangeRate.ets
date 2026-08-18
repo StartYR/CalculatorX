@@ -833,6 +833,20 @@ export struct ExchangeRate {
               .padding({ bottom: 8 }) // 不同的字母分组之间留出呼吸空间
             }
           }, (group: CurrencyGroup) => group.letter === '搜索结果' ? `搜索结果_${this.searchQuery}` : group.letter)
+
+          // 动态底部统计
+          ListItem() {
+            Text(
+              this.searchQuery
+                ? `搜索到 ${this.getGroupedCurrencies()[0].data.length} 种货币`
+                : `共 ${CURRENCY_WHITELIST.length} 种货币`
+            )
+              .fontSize(12)
+              .fontColor($r('sys.color.font_secondary'))
+              .width('100%')
+              .textAlign(TextAlign.Center)
+              .margin({ top: 12 })
+          }
         }
 
         // 底部安全区占位项
