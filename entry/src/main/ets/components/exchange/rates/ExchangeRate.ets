@@ -510,15 +510,15 @@ export struct ExchangeRate {
   getGroupedCurrencies(): CurrencyGroup[] {
     // 场景一：搜索状态
     if (this.searchQuery) {
-      // 1. 安全转义：防止用户输入 \、*、? 等正则特殊字符导致引擎崩溃
-      const safeQuery = this.searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-      // 2. 模糊正则匹配
-      const regexPattern = safeQuery.split('').join('.*');
+
+      const rawChars = Array.from(this.searchQuery); // 使用 Array.from 安全拆分原字符
+      const safeChars = rawChars.map(char => char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')); // 对每一个被拆分出来的独立字符，单独套上正则转义
+      const regexPattern = safeChars.join('.*'); // 安全缝合并生成正则对象
       const searchRegex = new RegExp(regexPattern, 'i'); // 无视大小写
 
       const filtered = CURRENCY_WHITELIST.filter(currency =>
-      // 3. 将原本的 includes 升级为正则的 test() 方法
+      // 正则匹配
       searchRegex.test(currency.name) ||
         searchRegex.test(currency.code) ||
         (currency.symbol && searchRegex.test(currency.symbol))
