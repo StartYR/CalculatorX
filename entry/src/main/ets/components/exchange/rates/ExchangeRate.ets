@@ -72,7 +72,7 @@ export struct ExchangeRate {
   private draggedIndex: number = -1;                // 当前被拖拽项的原始索引
 
   // [系统环境变量]
-  @StorageProp('topRectHeight') topRectHeight: number = 80; // 顶部状态栏避让高度
+  // @StorageProp('topRectHeight') topRectHeight: number = 80; // 顶部状态栏避让高度
 
   // ---------------------------------------------------------
   // 2. 生命周期 (Lifecycle)
@@ -1004,43 +1004,55 @@ export struct ExchangeRate {
     Column() {
       // 全局数据渲染列表
       List({ space: 8 }) {
-        // 列表头部：非货币项，避免干扰主数据序列
+        // 列表头部：非货币项
         ListItem() {
-          Row() {
-            Text(`上次更新: ${this.lastUpdateTime}`)
-              .fontSize(12)
-              .fontColor($r('sys.color.font_tertiary'))
-
-            Blank()
-
-            // 状态反馈区：失败显示红字，成功显示绿字
-            if (this.isUpdateFailed) {
-              Text('✘ 更新失败')
+          Column() {
+            // 1. 更新时间与操作按钮
+            Row() {
+              Text(`上次更新: ${this.lastUpdateTime}`)
                 .fontSize(12)
-                .fontColor(Color.Red)
-                .margin({ right: 8 })
-                .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
-            } else if (this.isUpdateSuccess) {
-              Text('🗸 更新成功')
-                .fontSize(12)
-                .fontColor(Color.Green)
-                .margin({ right: 8 })
-                .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
+                .fontColor($r('sys.color.font_tertiary'))
+
+              Blank()
+
+              // 状态反馈区：失败显示红字，成功显示绿字
+              if (this.isUpdateFailed) {
+                Text('✘ 更新失败')
+                  .fontSize(12)
+                  .fontColor(Color.Red)
+                  .margin({ right: 8 })
+                  .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
+              } else if (this.isUpdateSuccess) {
+                Text('🗸 更新成功')
+                  .fontSize(12)
+                  .fontColor(Color.Green)
+                  .margin({ right: 8 })
+                  .transition(TransitionEffect.OPACITY.animation({ duration: 200 }))
+              }
+
+              // 根据状态动态切换文字和颜色
+              Button(this.isRefreshing ? '更新中...' : (this.isUpdateFailed ? '重试 ↻' : '更新 ↻'))
+                .fontSize(14)
+                .fontColor(this.isRefreshing ? $r('sys.color.font_secondary') : (this.isUpdateFailed ? Color.Red : $r('sys.color.font_emphasize')))
+                .backgroundColor(Color.Transparent)
+                .onClick(() => this.handleRefresh())
             }
+            .width('100%')
+            .padding({ top: 72, bottom: 0 })
 
-            // 根据状态动态切换文字和颜色
-            Button(this.isRefreshing ? '更新中...' : (this.isUpdateFailed ? '重试 ↻' : '更新 ↻'))
-              .fontSize(14)
-              // 更新中显示次级灰色，失败显示红色，正常状态显示主题强调色
-              .fontColor(this.isRefreshing ? $r('sys.color.font_tertiary') : (this.isUpdateFailed ? Color.Red : $r('sys.color.font_emphasize')))
-              .backgroundColor(Color.Transparent)
-              .onClick(() => this.handleRefresh())
+            // 2. 免责声明
+            Text('数据仅供参考，实际交易价格以银行报价为准')
+              .fontSize(11)
+              .fontColor($r('sys.color.font_tertiary'))
+              .width('100%')
+              .textAlign(TextAlign.Start)
+              .margin({ bottom: 8 }) // 底部间距
           }
           .width('100%')
-          .padding({ left: 24, right: 24, top: this.topRectHeight + 12, bottom: 4 })
+          .padding({ left: 24, right: 24 })
         }
 
-        // 核心循环：采用一维拍平结构提升性能与交互可塑性
+        // 采用一维拍平结构提升性能与交互可塑性
         ForEach(this.currencyList, (item: CurrencyListItem, index: number) => {
           ListItem() {
             // 直接调用抽离的 Builder，传入当前项的数据
