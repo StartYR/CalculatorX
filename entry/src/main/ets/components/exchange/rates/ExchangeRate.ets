@@ -813,8 +813,8 @@ export struct ExchangeRate {
         // 如果处于搜索状态，右侧索引条是隐藏的，不需要进行任何计算
         if (this.searchQuery) return;
 
-        // List 第 0 项是空白占位项，所以是是 firstIndex - 1
-        let activeGroupIndex = firstIndex - 1;
+        // List 分组对应右侧字母
+        let activeGroupIndex = firstIndex;
 
         // 越界安全兜底：防止用户在最顶部使劲往下拉，导致 firstIndex 小于0
         if (activeGroupIndex < 0) {
@@ -910,6 +910,7 @@ export struct ExchangeRate {
           .alignStyle(IndexerAlign.Right)    // 右侧对齐
           .position({ right: 4, top: 150 })  // 避开顶部的搜索框和毛玻璃区域
           .itemSize(18)                      // 字母触控热区大小
+          .itemBorderRadius(10086)           // 字母圆角
           .usingPopup(true)                  // 放大气泡反馈
           .popupPosition({ x: 48, y: 0 })    // 气泡向左偏移，防止被手指遮挡
           .selectedBackgroundColor($r('sys.color.background_emphasize')) // 选中项底色

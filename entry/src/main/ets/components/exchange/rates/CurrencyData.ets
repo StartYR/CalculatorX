@@ -44,7 +44,7 @@ export const CURRENCY_WHITELIST: CurrencyInfo[] = [
   { code: 'CHF', name: '瑞士法郎', symbol: 'CHF' },
   { code: 'CLF', name: '智利发展单位', symbol: 'UF' },
   { code: 'CLP', name: '智利比索', symbol: '$' },
-  { code: 'CNH', name: '人民币(离岸)', symbol: '¥' },
+  { code: 'CNH', name: '人民币 (离岸)', symbol: '¥' },
   { code: 'CNY', name: '人民币', symbol: '¥' },
   { code: 'COP', name: '哥伦比亚比索', symbol: '$' },
   { code: 'CRC', name: '哥斯达黎加科朗', symbol: '₡' },
