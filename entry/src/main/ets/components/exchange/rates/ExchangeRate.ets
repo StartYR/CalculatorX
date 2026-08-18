@@ -514,31 +514,39 @@ export struct ExchangeRate {
       let filtered: CurrencyInfo[] = [];
 
       try {
-        // 1. 安全拆分与转义
+        // 检测是否为纯英文、数字或空格
+        const isPureEnglish = /^[a-zA-Z0-9\s]+$/.test(this.searchQuery);
+
+        // 安全拆分与正则转义
         const rawChars = Array.from(this.searchQuery);
         const safeChars = rawChars.map(char => char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 
-        // 2. 构建正则对象
-        const regexPattern = safeChars.join('.*');
+        // 动态构建正则表达式
+        // 如果是纯英文，使用连续匹配；否则使用模糊匹配
+        const regexPattern = isPureEnglish ? safeChars.join('') : safeChars.join('.*');
         const searchRegex = new RegExp(regexPattern, 'i');
 
-        // 3. 正则模糊匹配
+        // 执行全维度匹配
         filtered = CURRENCY_WHITELIST.filter(currency =>
         searchRegex.test(currency.name) ||
           searchRegex.test(currency.code) ||
-          (currency.symbol && searchRegex.test(currency.symbol))
+          (currency.symbol && searchRegex.test(currency.symbol)) ||
+          // 使用 .some() 对关键词进行遍历，只要有一个词命中就展示该货币
+          currency.keywords.some(keyword => searchRegex.test(keyword))
         );
       } catch (err) {
-        // 4. 【核心防御】：正则引擎崩溃时的优雅降级方案
+        // 捕获正则匹配异常
         Logger.error(`[ExchangeRate] 正则解析异常，已降级为基础搜索: ${err}`);
         filtered = CURRENCY_WHITELIST.filter(currency =>
         currency.code.toLowerCase().includes(query) ||
           currency.name.includes(query) ||
-          (currency.symbol && currency.symbol.includes(query))
+          (currency.symbol && currency.symbol.includes(query)) ||
+          // 兜底方案中同样需要加入关键词的比对（记得统一转小写）
+          currency.keywords.some(keyword => keyword.toLowerCase().includes(query))
         );
       }
 
-      // 如果连一条匹配的数据都没有，直接返回真正的空数组，触发 UI 空状态
+      // 空状态识别：一条匹配的数据都没有，返回空数组，触发 UI 提示
       if (filtered.length === 0) {
         return [];
       }
