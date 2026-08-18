@@ -508,7 +508,7 @@ export struct ExchangeRate {
    * 分组逻辑
    */
   getGroupedCurrencies(): CurrencyGroup[] {
-    // 场景一：搜索状态 (极简逻辑，直接从全量数据过滤，天然去重)
+    // 场景一：搜索状态 (从全量数据过滤)
     if (this.searchQuery) {
       const query = this.searchQuery.toLowerCase();
       const filtered = CURRENCY_WHITELIST.filter(currency =>
@@ -516,6 +516,12 @@ export struct ExchangeRate {
         currency.name.includes(query) ||
         (currency.symbol && currency.symbol.includes(query)) // 顺便支持符号搜索
       );
+
+      // 如果一条匹配的数据都没有，返回空数组，让 UI 触发空状态视图
+      if (filtered.length === 0) {
+        return [];
+      }
+
       return [new CurrencyGroup('搜索结果', filtered)];
     }
 
@@ -693,10 +699,10 @@ export struct ExchangeRate {
           // 空状态提示
           ListItem() {
             Column() {
-              Text('未找到匹配的货币')
+              Text('未搜索到任何内容')
                 .fontSize(16)
                 .fontColor($r('sys.color.font_tertiary'))
-                .margin({ top: 40 })
+                .margin({ top: 32 })
             }
             .width('100%')
             .alignItems(HorizontalAlign.Center)
@@ -798,7 +804,7 @@ export struct ExchangeRate {
               .width('100%')
               .padding({ bottom: 8 }) // 不同的字母分组之间留出呼吸空间
             }
-          }, (group: CurrencyGroup) => group.letter)
+          }, (group: CurrencyGroup) => group.letter === '搜索结果' ? `搜索结果_${this.searchQuery}` : group.letter)
         }
 
         // 底部安全区占位项
