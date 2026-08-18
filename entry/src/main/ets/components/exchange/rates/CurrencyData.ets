@@ -60,7 +60,7 @@ export const CURRENCY_WHITELIST: CurrencyInfo[] = [
   { code: 'EGP', name: '埃及镑', symbol: '£', keywords: ['Egyptian Pound', 'Egypt'] },
   { code: 'ERN', name: '厄立特里亚纳克法', symbol: 'Nfk', keywords: ['Eritrean Nakfa', 'Eritrea'] },
   { code: 'ETB', name: '埃塞俄比亚比尔', symbol: 'Br', keywords: ['Ethiopian Birr', 'Ethiopia'] },
-  { code: 'EUR', name: '欧元', symbol: '€', keywords: ['Euro', '欧盟', 'European Union', '德国', 'Germany', '法国', 'France', '意大利', 'Italy', '西班牙', 'Spain', '荷兰', 'Netherlands', '葡萄牙', 'Portugal', '希腊', 'Greece', '比利时', 'Belgium', '奥地利', 'Austria', '芬兰', 'Finland', '爱尔兰', 'Ireland'] },
+  { code: 'EUR', name: '欧元', symbol: '€', keywords: ['Euro', '欧盟', 'European Union', '欧洲', '德国', 'Germany', '法国', 'France', '意大利', 'Italy', '西班牙', 'Spain', '荷兰', 'Netherlands', '葡萄牙', 'Portugal', '希腊', 'Greece', '比利时', 'Belgium', '奥地利', 'Austria', '芬兰', 'Finland', '爱尔兰', 'Ireland'] },
   { code: 'FJD', name: '斐济元', symbol: 'FJ$', keywords: ['Fijian Dollar'] },
   { code: 'FKP', name: '福克兰群岛镑', symbol: '£', keywords: ['Falkland Islands Pound', 'Falkland Islands'] },
   { code: 'GBP', name: '英镑', symbol: '£', keywords: ['British Pound Sterling', '英国', 'United Kingdom', 'UK'] },
