@@ -510,19 +510,33 @@ export struct ExchangeRate {
   getGroupedCurrencies(): CurrencyGroup[] {
     // 场景一：搜索状态
     if (this.searchQuery) {
+      const query = this.searchQuery.toLowerCase();
+      let filtered: CurrencyInfo[] = [];
 
+      try {
+        // 1. 安全拆分与转义
+        const rawChars = Array.from(this.searchQuery);
+        const safeChars = rawChars.map(char => char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 
-      const rawChars = Array.from(this.searchQuery); // 使用 Array.from 安全拆分原字符
-      const safeChars = rawChars.map(char => char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')); // 对每一个被拆分出来的独立字符，单独套上正则转义
-      const regexPattern = safeChars.join('.*'); // 安全缝合并生成正则对象
-      const searchRegex = new RegExp(regexPattern, 'i'); // 无视大小写
+        // 2. 构建正则对象
+        const regexPattern = safeChars.join('.*');
+        const searchRegex = new RegExp(regexPattern, 'i');
 
-      const filtered = CURRENCY_WHITELIST.filter(currency =>
-      // 正则匹配
-      searchRegex.test(currency.name) ||
-        searchRegex.test(currency.code) ||
-        (currency.symbol && searchRegex.test(currency.symbol))
-      );
+        // 3. 正则模糊匹配
+        filtered = CURRENCY_WHITELIST.filter(currency =>
+        searchRegex.test(currency.name) ||
+          searchRegex.test(currency.code) ||
+          (currency.symbol && searchRegex.test(currency.symbol))
+        );
+      } catch (err) {
+        // 4. 【核心防御】：正则引擎崩溃时的优雅降级方案
+        Logger.error(`[ExchangeRate] 正则解析异常，已降级为基础搜索: ${err}`);
+        filtered = CURRENCY_WHITELIST.filter(currency =>
+        currency.code.toLowerCase().includes(query) ||
+          currency.name.includes(query) ||
+          (currency.symbol && currency.symbol.includes(query))
+        );
+      }
 
       // 如果连一条匹配的数据都没有，直接返回真正的空数组，触发 UI 空状态
       if (filtered.length === 0) {
