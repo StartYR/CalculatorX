@@ -492,7 +492,7 @@ export struct ExchangeRate {
    * @param id - 要删除的列表项 ID
    */
   deleteCurrency(id: string) {
-    // 启动物理阻尼动画，平滑移除元素并使下方项自动补位
+    // 动画效果：平滑移除元素并使下方项自动补位
     animateTo({ duration: 350, curve: Curve.Friction }, () => {
       let index = this.currencyList.findIndex(item => item.id === id);
       if (index !== -1) {
@@ -518,6 +518,7 @@ export struct ExchangeRate {
       try {
         // 检测是否为纯英文、数字或空格
         const isPureEnglish = /^[a-zA-Z0-9\s]+$/.test(this.searchQuery);
+        Logger.debug(`[ExchangeRate] [纯英文检测] searchQuery: ${this.searchQuery}, isPureEnglish: ${isPureEnglish}`);
 
         // 安全拆分与正则转义
         const rawChars = Array.from(this.searchQuery);
