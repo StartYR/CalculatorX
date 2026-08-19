@@ -13,27 +13,13 @@ import { LengthMetrics } from '@kit.ArkUI';
 import { PreferenceManager } from '../../../utils/PreferenceManager';
 import http from '@ohos.net.http';
 import { ApiConfig } from '../../../utils/ApiConfig';
-import { CURRENCY_WHITELIST, CURRENCY_MAP, CurrencyInfo } from './CurrencyData';
-import { CurrencyListItem, ExchangeApiResponse } from './ExchangeTypes';
+import { CURRENCY_MAP } from './CurrencyData';
+import { CurrencyListItem } from './ExchangeTypes';
 import { ExchangeKeyboard } from './ExchangeKeyboard';
+import { CurrencySelector } from './CurrencySelector';
 import promptAction from '@ohos.promptAction';
 import connection from '@ohos.net.connection';
-import { GroupHeader, MenuGroup, MenuButton, ItemDivider } from '../../common/MenuComponents';
 import curves from '@ohos.curves';
-
-// 定义分组数据接口
-class CurrencyGroup {
-  letter: string;
-  data: CurrencyInfo[];
-
-  constructor(letter: string, data: CurrencyInfo[]) {
-    this.letter = letter;
-    this.data = data;
-  }
-}
-
-// 定义高频货币白名单
-const POPULAR_CURRENCIES: string[] = ['USD', 'EUR', 'CNY', 'GBP', 'JPY', 'HKD', 'AUD', 'CAD', 'CHF', 'SGD', 'KRW'];
 
 // ==================== 主组件 ====================
 @Component
@@ -52,17 +38,13 @@ export struct ExchangeRate {
   @State isKeyboardShow: boolean = true;            // 控制数字软键盘的显隐及选中态UI
   @State baseAmount: string = '';
   @State lastUpdateTime: string = '加载中...';       // 顶部显示的格式化时间文本
-  @State searchQuery: string = '';                  // 货币搜索框的输入关键字
 
   // [视图控制状态]
   @State isSelectorShow: boolean = false;           // 控制货币选择半模态窗口的显隐
   @State selectingId: string = '';                  // 记录当前正在选择货币的列表项 ID
-  @State keyboardAvoidHeight: number = 40;          // 底部键盘避让占位高度
-  @State mainListBottomSpace: number = 0;           // 控制主列表底部的占位项高度
-  private listScroller: Scroller = new Scroller();  // 列表滚动控制器 (选择货币窗口)
-  private mainListScroller: Scroller = new Scroller(); // 列表滚动控制器 (主界面)
-  private isAutoScrolling: boolean = false;         // 自动滚动锁
-  @State selectedIndex: number = 0;                 // 当前索引状态
+  @State mainListBottomSpace: number = 0;           // 控制主列表底部的动态沙袋占位高度
+  private scroller: Scroller = new Scroller();      // 主界面列表专属滚动控制器
+  private isAutoScrolling: boolean = false;         // 自动滚动锁 (防止代码滚动触发收回键盘)
 
   // [网络与反馈动效状态]
   @State isRefreshing: boolean = false;             // 是否处于更新（或模拟更新）状态
@@ -142,7 +124,6 @@ export struct ExchangeRate {
     PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_BASE_AMOUNT, this.baseAmount);
   }
 
-
   // ---------------------------------------------------------
   // 4. 网络请求与状态调度 (Network & State Dispatching)
   // ---------------------------------------------------------
@@ -166,7 +147,7 @@ export struct ExchangeRate {
       Logger.warn(`[ExchangeRate] 底层探网 API 异常，降级为 HTTP 真实探测: ${JSON.stringify(e)}`);
     }
 
-    // 2. 缓存有效时的【前端拦截与障眼法逻辑】(去掉了 isForceNetwork 参数校验)
+    // 2. 缓存有效时的前端拦截与障眼法逻辑
     if (this.isCacheValid()) {
       if (isNetCheckSuccess) {
         if (!hasNet) {
@@ -266,27 +247,22 @@ export struct ExchangeRate {
   /**
    * 统一的状态提交与动画触发器
    * 负责拦截冗余定时器、下发时间戳落盘、调用时间格式化，并执行 UI 视觉反馈
-   * @param isSuccess - 更新是否成功（无论是真实联网成功还是模拟拦截成功）
+   * @param isSuccess - 更新是否成功
    * @param toastMsg - 失败时展示的错误提示信息
    */
   commitUpdateState(isSuccess: boolean, toastMsg?: string) {
-    // 掐断未完成的定时器，防止狂点导致状态错乱
     if (this.feedbackTimer !== -1) {
       clearTimeout(this.feedbackTimer);
     }
 
     if (isSuccess) {
-      // 统一下发最新时间戳并落盘（无论真假更新都走这里，确保杀后台重启时不穿帮）
       this.lastUpdateTimeStamp = new Date().getTime();
       PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_LAST_UPDATE, this.lastUpdateTimeStamp);
-
-      // 统一调用格式化方法，更新顶部 UI 显示的“今天 HH:mm”字符串
       this.updateTimeDisplay();
 
       this.isUpdateSuccess = true;
       this.isUpdateFailed = false;
     } else {
-      // 失败：显示错误状态并弹窗
       this.isUpdateFailed = true;
       this.isUpdateSuccess = false;
       if (toastMsg) {
@@ -298,7 +274,6 @@ export struct ExchangeRate {
       }
     }
 
-    // 3秒后平滑重置状态，让界面的绿字/红字温柔淡出
     this.feedbackTimer = setTimeout(() => {
       animateTo({ duration: 300, curve: Curve.EaseInOut }, () => {
         this.isUpdateFailed = false;
@@ -309,7 +284,6 @@ export struct ExchangeRate {
 
   /**
    * 格式化最后更新时间戳，并更新顶部 UI 显示的文本
-   * 内部包含当天、跨天及补零等日期处理逻辑
    */
   updateTimeDisplay() {
     if (this.lastUpdateTimeStamp === 0) {
@@ -342,10 +316,7 @@ export struct ExchangeRate {
    * @returns {string} 格式化后的金额字符串
    */
   getConvertedAmount(targetCode: string, isEditing: boolean): string {
-    // 1. 状态拦截：如果正在被编辑，直接显示用户输入的原始内容
     if (isEditing) return this.baseAmount;
-
-    // 2. 空值与异常拦截：输入为空、为 0 或错误状态，直接返回 '0'
     if (!this.baseAmount || this.baseAmount === 'Error' || this.baseAmount === '0') return '0';
 
     try {
@@ -355,41 +326,23 @@ export struct ExchangeRate {
       let activeItem = this.currencyList.find(item => item.id === this.activeId);
       if (!activeItem) return '0';
 
-      // 3. 获取汇率值，并进行极其严格的安全兜底
-      // 如果字典中没有查到，或者查到的是 0（防止除零异常），则默认赋为 1
       let rateFrom = this.rateMap[activeItem.code];
       let rateTo = this.rateMap[targetCode];
 
-      // 针对 API 可能不返回基准货币本身的特殊处理
       if (activeItem.code === 'USD') rateFrom = 1;
       if (targetCode === 'USD') rateTo = 1;
 
-      // 彻底的防崩溃兜底
       if (!rateFrom || rateFrom === 0) rateFrom = 1;
       if (!rateTo) rateTo = 1;
 
-      // 4. 交叉换算核心公式：
-      // (输入金额 / 源货币兑USD汇率) * 目标货币兑USD汇率
       let amountInUSD = inputVal / rateFrom;
       let result = amountInUSD * rateTo;
 
-      // 5. 精度控制：最多保留 4 位小数，并通过 parseFloat 去除末尾无意义的 0 (如 1.5000 -> 1.5)
       return parseFloat(result.toFixed(4)).toString();
     } catch (err) {
       Logger.error(`[ExchangeRate] 计算引擎异常: ${err}`);
       return 'Error';
     }
-  }
-
-  /**
-   * 判断某个货币代码是否为当前正在选择/修改的列表项的原有货币
-   * 用于在半模态选择窗口中渲染高亮或打钩状态
-   * @param code - 需要比对的货币代码
-   * @returns {boolean} 如果匹配则返回 true
-   */
-  isCurrencySelected(code: string): boolean {
-    let selectingItem = this.currencyList.find(c => c.id === this.selectingId);
-    return selectingItem ? selectingItem.code === code : false;
   }
 
   // ---------------------------------------------------------
@@ -410,11 +363,11 @@ export struct ExchangeRate {
       this.saveData();
     }
 
-    // 唤起键盘
+    // 唤起键盘并平滑撑开沙袋占位
     this.isKeyboardShow = true;
 
     animateTo({ curve: curves.springMotion(0.35, 0.9) }, () => {
-      this.mainListBottomSpace = 300;
+      this.mainListBottomSpace = 260;
     });
 
     // 防遮挡动态避让：让被点击的卡片自动滚到视区中间
@@ -425,12 +378,12 @@ export struct ExchangeRate {
         this.isAutoScrolling = true;
 
         // 因为列表的第 0 项是头部信息栏，所以真实的 UI 索引是 itemIndex + 1
-        this.mainListScroller.scrollToIndex(itemIndex + 1, true, ScrollAlign.CENTER);
+        this.scroller.scrollToIndex(itemIndex + 1, true, ScrollAlign.CENTER);
 
         // 动画完成后释放锁
-        animateTo({ curve: curves.springMotion(0.35, 0.9) }, () => {
-          this.mainListBottomSpace = 0;
-        });
+        setTimeout(() => {
+          this.isAutoScrolling = false;
+        }, 500);
       }
     }, 150);
   }
@@ -466,14 +419,12 @@ export struct ExchangeRate {
     }
 
     // 2. 500ms 防抖写盘
-    // 如果之前已经有一个正在倒计时的写盘任务，掐断
     if (this.keyboardSaveTimer !== -1) {
       clearTimeout(this.keyboardSaveTimer);
     }
-    // 重新开启一个 500ms 的倒计时
     this.keyboardSaveTimer = setTimeout(() => {
       this.saveData();
-      this.keyboardSaveTimer = -1; // 执行完毕后重置状态
+      this.keyboardSaveTimer = -1;
     }, 500);
   }
 
@@ -483,12 +434,11 @@ export struct ExchangeRate {
    */
   openSelector(id: string) {
     this.selectingId = id;
-    this.searchQuery = '';
     this.isSelectorShow = true;
   }
 
   /**
-   * 确认选择货币，并更新对应项的货币代码
+   * 确认选择货币，并更新对应项的货币代码 (子组件的回调出口)
    * @param code - 选中的货币代码
    */
   selectCurrency(code: string) {
@@ -534,92 +484,6 @@ export struct ExchangeRate {
       }
     });
     this.saveData();
-  }
-
-  /**
-   * 分组逻辑
-   */
-  getGroupedCurrencies(): CurrencyGroup[] {
-    // 场景一：搜索状态
-    if (this.searchQuery) {
-      const query = this.searchQuery.toLowerCase();
-      let filtered: CurrencyInfo[] = [];
-
-      try {
-        // 检测是否为纯英文、数字或空格
-        const isPureEnglish = /^[a-zA-Z0-9\s]+$/.test(this.searchQuery);
-        Logger.debug(`[ExchangeRate] [纯英文检测] searchQuery: ${this.searchQuery}, isPureEnglish: ${isPureEnglish}`);
-
-        // 安全拆分与正则转义
-        const rawChars = Array.from(this.searchQuery);
-        const safeChars = rawChars.map(char => char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-
-        // 动态构建正则表达式
-        // 如果是纯英文，使用连续匹配；否则使用模糊匹配
-        const regexPattern = isPureEnglish ? safeChars.join('') : safeChars.join('.*');
-        const searchRegex = new RegExp(regexPattern, 'i');
-
-        // 执行全维度匹配
-        filtered = CURRENCY_WHITELIST.filter(currency =>
-        searchRegex.test(currency.name) ||
-          searchRegex.test(currency.code) ||
-          (currency.symbol && searchRegex.test(currency.symbol)) ||
-          // 使用 .some() 对关键词进行遍历，只要有一个词命中就展示该货币
-          currency.keywords.some(keyword => searchRegex.test(keyword))
-        );
-      } catch (err) {
-        // 捕获正则匹配异常
-        Logger.error(`[ExchangeRate] 正则解析异常，已降级为基础搜索: ${err}`);
-        filtered = CURRENCY_WHITELIST.filter(currency =>
-        currency.code.toLowerCase().includes(query) ||
-          currency.name.includes(query) ||
-          (currency.symbol && currency.symbol.includes(query)) ||
-          // 兜底方案中同样需要加入关键词的比对（记得统一转小写）
-          currency.keywords.some(keyword => keyword.toLowerCase().includes(query))
-        );
-      }
-
-      // 空状态识别：一条匹配的数据都没有，返回空数组，触发 UI 提示
-      if (filtered.length === 0) {
-        return [];
-      }
-
-      return [new CurrencyGroup('搜索结果', filtered)];
-    }
-
-    // 场景二：默认状态 (常用分组 + A-Z 分组)
-    const groups: CurrencyGroup[] = [];
-
-    // 1. “常用”分组
-    const popularData: CurrencyInfo[] = [];
-    POPULAR_CURRENCIES.forEach(code => {
-      const currency = CURRENCY_WHITELIST.find(c => c.code === code);
-      if (currency) {
-        popularData.push(currency);
-      }
-    });
-
-    if (popularData.length > 0) {
-      groups.push(new CurrencyGroup('常用', popularData));
-    }
-
-    // 2. 标准的 A-Z 分组
-    const azMap = new Map<string, CurrencyInfo[]>();
-    CURRENCY_WHITELIST.forEach(currency => {
-      const firstLetter = currency.code.charAt(0).toUpperCase();
-      if (!azMap.has(firstLetter)) {
-        azMap.set(firstLetter, []);
-      }
-      azMap.get(firstLetter)?.push(currency);
-    });
-
-    // 排序 A-Z 分组并追加到总组中
-    const sortedKeys = Array.from(azMap.keys()).sort();
-    sortedKeys.forEach(key => {
-      groups.push(new CurrencyGroup(key, azMap.get(key) || []));
-    });
-
-    return groups;
   }
 
   // ---------------------------------------------------------
@@ -746,283 +610,18 @@ export struct ExchangeRate {
   }
 
   /**
-   * 带有搜索框的货币选择半模态窗口内容
+   * 货币选择器的半模态挂载点
    */
   @Builder
-  CurrencySelectorBuilder() {
-    Stack({ alignContent: Alignment.Top }) {
-
-      // ================= 层级 1 (底层)：全屏滚动的列表 =================
-      List({ scroller: this.listScroller }) {
-
-        // 调用刚刚写好的分组函数获取数据
-        if (this.getGroupedCurrencies().length === 0) {
-          // 空状态提示
-          ListItem() {
-            Column() {
-              Text('未搜索到任何内容')
-                .fontSize(16)
-                .fontColor($r('sys.color.font_tertiary'))
-                .margin({ top: 32 })
-            }
-            .width('100%')
-            .alignItems(HorizontalAlign.Center)
-          }
-        } else {
-          // 真实数据遍历 (分组渲染)
-          ForEach(this.getGroupedCurrencies(), (group: CurrencyGroup) => {
-            ListItem() {
-              Column() {
-                // 1. 渲染分组的 Header (如 "A", "B", 或 "搜索结果")
-                GroupHeader({ title: group.letter })
-
-                // 2. 渲染统一的卡片底板
-                MenuGroup() {
-                  ForEach(group.data, (currency: CurrencyInfo, index: number) => {
-
-                    // 3. 横向排版
-                    Row() {
-                      // 货币符号圆形头像图标
-                      Text(currency.symbol)
-                        .width(32)
-                        .height(32)
-                        .backgroundColor(this.isCurrencySelected(currency.code)
-                          ? $r('sys.color.background_emphasize')
-                          : $r('sys.color.comp_background_tertiary'))
-                        .borderRadius(16) // 高度一半，完美圆形
-                        .textAlign(TextAlign.Center)
-                        .fontColor(this.isCurrencySelected(currency.code)
-                          ? Color.White
-                          : $r('sys.color.font_primary'))
-                        .fontWeight(FontWeight.Medium)
-                        // 自适应缩放
-                        .maxLines(1)
-                        .maxFontSize(16)       // 默认字号 ($, ¥, €)
-                        .minFontSize(4)        // 最小字号
-                        .padding({ left: 6, right: 6 }) // 安全内边距，防止贴死边缘
-                        .margin({ right: 20 })  // 与右侧的代码距离
-
-                      // 货币代码
-                      Text(currency.code)
-                        .fontSize(18)
-                        .fontWeight(this.isCurrencySelected(currency.code)
-                          ? FontWeight.Bold
-                          : FontWeight.Medium)
-                        .fontColor(this.isCurrencySelected(currency.code)
-                          ? $r('sys.color.font_emphasize')
-                          : $r('sys.color.font_primary'))
-                        .width(60)
-                        .margin({ right: 8 })
-
-                      // 货币名称
-                      Text(currency.name)
-                        .fontSize(16)
-                        .fontWeight(this.isCurrencySelected(currency.code)
-                          ? FontWeight.Medium
-                          : FontWeight.Regular)
-                        .fontColor(this.isCurrencySelected(currency.code)
-                          ? $r('sys.color.font_emphasize_contrary')
-                          : $r('sys.color.font_secondary'))
-                        .layoutWeight(1)
-                        .maxLines(1)
-                        .textOverflow({ overflow: TextOverflow.Ellipsis })
-                        .margin({ right: 4 })
-
-                      // Blank() // 中间空白
-
-                      // 选中打钩状态
-                      if (this.isCurrencySelected(currency.code)) {
-                        SymbolGlyph($r('sys.symbol.checkmark'))
-                          .fontColor([$r('sys.color.font_emphasize')])
-                          .fontSize(20)
-                      }
-                    }
-                    .width('100%')
-                    .constraintSize({ minHeight: 46 }) // 最小点击高度
-                    .padding({ left: 10, right: 16, top: 10, bottom: 10 })
-                    .borderRadius(16) // 内部条目圆角，配合按压反馈
-                    // 添加点击变色的交互反馈
-                    .stateStyles({
-                      pressed: {
-                        .backgroundColor($r('sys.color.comp_background_secondary'))
-                      },
-                      normal: {
-                        .backgroundColor(Color.Transparent)
-                      }
-                    })
-                    .onClick(() => {
-                      this.selectCurrency(currency.code);
-                    })
-
-                    // 4. 分隔线控制
-                    if (index < group.data.length - 1) {
-                      ItemDivider({ marginLeft: 60 })
-                    }
-
-                  }, (currency: CurrencyInfo) => `${group.letter}_${currency.code}`)
-                }
-              }
-              .width('100%')
-              .padding({ bottom: 8 }) // 不同的字母分组之间留出呼吸空间
-            }
-          }, (group: CurrencyGroup) => group.letter === '搜索结果' ? `搜索结果_${this.searchQuery}` : group.letter)
-
-          // 动态底部统计
-          ListItem() {
-            Text(
-              this.searchQuery
-                ? `搜索到 ${this.getGroupedCurrencies()[0].data.length} 种货币`
-                : `共 ${CURRENCY_WHITELIST.length} 种货币`
-            )
-              .fontSize(12)
-              .fontColor($r('sys.color.font_secondary'))
-              .width('100%')
-              .textAlign(TextAlign.Center)
-              .margin({ top: 12 })
-          }
-        }
-
-        // 底部安全区占位项
-        ListItem() {
-          Row().width('100%').height(this.keyboardAvoidHeight)
-        }
+  SelectorSheetBuilder() {
+    CurrencySelector({
+      // 向子组件传递当前的激活币种用于打钩高亮
+      currentCurrencyCode: this.currencyList.find(c => c.id === this.selectingId)?.code || '',
+      // 接收子组件发回的选中代码
+      onSelect: (code: string) => {
+        this.selectCurrency(code);
       }
-      .width('100%')
-      .height('100%')
-      .padding({ left: 24, right: 36, top: 120})
-      .clip(false)
-      .scrollBar(BarState.Off)
-      .edgeEffect(EdgeEffect.Spring)
-      // 监听列表滚动事件，实现反向联动 (滑动列表 -> 点亮字母)
-      .onScrollIndex((firstIndex: number) => {
-        // 如果处于搜索状态，右侧索引条是隐藏的，不需要进行任何计算
-        if (this.searchQuery) return;
-
-        // List 分组对应右侧字母
-        let activeGroupIndex = firstIndex;
-
-        // 越界安全兜底：防止用户在最顶部使劲往下拉，导致 firstIndex 小于0
-        if (activeGroupIndex < 0) {
-          activeGroupIndex = 0;
-        }
-
-        // 只有当索引真正发生变化时才更新状态，避免无意义的 UI 重绘
-        if (this.selectedIndex !== activeGroupIndex) {
-          this.selectedIndex = activeGroupIndex;
-        }
-      })
-
-      // ================= 层级 2 (中层)：真正的渐变毛玻璃特效引擎 =================
-      Stack() {
-        // 2.1 毛玻璃实体层
-        Column()
-          .width('100%')
-          .height(84)
-          .backgroundBlurStyle(BlurStyle.Thin)
-
-        // 2.2 渐变透明度遮罩层 (Alpha Mask)
-        Column()
-          .width('100%')
-          .height(84)
-          .linearGradient({
-            angle: 180,
-            colors: [
-              // 顶部到搜索框下半部分：100% 纯白（完整保留底层毛玻璃效果）
-              ['#FFFFFFFF', 0.0],
-              ['#FFFFFFFF', 0.4],
-              // 指定透明色，底部边缘：过渡到 100% 透明白（让毛玻璃平滑羽化溶解）
-              ['#32ffffff', 1.0]
-            ]
-          })
-          // 将自己的透明度通道作为蒙版，扣除下方的毛玻璃
-          .blendMode(BlendMode.DST_IN)
-      }
-      .width('100%')
-      .height(84)
-      // 开启离屏渲染，隔离混合作用域，确保蒙版只作用于内部的毛玻璃，不破坏底部的 List
-      .blendMode(BlendMode.SRC_OVER, BlendApplyType.OFFSCREEN)
-      // 中层特效无需接收点击事件，放行给底部的列表滑动
-      .hitTestBehavior(HitTestMode.None)
-
-      // ================= 层级 3 (上层)：纯粹悬浮的药丸形搜索框 =================
-      Column() {
-        // 标题
-        Text('选择货币')
-          .fontSize(22)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('sys.color.font_primary'))
-          .width('100%')
-          .textAlign(TextAlign.Start)
-          .margin({ left: 20, top: 4, bottom: 8 })
-
-        // 搜索框
-        Search({ placeholder: '搜索货币代码或名称...', value: $$this.searchQuery })
-          .width('100%')
-          .height(40)
-          .borderWidth(0.1)
-          .borderColor($r('sys.color.comp_divider'))
-          .backgroundColor(Color.Transparent)
-          .backgroundBlurStyle(BlurStyle.Thin)
-          .onChange((val: string) => {
-            this.searchQuery = val.toUpperCase();
-          })
-          // 监听焦点，动态撑开底部空间
-          .onFocus(() => {
-            // 键盘弹出时，用动画将底部留白撑高
-            animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
-              this.keyboardAvoidHeight = 340;
-            });
-          })
-          .onBlur(() => {
-            // 键盘收起时，恢复原本的安全区高度
-            animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
-              this.keyboardAvoidHeight = 40;
-            });
-          })
-      }
-      .width('100%')
-      .padding({ left: 24, right: 24, top: 24 })
-
-      // ================= 层级 4 (最上层)：右侧字母索引条 =================
-      // 只有在非搜索状态下才显示索引条
-      if (!this.searchQuery) {
-        AlphabetIndexer({
-          // 动态映射数据源，把“常用”替换成星星图标，保持右侧字母表的窄宽度
-          arrayValue: this.getGroupedCurrencies().map(group => group.letter === '常用' ? '★' : group.letter),
-          selected: this.selectedIndex
-        })
-          .alignStyle(IndexerAlign.Right)    // 右侧对齐
-          .position({ right: 4, top: 150 })  // 避开顶部的搜索框和毛玻璃区域
-          .itemSize(18)                      // 字母触控热区大小
-          .itemBorderRadius(10086)           // 字母圆角
-          .usingPopup(true)                  // 放大气泡反馈
-          .popupPosition({ x: 48, y: 0 })    // 气泡向左偏移，防止被手指遮挡
-          .selectedBackgroundColor($r('sys.color.background_emphasize')) // 选中项底色
-          .selectedColor(Color.White)        // 选中项文字颜色
-          .popupColor($r('sys.color.font_emphasize'))          // 气泡文字颜色
-          // .popupBackground($r('sys.color.background_emphasize')) // 气泡底色
-          .onSelect((index: number) => {
-            // 手按索引条，列表跟随跳转
-            this.selectedIndex = index;
-            this.listScroller.scrollToIndex(index);
-          })
-      }
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor($r('sys.color.background_secondary'))
-  }
-
-  /**
-   * 菜单项右侧打钩插槽
-   */
-  @Builder
-  SelectedCheckmark(code: string) {
-    if (this.isCurrencySelected(code)) {
-      SymbolGlyph($r('sys.symbol.checkmark'))
-        .fontColor([$r('sys.color.font_emphasize')])
-        .fontSize(20)
-    }
+    })
   }
 
   // ---------------------------------------------------------
@@ -1035,7 +634,7 @@ export struct ExchangeRate {
   build() {
     Stack({ alignContent: Alignment.Bottom }) {
       // 全局数据渲染列表
-      List({ space: 8, scroller: this.mainListScroller }) {
+      List({ space: 8, scroller: this.scroller }) {
         // 列表头部：非货币项
         ListItem() {
           Column() {
@@ -1125,7 +724,7 @@ export struct ExchangeRate {
           .padding({ left: 16, right: 16, top: 8, bottom: 32 })
         }
 
-        // 底部占位项
+        // 底部占位项 (动态沙袋)
         ListItem() {
           Row()
             .width('100%')
@@ -1182,7 +781,7 @@ export struct ExchangeRate {
           this.isKeyboardShow = false;
 
           // 平滑降低底部的占位项目高度
-          animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+          animateTo({ curve: curves.springMotion(0.35, 0.9) }, () => {
             this.mainListBottomSpace = 0;
           });
         }
@@ -1207,7 +806,8 @@ export struct ExchangeRate {
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.background_secondary'))
-    .bindSheet($$this.isSelectorShow, this.CurrencySelectorBuilder(), {
+    // ✅ 精简后的半模态窗口调用点
+    .bindSheet($$this.isSelectorShow, this.SelectorSheetBuilder(), {
       height: SheetSize.LARGE
     })
   }
