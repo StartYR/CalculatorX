@@ -1136,7 +1136,7 @@ export struct ExchangeRate {
       .height('100%')
       .padding({ top: 0, bottom: 0 })
       .scrollBar(BarState.Off)
-      .edgeEffect(EdgeEffect.Spring)
+      .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
       .fadingEdge(true, { fadingEdgeLength: LengthMetrics.vp(12) })
       .onItemDragStart((event: ItemDragInfo, itemIndex: number) => {
         let actualIndex = itemIndex - 1;
