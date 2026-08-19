@@ -60,6 +60,7 @@ export struct ExchangeRate {
   private listScroller: Scroller = new Scroller();  // 列表滚动控制器 (选择货币窗口)
   private mainListScroller: Scroller = new Scroller(); // 列表滚动控制器 (主界面)
   private isAutoScrolling: boolean = false;         // 自动滚动锁
+  @State mainListBottomSpace: number = 0;           // 控制主列表底部的占位项高度
   @State selectedIndex: number = 0;                 // 当前索引状态
 
   // [网络与反馈动效状态]
@@ -402,7 +403,7 @@ export struct ExchangeRate {
    */
   setActiveCurrency(id: string, code: string) {
     // 唤起键盘
-      this.isKeyboardShow = true;
+    this.isKeyboardShow = true;
 
     // 只有点击“不是当前激活项”的卡片时，才重新换算和写盘
     if (this.activeId !== id) {
@@ -956,7 +957,6 @@ export struct ExchangeRate {
           .borderWidth(0.1)
           .borderColor($r('sys.color.comp_divider'))
           .backgroundColor(Color.Transparent)
-          // 毛玻璃材质只贴在搜索框上
           .backgroundBlurStyle(BlurStyle.Thin)
           .onChange((val: string) => {
             this.searchQuery = val.toUpperCase();
@@ -1028,7 +1028,7 @@ export struct ExchangeRate {
    * 主界面渲染 (Main Build)
    */
   build() {
-    Column() {
+    Stack({ alignContent: Alignment.Bottom }) {
       // 全局数据渲染列表
       List({ space: 8, scroller: this.mainListScroller }) {
         // 列表头部：非货币项
@@ -1119,9 +1119,17 @@ export struct ExchangeRate {
           .justifyContent(FlexAlign.Center)
           .padding({ left: 16, right: 16, top: 8, bottom: 32 })
         }
+
+        // 底部占位项
+        ListItem() {
+          Row()
+            .width('100%')
+            .height(this.mainListBottomSpace)
+        }
       }
       .layoutWeight(1)
       .width('100%')
+      .height('100%')
       .padding({ top: 0, bottom: 0 })
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.Spring)
@@ -1169,8 +1177,6 @@ export struct ExchangeRate {
             this.isKeyboardShow = false;
         }
       })
-
-      Blank()
 
       // ==================== 底部输入键盘 ====================
       if (this.isKeyboardShow) {
