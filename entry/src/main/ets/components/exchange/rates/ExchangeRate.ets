@@ -48,6 +48,7 @@ export struct ExchangeRate {
 
   // [UI 交互与双向绑定状态]
   @State activeId: string = '';
+  @State isKeyboardShow: boolean = true;            // 控制数字软键盘的显隐及选中态UI
   @State baseAmount: string = '';
   @State lastUpdateTime: string = '加载中...';       // 顶部显示的格式化时间文本
   @State searchQuery: string = '';                  // 货币搜索框的输入关键字
@@ -392,12 +393,18 @@ export struct ExchangeRate {
   // ---------------------------------------------------------
 
   /**
-   * 设置指定的货币项为当前激活（输入）状态
+   * 设置指定的货币项为当前激活（输入）状态，并唤起键盘
    * 切换时会自动将该项当前的折算结果反写为新的基准金额，确保视觉上的平滑过渡
    * @param id - 被点击激活的列表项 ID
    * @param code - 被点击激活的列表项的货币代码
    */
   setActiveCurrency(id: string, code: string) {
+    // 唤起键盘
+    // animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+      this.isKeyboardShow = true;
+    // });
+
+    // 只有点击了“不是当前激活项”的卡片时，才重新换算和写盘
     if (this.activeId !== id) {
       this.baseAmount = this.getConvertedAmount(code, false);
       this.activeId = id;
@@ -652,22 +659,22 @@ export struct ExchangeRate {
           Text(item.code)
             .fontSize(16)
             .fontWeight(FontWeight.Bold)
-            .fontColor(this.activeId === item.id ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
+            .fontColor(this.activeId === item.id && this.isKeyboardShow ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
           Image($r('sys.media.ohos_ic_public_arrow_down'))
             .width(16)
             .height(16)
-            .fillColor(this.activeId === item.id ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
+            .fillColor(this.activeId === item.id && this.isKeyboardShow ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
             .margin({ left: 4 })
         }
       }
-      .type(ButtonType.Normal) // 指定为 Normal，保留自定义的矩形和圆角
+      .type(ButtonType.Normal)
       .padding({ top: 8, bottom: 8, left: 12, right: 12 })
       .borderRadius(12)
-      .backgroundColor(this.activeId === item.id ? $r('sys.color.comp_background_primary') : $r('sys.color.background_secondary'))
+      .backgroundColor(this.activeId === item.id && this.isKeyboardShow ? $r('sys.color.comp_background_primary') : $r('sys.color.background_secondary'))
       .onClick(() => this.openSelector(item.id))
       .margin({ right: 14 })
       .alignSelf(ItemAlign.Center)
-      .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.95 }) // 轻微且顺滑的向内缩放效果
+      .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.95 })
 
       // 右侧内容区：两行式布局
       Column() {
@@ -688,7 +695,7 @@ export struct ExchangeRate {
           Text(`${CURRENCY_MAP[item.code]?.symbol || ''} ${this.getConvertedAmount(item.code, this.activeId === item.id)}`)
             .fontSize(24)
             .fontWeight(FontWeight.Medium)
-            .fontColor(this.activeId === item.id ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
+            .fontColor(this.activeId === item.id && this.isKeyboardShow ? $r('sys.color.font_primary') : $r('sys.color.font_secondary'))
             .width('100%')
             .textAlign(TextAlign.End)
             .maxLines(1)
@@ -704,14 +711,14 @@ export struct ExchangeRate {
     .padding({ left: 16, right: 16 })
     .stateStyles({
       normal: {
-        .backgroundColor(this.activeId === item.id ? $r('sys.color.comp_background_tertiary') : $r('sys.color.comp_background_primary'))
+        .backgroundColor(this.activeId === item.id && this.isKeyboardShow ? $r('sys.color.comp_background_tertiary') : $r('sys.color.comp_background_primary'))
       },
       pressed: {
         .backgroundColor($r('sys.color.interactive_pressed'))
       }
     })
     .borderRadius(16)
-    .borderWidth(this.activeId === item.id ? 1.0 : 0.5)
+    .borderWidth(this.activeId === item.id && this.isKeyboardShow ? 1.0 : 0.5)
     .borderColor($r('sys.color.comp_divider'))
   }
 
@@ -1136,15 +1143,24 @@ export struct ExchangeRate {
         // 拖拽结束，列表顺序已定，此时调用保存
         this.saveData();
       })
+      .onScrollStart(() => {
+        // 当手指开始滑动列表时，收起键盘，取消高亮UI
+        if (this.isKeyboardShow) {
+            this.isKeyboardShow = false;
+        }
+      })
 
       Blank()
 
       // ==================== 底部输入键盘 ====================
-      ExchangeKeyboard({
-        onKeyPress: (btn: string | Resource) => {
-          this.handleKeyboardInput(btn);
-        }
-      })
+      if (this.isKeyboardShow) {
+        ExchangeKeyboard({
+          onKeyPress: (btn: string | Resource) => {
+            this.handleKeyboardInput(btn);
+          }
+        })
+          .transition(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 350, curve: Curve.FastOutSlowIn }))
+      }
     }
     .width('100%')
     .height('100%')
