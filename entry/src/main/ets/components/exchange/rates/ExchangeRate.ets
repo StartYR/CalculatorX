@@ -19,6 +19,7 @@ import { ExchangeKeyboard } from './ExchangeKeyboard';
 import promptAction from '@ohos.promptAction';
 import connection from '@ohos.net.connection';
 import { GroupHeader, MenuGroup, MenuButton, ItemDivider } from '../../common/MenuComponents';
+import curves from '@ohos.curves';
 
 // 定义分组数据接口
 class CurrencyGroup {
@@ -412,8 +413,8 @@ export struct ExchangeRate {
     // 唤起键盘
     this.isKeyboardShow = true;
 
-    animateTo({ duration: 350, curve: Curve.FastOutSlowIn }, () => {
-      this.mainListBottomSpace = 260; // 平滑撑开底部占位项
+    animateTo({ curve: curves.springMotion(0.35, 0.9) }, () => {
+      this.mainListBottomSpace = 300;
     });
 
     // 防遮挡动态避让：让被点击的卡片自动滚到视区中间
@@ -427,9 +428,9 @@ export struct ExchangeRate {
         this.mainListScroller.scrollToIndex(itemIndex + 1, true, ScrollAlign.CENTER);
 
         // 动画完成后释放锁
-        setTimeout(() => {
-          this.isAutoScrolling = false;
-        }, 300);
+        animateTo({ curve: curves.springMotion(0.35, 0.9) }, () => {
+          this.mainListBottomSpace = 0;
+        });
       }
     }, 150);
   }
@@ -1194,7 +1195,13 @@ export struct ExchangeRate {
             this.handleKeyboardInput(btn);
           }
         })
-          .transition(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: 350, curve: Curve.FastOutSlowIn }))
+          .transition(
+            TransitionEffect
+              .move(TransitionEdge.BOTTOM)
+              .animation({
+                curve: curves.springMotion(0.35, 0.9)
+              })
+          )
       }
     }
     .width('100%')
