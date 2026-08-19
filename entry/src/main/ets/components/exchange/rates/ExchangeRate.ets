@@ -471,15 +471,20 @@ export struct ExchangeRate {
   }
 
   /**
-   * 在列表尾部新增一条货币转换项
+   * 在列表尾部新增一条货币转换项，并自动唤起货币选择器
    */
   addCurrency() {
     let newId = new Date().getTime().toString();
-    // 启动物理阻尼动画，确保新元素自然滑入列表尾部
+
+    // 动画效果
     animateTo({ duration: 350, curve: Curve.Friction }, () => {
-      this.currencyList.push(new CurrencyListItem(newId, 'USD'));
+      this.currencyList.push(new CurrencyListItem(newId, 'USD')); // 默认 USD
     });
+
     this.saveData();
+
+    // 唤起货币选择窗口
+    this.openSelector(newId);
   }
 
   /**
