@@ -57,7 +57,9 @@ export struct ExchangeRate {
   @State isSelectorShow: boolean = false;           // 控制货币选择半模态窗口的显隐
   @State selectingId: string = '';                  // 记录当前正在选择货币的列表项 ID
   @State keyboardAvoidHeight: number = 40;          // 底部键盘避让占位高度
-  private listScroller: Scroller = new Scroller();  // 列表滚动控制器
+  private listScroller: Scroller = new Scroller();  // 列表滚动控制器 (选择货币窗口)
+  private mainListScroller: Scroller = new Scroller(); // 列表滚动控制器 (主界面)
+  private isAutoScrolling: boolean = false;         // 自动滚动锁
   @State selectedIndex: number = 0;                 // 当前索引状态
 
   // [网络与反馈动效状态]
@@ -400,16 +402,31 @@ export struct ExchangeRate {
    */
   setActiveCurrency(id: string, code: string) {
     // 唤起键盘
-    // animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
       this.isKeyboardShow = true;
-    // });
 
-    // 只有点击了“不是当前激活项”的卡片时，才重新换算和写盘
+    // 只有点击“不是当前激活项”的卡片时，才重新换算和写盘
     if (this.activeId !== id) {
       this.baseAmount = this.getConvertedAmount(code, false);
       this.activeId = id;
       this.saveData();
     }
+
+    // 防遮挡动态避让：让被点击的卡片自动滚到视区中间
+    // 使用 setTimeout 稍微延迟，等待底层 Flex 布局重新计算键盘挤压后的新高度
+    setTimeout(() => {
+      let itemIndex = this.currencyList.findIndex(item => item.id === id);
+      if (itemIndex !== -1) {
+        this.isAutoScrolling = true; // 开启自动滚动锁，防止触发 onScrollStart 收起键盘
+
+        // 列表的第 0 项是头部的信息栏，所以真实的 UI 索引是 itemIndex + 1
+        this.mainListScroller.scrollToIndex(itemIndex + 1, true, ScrollAlign.CENTER); // 将卡片居中展示在剩余的可视区域内
+
+        // 300ms 后释放锁
+        setTimeout(() => {
+          this.isAutoScrolling = false;
+        }, 300);
+      }
+    }, 150);
   }
 
   /**
@@ -1013,7 +1030,7 @@ export struct ExchangeRate {
   build() {
     Column() {
       // 全局数据渲染列表
-      List({ space: 8 }) {
+      List({ space: 8, scroller: this.mainListScroller }) {
         // 列表头部：非货币项
         ListItem() {
           Column() {
@@ -1144,6 +1161,9 @@ export struct ExchangeRate {
         this.saveData();
       })
       .onScrollStart(() => {
+        // 如果当前是代码正在控制列表滚动（比如键盘避让），直接返回
+        if (this.isAutoScrolling) return;
+
         // 当手指开始滑动列表时，收起键盘，取消高亮UI
         if (this.isKeyboardShow) {
             this.isKeyboardShow = false;
