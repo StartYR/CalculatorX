@@ -27,7 +27,7 @@ export const topShiftButtons: Array<string | Resource> = [
 // 核心新增：基于当前激活的函数类型，动态生成主键盘矩阵
 export function getDynamicTopButtons(type: FunctionType | undefined): Array<string | Resource> {
   const base: Array<string | Resource> = [
-    '⇧Shift', '(', '⇦', '⇨', ')', '关闭',
+    '⇧Shift', '(', '⇦', '⇨', ')', '⌨⇩',
     icon_sqrt, icon_sqrtx, icon_power2, icon_power,'log', 'ln',
     'sin', 'cos', 'tan', icon_fraction
   ];
@@ -56,14 +56,13 @@ export const bottomButtons: Array<string | Resource> = [
 
 function getLocalFontColor(btn: string | Resource): ResourceColor {
   if (btn === 'π' || btn === 'e') return getFontColor('0');
-  if (btn === '确定' || btn === '关闭') return getFontColor('=');
+  if (btn === '确定') return getFontColor('=');
   return getFontColor(btn);
 }
 
 function getLocalBgColor(btn: string | Resource, isShift: boolean): ResourceColor {
   if (btn === 'π' || btn === 'e') return getBgColor('0', false);
   if (btn === '确定') return getBgColor('=', false);
-  if (btn === '关闭') return Color.Red;
   return getBgColor(btn, isShift);
 }
 
@@ -285,6 +284,8 @@ export struct DomainKeyboard {
     .backgroundColor(Color.Transparent)
     .backgroundBlurStyle(BlurStyle.Thin)
     .borderRadius({ topLeft: 36, topRight: 36 })
+    .borderWidth(0.7)
+    .borderColor($r('sys.color.comp_divider'))
     .shadow({ radius: 16, color: '#1A000000', offsetY: -12 })
     .padding({ bottom: this.navBarHeight - 16})
   }

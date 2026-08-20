@@ -127,7 +127,7 @@ export function getBgColor(btn: string | Resource, isShift: boolean): ResourceCo
   if (action === 'AC' || action === '⌫') return '#ffff5d3e';
   if (action === '⇧Shift') return isShift ? '#ffb87200' : '#ff9900';
   if (action === '=' || action === 'EXE') return $r('sys.color.comp_background_emphasize');
-  if (['+', '−', '×', '÷', '∘', 'Ans'].includes(action)) return $r('sys.color.comp_background_tertiary');
+  if (['+', '−', '×', '÷', '∘', 'Ans', '⌨⇩'].includes(action)) return $r('sys.color.comp_background_tertiary');
 
   let isNumberOrCore = (typeof btn === 'string' && btn >= '0' && btn <= '9') || action === '.' || action === 'dim' || action === '⇦'|| action === '⇨' || btn === '⇧'|| btn === '⇩';
   if (isNumberOrCore || action === 'icon_exp') return $r('sys.color.comp_background_primary');
@@ -141,7 +141,7 @@ export function getBgColor(btn: string | Resource, isShift: boolean): ResourceCo
 export function getFontSize(btn: string | Resource): number {
   if (typeof btn !== 'string') return 14;
   if ((btn >= '0' && btn <= '9') || btn === '.') return 24;
-  if (btn === 'e' || btn === 'Ans' || btn === 'Dim') return 22;
+  if (btn === 'e' || btn === 'Ans' || btn === 'Dim' || btn === '⌨⇩') return 22;
   if (btn === '+' || btn === '×' || btn === '÷' || btn === '=' || btn === '−') return 28;
   if (btn === '∘') return 36;
   if (['d/dx', 'lim'].includes(btn)) return 20;
@@ -203,15 +203,22 @@ export class PreferenceConfigs {
   static readonly KEY_PERMUTATION_SELECT = 'permutationSelectIndex';
   static readonly KEY_HAPTIC_FEEDBACK = 'hapticFeedback';
 
-  // 函数图像持久化配置的 Key
+  // 隐私声明同意状态标识
+  static readonly KEY_PRIVACY_VERSION = 'privacyVersion';
+
+  // 函数图像配置
   static readonly KEY_GRAPHING_FUNCTIONS = 'graphingFunctions';
 
   // 启动页面配置
   static readonly KEY_STARTUP_PAGE = 'startupPageMode';
   static readonly KEY_LAST_USED_MODULE = 'lastUsedModule';
 
-  // 隐私声明同意状态标识
-  static readonly KEY_PRIVACY_VERSION = 'privacyVersion';
+  // 汇率模块
+  static readonly KEY_EXCHANGE_CURRENCY_LIST = 'exchangeCurrencyList';
+  static readonly KEY_EXCHANGE_ACTIVE_ID = 'exchangeActiveId';
+  static readonly KEY_EXCHANGE_BASE_AMOUNT = 'exchangeBaseAmount';
+  static readonly KEY_EXCHANGE_RATES = 'exchangeRates';
+  static readonly KEY_EXCHANGE_LAST_UPDATE = 'exchangeLastUpdateTime';
 }
 
 /**

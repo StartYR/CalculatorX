@@ -1,8 +1,8 @@
 /**
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
- * * @file MenuComponents.ets
+ * @file MenuComponents.ets
  * @description 菜单组件库，提供无状态的纯 UI 积木
-* * @author 易睿 (Yi Rui)
+ * @author 易睿 (Yi Rui)
  * @date 2026
  */
 
@@ -43,11 +43,9 @@ export struct ItemDivider {
 // 菜单项 (支持无图标、支持副标题)
 @Component
 export struct MenuButton {
-  // 👇 将图标改为可选属性，去掉 @Prop
-  icon?: Resource;
+  icon?: Resource; // 可选图标
   @Prop title: string;
-  // 👇 新增：可选的副标题
-  subTitle?: string;
+  subTitle?: string; // 可选副标题
   @Prop isCustomSvg: boolean = false;
   onClickAction?: () => void;
 
@@ -90,7 +88,7 @@ export struct MenuButton {
       }
       .alignItems(HorizontalAlign.Start)
 
-      .layoutWeight(1) // 让文本容器占据所有剩余空间，把右侧箭头挤过去
+      .layoutWeight(1) // 让文本容器占据所有剩余空间
 
       // 3. 箭头区
       SymbolGlyph($r('sys.symbol.chevron_right'))

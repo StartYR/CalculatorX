@@ -25,8 +25,8 @@ import { GraphingCalc } from '../components/graphing/GraphingCalc';
 import { EquationSolver } from '../components/EquationSolver';
 import { StatisticsCalc } from '../components/StatisticsCalc';
 import { UnitConverter } from '../components/UnitConverter';
-import { BaseConverter } from '../components/BaseConverter';
-import { ExchangeRate } from '../components/ExchangeRate';
+import { BaseConverter } from '../components/exchange/BaseConverter';
+import { ExchangeRate } from '../components/exchange/rates/ExchangeRate';
 
 @Entry
 @Component
