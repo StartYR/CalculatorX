@@ -77,6 +77,21 @@ export struct ExchangeRate {
   // ---------------------------------------------------------
 
   /**
+   * 默认货币列表
+   */
+  private getDefaultCurrencies(): Array<CurrencyListItem> {
+    return [
+      new CurrencyListItem('1', 'USD'),
+      new CurrencyListItem('2', 'CNY'),
+      new CurrencyListItem('3', 'HKD'),
+      new CurrencyListItem('4', 'EUR'),
+      new CurrencyListItem('5', 'GBP'),
+      new CurrencyListItem('6', 'JPY'),
+      new CurrencyListItem('7', 'KRW'),
+    ];
+  }
+
+  /**
    * 从本地首选项 (Preferences) 中读取货币列表、汇率字典和时间戳
    * 加载完成后同步触发 UI 时间的初始渲染
    */
@@ -88,14 +103,11 @@ export struct ExchangeRate {
       if (parsedList && parsedList.length > 0) {
         this.currencyList = parsedList;
       } else {
-        // 无缓存时的默认兜底数据
-        this.currencyList = [
-          new CurrencyListItem('1', 'USD'),
-          new CurrencyListItem('2', 'CNY')
-        ];
+        // 默认兜底数据
+        this.currencyList = this.getDefaultCurrencies();
       }
     } catch (err) {
-      this.currencyList = [new CurrencyListItem('1', 'USD'), new CurrencyListItem('2', 'CNY')];
+      this.currencyList = this.getDefaultCurrencies();
     }
 
     this.activeId = AppStorage.get<string>(PreferenceConfigs.KEY_EXCHANGE_ACTIVE_ID) || this.currencyList[0].id;
