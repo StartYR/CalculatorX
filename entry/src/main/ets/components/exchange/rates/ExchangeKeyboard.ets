@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
  * @file ExchangeKeyboard.ets
- * @description 汇率模块的专属底部键盘组件与按键样式映射
+ * @description 汇率模块的专属底部小键盘，针对数字输入与高频删除操作进行优化排布
  * @author 易睿 (Yi Rui)
  * @date 2026/8/16 17:58
  */
@@ -10,56 +10,34 @@ import { HapticUtils } from '../../../utils/HapticUtils';
 import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor, icon_backspace, PreferenceConfigs } from '../../../utils/CalculatorConfigs';
 import { KeyGestureWrapper } from '../../common/KeyGestureWrapper';
 
-// ==================== 局部样式辅助函数 ====================
-function getLocalFontColor(btn: string | Resource): ResourceColor {
-  if (btn === 'π' || btn === 'e') return getFontColor('0');
-  if (btn === '确定' || btn === '关闭') return getFontColor('=');
-  return getFontColor(btn);
-}
-
-function getLocalBgColor(btn: string | Resource, isShift: boolean): ResourceColor {
-  if (btn === 'π' || btn === 'e') return getBgColor('0', false);
-  if (btn === '确定') return getBgColor('=', false);
-  if (btn === '关闭') return Color.Red;
-  return getBgColor(btn, isShift);
-}
-
-function getLocalFontSize(btn: string | Resource): number {
-  if (btn === 'π' || btn === 'e') return getFontSize('0');
-  if (btn === 't' || btn === 'θ' || btn === 'x' || btn === 'y') return getFontSize('0');
-  return getFontSize(btn);
-}
-
-function getLocalActionId(btn: string | Resource): string {
-  return getActionId(btn);
-}
-
-export const domainButtons: Array<string | Resource> = [
+// ==================== 键盘数据源 ====================
+// 精简后的汇率专属按键数组：移除减号与确定键，为 ⌫ 和 AC 留出跨行空间
+export const exchangeButtons: Array<string | Resource> = [
   '7', '8', '9', icon_backspace,
-  '4', '5', '6', 'AC',
-  '1', '2', '3', '−',
-  '0', '.', '确定'
+  '4', '5', '6',
+  '1', '2', '3', 'AC',
+  '0', '.'
 ];
 
-// ==================== 底层键盘组件 ====================
+// ==================== 独立按键组件 ====================
 @Component
 export struct BottomKeyItem {
   btn: string | Resource = '';
-  @Link isShift: boolean;
   @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
-
   customRadius?: number = 16;
+
+  @State isShift: boolean = false;
 
   onKeyPress: (btn: string | Resource) => void = () => {};
   onMenuSelect: (actionCode: string) => void = () => {};
 
   build() {
     KeyGestureWrapper({
-      actionId: getLocalActionId(this.btn),
+      actionId: getActionId(this.btn),
       targetBtn: this.btn,
       shiftBtn: '',
-      moduleType: 'graphing',
-      isShiftMode: $isShift,
+      moduleType: 'exchange', // 标明模块类型
+      isShiftMode: $isShift,     // 无需 Shift 模式
       onKeyPress: this.onKeyPress,
       onMenuSelect: this.onMenuSelect
     }) {
@@ -67,9 +45,9 @@ export struct BottomKeyItem {
         if (typeof this.btn === 'string') {
           Text(this.btn)
             .fontFamily(getFontFamily(this.btn))
-            .fontSize(getLocalFontSize(this.btn))
+            .fontSize(getFontSize(this.btn))
             .fontWeight(FontWeight.Medium)
-            .fontColor(getLocalFontColor(this.btn))
+            .fontColor(getFontColor(this.btn))
         } else {
           Image(this.btn)
             .width(48)
@@ -83,7 +61,7 @@ export struct BottomKeyItem {
       .width('100%')
       .height('100%')
       .padding({ left: 4, right: 4 })
-      .backgroundColor(getLocalBgColor(this.btn, false))
+      .backgroundColor(getBgColor(this.btn, false))
       .shadow(ShadowStyle.OUTER_DEFAULT_SM)
       .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
       .borderColor($r('app.color.btn_highlight'))
@@ -96,9 +74,9 @@ export struct BottomKeyItem {
   }
 }
 
+// ==================== 底部键盘主组件 ====================
 @Component
 export struct ExchangeKeyboard {
-  @State private isShift: boolean = false;
   onKeyPress: (btn: string | Resource) => void = () => {};
 
   @StorageProp('navBarHeight') navBarHeight: number = 0;
@@ -108,11 +86,10 @@ export struct ExchangeKeyboard {
   build() {
     Column() {
       Grid() {
-        ForEach(domainButtons, (btn: string | Resource) => {
+        ForEach(exchangeButtons, (btn: string | Resource) => {
           GridItem() {
             BottomKeyItem({
               btn: btn,
-              isShift: $isShift,
               customRadius: 36,
               onKeyPress: (b: string | Resource) => {
                 let action = getActionId(b);
@@ -121,8 +98,11 @@ export struct ExchangeKeyboard {
               }
             })
           }
-          .columnStart(btn === '0' ? 0 : undefined)
-          .columnEnd(btn === '0' ? 1 : undefined)
+          // 核心布局魔法：利用网格坐标动态实现跨行/跨列
+          .rowStart(btn === icon_backspace ? 0 : (btn === 'AC' ? 2 : undefined))
+          .rowEnd(btn === icon_backspace ? 1 : (btn === 'AC' ? 3 : undefined))
+          .columnStart((btn === icon_backspace || btn === 'AC') ? 3 : (btn === '0' ? 0 : undefined))
+          .columnEnd((btn === icon_backspace || btn === 'AC') ? 3 : (btn === '0' ? 1 : undefined))
         }, (btn: string | Resource) => typeof btn === 'string' ? btn : 'icon_backspace')
       }
       .columnsTemplate('1fr 1fr 1fr 1fr')
@@ -140,6 +120,6 @@ export struct ExchangeKeyboard {
     .borderWidth(0.7)
     .borderColor($r('sys.color.comp_divider'))
     .shadow({ radius: 16, color: '#1A000000', offsetY: -12 })
-    .padding({ bottom: this.navBarHeight - 16})
+    .padding({ bottom: this.navBarHeight - 16 })
   }
 }
