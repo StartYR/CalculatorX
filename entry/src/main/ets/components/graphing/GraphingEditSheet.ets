@@ -477,13 +477,13 @@ export struct GraphingEditSheet {
             this.editDomainIndex = -1;
             this.isSmallKeyboardShow = false;
           } else {
-            // 💡 核心状态转移逻辑 (主键盘)：
+            // 状态转移逻辑 (主键盘)
             if (isDeletingActive) {
-              // 删除了正在编辑的项：失去焦点，直接收起键盘，切断数据污染链条！
+              // 删除正在编辑的项,直接收起键盘
               this.activeIndex = -1;
               this.isKeyboardShow = false;
             } else if (isDeletingAboveActive) {
-              // 删除了上方项：当前编辑的项在数组中的索引 -1，必须同步调整 activeIndex 才能锁死原目标
+              // 删除上方项：当前编辑的项在数组中的索引 -1，必须同步调整 activeIndex 才能锁死原目标
               this.activeIndex -= 1;
             } else if (this.activeIndex >= this.functionList.length) {
               // 兜底防越界

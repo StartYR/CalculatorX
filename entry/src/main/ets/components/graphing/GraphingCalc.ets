@@ -152,11 +152,11 @@ export struct GraphingCalc {
     getContext(this).eventHub.emit('event_shift_change', this.isShift);
   }
 
-  // ==================== 拦截"确定"和"关闭"按键 ====================
+  // ==================== 拦截"确定"和"⌨⇩"按键 ====================
   private handleButtonClick = (btn: string | Resource) => {
     let action = getLocalActionId(btn);
     // 拦截"确定"按键：充当收起键盘坞和触发截图提取的指令
-    if (btn === '确定' || btn === '关闭') {
+    if (btn === '确定' || btn === '⌨⇩') {
       HapticUtils.playVibration(action, this.hapticFeedback, this.vibrationCurve);
       if (this.isKeyboardShow) {
         let magicId = this.activeIndex + (this.activeSubTarget * 10000);

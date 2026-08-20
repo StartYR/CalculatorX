@@ -44,3 +44,6 @@ symengine-*.tar.gz
 
 # 帮助文档
 /entry/src/main/resources/rawfile/docs/
+
+# 密钥
+entry/src/main/ets/utils/ApiConfig.ets
