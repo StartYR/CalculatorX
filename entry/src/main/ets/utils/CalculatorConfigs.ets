@@ -127,7 +127,7 @@ export function getBgColor(btn: string | Resource, isShift: boolean): ResourceCo
   if (action === 'AC' || action === '⌫') return '#ffff5d3e';
   if (action === '⇧Shift') return isShift ? '#ffb87200' : '#ff9900';
   if (action === '=' || action === 'EXE') return $r('sys.color.comp_background_emphasize');
-  if (['+', '−', '×', '÷', '∘', 'Ans'].includes(action)) return $r('sys.color.comp_background_tertiary');
+  if (['+', '−', '×', '÷', '∘', 'Ans', '⌨⇩'].includes(action)) return $r('sys.color.comp_background_tertiary');
 
   let isNumberOrCore = (typeof btn === 'string' && btn >= '0' && btn <= '9') || action === '.' || action === 'dim' || action === '⇦'|| action === '⇨' || btn === '⇧'|| btn === '⇩';
   if (isNumberOrCore || action === 'icon_exp') return $r('sys.color.comp_background_primary');
@@ -141,7 +141,7 @@ export function getBgColor(btn: string | Resource, isShift: boolean): ResourceCo
 export function getFontSize(btn: string | Resource): number {
   if (typeof btn !== 'string') return 14;
   if ((btn >= '0' && btn <= '9') || btn === '.') return 24;
-  if (btn === 'e' || btn === 'Ans' || btn === 'Dim') return 22;
+  if (btn === 'e' || btn === 'Ans' || btn === 'Dim' || btn === '⌨⇩') return 22;
   if (btn === '+' || btn === '×' || btn === '÷' || btn === '=' || btn === '−') return 28;
   if (btn === '∘') return 36;
   if (['d/dx', 'lim'].includes(btn)) return 20;
