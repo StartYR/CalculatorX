@@ -405,8 +405,11 @@ export struct ExchangeRate {
       } else {
         this.baseAmount = '0';
       }
-    } else if (action === '确定' || action === '−') {
-      // 保留作为纯震动反馈键
+    } else if (action === '确定' || action === '⌨⇩') {
+      this.isKeyboardShow = false;
+      animateTo({ curve: curves.springMotion(0.35, 0.9) }, () => {
+        this.mainListBottomSpace = 0;
+      });
     } else {
       if (this.baseAmount === '0' && action !== '.') {
         this.baseAmount = action;

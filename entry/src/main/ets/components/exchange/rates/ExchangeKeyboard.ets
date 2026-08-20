@@ -1,9 +1,10 @@
 /**
  * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ *
  * @file ExchangeKeyboard.ets
- * @description 汇率模块的专属底部小键盘，针对数字输入与高频删除操作进行优化排布
+ * @description 汇率模块的专属底部小键盘，1+1+1+1 功能键阶梯色彩布局
  * @author 易睿 (Yi Rui)
- * @date 2026/8/16 17:58
+ * @date 2026/8/20
  */
 
 import { HapticUtils } from '../../../utils/HapticUtils';
@@ -11,12 +12,12 @@ import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor, icon
 import { KeyGestureWrapper } from '../../common/KeyGestureWrapper';
 
 // ==================== 键盘数据源 ====================
-// 精简后的汇率专属按键数组：移除减号与确定键，为 ⌫ 和 AC 留出跨行空间
+// 恢复错落有致的标准 4 列布局
 export const exchangeButtons: Array<string | Resource> = [
   '7', '8', '9', icon_backspace,
-  '4', '5', '6',
-  '1', '2', '3', 'AC',
-  '0', '.'
+  '4', '5', '6','AC',
+  '1', '2', '3', '⌨⇩',
+  '0', '.', '确定'
 ];
 
 // ==================== 独立按键组件 ====================
@@ -25,8 +26,7 @@ export struct BottomKeyItem {
   btn: string | Resource = '';
   @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
   customRadius?: number = 16;
-
-  @State isShift: boolean = false;
+  @State isShift: boolean = false; // 用于满足 KeyGestureWrapper 的双向绑定要求
 
   onKeyPress: (btn: string | Resource) => void = () => {};
   onMenuSelect: (actionCode: string) => void = () => {};
@@ -36,8 +36,8 @@ export struct BottomKeyItem {
       actionId: getActionId(this.btn),
       targetBtn: this.btn,
       shiftBtn: '',
-      moduleType: 'exchange', // 标明模块类型
-      isShiftMode: $isShift,     // 无需 Shift 模式
+      moduleType: 'exchange',
+      isShiftMode: $isShift,
       onKeyPress: this.onKeyPress,
       onMenuSelect: this.onMenuSelect
     }) {
@@ -47,7 +47,7 @@ export struct BottomKeyItem {
             .fontFamily(getFontFamily(this.btn))
             .fontSize(getFontSize(this.btn))
             .fontWeight(FontWeight.Medium)
-            .fontColor(getFontColor(this.btn))
+            .fontColor(this.btn === '确定' ? getFontColor('=') : getFontColor(this.btn))
         } else {
           Image(this.btn)
             .width(48)
@@ -61,7 +61,7 @@ export struct BottomKeyItem {
       .width('100%')
       .height('100%')
       .padding({ left: 4, right: 4 })
-      .backgroundColor(getBgColor(this.btn, false))
+      .backgroundColor(this.btn === '确定' ? getBgColor('=', false) : getBgColor(this.btn, false))
       .shadow(ShadowStyle.OUTER_DEFAULT_SM)
       .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
       .borderColor($r('app.color.btn_highlight'))
@@ -98,11 +98,9 @@ export struct ExchangeKeyboard {
               }
             })
           }
-          // 核心布局魔法：利用网格坐标动态实现跨行/跨列
-          .rowStart(btn === icon_backspace ? 0 : (btn === 'AC' ? 2 : undefined))
-          .rowEnd(btn === icon_backspace ? 1 : (btn === 'AC' ? 3 : undefined))
-          .columnStart((btn === icon_backspace || btn === 'AC') ? 3 : (btn === '0' ? 0 : undefined))
-          .columnEnd((btn === icon_backspace || btn === 'AC') ? 3 : (btn === '0' ? 1 : undefined))
+          // 极简布局：所有按钮都是 1x1，只有 0 横跨两列
+          .columnStart(btn === '0' ? 0 : undefined)
+          .columnEnd(btn === '0' ? 1 : undefined)
         }, (btn: string | Resource) => typeof btn === 'string' ? btn : 'icon_backspace')
       }
       .columnsTemplate('1fr 1fr 1fr 1fr')
