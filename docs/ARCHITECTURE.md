@@ -68,6 +68,7 @@ Preferences / RDB 持久化
 | 本地数据 | Preferences、RDB | 配置/模块状态、结构化历史记录 |
 | 网络数据 | HarmonyOS HTTP、Network Connection | 汇率请求、联网状态判断和缓存调度 |
 
+
 ### 明确的层级边界
 
 - ArkTS 负责业务状态和调度，不重复实现通用 CAS。
