@@ -1,6 +1,21 @@
 # 状态、通信与持久化
 
+[← 返回架构主文档](../ARCHITECTURE.md)
+
 CalculatorX 不使用第三方状态管理库，而是按生命周期和作用域选择 ArkUI 状态、EventHub、AppStorage、Preferences 或 RDB。
+
+## 目录
+
+- [1. 状态分层](#1-状态分层)
+- [2. EventHub 事件表](#2-eventhub-事件表)
+- [3. AppStorage](#3-appstorage)
+- [4. PreferenceManager](#4-preferencemanager)
+- [5. 启动初始化](#5-启动初始化)
+- [6. 历史数据库](#6-历史数据库)
+- [7. 设置写入](#7-设置写入)
+- [8. 持久化选择准则](#8-持久化选择准则)
+
+---
 
 ## 1. 状态分层
 
