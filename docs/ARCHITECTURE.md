@@ -11,7 +11,7 @@
 
 ---
 
-## 1. 一分钟理解项目
+## 1. 快速了解项目
 
 CalculatorX 是一款面向 **HarmonyOS NEXT** 的原生科学计算器，采用 ArkTS、WebView 与 C++ 协作的混合架构：
 
