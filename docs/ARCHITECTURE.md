@@ -11,6 +11,21 @@
 
 ---
 
+## 目录
+
+- [1. 快速了解项目](#1-快速了解项目)
+- [2. 技术栈与职责边界](#2-技术栈与职责边界)
+- [3. 壳—插件 SPA](#3-壳插件-spa)
+- [4. 三条核心数据流](#4-三条核心数据流)
+- [5. 通信与状态原则](#5-通信与状态原则)
+- [6. 关键架构决策](#6-关键架构决策)
+- [7. 持久化概览](#7-持久化概览)
+- [8. 核心目录](#8-核心目录)
+- [9. 专题文档索引](#9-专题文档索引)
+- [10. 维护约定](#10-维护约定)
+
+---
+
 ## 1. 快速了解项目
 
 CalculatorX 是一款面向 **HarmonyOS NEXT** 的原生科学计算器，采用 ArkTS、WebView 与 C++ 协作的混合架构：
@@ -263,6 +278,7 @@ entry/src/main/
 | [汇率架构](architecture/EXCHANGE.md) | 汇率请求、缓存、选择器、列表或换算异常 |
 | [状态与持久化](architecture/STATE_AND_STORAGE.md) | EventHub、AppStorage、Preferences、历史数据库或启动初始化 |
 | [故障定位指南](architecture/TROUBLESHOOTING.md) | 根据 bug 或需求快速找到调用链和文件 |
+| [完整项目目录](architecture/PROJECT_STRUCTURE.md) | 浏览仓库结构并跳转到具体源码或配置文件 |
 
 ---
 
