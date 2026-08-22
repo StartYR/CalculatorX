@@ -1,6 +1,6 @@
 # CalculatorX 架构地图
 
-本文档是 CalculatorX 的架构入口，面向新贡献者、人类开发者和 AI 编码助手。它只回答四个问题：
+本文档是 CalculatorX 的架构入口，面向新贡献者、人类开发者和 AI 编码助手。它可回答以下问题：
 
 1. CalculatorX 是什么？
 2. 系统由哪些层组成？
@@ -13,6 +13,7 @@
 
 ## 目录
 
+### 本文索引
 - [1. 快速了解项目](#1-快速了解项目)
 - [2. 技术栈与职责边界](#2-技术栈与职责边界)
 - [3. 壳—插件 SPA](#3-壳插件-spa)
@@ -21,8 +22,19 @@
 - [6. 关键架构决策](#6-关键架构决策)
 - [7. 持久化概览](#7-持久化概览)
 - [8. 核心目录](#8-核心目录)
-- [9. 专题文档索引](#9-专题文档索引)
+- [9. 专题文档说明](#9-专题文档说明)
 - [10. 维护约定](#10-维护约定)
+
+### 专题文档索引
+
+- [模块与 UI](architecture/MODULES_AND_UI.md)
+- [计算管线](architecture/COMPUTE_PIPELINE.md)
+- [函数图像架构](architecture/GRAPHING.md)
+- [汇率架构](architecture/EXCHANGE.md)
+- [状态与持久化](architecture/STATE_AND_STORAGE.md)
+- [故障定位指南](architecture/TROUBLESHOOTING.md)
+- [完整项目结构](architecture/PROJECT_STRUCTURE.md)
+
 
 ---
 
@@ -265,13 +277,13 @@ entry/src/main/
 └── resources/rawfile/      # MathLive、Compute Engine、暗房和帮助站点
 ```
 
-文件级职责请查看对应专题文档；遇到具体故障时直接进入 [故障定位指南](architecture/TROUBLESHOOTING.md)。
+完整目录请查看 [完整项目结构](architecture/PROJECT_STRUCTURE.md)。
 
 ---
 
-## 9. 专题文档索引
+## 9. 专题文档说明
 
-| 文档 | 什么时候读 |
+| 文档 | 阅读场景 |
 |------|------------|
 | [模块与 UI](architecture/MODULES_AND_UI.md) | 修改计算器键盘、壳、手势、共享组件或页面 |
 | [计算管线](architecture/COMPUTE_PIPELINE.md) | 计算结果错误、LaTeX/AST、N-API、矩阵、方程或格式化 |
@@ -279,7 +291,7 @@ entry/src/main/
 | [汇率架构](architecture/EXCHANGE.md) | 汇率请求、缓存、选择器、列表或换算异常 |
 | [状态与持久化](architecture/STATE_AND_STORAGE.md) | EventHub、AppStorage、Preferences、历史数据库或启动初始化 |
 | [故障定位指南](architecture/TROUBLESHOOTING.md) | 根据 bug 或需求快速找到调用链和文件 |
-| [完整项目目录](architecture/PROJECT_STRUCTURE.md) | 浏览仓库结构并跳转到具体源码或配置文件 |
+| [完整项目结构](architecture/PROJECT_STRUCTURE.md) | 浏览仓库结构并跳转到具体源码或配置文件 |
 
 ---
 
@@ -292,5 +304,3 @@ entry/src/main/
 - 新增 EventHub 事件、AppStorage/Preferences 键：更新 `STATE_AND_STORAGE.md`。
 - 改变调用链或故障入口：更新 `TROUBLESHOOTING.md`。
 - 易变的动画时长、像素值和内部行数只在确有架构意义时记录。
-
-主文档应保持“可在十分钟内读完”；专题文档负责保留实现深度。
