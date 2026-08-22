@@ -32,6 +32,7 @@ CalculatorX 是一款基于**鸿蒙 Next (HarmonyOS)** 的科学计算器应用�
 | 符号计算引擎 | SymEngine（C++ 原生代数系统）+ Giac（CAS 符号引擎） |
 | 大数运算 | Boost.Multiprecision + 自研 FastMath |
 | 本地存储 | HarmonyOS Preferences（配置）+ RDB 关系型数据库（历史记录） |
+| 网络数据 | HarmonyOS HTTP + Network Connection（汇率拉取与网络状态检测） |
 | 跨层通信 | N-API（ArkTS ↔ C++）、Webview JS Bridge（ArkTS ↔ Web） |
 
 ### 已实现功能
@@ -41,6 +42,7 @@ CalculatorX 是一款基于**鸿蒙 Next (HarmonyOS)** 的科学计算器应用�
 - **矩阵计算**：矩阵创建（1×1 到 6×6）、四则运算、求逆、转置、共轭转置、行列式、特征值、秩、rref、迹、乘方
 - **方程求解**：一元方程、多元方程组（最多 6 元），支持 x/y/z/u/v/w 为未知数
 - **函数图像**：5 种函数类型（显函数/参数方程/极坐标/隐函数/点）、多函数叠加（最多 10 条）、颜色区分、图例显示、双指缩放与拖拽平移、定义域自定义、函数列表持久化
+- **汇率换算**：172 种法定货币、贵金属及数字资产，支持多币种同步换算、搜索与 A-Z 索引、列表增删排序、整点缓存、手动刷新和离线缓存
 - **设置**：深浅色模式、角度制切换、答案输出格式（自动/小数/分数/带分数/度分秒）、排列组合显示样式、振动反馈强度、启动页面、小数精度
 - **历史记录**：按模块分类存储计算图文，支持插入表达式/结果、单条滑动删除、按模块清空
 
@@ -61,8 +63,8 @@ CalculatorX 采用**单页面应用 (SPA) + 壳与插件**架构，不使用传�
 │  │  动态插槽 (currentModule 驱动)       │  │
 │  │  ┌──────────────────────────────┐  │  │
 │  │  │ ScientificCalc / BasicCalc / │  │  │
-│  │  │ MatrixCalc / EquationSolver  │  │  │
-│  │  │ ...                          │  │  │
+│  │  │ MatrixCalc / EquationSolver /│  │  │
+│  │  │ GraphingCalc / ExchangeRate  │  │  │
 │  │  └──────────────────────────────┘  │  │
 │  ├────────────────────────────────────┤  │
 │  │  SideBarMenu (侧边栏抽屉)            │  │
@@ -134,6 +136,11 @@ CalculatorX 采用**单页面应用 (SPA) + 壳与插件**架构，不使用传�
 | `KEY_COMBINATION_SELECT` | number | PreferenceManager | InputTranslator (组合数样式)、ScientificCalc 键盘图标 |
 | `KEY_PERMUTATION_SELECT` | number | PreferenceManager | InputTranslator (排列数样式)、ScientificCalc 键盘图标 |
 | `KEY_GRAPHING_FUNCTIONS` | string (JSON) | PreferenceManager | GraphingCalc（函数列表持久化，含表达式 AST/颜色/可见性） |
+| `KEY_EXCHANGE_CURRENCY_LIST` | string (JSON) | PreferenceManager | ExchangeRate（当前货币列表及排序） |
+| `KEY_EXCHANGE_ACTIVE_ID` | string | PreferenceManager | ExchangeRate（当前作为输入基准的列表项） |
+| `KEY_EXCHANGE_BASE_AMOUNT` | string | PreferenceManager | ExchangeRate（当前基准金额） |
+| `KEY_EXCHANGE_RATES` | string (JSON) | PreferenceManager | ExchangeRate（最近一次成功获取的汇率字典） |
+| `KEY_EXCHANGE_LAST_UPDATE` | number | PreferenceManager | ExchangeRate（汇率缓存时间戳） |
 
 ### 3.3 @State / @Prop / @Link（局部状态）
 
@@ -354,13 +361,59 @@ GraphingCalc (顶层枢纽)
 - 面板关闭时发送 `sleep_web_engines` → FormulaScreen 调用 `webviewController.onInactive()` 释放 GPU 资源
 - 面板打开/焦点切换时发送 `wake_web_engines` → FormulaScreen 调用 `webviewController.onActive()` 恢复渲染
 
+#### ExchangeRate（汇率换算）
+
+[ExchangeRate.ets](../entry/src/main/ets/components/exchange/rates/ExchangeRate.ets) 是汇率模块的顶层控制器。该模块不经过 FormulaScreen 或 C++ CAS，而是在 ArkTS 层完成网络调度、交叉汇率计算和列表交互。
+
+**架构概览**：
+
+```text
+ExchangeRate（主视图与状态中枢）
+├── CurrencySelector   ← 货币搜索、常用分组与 A-Z 索引
+├── ExchangeKeyboard   ← 金额输入专属 4×4 数字键盘
+├── CurrencyData       ← 172 种货币/资产的静态白名单与 O(1) 查询字典
+├── ExchangeTypes      ← 列表项及网络响应类型
+├── HarmonyOS HTTP     ← 从远端 API 拉取以 USD 为基准的汇率字典
+└── PreferenceManager  ← 列表、选中项、金额、汇率与更新时间持久化
+```
+
+**实时换算模型**：
+
+- 默认展示 USD、CNY、HKD、EUR、GBP、JPY、KRW 七种货币，任意卡片都可以切换为当前输入基准
+- 汇率字典以 USD 为共同基准，目标金额按 `输入金额 ÷ 基准货币汇率 × 目标货币汇率` 实时计算
+- 输出保留最多 4 位小数并去除尾随零；切换基准货币时会把当前换算结果反写为新基准金额，保持数值连续
+- [ExchangeKeyboard.ets](../entry/src/main/ets/components/exchange/rates/ExchangeKeyboard.ets) 提供数字、小数点、AC、退格、确定和收起按键，复用 `KeyGestureWrapper` 与全局触感反馈
+
+**货币列表与选择器**：
+
+- [CurrencyData.ets](../entry/src/main/ets/components/exchange/rates/CurrencyData.ets) 维护 172 种法定货币、贵金属和数字资产的代码、中文名、符号与搜索关键词，并构建 `CURRENCY_MAP` 供主列表 O(1) 查询
+- [CurrencySelector.ets](../entry/src/main/ets/components/exchange/rates/CurrencySelector.ets) 通过 `bindSheet` 以大型半模态页展示，默认包含 11 种常用货币分组和 A-Z 字母索引
+- 搜索同时匹配货币代码、中文名、符号和中英文关键词；中文支持按字符模糊匹配，正则异常时自动降级为基础包含搜索
+- 主列表支持添加货币、左滑删除和拖拽排序；修改后的列表顺序与当前输入项会自动持久化
+
+**网络刷新与缓存**：
+
+- `handleRefresh()` 是统一刷新入口：先通过 `connection.hasDefaultNetSync()` 检测网络，再判断缓存是否仍处于同一自然小时
+- 缓存跨越整点或不存在时，使用 HarmonyOS HTTP 请求远端汇率 API；连接和读取超时均为 10 秒，请求令牌由 [ApiConfig.ets](../entry/src/main/ets/utils/ApiConfig.ets) 集中提供
+- 请求成功后保存完整汇率字典和更新时间；请求失败或无网络时保留本地缓存，并通过状态文字和 Toast 向用户反馈
+- `module.json5` 声明 `ohos.permission.INTERNET` 与 `ohos.permission.GET_NETWORK_INFO`，分别用于汇率请求和网络状态检测
+
+**持久化状态**：
+
+| Key | 内容 |
+|-----|------|
+| `KEY_EXCHANGE_CURRENCY_LIST` | 货币列表及用户排序（JSON） |
+| `KEY_EXCHANGE_ACTIVE_ID` | 当前输入基准列表项 ID |
+| `KEY_EXCHANGE_BASE_AMOUNT` | 当前输入金额 |
+| `KEY_EXCHANGE_RATES` | 最近一次成功获取的汇率字典（JSON） |
+| `KEY_EXCHANGE_LAST_UPDATE` | 最近一次成功刷新或缓存确认的时间戳 |
+
 ### 5.3 占位模块（开发中）
 
 以下组件的 `build()` 仅渲染 "当前模块正在开发中..." 文本：
 - [StatisticsCalc.ets](../entry/src/main/ets/components/StatisticsCalc.ets) — 统计分析
 - [UnitConverter.ets](../entry/src/main/ets/components/UnitConverter.ets) — 单位转换
 - [BaseConverter.ets](../entry/src/main/ets/components/exchange/BaseConverter.ets) — 进制转换
-- [ExchangeRate.ets](../entry/src/main/ets/components/exchange/rates/ExchangeRate.ets) — 汇率
 
 ### 5.4 共享组件
 
@@ -697,7 +750,7 @@ entry/src/main/cpp/
 - **模式**：单例模式，启动时在 `EntryAbility` 中初始化
 - **写入**：`set(key, value)` 自动落盘（`putSync` + `flush`）
 - **读取**：`get(key, defaultValue)` 同步读取
-- **批量注入**：`loadAllToAppStorage()` 将 8 个配置项一次性发布到 AppStorage
+- **批量注入**：`loadAllToAppStorage()` 将全局配置、函数图像数据和汇率模块状态一次性发布到 AppStorage
 - **配置键**（在 `CalculatorConfigs.PreferenceConfigs` 中定义）：
 
 | Key | 默认值 | 说明 |
@@ -713,6 +766,11 @@ entry/src/main/cpp/
 | KEY_STARTUP_PAGE | 0 | 0=上次使用, 1-9=指定模块 |
 | KEY_LAST_USED_MODULE | 'scientific' | 上次使用的模块 ID |
 | KEY_GRAPHING_FUNCTIONS | '[]' | 函数图像列表持久化（JSON 序列化的 GraphFunctionItem 数组） |
+| KEY_EXCHANGE_CURRENCY_LIST | '[]' | 汇率模块的货币列表及排序（JSON；空列表由模块恢复默认七种货币） |
+| KEY_EXCHANGE_ACTIVE_ID | '1' | 当前输入基准列表项 ID |
+| KEY_EXCHANGE_BASE_AMOUNT | '100' | 当前输入金额 |
+| KEY_EXCHANGE_RATES | '{}' | 最近一次成功获取的汇率字典（JSON） |
+| KEY_EXCHANGE_LAST_UPDATE | 0 | 汇率缓存的最后更新时间戳 |
 
 ---
 
@@ -765,7 +823,7 @@ entry/src/main/cpp/
 - `getActionId()`：将 Icon Resource 或字符串映射为标准化 actionID
 - `getFontFamily/FontSize/FontColor/BgColor()`：根据按键类型返回对应视觉样式
 - `RoutePath`：路由路径常量
-- `PreferenceConfigs`：偏好设置的 key 名常量
+- `PreferenceConfigs`：偏好设置、函数图像和汇率持久化的 key 名常量
 
 ---
 
@@ -803,8 +861,11 @@ entry/src/main/
 │   │   │   └── GraphingTypes.ets           # 类型声明：FunctionType 枚举(5 种)、GraphFunctionItem 接口
 │   │   ├── exchange/
 │   │   │   ├── rates/
-│   │   │   │   ├── ExchangeRate.ets        # 汇率插件（占位，开发中）
-│   │   │   │   └── CurrencyData.ets        # 汇率模块静态白名单，包含所有支持的货币代码、名称与符号
+│   │   │   │   ├── ExchangeRate.ets        # 汇率顶层控制器：交叉换算、网络刷新、缓存、列表 CRUD/排序与持久化
+│   │   │   │   ├── CurrencySelector.ets    # 货币选择半模态页：搜索、常用分组、A-Z 索引与选中高亮
+│   │   │   │   ├── ExchangeKeyboard.ets    # 汇率专属 4×4 数字键盘：金额输入、AC、退格、确定/收起
+│   │   │   │   ├── CurrencyData.ets        # 172 种货币/资产静态白名单：代码、中文名、符号与搜索关键词
+│   │   │   │   └── ExchangeTypes.ets       # 汇率列表项与 API 响应类型声明
 │   │   │   ├── BaseConverter.ets           # 进制转换插件（占位，开发中）
 │   │   │   └── UnitConverter.ets           # 单位转换插件（占位，开发中）
 │   │   ├── StatisticsCalc.ets              # 统计分析插件（占位，开发中）
@@ -822,6 +883,7 @@ entry/src/main/
 │   │   ├── InputTranslator.ets             # 按键翻译中枢：70+ ActionID → 标准 LaTeX(含排列组合 5 种样式路由)
 │   │   ├── HapticUtils.ets                 # 触控震感中心：Auto/Sharp/Soft/Hard 四档马达曲线，按键类型自适应
 │   │   ├── CalculatorConfigs.ets           # 全局配置中心：SVG 资源常量、MathStyleOption 数据结构、RoutePath 路由、视觉函数(getFont/BgColor/FontSize/FontColor)、PreferenceConfigs 键名
+│   │   ├── ApiConfig.ets                    # 网络 API 配置中心：提供汇率请求令牌
 │   │   ├── PreferenceManager.ets           # 偏好管理单例：Preferences 读写自动落盘、全部配置批量注入 AppStorage
 │   │   └── Logger.ets                      # 日志门面：封装 hilog，统一 domain/prefix
 │   │
@@ -879,6 +941,8 @@ entry/src/main/
 | 函数图像不显示/曲线错误 | `GraphingCanvas.ets`（Canvas 绘制逻辑）、`GraphingEngine.cpp`（采样器/编译）、`engine.cpp`（mode=3 路由、缓存） |
 | 函数图像手势异常 | `GraphingCanvas.ets`（PanGesture/PinchGesture 处理、避震逻辑） |
 | 函数编辑/焦点切换问题 | `GraphingEditSheet.ets`（焦点管理、switchEditorFocus）、`FormulaScreen.ets`（graphing 事件处理） |
+| 汇率数值/刷新异常 | `ExchangeRate.ets`（换算公式、网络调度与缓存）、`ApiConfig.ets`（请求配置）、`CurrencyData.ets`（支持币种） |
+| 汇率选择/列表交互异常 | `CurrencySelector.ets`（搜索、分组与索引）、`ExchangeRate.ets`（增删排序与选中状态）、`ExchangeKeyboard.ets`（金额输入） |
 | 历史记录问题 | `HistoryRepository.ets`（数据库操作）、`render.html`（截图生成）、`FormulaScreen.ets`（arktsBridge 回调）、`UniversalHistoryList.ets`（列表渲染） |
 | 设置不生效 | `PreferenceManager.ets`（读写）、`EntryAbility.ets`（初始化）、`Settings.ets`（UI 设置项） |
 | 侧边栏/顶栏 UI 问题 | `SideBarMenu.ets`、`TopBar.ets`、`Index.ets`（全局布局） |
@@ -894,6 +958,7 @@ entry/src/main/
 | 矩阵运算 | `MatrixCalc.ets` → `FormulaScreen.ets` → `EngineService.ets` → `engine.cpp` → `MatrixParser.cpp` → `giac_bridge.cpp` |
 | 方程求解 | `EquationSolver.ets` → `FormulaScreen.ets` → `EngineService.ets` → `engine.cpp`(mode=2) → `giac_bridge.cpp`(csolve) |
 | 函数图像 | `GraphingCalc.ets` → `GraphingEditSheet.ets` → `FormulaScreen.ets`(graphing 模式) → `EngineService.calculateGraphPoints()` → `engine.cpp`(mode=3) → `GraphingEngine.cpp`(RPN 采样器) → `GraphingCanvas.ets`(Canvas 绘制) |
+| 汇率换算 | `ExchangeRate.ets` → `CurrencySelector.ets` / `ExchangeKeyboard.ets` → HarmonyOS HTTP / `CurrencyData.ets` → `PreferenceManager.ets` |
 | S⇄D 格式切换 | `FormulaScreen.ets`(handleAction/recalculateWithPrecision) → `engine.cpp`(precision 控制码) → `FormatUtils.cpp` |
 | 历史记录存取 | `FormulaScreen.ets`(arktsBridge.onImageReady) → `HistoryRepository.ets` → `UniversalHistoryList.ets` / `HistorySheet.ets` / `HistoryManager.ets` |
 | 全局状态管理 | `PreferenceManager.ets` + `EntryAbility.ets`（初始化） + `CalculatorConfigs.ets`（键名定义） + 各 `*Calc.ets`（AppStorage 消费） |
