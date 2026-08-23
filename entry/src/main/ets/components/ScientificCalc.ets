@@ -97,9 +97,8 @@ struct TopKeyItem {
                 .width('100%')
             } else {
               Image(topShiftButtons[this.btnIndex] as Resource)
-                .width('100%')
-                .height('100%')
-                .constraintSize({ maxWidth: 24, maxHeight: 16 })
+                .width(24)
+                .height(24)
                 .fillColor('#ffac8100')
                 .objectFit(ImageFit.Contain)
             }

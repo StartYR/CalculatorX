@@ -126,19 +126,27 @@ struct TopKeyItem {
         }) {
 
           Button() {
-            if (typeof this.btn === 'string') {
-              Text(this.btn)
-                .fontFamily(getFontFamily(this.btn))
-                .fontSize(getLocalFontSize(this.btn))
-                .fontWeight(FontWeight.Medium)
-                .fontColor(getLocalFontColor(this.btn))
-            } else {
-              Image(this.btn)
-                .width(36)
-                .height(36)
-                .fillColor($r('sys.color.font_secondary'))
-                .draggable(false)
+            Stack({ alignContent: Alignment.Center }) {
+              if (typeof this.btn === 'string') {
+                Text(this.btn)
+                  .fontFamily(getFontFamily(this.btn))
+                  .fontSize(getLocalFontSize(this.btn))
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor(getLocalFontColor(this.btn))
+                  .textAlign(TextAlign.Center)
+                  .maxLines(1)
+              } else {
+                Image(this.btn)
+                  .width('100%')
+                  .height('100%')
+                  .constraintSize({ maxWidth: 42, maxHeight: 42 })
+                  .objectFit(ImageFit.Contain)
+                  .fillColor($r('sys.color.font_secondary'))
+                  .draggable(false)
+              }
             }
+            .width('100%')
+            .height('100%')
           }
           .type(ButtonType.Normal)
           .borderRadius(12)
