@@ -10,22 +10,24 @@
 
   <p>
     <a href="https://github.com/StarHeartY/CalculatorX/releases"><img src="https://img.shields.io/badge/Version-1.6.0-2d8b4c.svg" alt="Version 1.6.0"></a>
-    <a href="https://developer.harmonyos.com/"><img src="https://img.shields.io/badge/Platform-HarmonyOS_NEXT-007dff.svg?logo=harmonyos" alt="HarmonyOS NEXT"></a>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-0052cc.svg" alt="GPL-3.0"></a>
+    <a href="https://developer.harmonyos.com/"><img src="https://img.shields.io/badge/Platform-HarmonyOS_NEXT-007dff.svg?logo=harmonyos" alt="HarmonyOS NEXT"></a>
     <img src="https://img.shields.io/badge/Tech-ArkTS_%7C_C%2B%2B_%7C_Web-6c45a8.svg" alt="ArkTS, C++ and Web">
     <img src="https://img.shields.io/badge/CAS-Giac_%7C_SymEngine-c73d3d.svg" alt="Giac and SymEngine">
   </p>
 
   <p>
-    <a href="https://appgallery.huawei.com/app/detail?id=com.startyi.calcx"><img src="https://img.shields.io/badge/AppGallery-立即下载-cf0a2c?style=for-the-badge&logo=huawei&logoColor=white" alt="从 AppGallery 下载"></a>
-    <a href="https://github.com/StarHeartY/CalculatorX/releases"><img src="https://img.shields.io/badge/GitHub-Releases-24292f?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Releases"></a>
-    <a href="https://calcx.startyi.com/docs"><img src="https://img.shields.io/badge/使用帮助-00b4ab?style=for-the-badge&logo=readthedocs&logoColor=white" alt="CalculatorX 使用帮助"></a>
+
+[![官网](https://img.shields.io/badge/官网-calcx.startyi.com-1890ff?style=for-the-badge&logo=googlechrome&logoColor=white)](https://calcx.startyi.com)
+[![帮助](https://img.shields.io/badge/帮助-Documentation-00b4ab?style=for-the-badge&logo=readthedocs&logoColor=white)](https://calcx.startyi.com/docs)
+[![Issue](https://img.shields.io/badge/Issue-Bug_Report-e34f26?style=for-the-badge&logo=github&logoColor=white)](https://github.com/StarHeartY/CalculatorX/issues/new)
+
   </p>
 </div>
 
 ---
 
-## 产品一览
+## 效果一览
 
 <div align="center">
   <picture>

@@ -1,4 +1,4 @@
-# CalculatorX 架构地图
+# CalculatorX 架构文档
 
 本文档是 CalculatorX 的架构入口，面向新贡献者、人类开发者和 AI 编码助手。它可回答以下问题：
 
@@ -34,7 +34,6 @@
 - [状态与持久化](architecture/STATE_AND_STORAGE.md)
 - [故障定位指南](architecture/TROUBLESHOOTING.md)
 - [完整项目结构](architecture/PROJECT_STRUCTURE.md)
-
 
 ---
 
