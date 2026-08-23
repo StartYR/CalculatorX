@@ -97,8 +97,9 @@ struct TopKeyItem {
                 .width('100%')
             } else {
               Image(topShiftButtons[this.btnIndex] as Resource)
-                .width(24)
-                .height(24)
+                .width('100%')
+                .height('100%')
+                .constraintSize({ maxWidth: 24, maxHeight: 16 })
                 .fillColor('#ffac8100')
                 .objectFit(ImageFit.Contain)
             }
@@ -115,31 +116,41 @@ struct TopKeyItem {
         }
 
         Button() {
-          if (this.btn === 'nCr') {
-            Image(CombinationOptions[this.combSelect].icon)
-              .width('100%')
-              .height(36)
-              .objectFit(ImageFit.Contain)
-              .fillColor($r('sys.color.font_secondary'))
-          } else if (this.btn === 'nPr') {
-            Image(PermutationOptions[this.permSelect].icon)
-              .width('100%')
-              .height(36)
-              .objectFit(ImageFit.Contain)
-              .fillColor($r('sys.color.font_secondary'))
-          } else if (typeof this.btn === 'string') {
-            Text(this.btn)
-              .fontFamily(getFontFamily(this.btn))
-              .fontSize(getFontSize(this.btn))
-              .fontWeight(FontWeight.Medium)
-              .fontColor(getFontColor(this.btn))
-          } else {
-            Image(this.btn)
-              .width(36)
-              .height(36)
-              .fillColor($r('sys.color.font_secondary'))
-              .draggable(false)
+          Stack({ alignContent: Alignment.Center }) {
+            if (this.btn === 'nCr') {
+              Image(CombinationOptions[this.combSelect].icon)
+                .width('100%')
+                .height('100%')
+                .constraintSize({ maxHeight: 40 })
+                .objectFit(ImageFit.Contain)
+                .fillColor($r('sys.color.font_secondary'))
+            } else if (this.btn === 'nPr') {
+              Image(PermutationOptions[this.permSelect].icon)
+                .width('100%')
+                .height('100%')
+                .constraintSize({ maxHeight: 40 })
+                .objectFit(ImageFit.Contain)
+                .fillColor($r('sys.color.font_secondary'))
+            } else if (typeof this.btn === 'string') {
+              Text(this.btn)
+                .fontFamily(getFontFamily(this.btn))
+                .fontSize(getFontSize(this.btn) + 1)
+                .fontWeight(FontWeight.Medium)
+                .fontColor(getFontColor(this.btn))
+                .textAlign(TextAlign.Center)
+                .maxLines(1)
+            } else {
+              Image(this.btn)
+                .width('100%')
+                .height('100%')
+                .constraintSize({ maxWidth: 40, maxHeight: 40 })
+                .objectFit(ImageFit.Contain)
+                .fillColor($r('sys.color.font_secondary'))
+                .draggable(false)
+            }
           }
+          .width('100%')
+          .height('100%')
         }
         .type(ButtonType.Normal)
         .borderRadius(12)
@@ -182,19 +193,34 @@ struct BottomKeyItem {
       onMenuSelect: this.onMenuSelect
     }) {
       Button() {
-        if (typeof this.btn === 'string') {
-          Text(this.btn)
-            .fontFamily(getFontFamily(this.btn))
-            .fontSize(getFontSize(this.btn))
-            .fontWeight(FontWeight.Medium)
-            .fontColor(getFontColor(this.btn))
-        } else {
-          Image(this.btn)
-            .width(48)
-            .height(40)
-            .fillColor(getFontColor(this.btn))
-            .draggable(false)
+        Stack({ alignContent: Alignment.Center }) {
+          if (typeof this.btn === 'string') {
+            Text(this.btn)
+              .fontFamily(getFontFamily(this.btn))
+              .fontSize(getFontSize(this.btn) + 1)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(getFontColor(this.btn))
+              .textAlign(TextAlign.Center)
+              .maxLines(1)
+          } else if (this.btn === icon_exp) {
+            // 指数图标位于高度充足的基础按键区，保留原始尺寸，避免 Contain 因 SVG 留白将有效图形过度缩小
+            Image(this.btn)
+              .width(48)
+              .height(40)
+              .fillColor(getFontColor(this.btn))
+              .draggable(false)
+          } else {
+            Image(this.btn)
+              .width('100%')
+              .height('100%')
+              .constraintSize({ maxWidth: 50, maxHeight: 42 })
+              .objectFit(ImageFit.Contain)
+              .fillColor(getFontColor(this.btn))
+              .draggable(false)
+          }
         }
+        .width('100%')
+        .height('100%')
       }
       .type(ButtonType.Normal)
       .borderRadius(16)
