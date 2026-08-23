@@ -115,31 +115,41 @@ struct TopKeyItem {
         }
 
         Button() {
-          if (this.btn === 'nCr') {
-            Image(CombinationOptions[this.combSelect].icon)
-              .width('100%')
-              .height(36)
-              .objectFit(ImageFit.Contain)
-              .fillColor($r('sys.color.font_secondary'))
-          } else if (this.btn === 'nPr') {
-            Image(PermutationOptions[this.permSelect].icon)
-              .width('100%')
-              .height(36)
-              .objectFit(ImageFit.Contain)
-              .fillColor($r('sys.color.font_secondary'))
-          } else if (typeof this.btn === 'string') {
-            Text(this.btn)
-              .fontFamily(getFontFamily(this.btn))
-              .fontSize(getFontSize(this.btn))
-              .fontWeight(FontWeight.Medium)
-              .fontColor(getFontColor(this.btn))
-          } else {
-            Image(this.btn)
-              .width(36)
-              .height(36)
-              .fillColor($r('sys.color.font_secondary'))
-              .draggable(false)
+          Stack({ alignContent: Alignment.Center }) {
+            if (this.btn === 'nCr') {
+              Image(CombinationOptions[this.combSelect].icon)
+                .width('100%')
+                .height('100%')
+                .constraintSize({ maxHeight: 40 })
+                .objectFit(ImageFit.Contain)
+                .fillColor($r('sys.color.font_secondary'))
+            } else if (this.btn === 'nPr') {
+              Image(PermutationOptions[this.permSelect].icon)
+                .width('100%')
+                .height('100%')
+                .constraintSize({ maxHeight: 40 })
+                .objectFit(ImageFit.Contain)
+                .fillColor($r('sys.color.font_secondary'))
+            } else if (typeof this.btn === 'string') {
+              Text(this.btn)
+                .fontFamily(getFontFamily(this.btn))
+                .fontSize(getFontSize(this.btn) + 1)
+                .fontWeight(FontWeight.Medium)
+                .fontColor(getFontColor(this.btn))
+                .textAlign(TextAlign.Center)
+                .maxLines(1)
+            } else {
+              Image(this.btn)
+                .width('100%')
+                .height('100%')
+                .constraintSize({ maxWidth: 40, maxHeight: 40 })
+                .objectFit(ImageFit.Contain)
+                .fillColor($r('sys.color.font_secondary'))
+                .draggable(false)
+            }
           }
+          .width('100%')
+          .height('100%')
         }
         .type(ButtonType.Normal)
         .borderRadius(12)
@@ -182,19 +192,34 @@ struct BottomKeyItem {
       onMenuSelect: this.onMenuSelect
     }) {
       Button() {
-        if (typeof this.btn === 'string') {
-          Text(this.btn)
-            .fontFamily(getFontFamily(this.btn))
-            .fontSize(getFontSize(this.btn))
-            .fontWeight(FontWeight.Medium)
-            .fontColor(getFontColor(this.btn))
-        } else {
-          Image(this.btn)
-            .width(48)
-            .height(40)
-            .fillColor(getFontColor(this.btn))
-            .draggable(false)
+        Stack({ alignContent: Alignment.Center }) {
+          if (typeof this.btn === 'string') {
+            Text(this.btn)
+              .fontFamily(getFontFamily(this.btn))
+              .fontSize(getFontSize(this.btn) + 1)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(getFontColor(this.btn))
+              .textAlign(TextAlign.Center)
+              .maxLines(1)
+          } else if (this.btn === icon_exp) {
+            // 指数图标位于高度充足的基础按键区，保留原始尺寸，避免 Contain 因 SVG 留白将有效图形过度缩小
+            Image(this.btn)
+              .width(48)
+              .height(40)
+              .fillColor(getFontColor(this.btn))
+              .draggable(false)
+          } else {
+            Image(this.btn)
+              .width('100%')
+              .height('100%')
+              .constraintSize({ maxWidth: 50, maxHeight: 42 })
+              .objectFit(ImageFit.Contain)
+              .fillColor(getFontColor(this.btn))
+              .draggable(false)
+          }
         }
+        .width('100%')
+        .height('100%')
       }
       .type(ButtonType.Normal)
       .borderRadius(16)
@@ -312,6 +337,8 @@ export struct ScientificCalc {
       .borderRadius(24)
       .shadow({ radius: 16, color: '#1A000000', offsetY: -4 })
       .padding({ bottom: this.navBarHeight - 8 })
+      // 将大量静态按键合并为一个缓存渲染组，降低侧边栏缩放动画期间的重复绘制负载
+      .renderGroup(true)
     }
     .width('100%')
     .height('100%')
