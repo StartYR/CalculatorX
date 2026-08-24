@@ -21,6 +21,13 @@ const MODULE_TITLES: Record<string, string> = {
   'exchange': '汇率'
 };
 
+// 顶栏右侧操作，同一时间只显示其中一种
+enum TopBarTrailingAction {
+  NONE,
+  HISTORY,
+  EDIT
+}
+
 @Component
 export struct TopBar {
   @Prop isShift: boolean = false;
@@ -31,6 +38,22 @@ export struct TopBar {
   onHistoryClick?: () => void;
   onUndoClick?: () => void;
   onRedoClick?: () => void;
+
+  private showUndoRedo(): boolean {
+    return ['scientific', 'equation', 'matrix'].includes(this.currentModule);
+  }
+
+  private trailingAction(): TopBarTrailingAction {
+    if (this.currentModule === 'graphing') {
+      return TopBarTrailingAction.EDIT;
+    }
+
+    if (['basic', 'scientific', 'equation', 'matrix'].includes(this.currentModule)) {
+      return TopBarTrailingAction.HISTORY;
+    }
+
+    return TopBarTrailingAction.NONE;
+  }
 
   build() {
     // 顶部悬浮控制栏
@@ -50,7 +73,7 @@ export struct TopBar {
         .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })
         .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
         .onClick(() => { if (this.onMenuClick) this.onMenuClick(); })
-        if (!(this.currentModule === 'graphing'|| this.currentModule === 'basic')) {
+        if (this.showUndoRedo()) {
           // 2. 撤销按钮
           Button({ type: ButtonType.Capsule, stateEffect: true }) {
             SymbolGlyph($r('sys.symbol.arrowshape_turn_up_left'))
@@ -116,7 +139,7 @@ export struct TopBar {
 
       Row({ space: 8 }) {
         // 3. 重做按钮
-        if (!(this.currentModule === 'graphing'|| this.currentModule === 'basic')) {
+        if (this.showUndoRedo()) {
           Button({ type: ButtonType.Capsule, stateEffect: true }) {
             SymbolGlyph($r('sys.symbol.arrowshape_turn_up_right'))
               .fontSize(18)
@@ -137,8 +160,8 @@ export struct TopBar {
             if (this.onRedoClick) this.onRedoClick();
           })
         }
-        // 4. 动态切换：函数图像模块显示“编辑”，其他模块显示“历史”
-        if (this.currentModule === 'graphing') {
+        // 4. 根据当前模块配置显示“编辑”或“历史”
+        if (this.trailingAction() === TopBarTrailingAction.EDIT) {
           Button({ type: ButtonType.Capsule, stateEffect: true }) {
             SymbolGlyph($r('sys.symbol.square_and_pencil')) // 系统的编辑图标
               .fontSize(18)
@@ -156,7 +179,7 @@ export struct TopBar {
             getContext(this).eventHub.emit('open_graphing_edit_sheet');
             Logger.info('[TopBar] 编辑面板打开结束');
           })
-        } else {
+        } else if (this.trailingAction() === TopBarTrailingAction.HISTORY) {
           Button({ type: ButtonType.Capsule, stateEffect: true }) {
             SymbolGlyph($r('sys.symbol.arrow_counterclockwise_clock'))
               .fontSize(18)
@@ -169,6 +192,11 @@ export struct TopBar {
           .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })
           .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
           .onClick(() => { if (this.onHistoryClick) this.onHistoryClick(); })
+        } else {
+          // 与左侧菜单按钮等宽，确保没有右侧操作时标题仍保持居中
+          Blank()
+            .width(44)
+            .height(32)
         }
       }
     }
