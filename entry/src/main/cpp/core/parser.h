@@ -23,6 +23,7 @@ struct CalcContext {
     bool isRad = false;
     bool preferExact = false;
     bool hasDMS = false;
+    bool hasChangeOfBaseLog = false;
     CalcMode mode = CalcMode::STANDARD;
 };
 

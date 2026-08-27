@@ -408,10 +408,12 @@ Expression parseAST(const json& ast, CalcContext& ctx) {
         // === 对数函数 ===
         if (op == "Ln") return SymEngine::log(parseExact(ast[1]));
         if (op == "Log") {
+            ctx.hasChangeOfBaseLog = true;
             if (ast.size() == 3) return SymEngine::log(parseExact(ast[1]), parseExact(ast[2]));
             return SymEngine::log(parseExact(ast[1]), Expression(10));
         }
         if (op == "Log10" || op == "Lg") {
+            ctx.hasChangeOfBaseLog = true;
             Expression num(SymEngine::log(parseExact(ast[1]).get_basic()));
             Expression den(SymEngine::log(Expression(10).get_basic()));
             return num / den;

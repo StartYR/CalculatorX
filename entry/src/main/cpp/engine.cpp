@@ -112,6 +112,7 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
         ctx.isRad = isRad;
         ctx.preferExact = (precision == -3 || precision == -4);
         ctx.hasDMS = false;
+        ctx.hasChangeOfBaseLog = false;
         ctx.mode = static_cast<CalcMode>(mode);
         
         
@@ -363,8 +364,10 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
                 } else {
                     std::string rawStr = expr.get_basic()->__str__();
                     
-                    // 检测到包含根号 (sqrt) 触发 Giac 化简
-                    if (rawStr.find("sqrt") != std::string::npos || rawStr.find("** (1/") != std::string::npos) {
+                    // 根式或换底对数需要 Giac 继续做精确化简。
+                    // 单个 ln 不触发该分支，避免不必要的重度计算。
+                    if (rawStr.find("sqrt") != std::string::npos ||
+                        rawStr.find("** (1/") != std::string::npos || ctx.hasChangeOfBaseLog) {
                         adaptSymEngineToGiac(expr_str);
                         
                         std::string giacCmd = "latex(simplify(" + rawStr + "))";
@@ -379,7 +382,7 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
                             result_msg = formattedResult;
                         }
                     } else {
-                        // 没有根号的普通分数、符号计算，直接走极速原生输出！
+                        // 普通分数、符号计算，直接走极速原生输出！
                         result_msg = SymEngine::latex(*expr.get_basic());
                     }
                 }
