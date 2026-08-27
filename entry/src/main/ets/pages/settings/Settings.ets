@@ -56,10 +56,21 @@ struct MathStyleSheet {
             Column() {
               Text(item.name)
                 .fontSize(16)
-                .fontColor($r('sys.color.font_primary'))
+                .fontWeight(FontWeight.Medium)
+                .fontColor(
+                  (this.styleType === 'comb' && this.currentComb === item.id) ||
+                    (this.styleType === 'perm' && this.currentPerm === item.id)
+                    ? $r('sys.color.font_emphasize')
+                    : $r('sys.color.font_primary')
+                )
               Text(item.description) // 小字说明
                 .fontSize(12)
-                .fontColor($r('sys.color.font_tertiary'))
+                .fontColor(
+                  (this.styleType === 'comb' && this.currentComb === item.id) ||
+                    (this.styleType === 'perm' && this.currentPerm === item.id)
+                    ? $r('sys.color.font_emphasize')
+                    : $r('sys.color.font_tertiary')
+                )
                 .margin({ top: 4 })
                 .maxLines(2)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -71,7 +82,12 @@ struct MathStyleSheet {
               .width(100)
               .height(48)
               .objectFit(ImageFit.Contain)
-              .fillColor($r('sys.color.font_primary'))
+              .fillColor(
+                (this.styleType === 'comb' && this.currentComb === item.id) ||
+                  (this.styleType === 'perm' && this.currentPerm === item.id)
+                  ? $r('sys.color.font_emphasize')
+                  : $r('sys.color.font_primary')
+              )
               .margin({ right: 16 })
 
             if ((this.styleType === 'comb' && this.currentComb === item.id) ||
@@ -109,7 +125,7 @@ struct MathStyleSheet {
         })
       }
       .backgroundColor($r('sys.color.comp_background_primary'))
-      .borderRadius(16)
+      .borderRadius(24)
       .margin({ left: 16, right: 16, bottom: 24 })
     }
     .width('100%')
