@@ -338,7 +338,7 @@ export struct ScientificCalc {
       .shadow({ radius: 16, color: '#1A000000', offsetY: -4 })
       .padding({ bottom: this.navBarHeight - 8 })
       // 将大量静态按键合并为一个缓存渲染组，降低侧边栏缩放动画期间的重复绘制负载
-      .renderGroup(true)
+      .renderGroup(this.activeBubbleId === '')
     }
     .width('100%')
     .height('100%')
