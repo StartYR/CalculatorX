@@ -181,13 +181,13 @@ export function getFontColor(btn: string | Resource): ResourceColor {
 // ==================== 函数图像颜色预设 ====================
 export const GRAPHING_COLORS: string[] = [
   '#ffff0500', // 红
-  '#ffcb6800', // 橙
   '#1E88E5', // 蓝
   '#43A047', // 绿
   '#8E24AA', // 紫
   '#FFB300', // 黄
   '#00ACC1',  // 青
   '#ffff82b0', // 粉红
+  '#ffcb6800', // 橙
   '#ff604941', // 棕色
   '#00897B', // 深青/墨绿 ← 补充冷色系
 ];
@@ -208,6 +208,7 @@ export class PreferenceConfigs {
 
   // 函数图像配置
   static readonly KEY_GRAPHING_FUNCTIONS = 'graphingFunctions';
+  static readonly KEY_GRAPHING_FUNCTIONS_MIGRATION_BACKUP = 'graphingFunctionsMigrationBackup';
 
   // 启动页面配置
   static readonly KEY_STARTUP_PAGE = 'startupPageMode';
