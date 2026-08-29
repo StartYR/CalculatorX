@@ -47,3 +47,5 @@ symengine-*.tar.gz
 
 # 密钥
 entry/src/main/ets/utils/ApiConfig.ets
+
+AGENTS.md

@@ -14,6 +14,7 @@ import Logger from '../utils/Logger';
 @CustomDialog
 export struct PrivacyDialog {
   controller: CustomDialogController;
+  @Prop isUpdate: boolean = false;
 
   // 获取当前 UIAbility 的上下文，用于退出应用和拉起浏览器
   private context = getContext(this) as common.UIAbilityContext;
@@ -36,7 +37,7 @@ export struct PrivacyDialog {
   build() {
     Stack() {
       Column({ space: 16 }) {
-        Text('隐私声明')
+        Text(this.isUpdate ? '隐私协议更新' : '隐私声明')
           .fontSize(24)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('sys.color.font_primary'))
@@ -44,10 +45,14 @@ export struct PrivacyDialog {
 
         // 正文
         Text() {
-          Span('欢迎使用 ')
-          Span('CalcX 计算器')
-            .fontWeight(FontWeight.Bold)
-          Span('！\n\n我们非常重视保护您的隐私和个人信息。在您使用本应用前，请您务必仔细阅读并透彻理解')
+          if (this.isUpdate) {
+            Span('为了更好地保障您的权益，我们更新了')
+          } else {
+            Span('欢迎使用 ')
+            Span('CalcX 计算器')
+              .fontWeight(FontWeight.Bold)
+            Span('！\n\n我们非常重视保护您的隐私和个人信息。在您使用本应用前，请您务必仔细阅读并透彻理解')
+          }
           // 高亮并绑定点击事件的用户协议
           Span('《用户协议》')
             .fontWeight(FontWeight.Medium)
@@ -63,10 +68,12 @@ export struct PrivacyDialog {
             .onClick(() => {
               this.openWebBrowser('https://calcx.startyi.com/privacy/');
             })
-          Span('。\n\n如果您同意以上内容，请点击“')
+          Span(this.isUpdate
+            ? '。\n\n请您仔细阅读并了解更新后的内容。如果您同意以上内容，请点击“'
+            : '。\n\n如果您同意以上内容，请点击“')
           Span('同意')
             .fontWeight(FontWeight.Bold)
-          Span('”开始使用我们的产品与服务。')
+          Span(this.isUpdate ? '”继续使用。' : '”开始使用我们的产品与服务。')
         }
         .fontSize(15)
         .fontColor($r('sys.color.font_primary'))
