@@ -37,8 +37,15 @@ calculateExpress
 -keep-property-name error
 
 # 保留 GraphingCanvas 传递给 C++ 引擎的 JSON 键名不被混淆
+-keep-property-name id
+-keep-property-name color
+-keep-property-name isVisible
 -keep-property-name type
+-keep-property-name latex
+-keep-property-name base64
 -keep-property-name ast
+-keep-property-name latex2
+-keep-property-name base64_2
 -keep-property-name ast2
 -keep-property-name tMin
 -keep-property-name tMax

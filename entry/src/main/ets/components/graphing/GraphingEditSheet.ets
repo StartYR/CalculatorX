@@ -587,7 +587,7 @@ export struct GraphingEditSheet {
               // 兜底点击：点击空白区域时，默认选中第一行主表达式
               this.switchEditorFocus(index, 0, item.latex);
             })
-          }, (item: GraphFunctionItem) => `${item.id}_${item.latex}_${item.base64.length}_${item.isVisible}_${item.latex2 || ''}_${item.base64_2?.length || 0}`)
+          }, (item: GraphFunctionItem) => `${item.id}_${item.latex}_${item.base64?.length ?? 0}_${item.isVisible}_${item.latex2 || ''}_${item.base64_2?.length ?? 0}`)
 
           // 列表尾部：新建函数挂载按钮
           ListItem() {

@@ -14,6 +14,21 @@ import { GraphFunctionItem, FunctionType } from './GraphingTypes';
 import { GraphingCanvas } from './GraphingCanvas';
 import { GraphingEditSheet } from './GraphingEditSheet';
 
+interface StoredGraphFunctionItem {
+  id?: string;
+  color?: string;
+  isVisible?: boolean;
+  type?: FunctionType;
+  latex?: string;
+  base64?: string;
+  ast?: string;
+  latex2?: string;
+  base64_2?: string;
+  ast2?: string;
+  tMin?: number;
+  tMax?: number;
+}
+
 function getLocalActionId(btn: string | Resource): string {
   return getActionId(btn);
 }
@@ -58,16 +73,85 @@ export struct GraphingCalc {
     }
   }
 
-  aboutToAppear() {
-    try {
-      let parsedList = JSON.parse(this.graphingFunctionsJson) as GraphFunctionItem[];
-      if (parsedList.length === 0) {
-        parsedList = [{ id: Date.now().toString(), latex: '', base64: '', color: GRAPHING_COLORS[0], isVisible: true }];
-      }
-      this.functionList = parsedList;
-    } catch (e) {
-      this.functionList = [{ id: Date.now().toString(), latex: '', base64: '', color: GRAPHING_COLORS[0], isVisible: true }];
+  private createDefaultFunction(): GraphFunctionItem {
+    return {
+      id: Date.now().toString(),
+      color: GRAPHING_COLORS[0],
+      isVisible: true,
+      type: FunctionType.NORMAL,
+      latex: '',
+      base64: ''
+    };
+  }
+
+  private normalizeFunctionItem(item: StoredGraphFunctionItem, index: number): GraphFunctionItem {
+    let type = FunctionType.NORMAL;
+    if (typeof item.type === 'number' && item.type >= FunctionType.NORMAL && item.type <= FunctionType.POINT) {
+      type = item.type;
     }
+
+    return {
+      id: typeof item.id === 'string' && item.id.length > 0
+        ? item.id
+        : `${Date.now().toString()}_${index.toString()}`,
+      color: typeof item.color === 'string' && item.color.length > 0
+        ? item.color
+        : GRAPHING_COLORS[index % GRAPHING_COLORS.length],
+      isVisible: typeof item.isVisible === 'boolean' ? item.isVisible : true,
+      type: type,
+      latex: typeof item.latex === 'string' ? item.latex : '',
+      base64: typeof item.base64 === 'string' ? item.base64 : '',
+      ast: typeof item.ast === 'string' ? item.ast : undefined,
+      latex2: typeof item.latex2 === 'string' ? item.latex2 : '',
+      base64_2: typeof item.base64_2 === 'string' ? item.base64_2 : '',
+      ast2: typeof item.ast2 === 'string' ? item.ast2 : undefined,
+      tMin: typeof item.tMin === 'number' && Number.isFinite(item.tMin) ? item.tMin : undefined,
+      tMax: typeof item.tMax === 'number' && Number.isFinite(item.tMax) ? item.tMax : undefined
+    };
+  }
+
+  private loadNormalizedFunctions(): GraphFunctionItem[] {
+    let parsedList = JSON.parse(this.graphingFunctionsJson) as StoredGraphFunctionItem[];
+    if (!Array.isArray(parsedList)) {
+      throw new Error('graphingFunctions is not an array');
+    }
+
+    let normalizedList: GraphFunctionItem[] = [];
+    for (let index = 0; index < parsedList.length; index++) {
+      let item = parsedList[index];
+      if (item === null || typeof item !== 'object') {
+        continue;
+      }
+      normalizedList.push(this.normalizeFunctionItem(item, index));
+    }
+
+    if (normalizedList.length === 0) {
+      normalizedList.push(this.createDefaultFunction());
+    }
+    return normalizedList;
+  }
+
+  private persistMigratedFunctions(originalJson: string, normalizedList: GraphFunctionItem[]): void {
+    let normalizedJson = JSON.stringify(normalizedList);
+    if (normalizedJson === originalJson) {
+      return;
+    }
+
+    if (originalJson.length > 0 && originalJson !== '[]') {
+      PreferenceManager.set(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS_MIGRATION_BACKUP, originalJson);
+    }
+    this.graphingFunctionsJson = normalizedJson;
+    PreferenceManager.set(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS, normalizedJson);
+  }
+
+  aboutToAppear() {
+    let originalJson = this.graphingFunctionsJson;
+    try {
+      this.functionList = this.loadNormalizedFunctions();
+    } catch (e) {
+      this.functionList = [this.createDefaultFunction()];
+    }
+    this.persistMigratedFunctions(originalJson, this.functionList);
 
     this.darkMediaQuery.on('change', this.onDarkModeChange);
     this.onColorModeChange();
@@ -372,7 +456,7 @@ export struct GraphingCalc {
             .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
             .hitTestBehavior(HitTestMode.None)
           }
-        }, (item: GraphFunctionItem) => `${item.id}_${item.latex}_${item.base64.length}_${item.isVisible}_${item.latex2 || ''}_${item.base64_2?.length || 0}`)
+        }, (item: GraphFunctionItem) => `${item.id}_${item.latex}_${item.base64?.length ?? 0}_${item.isVisible}_${item.latex2 || ''}_${item.base64_2?.length ?? 0}`)
       }
       .alignItems(HorizontalAlign.Start)
       .margin({ top: 80, left: 12 })
