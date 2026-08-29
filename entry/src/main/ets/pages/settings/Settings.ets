@@ -559,11 +559,7 @@ export struct Settings {
                 onClickAction: () => {
                   Logger.info('点击：使用帮助');
                   router.pushUrl({
-                    url: RoutePath.DOC_VIEWER,
-                    params: {
-                      title: '使用帮助',
-                      url: 'https://calcx.startyi.com/help'
-                    }
+                    url: RoutePath.HELP,
                   });
                 }
               })
