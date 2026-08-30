@@ -9,6 +9,8 @@
 #pragma once
 #include "json.hpp"
 #include <symengine/expression.h>
+#include <cstddef>
+#include <string>
 
 // 1. 计算模式枚举
 enum class CalcMode {
@@ -24,6 +26,9 @@ struct CalcContext {
     bool preferExact = false;
     bool hasDMS = false;
     bool hasChangeOfBaseLog = false;
+    std::size_t parseDepth = 0;
+    unsigned int internalSymbolCounter = 0;
+    std::string infiniteProductFallbackExpression;
     CalcMode mode = CalcMode::STANDARD;
 };
 

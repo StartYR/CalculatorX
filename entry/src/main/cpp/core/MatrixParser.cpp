@@ -160,8 +160,8 @@ SymEngine::Expression handle(const nlohmann::json& ast, CalcContext& ctx) {
         if (args.size() == 1) return SymEngine::Expression(SymEngine::symbol("MAGICMAT(-" + args[0] + ")")); // Negate
     }
 
-    // 乘法 (包括普通 Multiply 和隐式 Tuple)
-    if (op == "Multiply" || op == "Tuple")  {
+    // 乘法（兼容 MathLive 可能产生的两种隐式乘法节点）
+    if (op == "Multiply" || op == "InvisibleOperator" || op == "Tuple")  {
         std::string res = "";
         for (size_t i = 0; i < args.size(); ++i) {
             res += args[i];

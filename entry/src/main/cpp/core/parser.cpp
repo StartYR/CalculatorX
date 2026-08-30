@@ -15,10 +15,126 @@
 #include <symengine/constants.h>
 #include <symengine/eval_double.h>
 #include <cmath>
+#include <cctype>
 #include <string>
 
 using json = nlohmann::json;
 using SymEngine::Expression;
+
+namespace {
+
+class ParseDepthGuard {
+public:
+    explicit ParseDepthGuard(CalcContext& context)
+        : ctx(context), root(context.parseDepth == 0) {
+        ++ctx.parseDepth;
+        if (root) ctx.infiniteProductFallbackExpression.clear();
+    }
+
+    ~ParseDepthGuard() {
+        --ctx.parseDepth;
+    }
+
+    bool isRoot() const { return root; }
+
+private:
+    CalcContext& ctx;
+    bool root;
+};
+
+bool isIntegerText(const std::string& value) {
+    if (value.empty()) return false;
+    std::size_t pos = (value[0] == '-' || value[0] == '+') ? 1 : 0;
+    if (pos == value.size()) return false;
+    for (; pos < value.size(); ++pos) {
+        if (!std::isdigit(static_cast<unsigned char>(value[pos]))) return false;
+    }
+    return true;
+}
+
+bool isIntegerLiteralNode(const json& node) {
+    if (node.is_number_integer() || node.is_number_unsigned()) return true;
+    if (node.is_number_float()) {
+        double value = node.get<double>();
+        return std::isfinite(value) && std::floor(value) == value;
+    }
+    if (node.is_object() && node.contains("num") && node["num"].is_string()) {
+        return isIntegerText(node["num"].get<std::string>());
+    }
+    if (node.is_array() && node.size() == 2 && node[0] == "Negate") {
+        return isIntegerLiteralNode(node[1]);
+    }
+    return false;
+}
+
+bool isNumericCoefficientNode(const json& node) {
+    if (node.is_number()) return true;
+    if (!node.is_object() || !node.contains("num") || !node["num"].is_string()) return false;
+
+    const std::string value = node["num"].get<std::string>();
+    if (value.empty()) return false;
+    std::size_t pos = (value[0] == '-' || value[0] == '+') ? 1 : 0;
+    bool hasDigit = false;
+    for (; pos < value.size(); ++pos) {
+        char c = value[pos];
+        if (std::isdigit(static_cast<unsigned char>(c))) {
+            hasDigit = true;
+            continue;
+        }
+        if (c != '.' && c != 'e' && c != 'E' && c != '+' && c != '-') return false;
+    }
+    return hasDigit;
+}
+
+bool isRationalFunctionNode(const json& node, const std::string& variable) {
+    if (isNumericCoefficientNode(node)) return true;
+    if (node.is_string()) return node.get<std::string>() == variable;
+    if (!node.is_array() || node.empty() || !node[0].is_string()) return false;
+
+    const std::string op = node[0].get<std::string>();
+    if (op == "Delimiter") {
+        return node.size() == 2 && isRationalFunctionNode(node[1], variable);
+    }
+    if (op == "Negate") {
+        return node.size() == 2 && isRationalFunctionNode(node[1], variable);
+    }
+    if (op == "Tuple") {
+        return node.size() == 3 && isRationalFunctionNode(node[1], variable) &&
+               isRationalFunctionNode(node[2], variable);
+    }
+    if (op == "Subtract") {
+        return (node.size() == 2 || node.size() == 3) &&
+               isRationalFunctionNode(node[1], variable) &&
+               (node.size() == 2 || isRationalFunctionNode(node[2], variable));
+    }
+    if (op == "Divide" || op == "Rational") {
+        return node.size() == 3 && isRationalFunctionNode(node[1], variable) &&
+               isRationalFunctionNode(node[2], variable);
+    }
+    if (op == "Add" || op == "Multiply" || op == "InvisibleOperator") {
+        if (node.size() < 2) return false;
+        for (std::size_t i = 1; i < node.size(); ++i) {
+            if (!isRationalFunctionNode(node[i], variable)) return false;
+        }
+        return true;
+    }
+    if (op == "Power") {
+        return node.size() == 3 && isRationalFunctionNode(node[1], variable) &&
+               isIntegerLiteralNode(node[2]);
+    }
+    return false;
+}
+
+std::string createInternalProductLimitVariable(const json& root, CalcContext& ctx) {
+    const std::string serialized = root.dump();
+    std::string candidate;
+    do {
+        candidate = "calcxprodlimit" + std::to_string(ctx.internalSymbolCounter++);
+    } while (serialized.find(candidate) != std::string::npos);
+    return candidate;
+}
+
+} // namespace
 
 // 矩阵与数组转 Giac 字符串的核心解析器
 static std::string parseListToGiacString(const json& listNode, CalcContext& ctx) {
@@ -45,6 +161,7 @@ static std::string parseListToGiacString(const json& listNode, CalcContext& ctx)
 }
 
 Expression parseAST(const json& ast, CalcContext& ctx) {
+    ParseDepthGuard depthGuard(ctx);
     
     // 1. 强制精确求值，并允许向下级传播 DMS 副作用 (如 Sqrt, Power)
     auto parseExact = [&](const json& node) {
@@ -224,7 +341,7 @@ Expression parseAST(const json& ast, CalcContext& ctx) {
             if (ast.size() == 2) return -parseAST(ast[1], ctx);
             return parseAST(ast[1], ctx) - parseAST(ast[2], ctx);
         }
-        if (op == "Multiply") {
+        if (op == "Multiply" || op == "InvisibleOperator") {
             Expression prod(1);
             for (size_t i = 1; i < ast.size(); ++i) prod *= parseAST(ast[i], ctx);
             return prod;
@@ -312,7 +429,12 @@ Expression parseAST(const json& ast, CalcContext& ctx) {
                         FastMath::checkOverflow(magnitude);
                         return FastMath::buildBigScientificNode(magnitude);
                     }
-                } catch (const CalcException&) { throw; } catch (...) { throw CalcException(CalcErrorCode::TIMEOUT_ERROR); }
+                } catch (const CalcException&) {
+                    throw;
+                } catch (...) {
+                    // 符号阶乘（如 n!）无法转换为 double，应保留为 Gamma 表达式，
+                    // 而不是把立即发生的类型失败误报成计算超时。
+                }
                 return Expression(SymEngine::gamma((arg + Expression(1)).get_basic()));
             }
             throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid Factorial length.");
@@ -438,7 +560,18 @@ Expression parseAST(const json& ast, CalcContext& ctx) {
                 adaptSymEngineToGiac(upperStr);
                 
                 std::string giacFuncName = (op == "Sum") ? "sum" : "product";
-                
+
+                // Giac 1.9.0 会把部分无穷有理乘积的分子、分母分别代入无穷，
+                // 从而把本应整体取极限的结果变成 undef。保留原始 product 作为首选路径，
+                // 只为安全的顶层有理式准备“有限部分乘积 -> 整体极限”降级表达式。
+                if (op == "Product" && depthGuard.isRoot() && upperStr == "inf" &&
+                    isIntegerLiteralNode(ast[2][2]) && isRationalFunctionNode(ast[1], var_name)) {
+                    std::string limitVar = createInternalProductLimitVariable(ast, ctx);
+                    ctx.infiniteProductFallbackExpression =
+                        "limit(product(" + exprStr + ", " + var_name + ", " + lowerStr + ", " + limitVar +
+                        "), " + limitVar + ", inf)";
+                }
+
                 return Expression(SymEngine::symbol(giacFuncName + "(" + exprStr + ", " + var_name + ", " + lowerStr + ", " + upperStr + ")"));
             }
             throw CalcException(CalcErrorCode::SYNTAX_ERROR, "Invalid Sum/Product format");
