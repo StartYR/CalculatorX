@@ -1,0 +1,31 @@
+- name: Update README Copyright
+  run: |
+    set -euo pipefail
+
+    START_YEAR=2025
+    CURRENT_YEAR=$(TZ=Asia/Shanghai date +'%Y')
+
+    if ! grep -q '<!-- COPYRIGHT_START -->' README.md; then
+      echo "::error file=README.md::未找到 COPYRIGHT_START 标记"
+      exit 1
+    fi
+
+    if ! grep -q '<!-- COPYRIGHT_END -->' README.md; then
+      echo "::error file=README.md::未找到 COPYRIGHT_END 标记"
+      exit 1
+    fi
+
+    if [ "$CURRENT_YEAR" -gt "$START_YEAR" ]; then
+      NEW_TEXT="**Copyright © ${START_YEAR}-${CURRENT_YEAR} StartYi.**"
+    else
+      NEW_TEXT="Copyright © ${START_YEAR} StartYi."
+    fi
+
+    perl -i -0777 -pe "s|(<!-- COPYRIGHT_START -->\n)(.*?)(\n<!-- COPYRIGHT_END -->)|\${1}${NEW_TEXT}\${3}|s" README.md
+
+    if ! grep -Fq "$NEW_TEXT" README.md; then
+      echo "::error file=README.md::版权年份替换失败，请检查 README.md 中版权标记的格式"
+      exit 1
+    fi
+
+    echo "版权年份更新成功：$NEW_TEXT"

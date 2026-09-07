@@ -167,7 +167,9 @@ cd CalculatorX
 
 CalculatorX 基于 [GNU General Public License v3.0](./LICENSE) 发布。
 
+<!-- COPYRIGHT_START -->
 **Copyright © 2026 StartYi.**
+<!-- COPYRIGHT_END -->
 
 <details>
   <summary><strong>软件著作权登记特别声明</strong></summary>
