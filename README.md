@@ -9,7 +9,7 @@
   <p>从基础运算、微积分和矩阵，到方程求解、函数图像与实时汇率换算。</p>
 
   <p>
-    <a href="https://github.com/StarHeartY/CalculatorX/releases"><img src="https://img.shields.io/badge/Version-1.6.0-2d8b4c.svg" alt="Version 1.6.0"></a>
+    <a href="https://github.com/StarHeartY/CalculatorX/releases"><img src="https://img.shields.io/badge/Version-1.6.3-2d8b4c.svg" alt="Version 1.6.0"></a>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-0052cc.svg" alt="GPL-3.0"></a>
     <a href="https://developer.harmonyos.com/"><img src="https://img.shields.io/badge/Platform-HarmonyOS_NEXT-007dff.svg?logo=harmonyos" alt="HarmonyOS NEXT"></a>
     <img src="https://img.shields.io/badge/Tech-ArkTS_%7C_C%2B%2B_%7C_Web-6c45a8.svg" alt="ArkTS, C++ and Web">
