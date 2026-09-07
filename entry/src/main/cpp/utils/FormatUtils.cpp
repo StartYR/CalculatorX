@@ -273,6 +273,17 @@ std::string formatFloat(double float_val, int precision) {
 }
 
 void applyGlobalUIFormatting(std::string& result_msg) {
+    // bounded_function(n) 是 Giac 用于表示有界但未能确定极限的内部占位符，
+    // 不应把内部编号直接暴露给用户。
+    size_t boundedPos = result_msg.find("bounded");
+    size_t functionPos = boundedPos == std::string::npos
+        ? std::string::npos
+        : result_msg.find("function", boundedPos + 7);
+    if (functionPos != std::string::npos && functionPos - boundedPos < 32) {
+        result_msg = "\\text{undefined}";
+        return;
+    }
+
     size_t pos = 0;
     while ((pos = result_msg.find("MAGICBASETEN", pos)) != std::string::npos) {
         int check_pos = pos - 1;

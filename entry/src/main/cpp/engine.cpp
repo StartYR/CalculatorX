@@ -26,6 +26,33 @@ static std::unordered_map<std::string, GraphingEngine> graphing_cache;
 using json = nlohmann::json;
 using SymEngine::Expression;
 
+static bool containsBoundedFunctionPlaceholder(const std::string& result) {
+    std::size_t boundedPos = result.find("bounded");
+    if (boundedPos == std::string::npos) return false;
+    std::size_t functionPos = result.find("function", boundedPos + 7);
+    return functionPos != std::string::npos && functionPos - boundedPos < 32;
+}
+
+static bool isUnresolvedGiacResult(const std::string& result) {
+    return result.empty() ||
+           result.find("undef") != std::string::npos ||
+           result.find("Error") != std::string::npos ||
+           containsBoundedFunctionPlaceholder(result) ||
+           result.find("product(") != std::string::npos ||
+           result.find("limit(") != std::string::npos ||
+           result.find("\\prod") != std::string::npos ||
+           result.find("\\lim") != std::string::npos ||
+           result.find("Unknown") != std::string::npos ||
+           result.find("InvisibleOperator") != std::string::npos ||
+           result.find('?') != std::string::npos;
+}
+
+static void stripOuterQuotes(std::string& result) {
+    if (result.size() >= 2 && result.front() == '"' && result.back() == '"') {
+        result = result.substr(1, result.size() - 2);
+    }
+}
+
 static napi_value Calculate(napi_env env, napi_callback_info info) {
     size_t argc = 2; // 0：算式，1：配置
     napi_value args[2] = {nullptr};
@@ -293,9 +320,19 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
             
             std::string giacCmd = "latex(factor(" + expr_str + "))";
             std::string rawResult = evaluateWithGiac(giacCmd);
-            
-            if (rawResult.size() >= 2 && rawResult.front() == '"' && rawResult.back() == '"') {
-                rawResult = rawResult.substr(1, rawResult.size() - 2);
+
+            stripOuterQuotes(rawResult);
+
+            // 仅当原生无穷乘积未求出结果，且解析器确认它属于安全的顶层有理式时，
+            // 才尝试对有限部分乘积整体取极限。失败时保留原始结果，不扩大行为变化。
+            if (!ctx.infiniteProductFallbackExpression.empty() && isUnresolvedGiacResult(rawResult)) {
+                std::string fallbackExpr = ctx.infiniteProductFallbackExpression;
+                adaptSymEngineToGiac(fallbackExpr);
+                std::string fallbackResult = evaluateWithGiac("latex(factor(" + fallbackExpr + "))");
+                stripOuterQuotes(fallbackResult);
+                if (!isUnresolvedGiacResult(fallbackResult)) {
+                    rawResult = fallbackResult;
+                }
             }
             
             // Romberg 数值积分全局降级兜底
@@ -315,10 +352,7 @@ static napi_value Calculate(napi_env env, napi_callback_info info) {
                 replaceAll(fallback_str, "integrate(", "romberg(");
                 std::string fallbackCmd = "latex(" + fallback_str + ")"; 
                 rawResult = evaluateWithGiac(fallbackCmd);
-                
-                if (rawResult.size() >= 2 && rawResult.front() == '"' && rawResult.back() == '"') {
-                    rawResult = rawResult.substr(1, rawResult.size() - 2);
-                }
+                stripOuterQuotes(rawResult);
                 
                 // 清洗 Romberg 返回的误差区间 [min, max]
                 if (rawResult.find(',') != std::string::npos && 
