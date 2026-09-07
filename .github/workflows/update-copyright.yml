@@ -21,7 +21,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          START_YEAR=2025
+          START_YEAR=2026
           CURRENT_YEAR=$(TZ=Asia/Shanghai date +'%Y')
 
           if ! grep -q '<!-- COPYRIGHT_START -->' README.md; then
@@ -35,7 +35,7 @@ jobs:
           fi
 
           if [ "$CURRENT_YEAR" -gt "$START_YEAR" ]; then
-            NEW_TEXT="**Copyright © ${START_YEAR}-${CURRENT_YEAR} StartYi.**"
+            NEW_TEXT="**Copyright © ${START_YEAR}–${CURRENT_YEAR} StartYi.**"
           else
             NEW_TEXT="**Copyright © ${START_YEAR} StartYi.**"
           fi
