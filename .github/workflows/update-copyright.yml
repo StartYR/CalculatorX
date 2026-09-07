@@ -1,31 +1,65 @@
-- name: Update README Copyright
-  run: |
-    set -euo pipefail
+name: Update Copyright Year
 
-    START_YEAR=2025
-    CURRENT_YEAR=$(TZ=Asia/Shanghai date +'%Y')
+on:
+  schedule:
+    # 每年 1 月 1 日 00:00 (UTC+8) 自动触发
+    - cron: '0 16 31 12 *'
+  workflow_dispatch:
 
-    if ! grep -q '<!-- COPYRIGHT_START -->' README.md; then
-      echo "::error file=README.md::未找到 COPYRIGHT_START 标记"
-      exit 1
-    fi
+permissions:
+  contents: write
 
-    if ! grep -q '<!-- COPYRIGHT_END -->' README.md; then
-      echo "::error file=README.md::未找到 COPYRIGHT_END 标记"
-      exit 1
-    fi
+jobs:
+  update-year:
+    runs-on: ubuntu-latest
 
-    if [ "$CURRENT_YEAR" -gt "$START_YEAR" ]; then
-      NEW_TEXT="**Copyright © ${START_YEAR}-${CURRENT_YEAR} StartYi.**"
-    else
-      NEW_TEXT="Copyright © ${START_YEAR} StartYi."
-    fi
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    perl -i -0777 -pe "s|(<!-- COPYRIGHT_START -->\n)(.*?)(\n<!-- COPYRIGHT_END -->)|\${1}${NEW_TEXT}\${3}|s" README.md
+      - name: Update README Copyright
+        run: |
+          set -euo pipefail
 
-    if ! grep -Fq "$NEW_TEXT" README.md; then
-      echo "::error file=README.md::版权年份替换失败，请检查 README.md 中版权标记的格式"
-      exit 1
-    fi
+          START_YEAR=2026
+          CURRENT_YEAR=$(TZ=Asia/Shanghai date +'%Y')
 
-    echo "版权年份更新成功：$NEW_TEXT"
+          if ! grep -q '<!-- COPYRIGHT_START -->' README.md; then
+            echo "::error file=README.md::未找到 COPYRIGHT_START 标记"
+            exit 1
+          fi
+
+          if ! grep -q '<!-- COPYRIGHT_END -->' README.md; then
+            echo "::error file=README.md::未找到 COPYRIGHT_END 标记"
+            exit 1
+          fi
+
+          if [ "$CURRENT_YEAR" -gt "$START_YEAR" ]; then
+            NEW_TEXT="**Copyright © ${START_YEAR}-${CURRENT_YEAR} StartYi.**"
+          else
+            NEW_TEXT="**Copyright © ${START_YEAR} StartYi.**"
+          fi
+
+          perl -i -0777 -pe "s|(<!-- COPYRIGHT_START -->\r?\n)(.*?)(\r?\n<!-- COPYRIGHT_END -->)|\${1}${NEW_TEXT}\${3}|s" README.md
+
+          if ! grep -Fq "$NEW_TEXT" README.md; then
+            echo "::error file=README.md::版权年份替换失败，请检查 README.md 中版权标记的格式"
+            exit 1
+          fi
+
+          echo "版权年份更新成功：$NEW_TEXT"
+
+      - name: Commit and Push changes
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if ! git diff --quiet -- README.md; then
+            git add README.md
+            git commit -m "chore: update copyright year to $(TZ=Asia/Shanghai date +'%Y')"
+            git push
+          else
+            echo "版权年份无需更新。"
+          fi
