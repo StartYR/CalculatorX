@@ -58,7 +58,11 @@ jobs:
 
           if ! git diff --quiet -- README.md; then
             git add README.md
+
+            GIT_AUTHOR_NAME="StarHeartY" \
+            GIT_AUTHOR_EMAIL="yirui.pre@gmail.com" \
             git commit -m "chore: update copyright year to $(TZ=Asia/Shanghai date +'%Y')"
+
             git push
           else
             echo "版权年份无需更新。"
