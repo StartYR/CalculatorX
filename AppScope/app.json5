@@ -2,8 +2,8 @@
   "app": {
     "bundleName": "com.startyi.calcx",
     "vendor": "example",
-    "versionCode": 1060201,
-    "versionName": "1.6.2",
+    "versionCode": 1060301,
+    "versionName": "1.6.3",
     "buildVersion": "1",
     "icon": "$media:layered_image",
     "label": "$string:app_name"
