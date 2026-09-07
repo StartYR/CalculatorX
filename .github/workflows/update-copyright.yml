@@ -15,13 +15,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Update README Copyright
         run: |
           set -euo pipefail
 
-          START_YEAR=2026
+          START_YEAR=2025
           CURRENT_YEAR=$(TZ=Asia/Shanghai date +'%Y')
 
           if ! grep -q '<!-- COPYRIGHT_START -->' README.md; then
