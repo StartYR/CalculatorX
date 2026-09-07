@@ -21,7 +21,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          START_YEAR=2005
+          START_YEAR=2026
           CURRENT_YEAR=$(TZ=Asia/Shanghai date +'%Y')
 
           if ! grep -q '<!-- COPYRIGHT_START -->' README.md; then
