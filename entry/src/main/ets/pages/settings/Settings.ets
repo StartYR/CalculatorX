@@ -149,7 +149,12 @@ export struct Settings {
   @State startupPageMode: number = 0;
   aboutToAppear() {
     // 页面加载时，通过 PreferenceManager 拿到最新数据赋值给 UI
-    this.startupPageMode = PreferenceManager.get(PreferenceConfigs.KEY_STARTUP_PAGE, 0) as number;
+    const savedStartupPageMode = PreferenceManager.get(PreferenceConfigs.KEY_STARTUP_PAGE, 0) as number;
+    const availableStartupPageModes: number[] = [0, 1, 2, 3, 4, 5, 9];
+    this.startupPageMode = availableStartupPageModes.indexOf(savedStartupPageMode) >= 0 ? savedStartupPageMode : 0;
+    if (this.startupPageMode !== savedStartupPageMode) {
+      PreferenceManager.set(PreferenceConfigs.KEY_STARTUP_PAGE, this.startupPageMode);
+    }
   }
 
   @StorageProp(PreferenceConfigs.KEY_COMBINATION_SELECT) combSelect: number = 1;
@@ -416,18 +421,20 @@ export struct Settings {
                   { value: '矩阵与向量' },
                   { value: '函数图像' },
                   { value: '方程求解' },
-                  { value: '统计分析' },
-                  { value: '单位转换' },
-                  { value: '进制转换' },
+                  // 正式包暂时隐藏未开发的启动页选项
+                  // { value: '统计分析' },
+                  // { value: '单位转换' },
+                  // { value: '进制转换' },
                   { value: '汇率' }
                 ])
-                  .selected(this.startupPageMode)
-                  .value(['记忆上次', '基础计算', '科学计算', '矩阵与向量', '函数图像', '方程求解', '统计分析', '单位转换', '进制转换', '汇率'][this.startupPageMode] || '记忆上次')
+                  .selected([0, 2, 1, 3, 4, 5, 9].indexOf(this.startupPageMode))
+                  .value(['记忆上次', '科学计算', '基础计算', '矩阵与向量', '函数图像', '方程求解', '统计分析', '单位转换', '进制转换', '汇率'][this.startupPageMode] || '记忆上次')
                   .font({ size: 14 })
                   .fontColor($r('sys.color.font_primary'))
                   .onSelect((index: number) => {
-                    this.startupPageMode = index;
-                    PreferenceManager.set(PreferenceConfigs.KEY_STARTUP_PAGE, index);
+                    const startupModeMap: number[] = [0, 2, 1, 3, 4, 5, 9];
+                    this.startupPageMode = startupModeMap[index];
+                    PreferenceManager.set(PreferenceConfigs.KEY_STARTUP_PAGE, this.startupPageMode);
                   })
               }
               .width('100%')

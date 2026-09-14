@@ -55,10 +55,11 @@ export struct HistoryManager {
       case 0: return 'all';
       case 1: return 'basic,scientific';
       case 2: return 'equation';
-      case 3: return 'graph';
-      case 4: return 'matrix';
-      case 5: return 'conversion';
-      case 6: return 'pro';
+      case 3: return 'matrix';
+      // 正式包暂时隐藏未开发的历史分类
+      // case 4: return 'graph';
+      // case 5: return 'conversion';
+      // case 6: return 'pro';
       default: return 'all';
     }
   }
@@ -89,10 +90,11 @@ export struct HistoryManager {
       this.createTabItem('全部', $r('sys.symbol.list_bullet_square_fill_1')),
       this.createTabItem('计算', $r('sys.symbol.calculator_fill')),
       this.createTabItem('方程', $r('sys.symbol.exponentiation')),
+      // 正式包暂时隐藏未开发的历史分类
       // this.createTabItem('绘图', $r('sys.symbol.foldline_screen_fill')),
       this.createTabItem('矩阵', $r('sys.symbol.square_fill_grid_2x2')),
-      this.createTabItem('转换', $r('sys.symbol.arrow_left_arrow_right')),
-      this.createTabItem('更多', $r('sys.symbol.more_fill'))
+      // this.createTabItem('转换', $r('sys.symbol.arrow_left_arrow_right')),
+      // this.createTabItem('更多', $r('sys.symbol.more_fill'))
     ];
   }
 
