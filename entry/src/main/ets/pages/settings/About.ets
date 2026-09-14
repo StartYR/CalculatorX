@@ -236,13 +236,24 @@ struct About {
 
           // ====================== 底部版权信息 ==========================
           Column() {
-            Text('© 2026 Yi Rui (易睿). All Rights Reserved.')
+            Text('版权所有 © 2026 StartYi')
               .fontSize(12)
               .fontColor($r('sys.color.font_tertiary'))
-              .margin({ bottom: 4 })
-            Text('www.startyi.com')
+              .margin({ top: 4, bottom: 4 })
+            Text('赣ICP备2026021841号-1A')
               .fontSize(12)
               .fontColor($r('sys.color.font_tertiary'))
+              .margin({ top: 4, bottom: 4 })
+              .onClick(() => {
+                this.openUrlInBrowser('https://beian.miit.gov.cn');
+              })
+            Text('startyi.com')
+              .fontSize(12)
+              .fontColor($r('sys.color.font_tertiary'))
+              .margin({ top: 4, bottom: 4 })
+              .onClick(() => {
+                this.openUrlInBrowser('https://startyi.com');
+              })
           }
           .width('100%')
           .alignItems(HorizontalAlign.Center)
