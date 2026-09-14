@@ -9,7 +9,7 @@
   <p>从基础运算、微积分和矩阵，到方程求解、函数图像与实时汇率换算。</p>
 
   <p>
-    <a href="https://github.com/StarHeartY/CalculatorX/releases"><img src="https://img.shields.io/badge/Version-1.6.3-2d8b4c.svg" alt="Version 1.6.0"></a>
+    <a href="https://github.com/StartYR/CalculatorX/releases"><img src="https://img.shields.io/badge/Version-1.6.3-2d8b4c.svg" alt="Version 1.6.0"></a>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-0052cc.svg" alt="GPL-3.0"></a>
     <a href="https://developer.harmonyos.com/"><img src="https://img.shields.io/badge/Platform-HarmonyOS_NEXT-007dff.svg?logo=harmonyos" alt="HarmonyOS NEXT"></a>
     <img src="https://img.shields.io/badge/Tech-ArkTS_%7C_C%2B%2B_%7C_Web-6c45a8.svg" alt="ArkTS, C++ and Web">
@@ -20,7 +20,7 @@
 
 [![官网](https://img.shields.io/badge/官网-calcx.startyi.com-1890ff?style=for-the-badge&logo=googlechrome&logoColor=white)](https://calcx.startyi.com)
 [![帮助](https://img.shields.io/badge/帮助-Documentation-00b4ab?style=for-the-badge&logo=readthedocs&logoColor=white)](https://calcx.startyi.com/docs)
-[![Issue](https://img.shields.io/badge/Issue-Bug_Report-e34f26?style=for-the-badge&logo=github&logoColor=white)](https://github.com/StarHeartY/CalculatorX/issues/new)
+[![Issue](https://img.shields.io/badge/Issue-Bug_Report-e34f26?style=for-the-badge&logo=github&logoColor=white)](https://github.com/StartYR/CalculatorX/issues/new)
 
   </p>
 </div>
@@ -120,13 +120,13 @@ ArkUI 原生界面
 <p align="center">
   <a href="https://appgallery.huawei.com/app/detail?id=com.startyi.calcx"><img src="https://img.startyi.com/CalcX/AppGallery.webp" alt="从 AppGallery 获取 CalculatorX" height="64"></a>
   &emsp;&emsp;
-  <a href="https://github.com/StarHeartY/CalculatorX/releases"><img src="https://img.startyi.com/CalcX/GitHub-Releases.webp" alt="从 GitHub Releases 获取 CalculatorX" height="64"></a>
+  <a href="https://github.com/StartYR/CalculatorX/releases"><img src="https://img.startyi.com/CalcX/GitHub-Releases.webp" alt="从 GitHub Releases 获取 CalculatorX" height="64"></a>
 </p>
 
 - 普通用户推荐通过 **AppGallery** 安装和更新。
 - 开发版本及历史安装包可在 **GitHub Releases** 获取。
 - 功能用法、界面说明和常见问题请查看 [在线帮助](https://calcx.startyi.com/docs)。
-- 遇到问题可以前往 [GitHub Issues](https://github.com/StarHeartY/CalculatorX/issues/new) 反馈。
+- 遇到问题可以前往 [GitHub Issues](https://github.com/StartYR/CalculatorX/issues/new) 反馈。
 
 ## 开发者快速开始
 
@@ -140,7 +140,7 @@ ArkUI 原生界面
 ### 克隆项目
 
 ```bash
-git clone https://github.com/StarHeartY/CalculatorX.git
+git clone https://github.com/StartYR/CalculatorX.git
 cd CalculatorX
 ```
 

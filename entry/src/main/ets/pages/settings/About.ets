@@ -215,7 +215,7 @@ struct About {
                 title: '开源地址',
                 onClickAction: (): void => {
                   Logger.info('点击：开源地址');
-                  this.openUrlInBrowser('https://github.com/StarHeartY/CalculatorX');
+                  this.openUrlInBrowser('https://github.com/StartYR/CalculatorX');
                 }
               })
 
