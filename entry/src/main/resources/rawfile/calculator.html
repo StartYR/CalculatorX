@@ -276,10 +276,6 @@
             editorState = EditorState.RESULT_READY;
         };
 
-        window.getEditorState = function () {
-            return editorState;
-        };
-
         mf.addEventListener('input', () => {
             editorState = EditorState.EDITING;
             resField.classList.remove('show');
