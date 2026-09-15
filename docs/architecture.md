@@ -27,13 +27,13 @@
 
 ### 专题文档索引
 
-- [模块与 UI](architecture/MODULES_AND_UI.md)
-- [计算管线](architecture/COMPUTE_PIPELINE.md)
-- [函数图像架构](architecture/GRAPHING.md)
-- [汇率架构](architecture/EXCHANGE.md)
-- [状态与持久化](architecture/STATE_AND_STORAGE.md)
-- [故障定位指南](architecture/TROUBLESHOOTING.md)
-- [完整项目结构](architecture/PROJECT_STRUCTURE.md)
+- [模块与 UI](architecture/modules-and-ui.md)
+- [计算管线](architecture/compute-pipeline.md)
+- [函数图像架构](architecture/graphing.md)
+- [汇率架构](architecture/exchange.md)
+- [状态与持久化](architecture/state-and-storage.md)
+- [故障定位指南](architecture/troubleshooting.md)
+- [完整项目结构](architecture/project-structure.md)
 
 ---
 
@@ -119,7 +119,7 @@ Preferences / RDB 持久化
 | 单位转换 | 开发中 | `UnitConverter.ets` | 占位组件 |
 | 进制转换 | 开发中 | `exchange/BaseConverter.ets` | 占位组件 |
 
-模块的键盘、共享 UI 和交互机制详见 [模块与 UI](architecture/MODULES_AND_UI.md)。
+模块的键盘、共享 UI 和交互机制详见 [模块与 UI](architecture/modules-and-ui.md)。
 
 ---
 
@@ -144,7 +144,7 @@ Preferences / RDB 持久化
 
 这里最重要的决策是使用 MathLive/Compute Engine 将 LaTeX 转成 MathJSON，让 C++ 解析结构化 AST，而不是维护一套高复杂度 LaTeX 解析器。
 
-完整清洗规则、模式路由、精度控制和 C++ 文件职责详见 [计算管线](architecture/COMPUTE_PIPELINE.md)。
+完整清洗规则、模式路由、精度控制和 C++ 文件职责详见 [计算管线](architecture/compute-pipeline.md)。
 
 ### 4.2 函数图像
 
@@ -158,7 +158,7 @@ GraphingEditSheet 编辑表达式
   → GraphingCanvas 绘制、平移和缩放
 ```
 
-图形模块支持显函数、参数方程、极坐标、隐函数和独立点，最多叠加 10 条。完整算法与生命周期详见 [函数图像架构](architecture/GRAPHING.md)。
+图形模块支持显函数、参数方程、极坐标、隐函数和独立点，最多叠加 10 条。完整算法与生命周期详见 [函数图像架构](architecture/graphing.md)。
 
 ### 4.3 汇率换算
 
@@ -171,7 +171,7 @@ ExchangeRate 启动或手动刷新
   → ArkTS 计算所有目标金额并实时刷新列表
 ```
 
-汇率模块维护 172 种货币/资产白名单，支持搜索、A-Z 索引、增删排序和离线缓存。详见 [汇率架构](architecture/EXCHANGE.md)。
+汇率模块维护 172 种货币/资产白名单，支持搜索、A-Z 索引、增删排序和离线缓存。详见 [汇率架构](architecture/exchange.md)。
 
 ---
 
@@ -193,7 +193,7 @@ ExchangeRate 启动或手动刷新
 - Preferences 保存轻量键值和模块快照；RDB 保存可查询的历史记录。
 - WebView 生命周期由宿主组件管理，隐藏不等于持续占用 GPU。
 
-事件表、持久化键、数据库结构和启动初始化顺序详见 [状态与持久化](architecture/STATE_AND_STORAGE.md)。
+事件表、持久化键、数据库结构和启动初始化顺序详见 [状态与持久化](architecture/state-and-storage.md)。
 
 ---
 
@@ -276,7 +276,7 @@ entry/src/main/
 └── resources/rawfile/      # MathLive、Compute Engine、暗房和帮助站点
 ```
 
-完整目录请查看 [完整项目结构](architecture/PROJECT_STRUCTURE.md)。
+完整目录请查看 [完整项目结构](architecture/project-structure.md)。
 
 ---
 
@@ -284,13 +284,13 @@ entry/src/main/
 
 | 文档 | 阅读场景 |
 |------|------------|
-| [模块与 UI](architecture/MODULES_AND_UI.md) | 修改计算器键盘、壳、手势、共享组件或页面 |
-| [计算管线](architecture/COMPUTE_PIPELINE.md) | 计算结果错误、LaTeX/AST、N-API、矩阵、方程或格式化 |
-| [函数图像架构](architecture/GRAPHING.md) | 编辑函数、采样、Canvas、缩放平移或曲线异常 |
-| [汇率架构](architecture/EXCHANGE.md) | 汇率请求、缓存、选择器、列表或换算异常 |
-| [状态与持久化](architecture/STATE_AND_STORAGE.md) | EventHub、AppStorage、Preferences、历史数据库或启动初始化 |
-| [故障定位指南](architecture/TROUBLESHOOTING.md) | 根据 bug 或需求快速找到调用链和文件 |
-| [完整项目结构](architecture/PROJECT_STRUCTURE.md) | 浏览仓库结构并跳转到具体源码或配置文件 |
+| [模块与 UI](architecture/modules-and-ui.md) | 修改计算器键盘、壳、手势、共享组件或页面 |
+| [计算管线](architecture/compute-pipeline.md) | 计算结果错误、LaTeX/AST、N-API、矩阵、方程或格式化 |
+| [函数图像架构](architecture/graphing.md) | 编辑函数、采样、Canvas、缩放平移或曲线异常 |
+| [汇率架构](architecture/exchange.md) | 汇率请求、缓存、选择器、列表或换算异常 |
+| [状态与持久化](architecture/state-and-storage.md) | EventHub、AppStorage、Preferences、历史数据库或启动初始化 |
+| [故障定位指南](architecture/troubleshooting.md) | 根据 bug 或需求快速找到调用链和文件 |
+| [完整项目结构](architecture/project-structure.md) | 浏览仓库结构并跳转到具体源码或配置文件 |
 
 ---
 
@@ -300,6 +300,6 @@ entry/src/main/
 
 - 改变系统分层、模块状态或核心数据流：更新本文件。
 - 改变某个子系统的实现：只更新对应专题文档。
-- 新增 EventHub 事件、AppStorage/Preferences 键：更新 `STATE_AND_STORAGE.md`。
-- 改变调用链或故障入口：更新 `TROUBLESHOOTING.md`。
+- 新增 EventHub 事件、AppStorage/Preferences 键：更新 `state-and-storage.md`。
+- 改变调用链或故障入口：更新 `troubleshooting.md`。
 - 易变的动画时长、像素值和内部行数只在确有架构意义时记录。

@@ -9,7 +9,7 @@
 
 新增 Windows PowerShell 调用器和仅存在于 `ohosTest` target 的设备端计算入口。维护者可以输入 LaTeX、模式、角度制和精度，通过 HDC 取得真实 MathLive、N-API 与 C++ 引擎生成的结构化 LaTeX 结果。
 
-完整构建、安装、调用、退出码和排障方式见 [Windows 命令行计算自动化](../CALCULATION_CLI_AUTOMATION.md)。
+完整构建、安装、调用、退出码和排障方式见 [Windows 命令行计算自动化](../calculation-cli-automation.md)。
 
 ## 行为与实现
 

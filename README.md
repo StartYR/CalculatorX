@@ -94,7 +94,7 @@ ArkUI 原生界面
 - **暗房渲染**：隐藏 WebView 离屏生成公式 PNG，不干扰前台编辑与计算。
 - **原生持久化**：Preferences 保存设置与模块状态，RDB 保存结构化历史记录。
 
-深入了解实现方式，请阅读 [CalculatorX 架构文档](docs/ARCHITECTURE.md)。
+深入了解实现方式，请阅读 [CalculatorX 架构文档](docs/architecture.md)。
 
 ## 功能状态
 
@@ -150,13 +150,13 @@ cd CalculatorX
 
 | 文档                                               | 内容 |
 |--------------------------------------------------|------|
-| [架构文档](docs/ARCHITECTURE.md)                     | 项目全貌、系统分层、核心数据流和专题索引 |
-| [完整项目目录](docs/architecture/PROJECT_STRUCTURE.md) | ArkTS、C++、资源和关键配置结构 |
-| [计算管线](docs/architecture/COMPUTE_PIPELINE.md)    | LaTeX、MathJSON、N-API、SymEngine 与 Giac |
-| [Windows 命令行计算自动化](docs/CALCULATION_CLI_AUTOMATION.md) | 设备测试包构建、LaTeX 调用、CI 接入与排障 |
-| [函数图像架构](docs/architecture/GRAPHING.md)          | 编辑、RPN、采样、Canvas 与手势 |
-| [汇率架构](docs/architecture/EXCHANGE.md)            | 网络刷新、缓存、货币选择和交叉换算 |
-| [故障定位指南](docs/architecture/TROUBLESHOOTING.md)   | 按现象和调用链定位源码 |
+| [架构文档](docs/architecture.md)                     | 项目全貌、系统分层、核心数据流和专题索引 |
+| [完整项目目录](docs/architecture/project-structure.md) | ArkTS、C++、资源和关键配置结构 |
+| [计算管线](docs/architecture/compute-pipeline.md)    | LaTeX、MathJSON、N-API、SymEngine 与 Giac |
+| [Windows 命令行计算自动化](docs/calculation-cli-automation.md) | 设备测试包构建、LaTeX 调用、CI 接入与排障 |
+| [函数图像架构](docs/architecture/graphing.md)          | 编辑、RPN、采样、Canvas 与手势 |
+| [汇率架构](docs/architecture/exchange.md)            | 网络刷新、缓存、货币选择和交叉换算 |
+| [故障定位指南](docs/architecture/troubleshooting.md)   | 按现象和调用链定位源码 |
 | [贡献指南](docs/CONTRIBUTING.md)                     | 模块开发、状态管理和 Git 提交规范 |
 | [更新日志](docs/CHANGELOG.md)                        | 历史版本与重要改动 |
 

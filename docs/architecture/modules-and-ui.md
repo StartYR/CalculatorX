@@ -1,8 +1,8 @@
 # 模块与 UI 架构
 
-[← 返回架构主文档](../ARCHITECTURE.md)
+[← 返回架构主文档](../architecture.md)
 
-本文档描述 CalculatorX 的 ArkUI 壳、业务插件、共享组件和移动端交互。系统总览见 [ARCHITECTURE.md](../ARCHITECTURE.md)。
+本文档描述 CalculatorX 的 ArkUI 壳、业务插件、共享组件和移动端交互。系统总览见 [architecture.md](../architecture.md)。
 
 ## 目录
 
@@ -81,7 +81,7 @@ SideBarMenu 点击菜单项
 - rank、rref、trace 和 eigenvalues
 - `moduleType='matrix'` 映射到 C++ `mode=1`
 
-矩阵跨 Web/C++ 的 MWrap 机制和 Giac 路由见 [计算管线](COMPUTE_PIPELINE.md)。
+矩阵跨 Web/C++ 的 MWrap 机制和 Giac 路由见 [计算管线](compute-pipeline.md)。
 
 ### EquationSolver
 
@@ -97,13 +97,13 @@ SideBarMenu 点击菜单项
 
 [GraphingCalc.ets](../../entry/src/main/ets/components/graphing/GraphingCalc.ets) 组合 Canvas、编辑面板、隐藏公式引擎和专属键盘，支持五种函数类型及最多十条叠加。
 
-该模块有独立的编辑、采样和渲染架构，详见 [GRAPHING.md](GRAPHING.md)。
+该模块有独立的编辑、采样和渲染架构，详见 [graphing.md](graphing.md)。
 
 ### ExchangeRate
 
 [ExchangeRate.ets](../../entry/src/main/ets/components/exchange/rates/ExchangeRate.ets) 是独立的联网换算模块，不进入 FormulaScreen/C++ CAS。它包含货币选择、金额输入、列表管理、缓存和实时换算。
 
-完整设计见 [EXCHANGE.md](EXCHANGE.md)。
+完整设计见 [exchange.md](exchange.md)。
 
 ## 3. 开发中模块
 
