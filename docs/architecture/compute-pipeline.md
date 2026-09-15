@@ -1,8 +1,8 @@
 # 计算管线
 
-[← 返回架构主文档](../ARCHITECTURE.md)
+[← 返回架构主文档](../architecture.md)
 
-本文档描述从用户输入到 C++ 计算、结果显示和历史入库的完整链路。系统总览见 [ARCHITECTURE.md](../ARCHITECTURE.md)。
+本文档描述从用户输入到 C++ 计算、结果显示和历史入库的完整链路。系统总览见 [architecture.md](../architecture.md)。
 
 ## 目录
 
@@ -232,4 +232,4 @@ bmatrix LaTeX
 
 `test/Invoke-CalcXCalculation.ps1` 可通过 HDC 调用 `entry/ohosTest`，直接输入 LaTeX 并取得结构化计算结果。测试端复用本页描述的 `calculator.html → EngineService → libentry.so` 链路，因此适合计算引擎回归和 CI；它不经过按键翻译与编辑器交互，不能替代 UI 测试。
 
-构建、安装、参数、退出码、正式包隔离与排障步骤见 [Windows 命令行计算自动化](../CALCULATION_CLI_AUTOMATION.md)。
+构建、安装、参数、退出码、正式包隔离与排障步骤见 [Windows 命令行计算自动化](../calculation-cli-automation.md)。

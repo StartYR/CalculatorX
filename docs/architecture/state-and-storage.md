@@ -1,6 +1,6 @@
 # 状态、通信与持久化
 
-[← 返回架构主文档](../ARCHITECTURE.md)
+[← 返回架构主文档](../architecture.md)
 
 CalculatorX 不使用第三方状态管理库，而是按生命周期和作用域选择 ArkUI 状态、EventHub、AppStorage、Preferences 或 RDB。
 
