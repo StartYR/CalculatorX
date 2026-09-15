@@ -13,6 +13,8 @@ import { InputTranslator } from '../utils/InputTranslator';
 import { PreferenceConfigs } from '../utils/CalculatorConfigs';
 import Logger from '../utils/Logger';
 
+type FormulaInputBehavior = 'EDIT_CURRENT' | 'START_NEW_EXPRESSION';
+
 @Component
 export struct FormulaScreen {
   @Prop moduleType: string; // 区分是 basic 还是 scientific，用于入库打标签
@@ -43,7 +45,8 @@ export struct FormulaScreen {
     // ---------- 基础编辑监听 ----------
     eventHub.on('event_math_insert', (str: string) => {
       Logger.info(`[FormulaScreen] 收到 event_math_insert 事件`);
-      this.insertToWeb(str);
+      let inputBehavior: FormulaInputBehavior = this.supportsResultReady() ? 'START_NEW_EXPRESSION' : 'EDIT_CURRENT';
+      this.insertToWeb(str, inputBehavior);
     });
     eventHub.on('event_math_undo', () => {
       Logger.info(`[FormulaScreen] 收到 event_math_undo 事件`);
@@ -157,7 +160,8 @@ export struct FormulaScreen {
       this.webviewController.runJavaScript('insertDMS()');
     } else if (action === 'Ans') {
       let latexChar = this.lastAnsLatex === "0" ? "0" : `\\left(${this.lastAnsLatex}\\right)`;
-      this.insertToWeb(latexChar);
+      let inputBehavior: FormulaInputBehavior = this.supportsResultReady() ? 'START_NEW_EXPRESSION' : 'EDIT_CURRENT';
+      this.insertToWeb(latexChar, inputBehavior);
     } else if (action === 'S⇄D') {
       if (!this.lastValidJson) return;
       let cppPrecisionMode = -1;
@@ -202,7 +206,38 @@ export struct FormulaScreen {
       this.executeCalculation();
     } else {
       let latexChar = InputTranslator.translate(action, this.combSelect, this.permSelect);
-      this.insertToWeb(latexChar);
+      this.insertToWeb(latexChar, this.getInputBehavior(action));
+    }
+  }
+
+  private getInputBehavior(action: string): FormulaInputBehavior {
+    if (!this.supportsResultReady()) {
+      return 'EDIT_CURRENT';
+    }
+
+    switch (action) {
+      case '+':
+      case '−':
+      case '×':
+      case '÷':
+      case 'mod':
+      case '∘':
+      case 'power2':
+      case 'power3':
+      case 'power':
+      case 'inverse':
+      case 'fact':
+      case '%':
+      case 'icon_exp':
+      case 'M⁻¹':
+      case 'Mᵀ':
+      case 'Mᴴ':
+      case 'M_power':
+      case ')':
+      case 'comma':
+        return 'EDIT_CURRENT';
+      default:
+        return 'START_NEW_EXPRESSION';
     }
   }
 
@@ -297,9 +332,10 @@ export struct FormulaScreen {
     this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
   }
 
-  private insertToWeb(str: string) {
+  private insertToWeb(str: string, inputBehavior: FormulaInputBehavior = 'EDIT_CURRENT') {
     let safeString = JSON.stringify(str);
-    this.webviewController.runJavaScript(`insertMath(${safeString})`);
+    let safeInputBehavior = JSON.stringify(inputBehavior);
+    this.webviewController.runJavaScript(`insertMath(${safeString}, ${safeInputBehavior})`);
   }
 
   build() {
