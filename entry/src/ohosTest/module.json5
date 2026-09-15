@@ -2,11 +2,22 @@
   "module": {
     "name": "entry_test",
     "type": "feature",
+    "mainElement": "CalculationTestAbility",
     "deviceTypes": [
       "phone",
       "tablet"
     ],
     "deliveryWithInstall": true,
-    "installationFree": false
+    "installationFree": false,
+    "pages": "$profile:test_pages",
+    "abilities": [
+      {
+        "name": "CalculationTestAbility",
+        "srcEntry": "./ets/testability/CalculationTestAbility.ets",
+        "exported": false,
+        "startWindowIcon": "$media:startIcon",
+        "startWindowBackground": "$color:start_window_background"
+      }
+    ]
   }
 }
