@@ -215,6 +215,10 @@ export struct FormulaScreen {
     }
   }
 
+  private supportsResultReady(): boolean {
+    return this.moduleType === 'basic' || this.moduleType === 'scientific' || this.moduleType === 'matrix';
+  }
+
   private executeCalculation() {
     Logger.info(`[FormulaScreen] 开始执行 executeCalculation，准备提取输入公式`);
     this.webviewController.runJavaScript('window.getFormula()', (error, rawLatexResult) => {
@@ -275,7 +279,9 @@ export struct FormulaScreen {
           } else {
             this.isTempDecimal = true;
           }
-          this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
+          this.webviewController.runJavaScript(
+            `window.completeCalculation(${JSON.stringify(cppResponse)}, ${this.supportsResultReady()})`
+          );
         }
       });
     });

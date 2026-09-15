@@ -139,6 +139,12 @@
         const inputWrapper = document.querySelector('.input-scroll-wrapper');
         const resWrapper = document.querySelector('.result-scroll-wrapper');
 
+        const EditorState = Object.freeze({
+            EDITING: 'EDITING',
+            RESULT_READY: 'RESULT_READY'
+        });
+        let editorState = EditorState.EDITING;
+
         // ========== 通用的动态字号缩放核心核心算法 ==========
         function autoScaleFontSize(field, wrapper, maxRem, minRem) {
             // 1. 恢复最大字号以便测量
@@ -231,7 +237,7 @@
         mf.focus();
 
 
-        window.showResult = function (latexString) {
+        function renderResult(latexString) {
             resField.value = latexString;
             resField.classList.add('show');
 
@@ -247,9 +253,31 @@
                 }, 20);
 
             }, 50);
+        }
+
+        window.showResult = function (latexString) {
+            renderResult(latexString);
+        };
+
+        window.completeCalculation = function (latexString, enableResultReady) {
+            renderResult(latexString);
+
+            if (!enableResultReady) {
+                editorState = EditorState.EDITING;
+                return;
+            }
+
+            mf.executeCommand('moveToMathfieldEnd');
+            mf.blur();
+            editorState = EditorState.RESULT_READY;
+        };
+
+        window.getEditorState = function () {
+            return editorState;
         };
 
         mf.addEventListener('input', () => {
+            editorState = EditorState.EDITING;
             resField.classList.remove('show');
         });
 
