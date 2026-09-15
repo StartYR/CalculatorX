@@ -2,7 +2,7 @@
 
 本目录保存已经完成、准备合并的功能与修复说明。每个分支维护一份独立文档，在实现和验证完成后、合并前更新为最终内容。
 
-这套记录用于保留一次变更的完整上下文，也作为后续发布说明的素材来源。`docs/CHANGELOG.md` 保留为历史文档，不再作为新变更的必填入口。
+这套记录用于保留一次变更的完整上下文，也是后续编写 `docs/CHANGELOG.md` 和 GitHub Release 的素材来源。Changelog 只保留按版本整理的用户向摘要，具体设计和验证信息保留在本目录中。
 
 ## 何时需要编写
 
@@ -83,6 +83,20 @@ YYYY-MM-DD-topic-slug.md
 git diff --name-only --diff-filter=A <previous-tag>..HEAD -- 'docs/changes/*.md' ':(exclude)docs/changes/README.md'
 ```
 
-逐份提取“发布说明素材”，按功能、修复等类别整理到 GitHub Release。目录 README 不登记每一份说明，因此新增分支文档时不需要同步维护索引。
+逐份提取“发布说明素材”，按功能、修复等类别整理成版本摘要，并在 [`docs/CHANGELOG.md`](../CHANGELOG.md) 的现有版本记录上方新增当前版本。相同摘要可用于 GitHub Release。
+
+从 `v1.6.4` 开始，版本标题统一使用实际 Tag 名称和发布日期，例如：
+
+```markdown
+## [v1.6.4] - 2026-09-XX
+```
+
+Changelog 中的重要功能或修复可以在条目末尾附上对应的分支变更说明，方便读者查看完整行为、实现边界和验证信息。链接文字使用便于识别的文档名，可以省略文件名中的日期前缀。不要求每一条都添加链接，应优先链接需要进一步说明或具有代表性的变更。例如：
+
+```markdown
+- 优化计算完成后的连续输入，并修复结果接续百分号的解析问题。（[result-ready-input-flow.md](./changes/2026-09-15-result-ready-input-flow.md)）
+```
+
+Changelog 不需要复制各分支说明的实现细节，也不需要重新倒查提交。目录 README 不登记每一份说明，因此新增分支文档时无需同步维护索引。
 
 [返回贡献指南](../CONTRIBUTING.md)
