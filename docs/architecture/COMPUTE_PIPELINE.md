@@ -227,3 +227,9 @@ bmatrix LaTeX
 - 高级符号结果错误：Giac 指令构造 → giac_bridge。
 - 矩阵错误：MWrap → MatrixParser → Giac。
 - S⇄D 错误：FormulaScreen 保存的 AST → precision → FormatUtils。
+
+## 12. 设备端命令行自动化
+
+`test/Invoke-CalcXCalculation.ps1` 可通过 HDC 调用 `entry/ohosTest`，直接输入 LaTeX 并取得结构化计算结果。测试端复用本页描述的 `calculator.html → EngineService → libentry.so` 链路，因此适合计算引擎回归和 CI；它不经过按键翻译与编辑器交互，不能替代 UI 测试。
+
+构建、安装、参数、退出码、正式包隔离与排障步骤见 [Windows 命令行计算自动化](../CALCULATION_CLI_AUTOMATION.md)。
