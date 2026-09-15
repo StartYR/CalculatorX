@@ -1,6 +1,5 @@
 # 📅 CalculatorX 更新日志 (Changelog)
 
-本项目所有的版本更新记录都将在此文档中进行维护。
 日志格式严格遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/) 规范，版本号遵循 [语义化版本 2.0.0](https://semver.org/lang/zh-CN/) 规范。
 
 
