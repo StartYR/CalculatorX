@@ -143,6 +143,11 @@
             EDITING: 'EDITING',
             RESULT_READY: 'RESULT_READY'
         });
+        const InputBehavior = Object.freeze({
+            EDIT_CURRENT: 'EDIT_CURRENT',
+            START_NEW_EXPRESSION: 'START_NEW_EXPRESSION',
+            CONTINUE_FROM_RESULT: 'CONTINUE_FROM_RESULT'
+        });
         let editorState = EditorState.EDITING;
 
         // ========== 通用的动态字号缩放核心核心算法 ==========
@@ -290,13 +295,23 @@
             mf.executeCommand(command);
         };
 
-        window.insertMath = function (latexString, inputBehavior = 'EDIT_CURRENT') {
-            if (editorState === EditorState.RESULT_READY && inputBehavior === 'START_NEW_EXPRESSION') {
-                editorState = EditorState.EDITING;
-                mf.executeCommand('deleteAll');
-                resField.classList.remove('show');
-                resField.value = '';
+        function prepareResultReadyInput(inputBehavior, leftOperandLatex) {
+            if (editorState !== EditorState.RESULT_READY || inputBehavior === InputBehavior.EDIT_CURRENT) {
+                return;
             }
+
+            editorState = EditorState.EDITING;
+            mf.executeCommand('deleteAll');
+            resField.classList.remove('show');
+            resField.value = '';
+
+            if (inputBehavior === InputBehavior.CONTINUE_FROM_RESULT && leftOperandLatex) {
+                mf.executeCommand(['insert', leftOperandLatex]);
+            }
+        }
+
+        window.insertMath = function (latexString, inputBehavior = InputBehavior.EDIT_CURRENT, leftOperandLatex = '') {
+            prepareResultReadyInput(inputBehavior, leftOperandLatex);
 
             const currentLatex = mf.value;
             // 正则判断当前公式最后是不是以“秒”结尾（兼容 MathLive 的空格排版）
@@ -312,7 +327,9 @@
         };
 
         // 度分秒专属的智能插入与拦截
-        window.insertDMS = function () {
+        window.insertDMS = function (inputBehavior = InputBehavior.EDIT_CURRENT, leftOperandLatex = '') {
+            prepareResultReadyInput(inputBehavior, leftOperandLatex);
+
             const currentLatex = mf.value;
 
             // 【拦截逻辑】：如果前方紧挨着已经是“秒”了，直接禁止再次输入度分秒

@@ -13,7 +13,13 @@ import { InputTranslator } from '../utils/InputTranslator';
 import { PreferenceConfigs } from '../utils/CalculatorConfigs';
 import Logger from '../utils/Logger';
 
-type FormulaInputBehavior = 'EDIT_CURRENT' | 'START_NEW_EXPRESSION';
+type FormulaInputBehavior = 'EDIT_CURRENT' | 'START_NEW_EXPRESSION' | 'CONTINUE_FROM_RESULT';
+
+const CONTINUE_FROM_RESULT_ACTIONS: string[] = [
+  '+', '−', '×', '÷', 'mod', '∘',
+  'power2', 'power3', 'power', 'inverse', 'fact', '%', 'icon_exp', '° \' "',
+  'M⁻¹', 'Mᵀ', 'Mᴴ', 'M_power'
+];
 
 @Component
 export struct FormulaScreen {
@@ -157,11 +163,13 @@ export struct FormulaScreen {
     } else if (action === 'R/D') {
       AppStorage.setOrCreate('isRad', !this.isRad);
     } else if (action === '° \' \"') {
-      this.webviewController.runJavaScript('insertDMS()');
+      let inputBehavior = this.getInputBehavior(action);
+      let safeInputBehavior = JSON.stringify(inputBehavior);
+      let safeLeftOperand = JSON.stringify(inputBehavior === 'CONTINUE_FROM_RESULT' ? this.getAnsLatex() : '');
+      this.webviewController.runJavaScript(`insertDMS(${safeInputBehavior}, ${safeLeftOperand})`);
     } else if (action === 'Ans') {
-      let latexChar = this.lastAnsLatex === "0" ? "0" : `\\left(${this.lastAnsLatex}\\right)`;
       let inputBehavior: FormulaInputBehavior = this.supportsResultReady() ? 'START_NEW_EXPRESSION' : 'EDIT_CURRENT';
-      this.insertToWeb(latexChar, inputBehavior);
+      this.insertToWeb(this.getAnsLatex(), inputBehavior);
     } else if (action === 'S⇄D') {
       if (!this.lastValidJson) return;
       let cppPrecisionMode = -1;
@@ -215,30 +223,19 @@ export struct FormulaScreen {
       return 'EDIT_CURRENT';
     }
 
-    switch (action) {
-      case '+':
-      case '−':
-      case '×':
-      case '÷':
-      case 'mod':
-      case '∘':
-      case 'power2':
-      case 'power3':
-      case 'power':
-      case 'inverse':
-      case 'fact':
-      case '%':
-      case 'icon_exp':
-      case 'M⁻¹':
-      case 'Mᵀ':
-      case 'Mᴴ':
-      case 'M_power':
-      case ')':
-      case 'comma':
-        return 'EDIT_CURRENT';
-      default:
-        return 'START_NEW_EXPRESSION';
+    if (CONTINUE_FROM_RESULT_ACTIONS.includes(action)) {
+      return 'CONTINUE_FROM_RESULT';
     }
+
+    if (action === ')' || action === 'comma') {
+      return 'EDIT_CURRENT';
+    }
+
+    return 'START_NEW_EXPRESSION';
+  }
+
+  private getAnsLatex(): string {
+    return this.lastAnsLatex === "0" ? "0" : `\\left(${this.lastAnsLatex}\\right)`;
   }
 
   private getCalcMode(): number {
@@ -335,7 +332,8 @@ export struct FormulaScreen {
   private insertToWeb(str: string, inputBehavior: FormulaInputBehavior = 'EDIT_CURRENT') {
     let safeString = JSON.stringify(str);
     let safeInputBehavior = JSON.stringify(inputBehavior);
-    this.webviewController.runJavaScript(`insertMath(${safeString}, ${safeInputBehavior})`);
+    let safeLeftOperand = JSON.stringify(inputBehavior === 'CONTINUE_FROM_RESULT' ? this.getAnsLatex() : '');
+    this.webviewController.runJavaScript(`insertMath(${safeString}, ${safeInputBehavior}, ${safeLeftOperand})`);
   }
 
   build() {
