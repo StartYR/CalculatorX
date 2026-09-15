@@ -296,7 +296,17 @@
         };
 
         function prepareResultReadyInput(inputBehavior, leftOperandLatex) {
-            if (editorState !== EditorState.RESULT_READY || inputBehavior === InputBehavior.EDIT_CURRENT) {
+            if (editorState !== EditorState.RESULT_READY) {
+                return;
+            }
+
+            if (inputBehavior === InputBehavior.EDIT_CURRENT) {
+                editorState = EditorState.EDITING;
+                return;
+            }
+
+            if (inputBehavior !== InputBehavior.START_NEW_EXPRESSION &&
+                inputBehavior !== InputBehavior.CONTINUE_FROM_RESULT) {
                 return;
             }
 
