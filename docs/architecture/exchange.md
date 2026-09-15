@@ -1,6 +1,6 @@
 # 汇率架构
 
-[← 返回架构主文档](../ARCHITECTURE.md)
+[← 返回架构主文档](../architecture.md)
 
 汇率换算是独立的 ArkTS 网络业务模块。它不使用 FormulaScreen、MathJSON 或 C++ CAS，而是在本地对远端汇率字典进行交叉换算。
 

@@ -1,5 +1,5 @@
-import abilityTest from './Ability.test';
+import calculationCliTest from './CalculationCli.test';
 
 export default function testsuite() {
-  abilityTest();
+  calculationCliTest();
 }
