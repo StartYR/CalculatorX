@@ -260,6 +260,9 @@ export struct FormulaScreen {
       }
       Logger.info(`[FormulaScreen] 成功提取原始 LaTeX`);
 
+      this.lastValidJson = "";
+      this.isTempDecimal = false;
+
       let rawLatex = rawLatexResult.replace(/^"|"$/g, '').replace(/\\\\/g, '\\');
       let cleanedLatex = EngineService.cleanRawLatex(rawLatexResult);
       let injectJs = EngineService.generateInjectJs(cleanedLatex);
@@ -272,7 +275,6 @@ export struct FormulaScreen {
         Logger.info(`[FormulaScreen] 成功获取 MathJSON AST`);
 
         let cleanJsonString = EngineService.parseWebJsonResult(jsonResult);
-        this.lastValidJson = cleanJsonString;
 
         let cppPrecisionMode = -1;
         if (this.answerOutputMode === 0) {
@@ -295,6 +297,7 @@ export struct FormulaScreen {
           Logger.error(`[FormulaScreen] C++ 计算出现异常: ${cppResponse}`);
           this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
         } else {
+          this.lastValidJson = cleanJsonString;
           this.lastAnsLatex = cppResponse;
 
           Logger.info(`[FormulaScreen] 准备向暗房下发截图指令，原始公式与结果均就绪`);
