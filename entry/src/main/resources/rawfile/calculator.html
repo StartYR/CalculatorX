@@ -139,6 +139,17 @@
         const inputWrapper = document.querySelector('.input-scroll-wrapper');
         const resWrapper = document.querySelector('.result-scroll-wrapper');
 
+        const EditorState = Object.freeze({
+            EDITING: 'EDITING',
+            RESULT_READY: 'RESULT_READY'
+        });
+        const InputBehavior = Object.freeze({
+            EDIT_CURRENT: 'EDIT_CURRENT',
+            START_NEW_EXPRESSION: 'START_NEW_EXPRESSION',
+            CONTINUE_FROM_RESULT: 'CONTINUE_FROM_RESULT'
+        });
+        let editorState = EditorState.EDITING;
+
         // ========== 通用的动态字号缩放核心核心算法 ==========
         function autoScaleFontSize(field, wrapper, maxRem, minRem) {
             // 1. 恢复最大字号以便测量
@@ -231,7 +242,7 @@
         mf.focus();
 
 
-        window.showResult = function (latexString) {
+        function renderResult(latexString) {
             resField.value = latexString;
             resField.classList.add('show');
 
@@ -247,13 +258,67 @@
                 }, 20);
 
             }, 50);
+        }
+
+        window.showResult = function (latexString) {
+            renderResult(latexString);
+        };
+
+        window.completeCalculation = function (latexString, enableResultReady) {
+            renderResult(latexString);
+
+            if (!enableResultReady) {
+                editorState = EditorState.EDITING;
+                return;
+            }
+
+            mf.blur();
+            editorState = EditorState.RESULT_READY;
         };
 
         mf.addEventListener('input', () => {
+            editorState = EditorState.EDITING;
             resField.classList.remove('show');
+
+            if (window.editorBridge && window.editorBridge.onFormulaChanged) {
+                window.editorBridge.onFormulaChanged();
+            }
         });
 
-        window.insertMath = function (latexString) {
+        window.executeEditCommand = function (command) {
+            editorState = EditorState.EDITING;
+            mf.focus();
+            mf.executeCommand(command);
+        };
+
+        function prepareResultReadyInput(inputBehavior, leftOperandLatex) {
+            if (editorState !== EditorState.RESULT_READY) {
+                return;
+            }
+
+            if (inputBehavior === InputBehavior.EDIT_CURRENT) {
+                editorState = EditorState.EDITING;
+                return;
+            }
+
+            if (inputBehavior !== InputBehavior.START_NEW_EXPRESSION &&
+                inputBehavior !== InputBehavior.CONTINUE_FROM_RESULT) {
+                return;
+            }
+
+            editorState = EditorState.EDITING;
+            mf.executeCommand('deleteAll');
+            resField.classList.remove('show');
+            resField.value = '';
+
+            if (inputBehavior === InputBehavior.CONTINUE_FROM_RESULT && leftOperandLatex) {
+                mf.executeCommand(['insert', leftOperandLatex]);
+            }
+        }
+
+        window.insertMath = function (latexString, inputBehavior = InputBehavior.EDIT_CURRENT, leftOperandLatex = '') {
+            prepareResultReadyInput(inputBehavior, leftOperandLatex);
+
             const currentLatex = mf.value;
             // 正则判断当前公式最后是不是以“秒”结尾（兼容 MathLive 的空格排版）
             const isEndsWithSecond = /\^\{\\prime\s*\\prime\}\s*$/.test(currentLatex);
@@ -268,7 +333,9 @@
         };
 
         // 度分秒专属的智能插入与拦截
-        window.insertDMS = function () {
+        window.insertDMS = function (inputBehavior = InputBehavior.EDIT_CURRENT, leftOperandLatex = '') {
+            prepareResultReadyInput(inputBehavior, leftOperandLatex);
+
             const currentLatex = mf.value;
 
             // 【拦截逻辑】：如果前方紧挨着已经是“秒”了，直接禁止再次输入度分秒
@@ -303,6 +370,7 @@
         };
 
         window.clearMath = function () {
+            editorState = EditorState.EDITING;
             mf.executeCommand('deleteAll');
             resField.classList.remove('show');
             resField.value = '';
@@ -310,8 +378,7 @@
         };
 
         window.deleteMath = function () {
-            mf.executeCommand('deleteBackward');
-            mf.focus();
+            window.executeEditCommand('deleteBackward');
         };
 
         window.getFormula = function () {
@@ -351,6 +418,10 @@
             if (!isPanning && (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8)) {
                 isPanning = true;
 
+                if (editorState === EditorState.RESULT_READY) {
+                    mf.blur();
+                }
+
                 // 打断 MathLive 的蓝色选中
                 mf.dispatchEvent(new PointerEvent('pointercancel', {
                     pointerId: e.pointerId,
@@ -372,10 +443,15 @@
 
         // 3. 捕获手指抬起
         inputWrapper.addEventListener('pointerup', (e) => {
-            if (e.pointerType !== 'touch') return;
+            if (e.pointerType !== 'touch') {
+                editorState = EditorState.EDITING;
+                return;
+            }
             if (isPanning) {
                 e.stopPropagation();
                 isPanning = false;
+            } else {
+                editorState = EditorState.EDITING;
             }
         }, { capture: true });
     });

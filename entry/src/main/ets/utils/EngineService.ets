@@ -201,6 +201,12 @@ export class EngineService {
     if (Array.isArray(astNode)) {
       let arr = astNode as Object[];
 
+      // Compute Engine 会把括号后的后缀百分号解析为 Tuple + unexpected-command。
+      // 只修复这个完整且明确的错误结构，避免改变其他 Tuple 或解析错误。
+      if (arr.length === 3 && arr[0] === 'Tuple' && EngineService.isPostfixPercentParseError(arr[2])) {
+        return ['Percent', EngineService.unwrapMWrap(arr[1])];
+      }
+
       // 1. 拦截孤立的 ["MWrap", ["Matrix", ...]]
       if (arr.length === 2 && arr[0] === 'MWrap' && Array.isArray(arr[1]) && arr[1][0] === 'Matrix') {
         return EngineService.unwrapMWrap(arr[1]);
@@ -224,5 +230,23 @@ export class EngineService {
     }
     // 如果是数字或字符串，直接返回
     return astNode;
+  }
+
+  private static isPostfixPercentParseError(astNode: Object): boolean {
+    if (!Array.isArray(astNode)) {
+      return false;
+    }
+
+    let errorNode = astNode as Object[];
+    if (errorNode.length !== 3 || errorNode[0] !== 'Error' || errorNode[1] !== "'unexpected-command'") {
+      return false;
+    }
+
+    if (!Array.isArray(errorNode[2])) {
+      return false;
+    }
+
+    let latexNode = errorNode[2] as Object[];
+    return latexNode.length === 2 && latexNode[0] === 'LatexString' && latexNode[1] === "'\\%'";
   }
 }

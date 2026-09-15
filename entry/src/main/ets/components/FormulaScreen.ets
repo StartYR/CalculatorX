@@ -13,6 +13,14 @@ import { InputTranslator } from '../utils/InputTranslator';
 import { PreferenceConfigs } from '../utils/CalculatorConfigs';
 import Logger from '../utils/Logger';
 
+type FormulaInputBehavior = 'EDIT_CURRENT' | 'START_NEW_EXPRESSION' | 'CONTINUE_FROM_RESULT';
+
+const CONTINUE_FROM_RESULT_ACTIONS: string[] = [
+  '+', '−', '×', '÷', 'mod', '∘',
+  'power2', 'power3', 'power', 'inverse', 'fact', '%', 'icon_exp', '° \' "',
+  'M⁻¹', 'Mᵀ', 'Mᴴ', 'M_power'
+];
+
 @Component
 export struct FormulaScreen {
   @Prop moduleType: string; // 区分是 basic 还是 scientific，用于入库打标签
@@ -43,15 +51,16 @@ export struct FormulaScreen {
     // ---------- 基础编辑监听 ----------
     eventHub.on('event_math_insert', (str: string) => {
       Logger.info(`[FormulaScreen] 收到 event_math_insert 事件`);
-      this.insertToWeb(str);
+      let inputBehavior: FormulaInputBehavior = this.supportsResultReady() ? 'START_NEW_EXPRESSION' : 'EDIT_CURRENT';
+      this.insertToWeb(str, inputBehavior);
     });
     eventHub.on('event_math_undo', () => {
       Logger.info(`[FormulaScreen] 收到 event_math_undo 事件`);
-      this.webviewController.runJavaScript(`document.querySelector('math-field').executeCommand('undo')`);
+      this.webviewController.runJavaScript(`window.executeEditCommand('undo')`);
     });
     eventHub.on('event_math_redo', () => {
       Logger.info(`[FormulaScreen] 收到 event_math_redo 事件`);
-      this.webviewController.runJavaScript(`document.querySelector('math-field').executeCommand('redo')`);
+      this.webviewController.runJavaScript(`window.executeEditCommand('redo')`);
     });
     eventHub.on('screen_handle_action', (action: string, isShift: boolean) => {
       Logger.info(`[FormulaScreen] 收到 screen_handle_action 事件, action: ${action}, isShift: ${isShift}`);
@@ -144,20 +153,23 @@ export struct FormulaScreen {
     } else if (action === '⌫') {
       this.webviewController.runJavaScript('deleteMath()');
     } else if (action === '⇦') {
-      this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveToPreviousChar')`);
+      this.webviewController.runJavaScript(`window.executeEditCommand('moveToPreviousChar')`);
     } else if (action === '⇨') {
-      this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveToNextChar')`);
+      this.webviewController.runJavaScript(`window.executeEditCommand('moveToNextChar')`);
     } else if (action === '⇧') {
-      this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveUp')`);
+      this.webviewController.runJavaScript(`window.executeEditCommand('moveUp')`);
     } else if (action === '⇩') {
-      this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveDown')`);
+      this.webviewController.runJavaScript(`window.executeEditCommand('moveDown')`);
     } else if (action === 'R/D') {
       AppStorage.setOrCreate('isRad', !this.isRad);
     } else if (action === '° \' \"') {
-      this.webviewController.runJavaScript('insertDMS()');
+      let inputBehavior = this.getInputBehavior(action);
+      let safeInputBehavior = JSON.stringify(inputBehavior);
+      let safeLeftOperand = JSON.stringify(inputBehavior === 'CONTINUE_FROM_RESULT' ? this.getAnsLatex() : '');
+      this.webviewController.runJavaScript(`insertDMS(${safeInputBehavior}, ${safeLeftOperand})`);
     } else if (action === 'Ans') {
-      let latexChar = this.lastAnsLatex === "0" ? "0" : `\\left(${this.lastAnsLatex}\\right)`;
-      this.insertToWeb(latexChar);
+      let inputBehavior: FormulaInputBehavior = this.supportsResultReady() ? 'START_NEW_EXPRESSION' : 'EDIT_CURRENT';
+      this.insertToWeb(this.getAnsLatex(), inputBehavior);
     } else if (action === 'S⇄D') {
       if (!this.lastValidJson) return;
       let cppPrecisionMode = -1;
@@ -202,8 +214,28 @@ export struct FormulaScreen {
       this.executeCalculation();
     } else {
       let latexChar = InputTranslator.translate(action, this.combSelect, this.permSelect);
-      this.insertToWeb(latexChar);
+      this.insertToWeb(latexChar, this.getInputBehavior(action));
     }
+  }
+
+  private getInputBehavior(action: string): FormulaInputBehavior {
+    if (!this.supportsResultReady()) {
+      return 'EDIT_CURRENT';
+    }
+
+    if (CONTINUE_FROM_RESULT_ACTIONS.includes(action)) {
+      return 'CONTINUE_FROM_RESULT';
+    }
+
+    if (action === ')' || action === 'comma') {
+      return 'EDIT_CURRENT';
+    }
+
+    return 'START_NEW_EXPRESSION';
+  }
+
+  private getAnsLatex(): string {
+    return this.lastAnsLatex === "0" ? "0" : `\\left(${this.lastAnsLatex}\\right)`;
   }
 
   private getCalcMode(): number {
@@ -215,6 +247,10 @@ export struct FormulaScreen {
     }
   }
 
+  private supportsResultReady(): boolean {
+    return this.moduleType === 'basic' || this.moduleType === 'scientific' || this.moduleType === 'matrix';
+  }
+
   private executeCalculation() {
     Logger.info(`[FormulaScreen] 开始执行 executeCalculation，准备提取输入公式`);
     this.webviewController.runJavaScript('window.getFormula()', (error, rawLatexResult) => {
@@ -223,6 +259,9 @@ export struct FormulaScreen {
         return;
       }
       Logger.info(`[FormulaScreen] 成功提取原始 LaTeX`);
+
+      this.lastValidJson = "";
+      this.isTempDecimal = false;
 
       let rawLatex = rawLatexResult.replace(/^"|"$/g, '').replace(/\\\\/g, '\\');
       let cleanedLatex = EngineService.cleanRawLatex(rawLatexResult);
@@ -236,7 +275,6 @@ export struct FormulaScreen {
         Logger.info(`[FormulaScreen] 成功获取 MathJSON AST`);
 
         let cleanJsonString = EngineService.parseWebJsonResult(jsonResult);
-        this.lastValidJson = cleanJsonString;
 
         let cppPrecisionMode = -1;
         if (this.answerOutputMode === 0) {
@@ -259,6 +297,7 @@ export struct FormulaScreen {
           Logger.error(`[FormulaScreen] C++ 计算出现异常: ${cppResponse}`);
           this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
         } else {
+          this.lastValidJson = cleanJsonString;
           this.lastAnsLatex = cppResponse;
 
           Logger.info(`[FormulaScreen] 准备向暗房下发截图指令，原始公式与结果均就绪`);
@@ -275,7 +314,9 @@ export struct FormulaScreen {
           } else {
             this.isTempDecimal = true;
           }
-          this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
+          this.webviewController.runJavaScript(
+            `window.completeCalculation(${JSON.stringify(cppResponse)}, ${this.supportsResultReady()})`
+          );
         }
       });
     });
@@ -291,9 +332,11 @@ export struct FormulaScreen {
     this.webviewController.runJavaScript(`window.showResult(${JSON.stringify(cppResponse)})`);
   }
 
-  private insertToWeb(str: string) {
+  private insertToWeb(str: string, inputBehavior: FormulaInputBehavior = 'EDIT_CURRENT') {
     let safeString = JSON.stringify(str);
-    this.webviewController.runJavaScript(`insertMath(${safeString})`);
+    let safeInputBehavior = JSON.stringify(inputBehavior);
+    let safeLeftOperand = JSON.stringify(inputBehavior === 'CONTINUE_FROM_RESULT' ? this.getAnsLatex() : '');
+    this.webviewController.runJavaScript(`insertMath(${safeString}, ${safeInputBehavior}, ${safeLeftOperand})`);
   }
 
   build() {
@@ -321,6 +364,17 @@ export struct FormulaScreen {
             this.webviewController.runJavaScript(script);
             this.pendingLatex = null;
           }
+        })
+        .javaScriptProxy({
+          object: {
+            onFormulaChanged: () => {
+              this.lastValidJson = "";
+              this.isTempDecimal = false;
+            }
+          },
+          name: "editorBridge",
+          methodList: ["onFormulaChanged"],
+          controller: this.webviewController
         })
 
       // 2. 暗房 Webview
