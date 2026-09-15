@@ -1,9 +1,12 @@
 # 📅 CalculatorX 更新日志 (Changelog)
 
-本项目所有的版本更新记录都将在此文档中进行维护。
-日志格式严格遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/) 规范，版本号遵循 [语义化版本 2.0.0](https://semver.org/lang/zh-CN/) 规范。
+本文件记录正式版本中面向用户的重要变化，不逐条罗列提交。
 
+从 `v1.6.4` 开始，每次发布新版本时，根据两个 Tag 之间新增的[分支变更说明](./changes/README.md)整理版本摘要，并将最新版本写在现有记录上方；同一份摘要可用于 [GitHub Releases](https://github.com/StartYR/CalculatorX/releases)。版本号遵循[语义化版本 2.0.0](https://semver.org/lang/zh-CN/) 规范，内容分类参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
+重要或具有代表性的更新条目可以附上对应的详细变更说明，并以便于识别的文档名作为链接文字；链接文字可以省略文件名中的日期前缀。不要求每一条记录都添加链接。
+
+`v1.3.1` 至 `v1.6.3` 期间没有持续维护本文件，暂不追溯补写。下方保留已有的早期版本记录。
 
 ## [1.3.0 Beta] - 2026-06
 
