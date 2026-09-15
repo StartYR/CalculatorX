@@ -1,6 +1,6 @@
 # 完整项目结构
 
-[← 返回架构主文档](../ARCHITECTURE.md)
+[← 返回架构主文档](../architecture.md)
 
 
 ## 目录结构
@@ -128,4 +128,4 @@ entry/src/main/                   # 📦 主 HAP 模块源码
 
 ---
 
-[← 返回架构主文档](../ARCHITECTURE.md)
+[← 返回架构主文档](../architecture.md)
