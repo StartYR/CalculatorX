@@ -290,7 +290,14 @@
             mf.executeCommand(command);
         };
 
-        window.insertMath = function (latexString) {
+        window.insertMath = function (latexString, inputBehavior = 'EDIT_CURRENT') {
+            if (editorState === EditorState.RESULT_READY && inputBehavior === 'START_NEW_EXPRESSION') {
+                editorState = EditorState.EDITING;
+                mf.executeCommand('deleteAll');
+                resField.classList.remove('show');
+                resField.value = '';
+            }
+
             const currentLatex = mf.value;
             // 正则判断当前公式最后是不是以“秒”结尾（兼容 MathLive 的空格排版）
             const isEndsWithSecond = /\^\{\\prime\s*\\prime\}\s*$/.test(currentLatex);
