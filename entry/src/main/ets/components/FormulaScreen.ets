@@ -47,11 +47,11 @@ export struct FormulaScreen {
     });
     eventHub.on('event_math_undo', () => {
       Logger.info(`[FormulaScreen] 收到 event_math_undo 事件`);
-      this.webviewController.runJavaScript(`document.querySelector('math-field').executeCommand('undo')`);
+      this.webviewController.runJavaScript(`window.executeEditCommand('undo')`);
     });
     eventHub.on('event_math_redo', () => {
       Logger.info(`[FormulaScreen] 收到 event_math_redo 事件`);
-      this.webviewController.runJavaScript(`document.querySelector('math-field').executeCommand('redo')`);
+      this.webviewController.runJavaScript(`window.executeEditCommand('redo')`);
     });
     eventHub.on('screen_handle_action', (action: string, isShift: boolean) => {
       Logger.info(`[FormulaScreen] 收到 screen_handle_action 事件, action: ${action}, isShift: ${isShift}`);
@@ -144,13 +144,13 @@ export struct FormulaScreen {
     } else if (action === '⌫') {
       this.webviewController.runJavaScript('deleteMath()');
     } else if (action === '⇦') {
-      this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveToPreviousChar')`);
+      this.webviewController.runJavaScript(`window.executeEditCommand('moveToPreviousChar')`);
     } else if (action === '⇨') {
-      this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveToNextChar')`);
+      this.webviewController.runJavaScript(`window.executeEditCommand('moveToNextChar')`);
     } else if (action === '⇧') {
-      this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveUp')`);
+      this.webviewController.runJavaScript(`window.executeEditCommand('moveUp')`);
     } else if (action === '⇩') {
-      this.webviewController.runJavaScript(`document.getElementById('math-input').executeCommand('moveDown')`);
+      this.webviewController.runJavaScript(`window.executeEditCommand('moveDown')`);
     } else if (action === 'R/D') {
       AppStorage.setOrCreate('isRad', !this.isRad);
     } else if (action === '° \' \"') {
@@ -327,6 +327,17 @@ export struct FormulaScreen {
             this.webviewController.runJavaScript(script);
             this.pendingLatex = null;
           }
+        })
+        .javaScriptProxy({
+          object: {
+            onFormulaChanged: () => {
+              this.lastValidJson = "";
+              this.isTempDecimal = false;
+            }
+          },
+          name: "editorBridge",
+          methodList: ["onFormulaChanged"],
+          controller: this.webviewController
         })
 
       // 2. 暗房 Webview

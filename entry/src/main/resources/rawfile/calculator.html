@@ -278,7 +278,17 @@
         mf.addEventListener('input', () => {
             editorState = EditorState.EDITING;
             resField.classList.remove('show');
+
+            if (window.editorBridge && window.editorBridge.onFormulaChanged) {
+                window.editorBridge.onFormulaChanged();
+            }
         });
+
+        window.executeEditCommand = function (command) {
+            editorState = EditorState.EDITING;
+            mf.focus();
+            mf.executeCommand(command);
+        };
 
         window.insertMath = function (latexString) {
             const currentLatex = mf.value;
@@ -330,6 +340,7 @@
         };
 
         window.clearMath = function () {
+            editorState = EditorState.EDITING;
             mf.executeCommand('deleteAll');
             resField.classList.remove('show');
             resField.value = '';
@@ -337,8 +348,7 @@
         };
 
         window.deleteMath = function () {
-            mf.executeCommand('deleteBackward');
-            mf.focus();
+            window.executeEditCommand('deleteBackward');
         };
 
         window.getFormula = function () {
@@ -378,6 +388,10 @@
             if (!isPanning && (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8)) {
                 isPanning = true;
 
+                if (editorState === EditorState.RESULT_READY) {
+                    mf.blur();
+                }
+
                 // 打断 MathLive 的蓝色选中
                 mf.dispatchEvent(new PointerEvent('pointercancel', {
                     pointerId: e.pointerId,
@@ -399,10 +413,15 @@
 
         // 3. 捕获手指抬起
         inputWrapper.addEventListener('pointerup', (e) => {
-            if (e.pointerType !== 'touch') return;
+            if (e.pointerType !== 'touch') {
+                editorState = EditorState.EDITING;
+                return;
+            }
             if (isPanning) {
                 e.stopPropagation();
                 isPanning = false;
+            } else {
+                editorState = EditorState.EDITING;
             }
         }, { capture: true });
     });
