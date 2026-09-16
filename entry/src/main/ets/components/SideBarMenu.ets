@@ -9,6 +9,7 @@
 import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from './common/MenuComponents';
 import router from '@ohos.router';
 import { RoutePath } from '../utils/CalculatorConfigs';
+import { SemanticIds, getModuleSemanticId } from '../utils/SemanticIds';
 
 @Component
 export struct SideBarMenu {
@@ -27,6 +28,8 @@ export struct SideBarMenu {
         .width('100%')
         .height('100%')
         .backgroundColor('rgba(0, 0, 0, 0.2)') // 稍微调低透明度，让底层的模糊更透亮
+        .id(SemanticIds.SIDEBAR_DISMISS)
+        .accessibilityText('关闭导航菜单')
         .backgroundBlurStyle(BlurStyle.Thin)
         .onClick(() => {
           // 收起动效
@@ -62,6 +65,8 @@ export struct SideBarMenu {
           }
           .width(40)
           .height(40)
+          .id(SemanticIds.NAV_HISTORY_PAGE)
+          .accessibilityText('历史记录')
           .backgroundColor($r('sys.color.comp_background_tertiary'))
           .margin({ right: 12 }) // 按钮间距
           .border({
@@ -91,6 +96,8 @@ export struct SideBarMenu {
           }
           .width(40)
           .height(40)
+          .id(SemanticIds.NAV_SETTINGS)
+          .accessibilityText('设置')
           .backgroundColor($r('sys.color.comp_background_tertiary')) // 底色
           .border({
             width: 0.5,
@@ -123,6 +130,7 @@ export struct SideBarMenu {
                 MenuButton({
                   icon: $r('sys.symbol.calculator_1'),
                   title: '基础计算',
+                  semanticId: getModuleSemanticId('basic'),
                   onClickAction: () => {
                     animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
                     if (this.onModuleSelect) { this.onModuleSelect('basic'); }
@@ -132,6 +140,7 @@ export struct SideBarMenu {
                 MenuButton({
                   icon: $r('sys.symbol.calculator'),
                   title: '科学计算',
+                  semanticId: getModuleSemanticId('scientific'),
                   onClickAction: () => {
                     animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
                     if (this.onModuleSelect) { this.onModuleSelect('scientific'); }
@@ -148,6 +157,7 @@ export struct SideBarMenu {
                 MenuButton({
                   icon: $r('sys.symbol.foldline_screen'),
                   title: '函数图像',
+                  semanticId: getModuleSemanticId('graphing'),
                   onClickAction: () => {
                     animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
                     if (this.onModuleSelect) { this.onModuleSelect('graphing'); }
@@ -157,6 +167,7 @@ export struct SideBarMenu {
                 MenuButton({
                   icon: $r('sys.symbol.exponentiation'),
                   title: '方程求解',
+                  semanticId: getModuleSemanticId('equation'),
                   onClickAction: () => {
                     animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
                     if (this.onModuleSelect) { this.onModuleSelect('equation'); }
@@ -166,6 +177,7 @@ export struct SideBarMenu {
                 MenuButton({
                   icon: $r('sys.symbol.square_grid_2x2'),
                   title: '矩阵与向量',
+                  semanticId: getModuleSemanticId('matrix'),
                   onClickAction: () => {
                     animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
                     if (this.onModuleSelect) { this.onModuleSelect('matrix'); }
@@ -175,6 +187,7 @@ export struct SideBarMenu {
                 MenuButton({
                   icon: $r('sys.symbol.data'),
                   title: '统计分析',
+                  semanticId: getModuleSemanticId('statistics'),
                   onClickAction: () => {
                     animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
                     if (this.onModuleSelect) { this.onModuleSelect('statistics'); }
@@ -191,6 +204,7 @@ export struct SideBarMenu {
                 MenuButton({
                   icon: $r('sys.symbol.arrow_left_arrow_right'),
                   title: '单位转换',
+                  semanticId: getModuleSemanticId('unit'),
                   onClickAction: () => {
                     animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
                     if (this.onModuleSelect) { this.onModuleSelect('unit'); }
@@ -200,6 +214,7 @@ export struct SideBarMenu {
                 MenuButton({
                   icon: $r('sys.symbol.gobackward_10'),
                   title: '进制转换',
+                  semanticId: getModuleSemanticId('base'),
                   onClickAction: () => {
                     animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
                     if (this.onModuleSelect) { this.onModuleSelect('base'); }
@@ -209,6 +224,7 @@ export struct SideBarMenu {
                 MenuButton({
                   icon: $r('sys.symbol.yuansign_arrow_2_circlepath'),
                   title: '汇率',
+                  semanticId: getModuleSemanticId('exchange'),
                   onClickAction: () => {
                     animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
                     if (this.onModuleSelect) { this.onModuleSelect('exchange'); }
@@ -292,5 +308,7 @@ export struct SideBarMenu {
     }
     .width('100%')
     .height('100%')
+    .id(SemanticIds.SIDEBAR)
+    .accessibilityText('CalculatorX 导航菜单')
   }
 }

@@ -9,6 +9,7 @@
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { getActionId, getFontColor, getBgColor, PreferenceConfigs, icon_backspace } from '../utils/CalculatorConfigs';
+import { getCalculatorKeySemanticId } from '../utils/SemanticIds';
 
 // 按键布局
 const basicButtons: Array<string | Resource> = [
@@ -59,6 +60,8 @@ struct BasicKeyItem {
       }
     }
     .type(ButtonType.Normal)
+    .id(getCalculatorKeySemanticId(getActionId(this.btn)))
+    .accessibilityText(getActionId(this.btn))
     .borderRadius(40)
     .width('100%')
     .height('100%')
