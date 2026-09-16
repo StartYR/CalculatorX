@@ -150,6 +150,20 @@
         });
         let editorState = EditorState.EDITING;
 
+        window.getSemanticState = function () {
+            return JSON.stringify({
+                inputLatex: mf.value,
+                resultLatex: resField.classList.contains('show') ? resField.value : '',
+                editorState: editorState
+            });
+        };
+
+        function notifySemanticState() {
+            if (window.editorBridge && window.editorBridge.onSemanticStateChanged) {
+                window.editorBridge.onSemanticStateChanged(window.getSemanticState());
+            }
+        }
+
         // ========== 通用的动态字号缩放核心核心算法 ==========
         function autoScaleFontSize(field, wrapper, maxRem, minRem) {
             // 1. 恢复最大字号以便测量
@@ -262,6 +276,7 @@
 
         window.showResult = function (latexString) {
             renderResult(latexString);
+            notifySemanticState();
         };
 
         window.completeCalculation = function (latexString, enableResultReady) {
@@ -269,11 +284,13 @@
 
             if (!enableResultReady) {
                 editorState = EditorState.EDITING;
+                notifySemanticState();
                 return;
             }
 
             mf.blur();
             editorState = EditorState.RESULT_READY;
+            notifySemanticState();
         };
 
         mf.addEventListener('input', () => {
@@ -283,6 +300,7 @@
             if (window.editorBridge && window.editorBridge.onFormulaChanged) {
                 window.editorBridge.onFormulaChanged();
             }
+            notifySemanticState();
         });
 
         window.executeEditCommand = function (command) {
@@ -375,6 +393,7 @@
             resField.classList.remove('show');
             resField.value = '';
             mf.focus();
+            notifySemanticState();
         };
 
         window.deleteMath = function () {
@@ -384,6 +403,8 @@
         window.getFormula = function () {
             return mf.value;
         };
+
+        notifySemanticState();
 
         window.getMathJSON = function () {
             const jsonAST = mf.getValue('math-json');

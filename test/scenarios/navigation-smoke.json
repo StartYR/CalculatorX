@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "name": "navigation-smoke",
+  "steps": [
+    { "command": "app.start" },
+    { "command": "ui.click", "target": "nav.sidebar.open" },
+    { "command": "assert", "path": "control.exists", "target": "module.scientific", "equals": true },
+    { "command": "ui.click", "target": "module.scientific" },
+    { "command": "wait", "path": "screen.module", "equals": "scientific", "timeoutSeconds": 10 }
+  ]
+}

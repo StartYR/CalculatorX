@@ -45,6 +45,7 @@ export struct ItemDivider {
 export struct MenuButton {
   icon?: Resource; // 可选图标
   @Prop title: string;
+  semanticId: string = '';
   subTitle?: string; // 可选副标题
   @Prop isCustomSvg: boolean = false;
   onClickAction?: () => void;
@@ -97,6 +98,8 @@ export struct MenuButton {
         .margin({ left: 12 })
     }
     .width('100%')
+    .id(this.semanticId)
+    .accessibilityText(this.title)
     .constraintSize({ minHeight: 46 }) // 使用最小高度，如果副标题很长，卡片会自动被撑高
     .padding({ left: 12, right: 12, top: 12, bottom: 12 }) // 增加上下内边距，让双行文本呼吸感更好
     .margin(0)

@@ -7,6 +7,7 @@
  */
 
 import Logger from '../utils/Logger'
+import { SemanticIds } from '../utils/SemanticIds';
 
 // 定义模块名称映射
 const MODULE_TITLES: Record<string, string> = {
@@ -68,6 +69,8 @@ export struct TopBar {
         }
         .width(44)
         .height(32)
+        .id(SemanticIds.NAV_SIDEBAR_OPEN)
+        .accessibilityText('打开导航菜单')
         .backgroundColor('#54ffffff')
         .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
         .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })
@@ -82,6 +85,8 @@ export struct TopBar {
           }
           .width(36)
           .height(32)
+          .id(SemanticIds.NAV_UNDO)
+          .accessibilityText('撤销')
           .backgroundColor('#54ffffff')
           .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
           .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })
@@ -147,6 +152,8 @@ export struct TopBar {
           }
           .width(36)
           .height(32)
+          .id(SemanticIds.NAV_REDO)
+          .accessibilityText('重做')
           .backgroundColor('#54ffffff')
           .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
           .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })
@@ -169,6 +176,8 @@ export struct TopBar {
           }
           .width(44)
           .height(32)
+          .id(SemanticIds.NAV_GRAPHING_EDIT)
+          .accessibilityText('编辑函数')
           .backgroundColor('#54ffffff')
           .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
           .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })
@@ -187,6 +196,8 @@ export struct TopBar {
           }
           .width(44)
           .height(32)
+          .id(SemanticIds.NAV_HISTORY_SHEET)
+          .accessibilityText('历史记录')
           .backgroundColor('#54ffffff')
           .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
           .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })

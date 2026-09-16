@@ -12,8 +12,15 @@ import { EngineService, CalcConfig } from '../utils/EngineService';
 import { InputTranslator } from '../utils/InputTranslator';
 import { PreferenceConfigs } from '../utils/CalculatorConfigs';
 import Logger from '../utils/Logger';
+import { SemanticIds } from '../utils/SemanticIds';
 
 type FormulaInputBehavior = 'EDIT_CURRENT' | 'START_NEW_EXPRESSION' | 'CONTINUE_FROM_RESULT';
+
+interface FormulaSemanticState {
+  inputLatex: string;
+  resultLatex: string;
+  editorState: string;
+}
 
 const CONTINUE_FROM_RESULT_ACTIONS: string[] = [
   '+', '−', '×', '÷', 'mod', '∘',
@@ -42,7 +49,35 @@ export struct FormulaScreen {
 
   // Web 就绪状态与缓冲
   @State isWebReady: boolean = false;
+  @State semanticInputLatex: string = '';
+  @State semanticResultLatex: string = '';
+  @State semanticEditorState: string = 'WEB_NOT_READY';
   private pendingLatex: string | null = null;
+
+  private updateSemanticState(stateJson: string): void {
+    try {
+      const state = JSON.parse(stateJson) as FormulaSemanticState;
+      this.semanticInputLatex = state.inputLatex;
+      this.semanticResultLatex = state.resultLatex;
+      this.semanticEditorState = state.editorState;
+    } catch (error) {
+      Logger.error(`[FormulaScreen] 公式语义状态解析失败: ${error}`);
+    }
+  }
+
+  private refreshSemanticState(): void {
+    this.webviewController.runJavaScript('window.getSemanticState()', (error, result) => {
+      if (error) {
+        Logger.error(`[FormulaScreen] 公式语义状态读取失败: ${error.message}`);
+        return;
+      }
+      try {
+        this.updateSemanticState(JSON.parse(result) as string);
+      } catch (parseError) {
+        Logger.error(`[FormulaScreen] 公式语义状态解包失败: ${parseError}`);
+      }
+    });
+  }
 
   aboutToAppear() {
     Logger.info(`[FormulaScreen] aboutToAppear 触发, 当前 moduleType: ${this.moduleType}`);
@@ -346,6 +381,13 @@ export struct FormulaScreen {
         src: $rawfile('calculator.html'),
         controller: this.webviewController
       })
+        .id(SemanticIds.FORMULA)
+        .accessibilityText(JSON.stringify({
+          inputLatex: this.semanticInputLatex,
+          resultLatex: this.semanticResultLatex,
+          editorState: this.semanticEditorState,
+          webReady: this.isWebReady
+        }))
         .darkMode(WebDarkMode.Auto)
         .width('100%')
         .height('100%')
@@ -364,16 +406,20 @@ export struct FormulaScreen {
             this.webviewController.runJavaScript(script);
             this.pendingLatex = null;
           }
+          this.refreshSemanticState();
         })
         .javaScriptProxy({
           object: {
             onFormulaChanged: () => {
               this.lastValidJson = "";
               this.isTempDecimal = false;
+            },
+            onSemanticStateChanged: (stateJson: string) => {
+              this.updateSemanticState(stateJson);
             }
           },
           name: "editorBridge",
-          methodList: ["onFormulaChanged"],
+          methodList: ["onFormulaChanged", "onSemanticStateChanged"],
           controller: this.webviewController
         })
 

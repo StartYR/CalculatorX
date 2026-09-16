@@ -22,6 +22,7 @@ import Logger from '../../utils/Logger'
 
 // 引入全局菜单组件库
 import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from '../../components/common/MenuComponents';
+import { SemanticIds } from '../../utils/SemanticIds';
 
 // ==================== 底部半模态面板内容：数学公式样式选择 ====================
 @Component
@@ -206,6 +207,8 @@ export struct Settings {
                   { value: '角度制 (Deg)' },
                   { value: '弧度制 (Rad)' }
                 ])
+                  .id('settings.angle')
+                  .accessibilityText(this.isRad ? 'radian' : 'degree')
                   .selected(this.isRad ? 1 : 0)
                   .value(this.isRad ? '弧度制 (Rad)' : '角度制 (Deg)')
                   .font({ size: 14 })
@@ -236,6 +239,8 @@ export struct Settings {
                   { value: '自动模式' },
                   { value: '小数模式' }
                 ])
+                  .id('settings.answer-output')
+                  .accessibilityText(this.answerOutputMode === 0 ? 'auto' : 'decimal')
                   .selected(this.answerOutputMode)
                   .value(this.answerOutputMode === 0 ? '自动模式' : '小数模式')
                   .font({ size: 14 })
@@ -285,6 +290,8 @@ export struct Settings {
                     step: 1,
                     style: SliderStyle.InSet
                   })
+                    .id('settings.decimal-precision')
+                    .accessibilityText(`${this.decimalPrecision}`)
                     .width('100%')
                     .onChange((value: number) => {
                       // 改变 UI 状态
@@ -331,6 +338,8 @@ export struct Settings {
                   .fontColor([$r('sys.color.icon_tertiary')])
               }
               .width('100%')
+              .id('settings.combination-style')
+              .accessibilityText(`${this.combSelect}`)
               .height(46) // 完美对齐 MenuButton 的高度
               .padding({ left: 12, right: 12 }) // 完美对齐内边距
               .borderRadius(16) // 独立胶囊圆角
@@ -374,6 +383,8 @@ export struct Settings {
                   .fontColor([$r('sys.color.icon_tertiary')])
               }
               .width('100%')
+              .id('settings.permutation-style')
+              .accessibilityText(`${this.permSelect}`)
               .height(46)
               .padding({ left: 12, right: 12 })
               .borderRadius(16)
@@ -421,6 +432,8 @@ export struct Settings {
                   { value: '进制转换' },
                   { value: '汇率' }
                 ])
+                  .id('settings.startup-page')
+                  .accessibilityText(`${this.startupPageMode}`)
                   .selected(this.startupPageMode)
                   .value(['记忆上次', '基础计算', '科学计算', '矩阵与向量', '函数图像', '方程求解', '统计分析', '单位转换', '进制转换', '汇率'][this.startupPageMode] || '记忆上次')
                   .font({ size: 14 })
@@ -450,6 +463,8 @@ export struct Settings {
                   { value: '深色' },
                   { value: '系统' }
                 ])
+                  .id('settings.color-mode')
+                  .accessibilityText(`${this.colorModeIndex}`)
                   .selected(this.colorModeIndex)
                   .value(this.colorModeIndex === 0 ? '浅色' : this.colorModeIndex === 1 ? '深色' : '系统')
                   .font({ size: 14 })
@@ -488,6 +503,8 @@ export struct Settings {
                   .fontColor($r('sys.color.font_primary'))
                 Blank()
                 Toggle({ type: ToggleType.Switch, isOn: this.hapticFeedback })
+                  .id('settings.haptic-feedback')
+                  .accessibilityText(this.hapticFeedback ? 'true' : 'false')
                   .onChange((isOn: boolean) => {
                     // 改变 UI 状态
                     this.hapticFeedback = isOn;
@@ -527,6 +544,8 @@ export struct Settings {
                     { value: '原生轻柔 (Soft)' },
                     { value: '原生厚重 (Hard)' }
                   ])
+                    .id('settings.vibration-curve')
+                    .accessibilityText(`${this.vibrationCurve}`)
                     .selected(this.vibrationCurve)
                     .value(this.vibrationCurve === 0 ? '自动' :
                       this.vibrationCurve === 1 ? '清脆' :
@@ -656,5 +675,7 @@ export struct Settings {
     .titleMode(HdsNavigationTitleMode.MINI)
     .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
     .backgroundColor($r('sys.color.background_secondary'))
+    .id(SemanticIds.PAGE_SETTINGS)
+    .accessibilityText('CalculatorX 设置')
   }
 }

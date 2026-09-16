@@ -18,6 +18,7 @@ import {
 } from '@kit.UIDesignKit';
 import { SymbolGlyphModifier, promptAction } from '@kit.ArkUI';
 import Logger from '../../utils/Logger'
+import { SemanticIds } from '../../utils/SemanticIds';
 
 import pasteboard from '@ohos.pasteboard'; // 剪贴板
 
@@ -222,5 +223,7 @@ export struct HistoryManager {
     }
     .width('100%')
     .height('100%')
+    .id(SemanticIds.PAGE_HISTORY)
+    .accessibilityText('CalculatorX 历史记录')
   }
 }
