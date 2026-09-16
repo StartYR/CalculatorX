@@ -79,7 +79,25 @@ export struct FormulaScreen {
     });
   }
 
+  private getSemanticStateDescription(): string {
+    if (!getContext(this).applicationInfo.debug) {
+      return '';
+    }
+    return JSON.stringify({
+      inputLatex: this.semanticInputLatex,
+      resultLatex: this.semanticResultLatex,
+      editorState: this.semanticEditorState,
+      webReady: this.isWebReady
+    });
+  }
+
   aboutToAppear() {
+    const pendingFormula = AppStorage.get<string>(PreferenceConfigs.KEY_CLI_PENDING_FORMULA) ?? '';
+    if (pendingFormula.startsWith('1:')) {
+      this.pendingLatex = pendingFormula.substring(2);
+      AppStorage.setOrCreate(PreferenceConfigs.KEY_CLI_PENDING_FORMULA, '');
+    }
+
     Logger.info(`[FormulaScreen] aboutToAppear 触发, 当前 moduleType: ${this.moduleType}`);
     let eventHub = getContext(this).eventHub;
 
@@ -382,12 +400,7 @@ export struct FormulaScreen {
         controller: this.webviewController
       })
         .id(SemanticIds.FORMULA)
-        .accessibilityText(JSON.stringify({
-          inputLatex: this.semanticInputLatex,
-          resultLatex: this.semanticResultLatex,
-          editorState: this.semanticEditorState,
-          webReady: this.isWebReady
-        }))
+        .accessibilityDescription(this.getSemanticStateDescription())
         .darkMode(WebDarkMode.Auto)
         .width('100%')
         .height('100%')

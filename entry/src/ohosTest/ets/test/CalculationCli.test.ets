@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@ohos/hypium';
 import { util } from '@kit.ArkTS';
+import { Want } from '@kit.AbilityKit';
 import { abilityDelegatorRegistry } from '@kit.TestKit';
 import {
   CalculationRequest,
@@ -32,6 +33,11 @@ interface CalculationBatchSummary {
   total: number;
   succeeded: number;
   failed: number;
+}
+
+interface EntryAbilityMonitor {
+  abilityName: string;
+  moduleName: string;
 }
 
 function decodeRequest(payload: string): CalculationCliRequest {
@@ -84,6 +90,12 @@ function validateRequest(request: CalculationCliRequest): void {
   if (request.command === 'settings.set') {
     if (!request.setting || !request.value || request.setting.length > 64 || request.value.length > 64) {
       throw new Error('settings.set requires setting and value');
+    }
+    return;
+  }
+  if (request.command === 'formula.set') {
+    if (request.latex === undefined || request.latex.length > 4096) {
+      throw new Error('formula.set requires latex with at most 4096 characters');
     }
     return;
   }
@@ -159,13 +171,38 @@ export default function calculationCliTest(): void {
           const summary = await runBatch(request);
           await delegator.print(BATCH_SUMMARY_PREFIX + encodeResponse(summary));
           succeeded = summary.ok;
-        } else if (request.command === 'settings.set') {
-          const response = await CalculationTestBridge.setSetting(
-            request.requestId,
-            request.setting ?? '',
-            request.value ?? '',
-            10000
-          );
+        } else if (request.command === 'settings.set' || request.command === 'formula.set') {
+          const entryMonitor: EntryAbilityMonitor = {
+            abilityName: 'EntryAbility',
+            moduleName: 'entry'
+          };
+          const entryWant: Want = {
+            bundleName: abilityDelegatorRegistry.getArguments().bundleName,
+            abilityName: 'EntryAbility'
+          };
+          let response: CalculationResponse = requestFailure(request.requestId, 'EntryAbility did not start');
+          await delegator.addAbilityMonitor(entryMonitor);
+          try {
+            await delegator.startAbility(entryWant);
+            const entryAbility = await delegator.waitAbilityMonitor(entryMonitor, 10000);
+            if (request.command === 'settings.set') {
+              response = await CalculationTestBridge.setSetting(
+                request.requestId,
+                request.setting ?? '',
+                request.value ?? '',
+                10000,
+                entryAbility.context
+              );
+            } else {
+              response = await CalculationTestBridge.setFormula(
+                request.requestId,
+                request.latex ?? '',
+                entryAbility.context
+              );
+            }
+          } finally {
+            await delegator.removeAbilityMonitor(entryMonitor);
+          }
           await printResponse(response);
           succeeded = response.ok;
         } else {

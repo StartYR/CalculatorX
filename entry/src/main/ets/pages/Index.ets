@@ -29,6 +29,23 @@ import { UnitConverter } from '../components/UnitConverter';
 import { BaseConverter } from '../components/exchange/BaseConverter';
 import { ExchangeRate } from '../components/exchange/rates/ExchangeRate';
 
+interface IndexSemanticSettingsState {
+  angle: string;
+  answerOutput: string;
+  decimalPrecision: number;
+  hapticFeedback: boolean;
+  vibrationCurve: number;
+  startupPage: number;
+  colorMode: number;
+  combinationStyle: number;
+  permutationStyle: number;
+}
+
+interface IndexSemanticState {
+  module: string;
+  settings: IndexSemanticSettingsState;
+}
+
 @Entry
 @Component
 struct Index {
@@ -117,6 +134,28 @@ struct Index {
     getContext(this).eventHub.on('event_shift_change', (isShiftActive: boolean) => {
       this.topBarIsShift = isShiftActive;
     });
+  }
+
+  private getSemanticStateJson(): string {
+    if (!getContext(this).applicationInfo.debug) {
+      return '';
+    }
+    const settings: IndexSemanticSettingsState = {
+      angle: this.isRad ? 'radian' : 'degree',
+      answerOutput: this.answerOutputMode === 0 ? 'auto' : 'decimal',
+      decimalPrecision: this.decimalPrecision,
+      hapticFeedback: this.hapticFeedback,
+      vibrationCurve: this.vibrationCurve,
+      startupPage: this.startupPageMode,
+      colorMode: this.colorModeIndex,
+      combinationStyle: this.combinationStyle,
+      permutationStyle: this.permutationStyle
+    };
+    const state: IndexSemanticState = {
+      module: this.currentModule,
+      settings: settings
+    };
+    return JSON.stringify(state);
   }
 
   build() {
@@ -216,20 +255,7 @@ struct Index {
     .width('100%')
     .height('100%')
     .id(SemanticIds.PAGE_INDEX)
-    .accessibilityText(JSON.stringify({
-      module: this.currentModule,
-      settings: {
-        angle: this.isRad ? 'radian' : 'degree',
-        answerOutput: this.answerOutputMode === 0 ? 'auto' : 'decimal',
-        decimalPrecision: this.decimalPrecision,
-        hapticFeedback: this.hapticFeedback,
-        vibrationCurve: this.vibrationCurve,
-        startupPage: this.startupPageMode,
-        colorMode: this.colorModeIndex,
-        combinationStyle: this.combinationStyle,
-        permutationStyle: this.permutationStyle
-      }
-    }))
+    .accessibilityDescription(this.getSemanticStateJson())
     .backgroundColor($r('sys.color.background_primary'))
   }
 }

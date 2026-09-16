@@ -54,6 +54,14 @@ try {
         exit 10
     }
 
+    $initialStopResult = Invoke-CalcXProcessWithTimeout -FilePath $resolvedHdc `
+        -ArgumentList @('-t', $selectedDevice, 'shell', 'aa', 'force-stop', (Get-CalcXBundleName)) `
+        -TimeoutSeconds $TimeoutSeconds
+    if ($initialStopResult.ExitCode -ne 0) {
+        Write-CalcXDiagnostic 'CalculatorX could not be stopped before preparing the setting.'
+        exit 13
+    }
+
     $request = [ordered]@{
         protocolVersion = Get-CalcXProtocolVersion
         requestId = New-CalcXRequestId
@@ -93,6 +101,14 @@ try {
     }
     [Console]::Out.WriteLine(($response | ConvertTo-Json -Compress -Depth 10))
     if (-not $response.ok) { exit 20 }
+
+    $stopResult = Invoke-CalcXProcessWithTimeout -FilePath $resolvedHdc `
+        -ArgumentList @('-t', $selectedDevice, 'shell', 'aa', 'force-stop', (Get-CalcXBundleName)) `
+        -TimeoutSeconds $TimeoutSeconds
+    if ($stopResult.ExitCode -ne 0) {
+        Write-CalcXDiagnostic 'The setting was stored, but CalculatorX could not be stopped for synchronization.'
+        exit 13
+    }
 
     $startResult = Invoke-CalcXProcessWithTimeout -FilePath $resolvedHdc `
         -ArgumentList @('-t', $selectedDevice, 'shell', 'aa', 'start', '-a', 'EntryAbility', '-b', (Get-CalcXBundleName)) `

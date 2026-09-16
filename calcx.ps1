@@ -30,6 +30,7 @@ $calculationScript = Join-Path $PSScriptRoot 'test\Invoke-CalcXCalculation.ps1'
 $batchScript = Join-Path $PSScriptRoot 'test\Invoke-CalcXBatch.ps1'
 $uiScript = Join-Path $PSScriptRoot 'test\Invoke-CalcXUi.ps1'
 $setupScript = Join-Path $PSScriptRoot 'test\Invoke-CalcXSetup.ps1'
+$formulaScript = Join-Path $PSScriptRoot 'test\Invoke-CalcXFormula.ps1'
 $scenarioScript = Join-Path $PSScriptRoot 'test\Invoke-CalcXScenario.ps1'
 
 function Show-CalcXHelp {
@@ -42,7 +43,7 @@ Usage:
   .\calcx.ps1 engine batch <json-file>
   .\calcx.ps1 app status|start|stop
   .\calcx.ps1 screen get|controls|find <semantic-id>
-  .\calcx.ps1 formula get
+  .\calcx.ps1 formula get|set <latex>|clear
   .\calcx.ps1 settings get
   .\calcx.ps1 setup settings set <key> <value>
   .\calcx.ps1 scenario run <json-file> [-ContinueOnFailure]
@@ -139,6 +140,23 @@ function Invoke-SetupSettingCommand {
     return $LASTEXITCODE
 }
 
+function Invoke-FormulaCommand {
+    param(
+        [Parameter(Mandatory)][string]$FormulaCommand,
+        [string]$Latex = ''
+    )
+
+    $forwardArguments = @{
+        Command = $FormulaCommand
+        Latex = $Latex
+        TimeoutSeconds = $TimeoutSeconds
+    }
+    if ($DeviceId) { $forwardArguments.DeviceId = $DeviceId }
+    if ($HdcPath) { $forwardArguments.HdcPath = $HdcPath }
+    & $formulaScript @forwardArguments
+    return $LASTEXITCODE
+}
+
 try {
     if ($SelfTest) {
         & $calculationScript -SelfTest
@@ -202,12 +220,26 @@ try {
         exit 2
     }
 
-    if ($Command -in @('formula', 'settings')) {
+    if ($Command -eq 'formula') {
+        if ($CommandArguments.Count -eq 1 -and $CommandArguments[0] -eq 'get') {
+            exit (Invoke-UiCommand -UiCommand 'formula')
+        }
+        if ($CommandArguments.Count -eq 1 -and $CommandArguments[0] -eq 'clear') {
+            exit (Invoke-FormulaCommand -FormulaCommand 'clear')
+        }
+        if ($CommandArguments.Count -eq 2 -and $CommandArguments[0] -eq 'set') {
+            exit (Invoke-FormulaCommand -FormulaCommand 'set' -Latex $CommandArguments[1])
+        }
+        [Console]::Error.WriteLine('Usage: .\calcx.ps1 formula get|set <latex>|clear')
+        exit 2
+    }
+
+    if ($Command -eq 'settings') {
         if ($CommandArguments.Count -ne 1 -or $CommandArguments[0] -ne 'get') {
-            [Console]::Error.WriteLine("Usage: .\calcx.ps1 $Command get")
+            [Console]::Error.WriteLine('Usage: .\calcx.ps1 settings get')
             exit 2
         }
-        exit (Invoke-UiCommand -UiCommand $Command)
+        exit (Invoke-UiCommand -UiCommand 'settings')
     }
 
     if ($Command -eq 'setup') {
