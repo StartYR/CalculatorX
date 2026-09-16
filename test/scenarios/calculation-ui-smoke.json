@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "name": "calculation-ui-smoke",
+  "steps": [
+    { "command": "formula.set", "latex": "1+1" },
+    { "command": "wait", "path": "formula.inputLatex", "equals": "1+1", "timeoutSeconds": 10 },
+    { "command": "ui.click", "target": "calc.key.equals" },
+    { "command": "wait", "path": "formula.resultLatex", "equals": "2", "timeoutSeconds": 10 },
+    { "command": "formula.clear" },
+    { "command": "wait", "path": "formula.inputLatex", "equals": "", "timeoutSeconds": 10 }
+  ]
+}

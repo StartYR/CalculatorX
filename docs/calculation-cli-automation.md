@@ -1,42 +1,41 @@
-# Windows 命令行计算自动化
+# Windows 语义 CLI 自动化
 
-本文档说明如何在 Windows 上通过 HDC 调用 CalculatorX 的 HarmonyOS 测试模块，输入 LaTeX，并同步取得计算结果 LaTeX。该入口用于自动化回归、计算引擎验证和问题复现，不是正式应用面向用户的命令行功能。
+本文档说明如何在 Windows 上通过仓库根目录的 `calcx.ps1` 驱动 CalculatorX 真机测试。CLI 面向自动化回归、问题复现和 AI Agent，支持直接计算、界面状态读取、语义点击、测试状态准备和 JSON 场景；它不是正式应用面向普通用户的命令行功能。
 
-## 1. 能力与边界
+## 1. 能力模型
 
-调用链如下：
+CLI 将操作分为三条互不冒充的路径：
+
+| `executionPath` | 用途 | 是否经过真实界面 |
+| --- | --- | --- |
+| `engine` | 直接提交 LaTeX，快速验证 MathLive、N-API 和 C++ 计算链路 | 否 |
+| `setup` | 直接准备公式或白名单设置，构造测试前置状态 | 部分 |
+| `ui` / `ui-tree` | 读取系统组件树、按语义 ID 点击、返回和验证用户可见状态 | 是 |
+
+直接计算链路为：
 
 ```text
-Invoke-CalcXCalculation.ps1
-  → hdc shell aa test
-  → entry_test / CalculationTestAbility
-  → calculator.html / MathLive Compute Engine
-  → EngineService
-  → libentry.so / C++ 计算引擎
-  → CALCX_TEST_RESULT
-  → Windows JSON 输出
+calcx.ps1
+  -> hdc shell aa test
+  -> entry_test / CalculationTestAbility
+  -> calculator.html / MathLive Compute Engine
+  -> EngineService
+  -> libentry.so / C++ 计算引擎
+  -> CALCX_TEST_RESULT
+  -> Windows JSON 输出
 ```
 
-测试端复用正式应用的以下实现：
+`engine` 复用正式应用的 `calculator.html`、`EngineService` 和 `libentry.so`，但不经过可见按键、`InputTranslator` 和 MathLive 编辑状态。因此，同一最终 LaTeX 和配置应得到与正式界面相同的计算结果；按键映射、光标、撤销、`Ans`、`S⇄D` 或结果后继续输入仍应通过 `ui` 路径或人工操作验证。
 
-- `entry/src/main/resources/rawfile/calculator.html`
-- `EngineService.cleanRawLatex()`
-- `EngineService.generateInjectJs()`
-- `EngineService.parseWebJsonResult()`
-- `EngineService.calculateNative()`
-- `libentry.so` 原生计算引擎
-
-因此，相同最终 LaTeX 和相同配置会进入与正式界面相同的 MathJSON 和 C++ 计算链路。命令行入口不经过可见按键、`InputTranslator` 和 MathLive 编辑状态，所以它不能单独证明按键映射、光标、撤销、`Ans`、`S⇄D` 或结果后继续输入行为正确；涉及这些功能时仍需补充 UI 测试。
-
-命令行计算不会写入历史记录、修改用户首选项或触发振动。测试 Ability 仅存在于 `entry/ohosTest` target，正式 `entry/default/release` HAP 不包含该入口。
+`ui click` 先从当前 UI 树按稳定 ID 唯一定位控件，再读取当前边界并点击其中心。调用方不依赖截图、不传屏幕坐标，也不依赖中文或英文显示文本。
 
 ## 2. 前置条件
 
 - Windows PowerShell 7。
 - 已安装 DevEco Studio、HarmonyOS SDK 和 HDC。
-- 设备已连接、已授权调试，并能出现在 `hdc list targets` 中。
+- 设备已连接并授权调试，能出现在 `hdc list targets` 中。
 - 设备上安装了同一次构建产生且签名匹配的 debug 主应用 HAP 和 `entry-ohosTest-signed.hap`。
-- 当前协议支持 `standard`、`matrix` 和 `equation`。函数图像返回采样点数组，不属于 LaTeX 结果协议。
+- 在仓库根目录执行命令，以便始终使用相对路径 `./calcx.ps1`。
 
 先检查工具和设备：
 
@@ -45,14 +44,14 @@ hdc version
 hdc list targets
 ```
 
-如果 HDC 不在 `PATH` 中，可在调用时使用 `-HdcPath`。脚本也会检查 `DEVECO_SDK_HOME`，并回退到本项目开发时使用的 DevEco Studio 默认位置。
+调用器依次从 `PATH`、`DEVECO_SDK_HOME`、`HARMONYOS_SDK_HOME`、DevEco 相关环境变量和 Windows 安装信息查找 HDC。仍无法找到时使用 `-HdcPath`；多台设备并存时使用 `-DeviceId`。
 
-## 3. 构建与安装测试包
+## 3. 构建与安装
 
-可直接在 DevEco Studio 中分别构建 `entry/default/debug` 和 `entry/ohosTest/debug`。需要从终端构建时，先按本机安装位置调整 `$devEcoHome`：
+可在 DevEco Studio 中分别构建 `entry/default/debug` 和 `entry/ohosTest/debug`。从终端构建时，将 `$devEcoHome` 指向本机 DevEco Studio 安装目录：
 
 ```powershell
-$devEcoHome = 'E:\Program Files\HUAWEI\DevEco Studio'
+$devEcoHome = '<DevEco Studio 安装目录>'
 $env:DEVECO_SDK_HOME = Join-Path $devEcoHome 'sdk'
 $hvigor = Join-Path $devEcoHome 'tools\hvigor\bin\hvigorw.bat'
 
@@ -63,7 +62,8 @@ $hvigor = Join-Path $devEcoHome 'tools\hvigor\bin\hvigorw.bat'
   -p buildMode=debug `
   assembleHap `
   --analyze=normal `
-  --incremental
+  --incremental `
+  --no-daemon
 
 & $hvigor `
   --mode module `
@@ -72,10 +72,9 @@ $hvigor = Join-Path $devEcoHome 'tools\hvigor\bin\hvigorw.bat'
   -p buildMode=debug `
   assembleHap `
   --analyze=normal `
-  --incremental
+  --incremental `
+  --no-daemon
 ```
-
-如果原生编译进程因系统信号或资源不足终止，不要立即判断为代码错误。确认错误不含编译诊断后，关闭并行构建并重试。构建命令不明确时先使用 Hvigor 的任务列表确认，不连续猜测任务名。
 
 安装两个 HAP：
 
@@ -89,143 +88,208 @@ hdc -t $device install -r `
   .\entry\build\default\outputs\ohosTest\entry-ohosTest-signed.hap
 ```
 
-只更新测试代码时，通常只需重新构建并覆盖安装 `entry-ohosTest-signed.hap`。修改正式资源、`EngineService` 或原生引擎后，应重新构建并安装两者，避免主应用与测试模块版本不一致。
+修改正式 ArkTS、资源、`EngineService` 或原生引擎后应重新构建并安装两者。只修改 `ohosTest` 时通常只需重建并覆盖安装测试 HAP。构建模式会复用同一正式 HAP 路径，因此 release 构建后若要继续运行 CLI，应重新构建并安装 debug 主包。
 
-## 4. 调用方法
+## 4. 最短调用方式
 
-在项目根目录执行：
-
-```powershell
-.\test\Invoke-CalcXCalculation.ps1 `
-  -Latex '\frac{1}{2}+\frac{1}{3}' `
-  -Mode standard `
-  -Angle radian `
-  -Precision auto
-```
-
-单设备时可以省略 `-DeviceId`。存在多台设备时必须显式选择：
+在仓库根目录直接输入 LaTeX：
 
 ```powershell
-.\test\Invoke-CalcXCalculation.ps1 `
-  -Latex '1+1' `
-  -DeviceId '<设备 ID>'
+.\calcx.ps1 '1+1'
 ```
 
-HDC 不在 `PATH` 时：
+等价的完整写法：
 
 ```powershell
-.\test\Invoke-CalcXCalculation.ps1 `
-  -Latex '1+1' `
-  -HdcPath 'E:\Program Files\HUAWEI\DevEco Studio\sdk\default\openharmony\toolchains\hdc.exe'
+.\calcx.ps1 engine calculate '1+1'
 ```
 
-只检查 Windows 端 JSON、UTF-8 和 URL-safe Base64 编解码：
+分数、角度制和精度：
 
 ```powershell
-.\test\Invoke-CalcXCalculation.ps1 -SelfTest
+.\calcx.ps1 engine calculate '\frac{1}{2}+\frac{1}{3}'
+.\calcx.ps1 engine calculate '\sin\left(30\right)' -Angle degree
+.\calcx.ps1 engine calculate '1\div3' -Precision 4
 ```
 
-## 5. 参数
+公共选项：
 
-| 参数 | 必填 | 默认值 | 说明 |
-| --- | --- | --- | --- |
-| `Latex` | 是 | 无 | 1 至 4096 个字符的 LaTeX；可作为第一个位置参数传入 |
-| `Mode` | 否 | `standard` | `standard`、`matrix` 或 `equation` |
-| `Angle` | 否 | `radian` | `radian` 或 `degree` |
-| `Precision` | 否 | `auto` | `auto`、`decimal-auto` 或 `0` 至 `15` |
-| `DeviceId` | 否 | 自动选择唯一设备 | 多设备时必须提供 |
-| `TimeoutSeconds` | 否 | `30` | 允许范围为 5 至 300 秒 |
-| `HdcPath` | 否 | 自动查找 | HDC 可执行文件路径 |
-| `SelfTest` | 否 | 关闭 | 只执行本地协议自检，不连接设备 |
+| 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `-Mode` | `standard` | `standard`、`matrix` 或 `equation` |
+| `-Angle` | `radian` | `radian` 或 `degree` |
+| `-Precision` | `auto` | `auto`、`decimal-auto` 或 `0` 至 `15` |
+| `-DeviceId` | 自动选择唯一设备 | 多设备时必须指定 |
+| `-HdcPath` | 自动查找 | HDC 可执行文件路径 |
+| `-TimeoutSeconds` | 依命令而定 | 允许范围通常为 5 至 300 秒 |
 
-精度映射与正式界面一致：
+## 5. 应用生命周期与状态读取
 
-- `auto` → 原生精度 `-1`，优先精确/符号结果。
-- `decimal-auto` → 原生精度 `-2`，最多输出 16 位小数。
-- `0` 至 `15` → 指定小数位数。
+```powershell
+.\calcx.ps1 app status
+.\calcx.ps1 app start
+.\calcx.ps1 app stop
 
-## 6. 输出与 CI 使用
+.\calcx.ps1 screen get
+.\calcx.ps1 screen controls
+.\calcx.ps1 screen find calc.key.equals
+.\calcx.ps1 formula get
+.\calcx.ps1 settings get
+```
 
-成功时，标准输出只有一行紧凑 JSON：
+`app start` 启动真实 `EntryAbility`。随后执行 `screen`、`formula get`、`settings get`、`ui click` 或 `ui back` 不会主动关闭或重启 APP，可以连续发送命令。每条命令会重新导出当前 UI 树，避免复用过期页面状态。
+
+`screen get` 返回当前 Ability、页面、计算模块、弹层、公式、设置和语义控件数量。`screen controls` 返回带稳定 ID 的控件列表，包括类型、文本、描述、边界、可见性、启用、可点击和选中状态。
+
+公式和设置机器状态只在 debug 主包中写入 `accessibilityDescription`。release 下这些描述为空，避免屏幕阅读器朗读机器 JSON；普通无障碍文本和稳定控件 ID 不受影响。
+
+## 6. 语义点击与导航
+
+```powershell
+.\calcx.ps1 ui click nav.sidebar.open
+.\calcx.ps1 ui click module.scientific
+.\calcx.ps1 ui click calc.key.1
+.\calcx.ps1 ui click calc.key.plus
+.\calcx.ps1 ui click calc.key.equals
+.\calcx.ps1 ui back
+```
+
+首版稳定 ID 包括：
+
+- 页面：`app.page.index`、`app.page.settings`、`app.page.history`。
+- 公式区：`calc.formula`。
+- 导航：`nav.sidebar.open`、`nav.settings`、`nav.history.page`、`nav.history.sheet`、`nav.undo`、`nav.redo`。
+- 模块：`module.basic`、`module.scientific`、`module.graphing`、`module.equation`、`module.matrix`、`module.statistics`、`module.unit`、`module.base`、`module.exchange`。
+- 普通按键：`calc.key.0` 至 `calc.key.9`、`calc.key.plus`、`calc.key.minus`、`calc.key.multiply`、`calc.key.divide`、`calc.key.equals`、`calc.key.clear` 等。
+- 设置控件：`settings.angle`、`settings.answer-output`、`settings.decimal-precision`、`settings.combination-style`、`settings.permutation-style`、`settings.startup-page`、`settings.color-mode`、`settings.haptic-feedback`、`settings.vibration-curve`。
+- 弹层：`overlay.sidebar`、`overlay.sidebar.dismiss`。
+
+点击白名单只接受 `nav.*`、`module.*`、`calc.key.*`、`settings.*` 和 `overlay.sidebar.dismiss`。目标必须在当前 UI 树中唯一、可见且启用；目标缺失或重复时不会退化为文字匹配或任意坐标点击。
+
+不支持长按滑动气泡、拖拽、MathLive 光标精细控制、系统权限弹窗、外部浏览器、图像曲线正确性判断或像素级视觉验证。
+
+## 7. 公式与设置准备
+
+直接把完整 LaTeX 放入真实主界面：
+
+```powershell
+.\calcx.ps1 formula set '\frac{1}{2}+\frac{1}{3}'
+.\calcx.ps1 formula clear
+```
+
+`formula set/clear` 属于 `setup` 路径。它会先停止 APP，通过测试包写入一次性公式记录，再启动真实 `EntryAbility`；正式 UI 消费后立即删除该记录，并从 UI 树核对实际输入。因此这两条命令会有一次受控重启，不能用来证明逐键输入行为正确。
+
+直接准备白名单设置：
+
+```powershell
+.\calcx.ps1 setup settings set angle degree
+.\calcx.ps1 setup settings set decimal-precision 4
+.\calcx.ps1 setup settings set haptic-feedback false
+```
+
+支持的设置和值：
+
+| 设置键 | 允许值 |
+| --- | --- |
+| `angle` | `degree`、`radian` |
+| `answer-output` | `auto`、`decimal` |
+| `decimal-precision` | `auto`、`0` 至 `15` |
+| `haptic-feedback` | `true`、`false` |
+| `vibration-curve` | `0` 至 `3` |
+| `startup-page` | `0` 至 `9` |
+| `color-mode` | `light`、`dark`、`system` |
+| `combination-style` | `0` 至 `4` |
+| `permutation-style` | `0` 至 `4` |
+
+设置准备同样会停止并重启 APP。测试模块通过 `AbilityMonitor` 取得新创建的正式 `EntryAbility`，使用它的真实 Context 写入偏好；不能用 `ohosTest` 自己的 Context，因为两个模块的 Preferences 空间相互隔离。命令成功后仍应使用 `settings get` 或实际设置页面核对。
+
+## 8. 批量计算
+
+默认用例文件位于 `test/cases/engine-smoke.json`：
+
+```powershell
+.\calcx.ps1 engine batch .\test\cases\engine-smoke.json
+```
+
+格式：
 
 ```json
-{"protocolVersion":1,"requestId":"...","ok":true,"inputLatex":"1+1","normalizedLatex":"1+1","mathJson":"[\"Add\",1,1]","resultLatex":"2","mode":"standard","angle":"radian","precision":"auto"}
+{
+  "items": [
+    { "latex": "1+1" },
+    { "latex": "\\sin\\left(30\\right)", "angle": "degree" },
+    { "latex": "1\\div3", "precision": "4" }
+  ]
+}
 ```
 
-主要字段：
+批量模式在一次测试会话和一次 WebView 初始化中顺序执行项目。每项具有独立 `requestId` 和结果，单项失败不会阻止其余项目，最终汇总决定进程退出码。
 
-| 字段 | 含义 |
-| --- | --- |
-| `protocolVersion` | Windows 与测试模块之间的协议版本 |
-| `requestId` | 本次请求的关联 ID，用于排除其他日志中的旧结果 |
-| `ok` | 计算是否成功 |
-| `inputLatex` | 调用方传入的原始 LaTeX |
-| `normalizedLatex` | `EngineService` 清洗后的 LaTeX |
-| `mathJson` | MathLive 生成的 MathJSON，可用于定位输入差异 |
-| `resultLatex` | 原生引擎返回的结果 LaTeX |
-| `stage` / `error` | 失败阶段和错误信息，仅失败时出现 |
+## 9. JSON 场景
 
-诊断信息写入标准错误。CI 应同时检查进程退出码和 JSON 中的 `ok`，不能只依赖 HDC 自身的退出码：
+仓库提供两个真机冒烟场景：
 
 ```powershell
-$output = & .\test\Invoke-CalcXCalculation.ps1 `
-  -Latex '1+1' `
-  -Mode standard `
-  -Angle radian `
-  -Precision auto
-$exitCode = $LASTEXITCODE
+.\calcx.ps1 scenario run .\test\scenarios\navigation-smoke.json
+.\calcx.ps1 scenario run .\test\scenarios\calculation-ui-smoke.json
+```
 
-if ($exitCode -ne 0) {
-  throw "CalculatorX device calculation failed with exit code $exitCode"
-}
+场景文件支持 `app.start`、`app.status`、`screen.get`、`screen.controls`、`screen.find`、`formula.get`、`formula.set`、`formula.clear`、`settings.get`、`ui.click`、`ui.back`、`engine.calculate`、`setup.settings.set`、`assert` 和 `wait`。顶层 `variables` 可通过 `${name}` 插入字符串。
 
-$result = $output | ConvertFrom-Json
-if (-not $result.ok -or $result.resultLatex -ne '2') {
-  throw 'Unexpected CalculatorX calculation result'
+示例：
+
+```json
+{
+  "version": 1,
+  "name": "calculation-ui-smoke",
+  "steps": [
+    { "command": "formula.set", "latex": "1+1" },
+    { "command": "wait", "path": "formula.inputLatex", "equals": "1+1" },
+    { "command": "ui.click", "target": "calc.key.equals" },
+    { "command": "wait", "path": "formula.resultLatex", "equals": "2" }
+  ]
 }
 ```
 
-## 7. 退出码
+默认遇到首个失败即停止。添加 `-ContinueOnFailure` 可继续收集后续失败。标准输出为逐步 NDJSON，末行是汇总对象。
+
+场景中的普通读取和点击复用已经启动的 APP；只有 `formula set/clear` 和 `setup settings set` 为同步正式状态而有意重启。
+
+## 10. 输出、退出码与 CI
+
+成功时标准输出为紧凑 JSON 或 NDJSON，诊断信息写入标准错误。所有结构化响应包含协议版本、请求 ID、`ok` 和执行路径。
 
 | 退出码 | 含义 |
 | --- | --- |
-| `0` | 计算成功 |
-| `2` | Windows 参数无效 |
+| `0` | 成功 |
+| `2` | Windows 参数、场景或白名单值无效 |
 | `10` | HDC 不可用或无法列出设备 |
 | `11` | 没有设备，或指定设备未连接 |
 | `12` | 连接了多台设备但未指定设备 |
-| `13` | 测试模块、`aa test` 或结果标记异常 |
-| `14` | Windows 等待设备测试超时 |
-| `20` | 设备返回结构化计算错误 |
+| `13` | APP、测试模块、`aa test`、UI 输入或结果标记异常 |
+| `14` | 等待设备、页面或进程超时 |
+| `15` | 语义目标不存在或不唯一 |
+| `16` | 语义目标不可见、禁用或不可点击 |
+| `20` | 设备返回结构化业务失败或场景断言失败 |
 | `21` | 其他协议或调用器错误 |
 
-Hypium 用例失败时，某些系统上的 `hdc shell aa test` 仍可能返回进程退出码 `0`。调用器会按固定结果标记、协议版本、请求 ID 和 `ok` 字段判断最终状态。
+Hypium 用例失败时，部分系统上的 `hdc shell aa test` 仍可能返回进程退出码 `0`。调用器会继续验证固定结果标记、协议版本、请求 ID 和响应 `ok`；CI 也应同时检查 PowerShell 退出码与 JSON。
 
-## 8. 建议回归用例
-
-| 场景 | 参数或输入 | 已验证结果 |
-| --- | --- | --- |
-| 基础运算 | `1+1` | `2` |
-| 分数 | `\frac{1}{2}+\frac{1}{3}` | `\frac{5}{6}` |
-| 角度制 | degree 下 `\sin\left(30\right)` | `\frac{1}{2}` |
-| 指定精度 | precision 4 下 `1\div3` | `0.3333` |
-| 矩阵 | `\begin{bmatrix}1&2\\3&4\end{bmatrix}` | 对应 `bmatrix` LaTeX |
-| 方程 | equation 下 `x+1=2` | `x = 1` |
-| 非法表达式 | 不完整的 `\frac` | 退出码 `20` 和结构化错误 |
-| 字符传输 | 反斜杠、引号、空格、中文、Unicode | 请求与响应关联保持完整 |
-| 生命周期 | 连续调用、强制停止应用后调用 | 均成功 |
-
-计算引擎回归之外，至少保留一个代表性 UI 冒烟用例。例如真实点按 `AC → 1 → + → 1 → =`，确认界面表达式与结果分别为 `1+1` 和 `2`，再与命令行结果比较。
-
-## 9. 正式包隔离检查
-
-发布构建必须使用 `entry@default/release`，且只分发正式 HAP，不分发 `entry-ohosTest-signed.hap`。构建后检查：
+仅验证 Windows 端参数、JSON、UTF-8 和 URL-safe Base64：
 
 ```powershell
-$devEcoHome = 'E:\Program Files\HUAWEI\DevEco Studio'
-$env:DEVECO_SDK_HOME = Join-Path $devEcoHome 'sdk'
-$hvigor = Join-Path $devEcoHome 'tools\hvigor\bin\hvigorw.bat'
+.\calcx.ps1 -SelfTest
+```
 
+## 11. debug 与 release 隔离
+
+CLI 控制能力依赖单独安装的 `entry-ohosTest-signed.hap`。发布时只分发 `entry@default/release` 的正式 HAP，不分发测试 HAP。
+
+正式应用中保留稳定控件 ID 和正常无障碍文本；公式、设置等机器 JSON 描述由 `applicationInfo.debug` 门控，release 返回空描述。一次性公式记录也只在 debug 主包中消费。
+
+发布构建：
+
+```powershell
 & $hvigor `
   --mode module `
   -p product=default `
@@ -233,93 +297,78 @@ $hvigor = Join-Path $devEcoHome 'tools\hvigor\bin\hvigorw.bat'
   -p buildMode=release `
   assembleHap `
   --analyze=normal `
-  --incremental
+  --incremental `
+  --no-daemon
 ```
 
 正式 HAP 的 `module.json` 应满足：
 
-- `app.debug` 为 `false`。
-- `app.buildMode` 为 `release`。
+- `app.debug` 为 `false`，`app.buildMode` 为 `release`。
 - 模块名为 `entry`，主 Ability 为 `EntryAbility`。
-- 不存在 `entry_test` 或 `CalculationTestAbility`。
+- 不存在 `entry_test`、`CalculationTestAbility` 或其他测试 Ability。
 
-还应检查正式字节码中不存在以下标记：
+正式字节码不应包含 `OpenHarmonyTestRunner`、`CALCX_TEST_RESULT`、`calcxRequest` 等测试协议标记。测试 HAP 则应包含这些标记和真实 `libentry.so` 引用，同时不包含 `Libentry.mock`、`NativeMock` 或 `src/mock`，以此作为扫描正对照。
 
-```text
-entry_test
-CalculationTestAbility
-OpenHarmonyTestRunner
-CALCX_TEST_RESULT
-calcxRequest
-Invoke-CalcXCalculation
-```
+## 12. 常见问题
 
-可使用 7-Zip 将 `module.json` 和 `ets/modules.abc` 提取到新建临时目录，再用 `rg -a` 扫描。使用同样方法检查测试 HAP 应能命中测试标记，作为扫描有效性的正对照。
+### UI 命令提示 APP 不在当前组件树
 
-## 10. 常见问题
+先执行 `./calcx.ps1 app start`。UI 命令不会为了隐藏状态问题而自动重启 APP。
+
+### 公式或设置字段显示 `UNAVAILABLE`
+
+确认设备安装的是 debug 主包，并等待 WebView 就绪。release 主包有意不暴露机器 JSON 描述，因此页面和控件仍可识别，但公式和设置详细状态不可用。
 
 ### 没有返回 `CALCX_TEST_RESULT`
 
-依次检查：
+检查主应用和测试 HAP 是否都已安装，以及 bundle、测试模块和 TestRunner 是否仍分别为 `com.startyi.calcx`、`entry_test` 和 `/ets/testrunner/OpenHarmonyTestRunner`。
 
-1. 主应用和测试 HAP 是否都已安装。
-2. bundle、测试模块和 TestRunner 是否仍分别为 `com.startyi.calcx`、`entry_test` 和 `/ets/testrunner/OpenHarmonyTestRunner`。
-3. 测试 Ability 是否能加载 `pages/CalculationTestPage`。
-4. `calculator.html` 是否能在测试 WebView 中完成加载。
+### 请求参数在测试端为空
 
-### 请求被判断为非法 Base64
+当前 API 24 设备实测中，`aa test -s calcxRequest <payload>` 对应的参数键可能是 `-s calcxRequest`。测试端同时兼容带前缀和不带前缀的键。升级 SDK 后若问题复现，应只记录参数键和长度，不输出完整动态请求。
 
-当前设备实测中，`aa test -s calcxRequest <payload>` 对应的参数键是 `-s calcxRequest`，而不是 `calcxRequest`。测试端同时兼容两种键。升级 SDK 或修改 TestRunner 后若问题复现，应先只打印参数键和各值长度确认映射，不要把完整请求写入日志。
+### 设置写入后正式界面没有变化
 
-### 测试构建成功，但没有调用真实 C++ 引擎
+不要使用 `ohosTest` 模块自己的 Context 写正式设置；它与 `entry` 的偏好空间隔离。当前实现通过 `AbilityMonitor` 获取真实 `EntryAbility` Context，修改后重启并由 UI 树复核。
 
-检查 `entry/src/mock/mock-config.json5`。如果 `libentry.so` 被映射到模板 mock，`ohosTest` 会绕过真实原生模块。当前文件应保持不含该映射；重建测试 HAP 后，字节码应包含 `libentry.so` 引用，并且不包含 `Libentry.mock`、`NativeMock` 或 `src/mock` 标记。
+### 正式界面与直接计算结果不同
 
-### HDC 返回 0，但测试实际失败
+先比较 `inputLatex`、`normalizedLatex`、`mathJson` 和配置：最终 LaTeX 不同通常属于按键映射或编辑器状态差异；MathJSON 与配置相同但结果不同，应检查主包与测试 HAP 是否来自同一次构建，以及测试 HAP 是否误用了原生 mock。
 
-不要直接把 HDC 退出码当成 Hypium 结果。调用器会解析带请求 ID 的结构化响应，并把设备计算失败映射为退出码 `20`；自定义 CI 封装也应保留这层判断。
+## 13. 维护与验证清单
 
-### 正式界面与命令行结果不同
+主要实现位置：
 
-先比较响应中的 `inputLatex`、`normalizedLatex` 和 `mathJson`：
+- 根入口：`calcx.ps1`。
+- 公共 HDC、协议和 UI 树解析：`test/CalcXCli.Common.psm1`。
+- 单次/批量计算：`test/Invoke-CalcXCalculation.ps1`、`test/Invoke-CalcXBatch.ps1`。
+- UI 与准备命令：`test/Invoke-CalcXUi.ps1`、`test/Invoke-CalcXFormula.ps1`、`test/Invoke-CalcXSetup.ps1`。
+- 场景执行：`test/Invoke-CalcXScenario.ps1`。
+- 设备协议：`entry/src/ohosTest/ets/test/CalculationCli.test.ets`、`entry/src/ohosTest/ets/utils/CalculationTestBridge.ets`。
+- 稳定 ID：`entry/src/main/ets/utils/SemanticIds.ets` 及各 UI 组件。
+- debug 状态描述：`entry/src/main/ets/pages/Index.ets`、`entry/src/main/ets/components/FormulaScreen.ets`。
 
-- 最终 LaTeX 不同：检查按键映射、`InputTranslator` 和编辑器状态。
-- LaTeX 相同但 MathJSON 不同：检查 `calculator.html`、MathLive 版本或资源是否一致。
-- MathJSON 与配置均相同但结果不同：检查主应用与测试 HAP 是否来自同一次构建，以及是否误用了原生 mock。
+修改后至少执行：
 
-## 11. 维护清单
+1. 所有 PowerShell 文件 AST 解析和 `./calcx.ps1 -SelfTest`。
+2. 构建并安装 `entry@default/debug` 与 `entry@ohosTest/debug`。
+3. 运行引擎批量、导航场景和公式 UI 场景。
+4. 抽样真实逐键输入并与 `engine` 结果对照。
+5. 若修改发布边界，重建 `entry@default/release` 并执行 HAP 隔离检查。
 
-修改协议或测试入口时同步检查：
+## 14. 已验证基线
 
-- Windows 常量：`test/Invoke-CalcXCalculation.ps1`。
-- 请求校验与结果标记：`entry/src/ohosTest/ets/test/CalculationCli.test.ets`。
-- 模式、精度和计算链路：`entry/src/ohosTest/ets/utils/CalculationTestBridge.ets`。
-- TestRunner：`entry/src/ohosTest/ets/testrunner/OpenHarmonyTestRunner.ets`。
-- 测试 Ability 与页面：`entry/src/ohosTest/ets/testability/`、`entry/src/ohosTest/ets/pages/`。
-- 测试模块声明：`entry/src/ohosTest/module.json5`。
-- 原生 mock 排除：`entry/src/mock/mock-config.json5`。
+2026-09-16 的真机基线：
 
-协议字段发生不兼容变化时提升 `protocolVersion`，并同时修改 Windows 与设备端。增加模式时，必须确认该模式返回的是 LaTeX 字符串；图像采样等其他返回类型应使用独立协议。
-
-每次修改后至少执行：
-
-1. PowerShell 语法检查和 `-SelfTest`。
-2. 构建并安装 `entry@ohosTest/debug`。
-3. 运行基础、错误、特殊字符和连续调用用例。
-4. 修改正式计算代码时补充一个真实 UI 对照。
-5. 发布前重新构建 `entry@default/release` 并检查正式包隔离。
-
-## 12. 已验证基线
-
-2026-09-15 的设备验证基线：
-
-- HDC `3.2.0f`。
-- HarmonyOS API 24 测试运行时。
-- standard、matrix、equation 三种模式通过。
-- 角度制、指定精度、非法输入、特殊字符、连续调用和冷启动通过。
-- 真实 UI `1+1` 与命令行结果一致。
-- 命令行显式配置未写回正式界面设置。
-- 测试 HAP 使用真实 `libentry.so`，正式 release HAP 不含测试入口。
-- 未故意制造 WebView 或原生引擎长时间卡死；强制超时终止分支尚无设备运行证据。
+- HDC `3.2.0f`，HarmonyOS API 24 测试运行时。
+- `entry@default/debug`、`entry@ohosTest/debug` 和 `entry@default/release` 均构建成功。
+- 单次 `1+1` 返回 `2`；引擎批量 4/4 通过。
+- 真实语义点击 `1 -> + -> 1 -> =` 返回 `2`。
+- 首页、侧栏、基础/科学模块、设置页、历史页和返回导航可识别并操作。
+- `navigation-smoke.json` 5/5、`calculation-ui-smoke.json` 6/6 通过。
+- 设置准备按 `radian -> degree -> radian` 验证，最终恢复为 `radian`。
+- release 主 HAP 为 `debug=false`、`buildMode=release`，只包含正式 Ability，未命中测试协议标记。
+- release UI 树不暴露公式/设置机器 JSON；恢复 debug 主包后完整状态重新可见。
+- 未自动验证长按滑动、MathLive 光标、图像曲线、系统弹窗、浏览器或视觉表现，这些属于明确排除项。
 
 [返回项目 README](../README.md)

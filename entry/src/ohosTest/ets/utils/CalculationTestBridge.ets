@@ -1,7 +1,8 @@
 import { webview } from '@kit.ArkWeb';
+import { common } from '@kit.AbilityKit';
+import { preferences } from '@kit.ArkData';
 import { CalcConfig, EngineService } from '../../../main/ets/utils/EngineService';
 import { PreferenceConfigs } from '../../../main/ets/utils/CalculatorConfigs';
-import { PreferenceManager } from '../../../main/ets/utils/PreferenceManager';
 
 export interface CalculationRequest {
   protocolVersion: number;
@@ -29,6 +30,11 @@ export interface CalculationResponse {
   setting?: string;
   value?: string;
   restartRequired?: boolean;
+}
+
+interface NormalizedSetting {
+  key: string;
+  value: string | number | boolean;
 }
 
 export class CalculationTestBridge {
@@ -114,12 +120,14 @@ export class CalculationTestBridge {
   }
 
   static async setSetting(requestId: string, setting: string, value: string,
-    timeoutMs: number): Promise<CalculationResponse> {
+    timeoutMs: number, entryContext: common.UIAbilityContext): Promise<CalculationResponse> {
     try {
       await CalculationTestBridge.waitUntilReady(timeoutMs);
       const normalized = CalculationTestBridge.normalizeSetting(setting, value);
-      PreferenceManager.set(normalized.key, normalized.value);
-      const storedValue = PreferenceManager.get(normalized.key, `__calcx_missing_${Date.now()}`);
+      const store = preferences.getPreferencesSync(entryContext, { name: PreferenceConfigs.STORE_NAME });
+      store.putSync(normalized.key, normalized.value);
+      await store.flush();
+      const storedValue = store.getSync(normalized.key, `__calcx_missing_${Date.now()}`);
       if (storedValue !== normalized.value) {
         throw new Error(`Setting did not persist: ${setting}`);
       }
@@ -137,7 +145,32 @@ export class CalculationTestBridge {
     }
   }
 
-  private static normalizeSetting(setting: string, value: string): { key: string, value: string | number | boolean } {
+  static async setFormula(requestId: string, latex: string,
+    entryContext: common.UIAbilityContext): Promise<CalculationResponse> {
+    try {
+      if (latex.length > 4096) {
+        throw new Error('latex must contain at most 4096 characters');
+      }
+      if (!entryContext.applicationInfo.debug) {
+        throw new Error('formula setup is available only in debug builds');
+      }
+      const store = preferences.getPreferencesSync(entryContext, { name: PreferenceConfigs.STORE_NAME });
+      store.putSync(PreferenceConfigs.KEY_CLI_PENDING_FORMULA, `1:${latex}`);
+      await store.flush();
+      return {
+        protocolVersion: 1,
+        requestId: requestId,
+        ok: true,
+        executionPath: 'setup',
+        inputLatex: latex,
+        restartRequired: true
+      };
+    } catch (error) {
+      return CalculationTestBridge.failure(requestId, 'formula-set', `${error}`);
+    }
+  }
+
+  private static normalizeSetting(setting: string, value: string): NormalizedSetting {
     switch (setting) {
       case 'angle':
         if (!['degree', 'radian'].includes(value)) throw new Error('angle must be degree or radian');

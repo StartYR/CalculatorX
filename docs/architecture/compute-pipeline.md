@@ -230,6 +230,6 @@ bmatrix LaTeX
 
 ## 12. 设备端命令行自动化
 
-`test/Invoke-CalcXCalculation.ps1` 可通过 HDC 调用 `entry/ohosTest`，直接输入 LaTeX 并取得结构化计算结果。测试端复用本页描述的 `calculator.html → EngineService → libentry.so` 链路，因此适合计算引擎回归和 CI；它不经过按键翻译与编辑器交互，不能替代 UI 测试。
+根目录 `calcx.ps1` 可通过 HDC 调用 `entry/ohosTest`，直接输入 LaTeX 并取得结构化计算结果；也可从系统 UI 树读取页面、公式和设置状态，按稳定语义 ID 操作普通控件。直接计算复用本页描述的 `calculator.html → EngineService → libentry.so` 链路，但不经过按键翻译与编辑器交互；需要验证真实交互时应使用语义点击或场景命令。
 
-构建、安装、参数、退出码、正式包隔离与排障步骤见 [Windows 命令行计算自动化](../calculation-cli-automation.md)。
+构建、安装、命令、场景、退出码、正式包隔离与排障步骤见 [Windows 语义 CLI 自动化](../calculation-cli-automation.md)。

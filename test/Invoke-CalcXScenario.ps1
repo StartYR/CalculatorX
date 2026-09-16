@@ -21,7 +21,7 @@ $rootScript = Join-Path (Split-Path -Parent $PSScriptRoot) 'calcx.ps1'
 $supportedCommands = @(
     'app.start', 'app.status',
     'screen.get', 'screen.controls', 'screen.find',
-    'formula.get', 'settings.get',
+    'formula.get', 'formula.set', 'formula.clear', 'settings.get',
     'ui.click', 'ui.back',
     'engine.calculate', 'setup.settings.set',
     'assert', 'wait'
@@ -108,6 +108,11 @@ function Get-CommandArguments {
             return @('screen', 'find', $target)
         }
         'formula.get' { return @('formula', 'get') }
+        'formula.set' {
+            $latex = Resolve-ScenarioText ([string](Get-StepProperty $Step 'latex' '')) $Variables
+            return @('formula', 'set', $latex)
+        }
+        'formula.clear' { return @('formula', 'clear') }
         'settings.get' { return @('settings', 'get') }
         'ui.click' {
             $target = Resolve-ScenarioText ([string](Get-StepProperty $Step 'target' '')) $Variables
