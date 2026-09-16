@@ -16,6 +16,7 @@ import { TopBar } from '../components/TopBar';
 import { SideBarMenu } from '../components/SideBarMenu';
 import { HistorySheet } from '../components/HistorySheet';
 import { HistoryRepository } from '../database/HistoryRepository';
+import { SemanticIds, getModuleSemanticId } from '../utils/SemanticIds';
 
 // 所有功能模块组件
 import { ScientificCalc } from '../components/ScientificCalc';
@@ -33,6 +34,14 @@ import { ExchangeRate } from '../components/exchange/rates/ExchangeRate';
 struct Index {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageProp('isRad') isRad: boolean = true;
+  @StorageProp(PreferenceConfigs.KEY_ANSWER_OUTPUT_MODE) answerOutputMode: number = 0;
+  @StorageProp(PreferenceConfigs.KEY_DECIMAL_PRECISION) decimalPrecision: number = 13;
+  @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
+  @StorageProp(PreferenceConfigs.KEY_VIBRATION_CURVE) vibrationCurve: number = 0;
+  @StorageProp(PreferenceConfigs.KEY_STARTUP_PAGE) startupPageMode: number = 0;
+  @StorageProp(PreferenceConfigs.KEY_COLOR_MODE) colorModeIndex: number = 2;
+  @StorageProp(PreferenceConfigs.KEY_COMBINATION_SELECT) combinationStyle: number = 1;
+  @StorageProp(PreferenceConfigs.KEY_PERMUTATION_SELECT) permutationStyle: number = 1;
 
   @State isSidebarOpen: boolean = false;
   @State isShowHistorySheet: boolean = false;
@@ -146,6 +155,8 @@ struct Index {
       }
       .width('100%')
       .height('100%')
+      .id(getModuleSemanticId(this.currentModule) + '.page')
+      .accessibilityText(this.currentModule)
       // 侧边栏开启时的缩放卡片动效保持不变
       .scale({ x: this.isSidebarOpen ? 0.92 : 1.0, y: this.isSidebarOpen ? 0.92 : 1.0 })
       .borderRadius(this.isSidebarOpen ? 32 : 0)
@@ -204,6 +215,21 @@ struct Index {
     }
     .width('100%')
     .height('100%')
+    .id(SemanticIds.PAGE_INDEX)
+    .accessibilityText(JSON.stringify({
+      module: this.currentModule,
+      settings: {
+        angle: this.isRad ? 'radian' : 'degree',
+        answerOutput: this.answerOutputMode === 0 ? 'auto' : 'decimal',
+        decimalPrecision: this.decimalPrecision,
+        hapticFeedback: this.hapticFeedback,
+        vibrationCurve: this.vibrationCurve,
+        startupPage: this.startupPageMode,
+        colorMode: this.colorModeIndex,
+        combinationStyle: this.combinationStyle,
+        permutationStyle: this.permutationStyle
+      }
+    }))
     .backgroundColor($r('sys.color.background_primary'))
   }
 }

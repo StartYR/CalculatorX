@@ -9,6 +9,7 @@
 import { display } from '@kit.ArkUI'; // 用于获取屏幕宽度
 import { HapticUtils } from '../../utils/HapticUtils';
 import { icon_power2, icon_sqrtx, icon_sqrt3 } from '../../utils/CalculatorConfigs';
+import { getCalculatorKeySemanticId } from '../../utils/SemanticIds';
 
 export type LongPressStrategy = 'CONTINUOUS' | 'NATIVE_MENU' | 'SLIDE_BUBBLE' | 'DIRECT_SHIFT' | 'NONE';
 
@@ -163,6 +164,8 @@ export struct KeyGestureWrapper {
     }
     .width('100%')
     .height('100%')
+    .id(getCalculatorKeySemanticId(this.actionId))
+    .accessibilityText(this.actionId)
     // 动态获取按键宽度，作为滑动坐标换算的基准
     .onAreaChange((oldValue: Area, newValue: Area) => {
       this.btnWidth = newValue.width as number;
