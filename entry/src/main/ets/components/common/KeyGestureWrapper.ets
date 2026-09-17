@@ -10,6 +10,7 @@ import { display } from '@kit.ArkUI'; // 用于获取屏幕宽度
 import { HapticUtils } from '../../utils/HapticUtils';
 import { icon_power2, icon_sqrtx, icon_sqrt3 } from '../../utils/CalculatorConfigs';
 import { getCalculatorKeySemanticId } from '../../utils/SemanticIds';
+import { createMenuMaterial } from '../../utils/ImmersiveMaterialUtils';
 
 export type LongPressStrategy = 'CONTINUOUS' | 'NATIVE_MENU' | 'SLIDE_BUBBLE' | 'DIRECT_SHIFT' | 'NONE';
 
@@ -200,6 +201,7 @@ export struct KeyGestureWrapper {
       }
     })
     .bindContextMenu(this.isNativeMenuShow, this.NativeMenuBuilder, {
+      systemMaterial: createMenuMaterial(),
       onDisappear: () => { this.isNativeMenuShow = false; }
     })
     .onTouch((event: TouchEvent) => {

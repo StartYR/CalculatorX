@@ -24,3 +24,13 @@ export function createDialogMaterial(): uiMaterial.Material | undefined {
 
   return undefined;
 }
+
+export function createMenuMaterial(): uiMaterial.Material | undefined {
+  if (deviceInfo.apiAvailable('26.0.0')) {
+    return new uiMaterial.ImmersiveMaterial({
+      style: uiMaterial.ImmersiveStyle.THICK
+    });
+  }
+
+  return undefined;
+}
