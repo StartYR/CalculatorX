@@ -121,12 +121,7 @@ ArkUI 原生界面
 ## 获取 CalculatorX
 
 <p align="center">
-  <a href="https://appgallery.huawei.com/app/detail?id=com.startyi.calcx">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/AppGallery-dark.webp">
-      <img src="https://img.startyi.com/AppGallery.webp" alt="从 AppGallery 获取" height="64">
-    </picture>
-  </a>
+  <a href="https://appgallery.huawei.com/app/detail?id=com.startyi.calcx"><picture><source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/AppGallery-dark.webp"><img src="https://img.startyi.com/AppGallery.webp" alt="从 AppGallery 获取" height="64"></picture></a>
   &emsp;&emsp;
   <a href="https://github.com/StartYR/CalculatorX/releases"><img src="https://img.startyi.com/GitHub-Releases.webp" alt="从 GitHub Releases 获取" height="64"></a>
 </p>
