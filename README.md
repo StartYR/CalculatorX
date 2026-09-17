@@ -123,7 +123,7 @@ ArkUI 原生界面
 <p align="center">
   <a href="https://appgallery.huawei.com/app/detail?id=com.startyi.calcx">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/AppGallery-dark.png">
+      <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/AppGallery-dark.webp">
       <img src="https://img.startyi.com/AppGallery.webp" alt="从 AppGallery 获取" height="64">
     </picture>
   </a>
