@@ -8,6 +8,8 @@
   <p><strong>面向 HarmonyOS NEXT 的原生科学与符号计算器</strong></p>
   <p>从基础运算、微积分和矩阵，到方程求解、函数图像与实时汇率换算。</p>
 
+  <a href="https://calcx.startyi.com/"><p>github.com/StartYR</p></a>
+
   <p>
     <a href="https://github.com/StartYR/CalculatorX/releases"><img src="https://img.shields.io/badge/Version-1.6.4-2d8b4c.svg" alt="Version 1.6.0"></a>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-0052cc.svg" alt="GPL-3.0"></a>
