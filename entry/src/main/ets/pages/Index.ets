@@ -91,6 +91,35 @@ struct Index {
     })
   }
 
+  @Builder MainNavigationTitleBuilder() {
+    TopBar({
+      isShift: this.topBarIsShift,
+      isRad: this.isRad,
+      currentModule: this.currentModule,
+      onMenuClick: () => {
+        animateTo({ duration: 350, curve: Curve.Friction }, () => {
+          this.isSidebarOpen = true;
+        });
+      },
+      onUndoClick: () => {
+        getContext(this).eventHub.emit('event_math_undo');
+      },
+      onRedoClick: () => {
+        getContext(this).eventHub.emit('event_math_redo');
+      },
+      onHistoryClick: () => {
+        this.isShowHistorySheet = true;
+      }
+    })
+      .bindSheet($$this.isShowHistorySheet, this.HistorySheetBuilder(), {
+        height: '75%',
+        dragBar: true,
+        backgroundColor: $r('sys.color.background_secondary'),
+        systemMaterial: createSheetMaterial(),
+        showClose: false
+      })
+  }
+
   aboutToAppear() {
     HistoryRepository.init(getContext(this) as common.UIAbilityContext);
     font.registerFont({ familyName: 'Cambria Math', familySrc: $rawfile('fonts/Cambria Math.ttf') });
@@ -162,79 +191,58 @@ struct Index {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      // ================= 1. 动态内容区 =================
-      Column() {
-        if (this.currentModule === 'scientific') {
-          ScientificCalc()
-        } else if (this.currentModule === 'basic') {
-          BasicCalc()
-        } else if (this.currentModule === 'matrix') {
-          MatrixCalc()
-        } else if (this.currentModule === 'graphing') {
-          GraphingCalc()
-        } else if (this.currentModule === 'equation') {
-          EquationSolver()
-        } else if (this.currentModule === 'statistics') {
-          StatisticsCalc()
-        } else if (this.currentModule === 'unit') {
-          UnitConverter()
-        } else if (this.currentModule === 'base') {
-          BaseConverter()
-        } else if (this.currentModule === 'exchange') {
-          ExchangeRate()
-        } else {
-          // 兜底保护，防止出现白屏
-          Column() {
-            Text('模块正在开发中...')
-              .fontSize(18)
-              .fontColor($r('sys.color.font_secondary'))
+      Navigation() {
+        // ================= 1. 动态内容区 =================
+        Column() {
+          if (this.currentModule === 'scientific') {
+            ScientificCalc()
+          } else if (this.currentModule === 'basic') {
+            BasicCalc()
+          } else if (this.currentModule === 'matrix') {
+            MatrixCalc()
+          } else if (this.currentModule === 'graphing') {
+            GraphingCalc()
+          } else if (this.currentModule === 'equation') {
+            EquationSolver()
+          } else if (this.currentModule === 'statistics') {
+            StatisticsCalc()
+          } else if (this.currentModule === 'unit') {
+            UnitConverter()
+          } else if (this.currentModule === 'base') {
+            BaseConverter()
+          } else if (this.currentModule === 'exchange') {
+            ExchangeRate()
+          } else {
+            // 兜底保护，防止出现白屏
+            Column() {
+              Text('模块正在开发中...')
+                .fontSize(18)
+                .fontColor($r('sys.color.font_secondary'))
+            }
+            .width('100%')
+            .height('100%')
+            .justifyContent(FlexAlign.Center)
           }
-          .width('100%')
-          .height('100%')
-          .justifyContent(FlexAlign.Center)
         }
+        .width('100%')
+        .height('100%')
+        .id(getModuleSemanticId(this.currentModule) + '.page')
+        .accessibilityText(this.currentModule)
+        // 侧边栏开启时的缩放卡片动效保持不变
+        .scale({ x: this.isSidebarOpen ? 0.92 : 1.0, y: this.isSidebarOpen ? 0.92 : 1.0 })
+        .borderRadius(this.isSidebarOpen ? 32 : 0)
+        .backgroundColor($r('sys.color.background_primary'))
       }
       .width('100%')
       .height('100%')
-      .id(getModuleSemanticId(this.currentModule) + '.page')
-      .accessibilityText(this.currentModule)
-      // 侧边栏开启时的缩放卡片动效保持不变
-      .scale({ x: this.isSidebarOpen ? 0.92 : 1.0, y: this.isSidebarOpen ? 0.92 : 1.0 })
-      .borderRadius(this.isSidebarOpen ? 32 : 0)
-      .backgroundColor($r('sys.color.background_primary'))
-
-      // ================= 2. 全局顶部悬浮控制栏 =================
-      TopBar({
-        isShift: this.topBarIsShift,
-        isRad: this.isRad,
-        // 根据当前模块动态显示顶栏标题
-        currentModule: this.currentModule,
-        onMenuClick: () => {
-          animateTo({ duration: 350, curve: Curve.Friction }, () => {
-            this.isSidebarOpen = true;
-          });
-        },
-        onUndoClick: () => {
-          // 跨组件触发撤销
-          getContext(this).eventHub.emit('event_math_undo');
-        },
-        onRedoClick: () => {
-          // 跨组件触发重做
-          getContext(this).eventHub.emit('event_math_redo');
-        },
-        onHistoryClick: () => {
-          this.isShowHistorySheet = true;
-        }
+      .mode(NavigationMode.Stack)
+      .title({ builder: this.MainNavigationTitleBuilder, height: 56 }, {
+        backgroundColor: Color.Transparent,
+        barStyle: BarStyle.STACK
       })
-        .bindSheet($$this.isShowHistorySheet, this.HistorySheetBuilder(), {
-          height: '75%',
-          dragBar: true,
-          backgroundColor: $r('sys.color.background_secondary'),
-          systemMaterial: createSheetMaterial(),
-          showClose: false
-        })
+      .hideBackButton(true)
 
-      // ================= 3. 全局左侧侧边栏 =================
+      // ================= 2. 全局左侧侧边栏 =================
       if (this.isSidebarOpen) {
         SideBarMenu({
           isSidebarOpen: $isSidebarOpen,

@@ -212,6 +212,8 @@ export struct TopBar {
       }
     }
     .width('100%')
-    .padding({ top: 36, left: 12, right: 12 })
+    .height('100%')
+    .alignItems(VerticalAlign.Center)
+    .padding({ left: 12, right: 12 })
   }
 }
