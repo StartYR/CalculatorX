@@ -17,7 +17,7 @@ import { SideBarMenu } from '../components/SideBarMenu';
 import { HistorySheet } from '../components/HistorySheet';
 import { HistoryRepository } from '../database/HistoryRepository';
 import { SemanticIds, getModuleSemanticId } from '../utils/SemanticIds';
-import { createSheetMaterial } from '../utils/ImmersiveMaterialUtils';
+import { createDialogMaterial, createSheetMaterial } from '../utils/ImmersiveMaterialUtils';
 
 // 所有功能模块组件
 import { ScientificCalc } from '../components/ScientificCalc';
@@ -73,7 +73,8 @@ struct Index {
     builder: PrivacyDialog({ isUpdate: this.isPrivacyUpdate }),
     autoCancel: false, // 禁止点击弹窗外部的遮罩层关闭，必须显式点击“同意”或“不同意”
     alignment: DialogAlignment.Center,
-    customStyle: true  // 允许使用在 PrivacyDialog 内部定义的背景色和圆角
+    customStyle: true, // 允许使用在 PrivacyDialog 内部定义的背景色和圆角
+    systemMaterial: createDialogMaterial()
   });
 
   // 历史记录面板的生成器 (作为全局遮罩，保留在主入口)

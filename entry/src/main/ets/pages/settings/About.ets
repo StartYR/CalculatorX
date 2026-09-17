@@ -17,6 +17,7 @@ import {
 } from '@kit.UIDesignKit';
 import Logger from '../../utils/Logger'
 import bundleManager from '@ohos.bundle.bundleManager';
+import { createDialogMaterial, isImmersiveMaterialAvailable } from '../../utils/ImmersiveMaterialUtils';
 
 // 定义鸣谢数据结构
 interface CreditItem {
@@ -80,7 +81,7 @@ struct CreditsDialog {
     }
     .width('100%')
     .height('55%') // 占据屏幕一半高度
-    .backgroundColor($r('sys.color.background_secondary'))
+    .backgroundColor(isImmersiveMaterialAvailable() ? Color.Transparent : $r('sys.color.background_secondary'))
     .borderRadius({ topLeft: 24, topRight: 24 }) // 顶部大圆角
   }
 }
@@ -104,7 +105,8 @@ struct About {
     builder: CreditsDialog(),
     alignment: DialogAlignment.Bottom, // 从底部弹出
     customStyle: true, // 使用自定义圆角和背景
-    offset: { dx: 0, dy: 0 }
+    offset: { dx: 0, dy: 0 },
+    systemMaterial: createDialogMaterial()
   });
 
   // 统一封装拉起外部浏览器的函数
