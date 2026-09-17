@@ -10,12 +10,9 @@
 
   <p>
     <a href="https://github.com/StartYR/CalculatorX/releases"><img src="https://img.shields.io/badge/Version-1.6.4-2d8b4c.svg" alt="Version 1.6.0"> </a>
-  &emsp;
     <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-0052cc.svg" alt="GPL-3.0"></a>
     <a href="https://developer.harmonyos.com/"><img src="https://img.shields.io/badge/Platform-HarmonyOS_NEXT-007dff.svg?logo=harmonyos" alt="HarmonyOS NEXT"></a>
-    &emsp;
     <img src="https://img.shields.io/badge/Tech-ArkTS_%7C_C%2B%2B_%7C_Web-6c45a8.svg" alt="ArkTS, C++ and Web">
-    &emsp;
     <img src="https://img.shields.io/badge/CAS-Giac_%7C_SymEngine-c73d3d.svg" alt="Giac and SymEngine">
   </p>
 
@@ -25,12 +22,15 @@
 <a href="https://github.com/StartYR/CalculatorX">
   <img src="./docs/image/GitHub.svg" height="30" alt="GitHub">
 </a>
+&nbsp;
 <a href="https://calcx.startyi.com">
   <img src="./docs/image/Web.svg" height="30" alt="CalculatorX 官网">
 </a>
+&nbsp;
 <a href="https://calcx.startyi.com/docs">
   <img src="./docs/image/Help.svg" height="30" alt="CalculatorX 帮助文档">
 </a>
+&nbsp;
 <a href="https://github.com/StartYR/CalculatorX/issues/new">
   <img src="./docs/image/Issue.svg" height="30" alt="提交 Issue">
 </a>
