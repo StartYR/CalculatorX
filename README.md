@@ -18,10 +18,19 @@
 
   <p>
 
-[![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/StartYR/CalculatorX)
-[![Web](https://img.shields.io/badge/Web-1890ff?style=for-the-badge&logo=googlechrome&logoColor=white)](https://calcx.startyi.com)
-[![Help](https://img.shields.io/badge/Help-00b4ab?style=for-the-badge&logo=readthedocs&logoColor=white)](https://calcx.startyi.com/docs)
-[![Issue](https://img.shields.io/badge/Issue-e34f26?style=for-the-badge&logo=github&logoColor=white)](https://github.com/StartYR/CalculatorX/issues/new)
+
+<a href="https://github.com/StartYR/CalculatorX">
+  <img src="./docs/image/github-badge.svg" height="30" alt="GitHub">
+</a>
+<a href="https://calcx.startyi.com">
+  <img src="./docs/image/web-badge.svg" height="30" alt="CalculatorX 官网">
+</a>
+<a href="https://calcx.startyi.com/docs">
+  <img src="./docs/image/help-badge.svg" height="30" alt="CalculatorX 帮助文档">
+</a>
+<a href="https://github.com/StartYR/CalculatorX/issues/new">
+  <img src="./docs/image/issue-badge.svg" height="30" alt="提交 Issue">
+</a>
 
   </p>
 
