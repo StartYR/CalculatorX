@@ -1,6 +1,6 @@
 # TopBar 沉浸光感与 Navigation 标题栏迁移计划
 
-- 状态：代码实施与构建验证完成，待真机视觉验收
+- 状态：API 26 手机竖屏验证完成，API 23 与其他设备形态待验收
 - 编写日期：2026-09-18
 - 适用分支：`feature/api-update`
 - 目标 API：`26.0.0`
@@ -65,8 +65,8 @@ Stack
 - 不引入 `NavPathStack`，主页仍使用 `currentModule` 动态挂载计算模块；
 - 不改设置、历史、帮助等页面现有的 router 路由；
 - 不把侧边栏移入 Navigation；
-- TopBar 使用 56vp 自定义标题栏和 `BarStyle.STACK`；
-- Navigation 负责标题栏安全区，TopBar 移除硬编码的顶部 36vp 内边距，只保留左右间距；
+- TopBar 使用“56vp 内容高度 + 实时状态栏高度”的自定义标题栏和 `BarStyle.STACK`；
+- `EntryAbility` 将顶部系统避让区高度写入 `AppStorage` 并监听变化，TopBar 使用该值作为顶部内边距，不再依赖硬编码的 36vp；
 - 历史记录 Sheet 仍绑定在 TopBar 调用点，内容、状态和材质不变。
 
 ## 4. 分阶段实施
@@ -94,10 +94,10 @@ docs: 新增 TopBar 沉浸光感迁移计划
 
 - [x] 在 `Index` 中新增主页标题栏 Builder，集中创建 `TopBar` 并保留全部回调；
 - [x] 用静态 `Navigation` 包裹动态计算内容；
-- [x] 将 TopBar Builder 设置为 56vp 自定义标题栏；
+- [x] 将 TopBar Builder 设置为 56vp 内容高度，并叠加实时状态栏高度；
 - [x] 设置 `NavigationMode.Stack`、隐藏返回键，并使用 `BarStyle.STACK` 保持覆盖布局；
 - [x] 保持外层 `Stack` 和 `SideBarMenu` 层级不变；
-- [x] 将 TopBar 顶部内边距交给 Navigation 安全区处理，保持左右 12vp 和按钮尺寸不变；
+- [x] 使用窗口顶部系统避让区设置 TopBar 顶部内边距，保持左右 12vp 和按钮尺寸不变；
 - [x] 保留所有 Semantic ID、标题状态、Shift 状态和事件回调；
 - [x] 保留现有按钮模糊样式，先隔离结构变化与材质变化；
 - [x] 构建 `entry@default/debug`。
@@ -155,12 +155,27 @@ feat: 为主页顶栏启用沉浸光感
 - [x] 执行 `git diff --check`；
 - [x] 构建 `entry@ohosTest/debug` 与 `entry@default/release`；
 - [x] release 后重新构建 `entry@default/debug`，恢复开发产物；
-- [x] 不安装 HAP，不执行真机操作，除非另有明确授权。
+- [x] 初次迁移阶段未安装 HAP；后续经用户明确授权安装 debug HAP 验证修复。
 
 建议提交：
 
 ```text
 docs: 记录 TopBar 沉浸光感迁移
+```
+
+### 阶段 4：根据 API 26 真机反馈修正安全区与配色
+
+- [x] 读取并监听 `TYPE_SYSTEM` 顶部避让区高度；
+- [x] 扩展自定义标题栏高度，并将 TopBar 完整放到状态栏下方；
+- [x] 保持 `BarStyle.STACK`，避免动态计算内容被标题栏整体下推；
+- [x] API 26 按钮使用 `ButtonStyleMode.TEXTUAL`，移除默认强调色背景；
+- [x] 构建、安装并启动 debug HAP；
+- [x] 通过截图和 UI 树核对按钮边界、透明背景与菜单点击行为。
+
+提交：
+
+```text
+fix: 修复 TopBar 安全区与按钮配色
 ```
 
 ## 5. 兼容与回退
@@ -183,14 +198,20 @@ docs: 记录 TopBar 沉浸光感迁移
 - 新增 API 无低版本兼容告警
 - `git diff --check`
 
+已完成真机验收：
+
+- API 26 手机、深色模式、竖屏、科学计算模块；
+- TopBar 四个可见按钮完整位于状态栏图标下方，UI 树无裁剪；
+- 按钮背景为透明中性材质，菜单按钮可打开侧边栏。
+
 后续真机验收：
 
-- API 23 与 API 26；
-- 浅色与深色；
-- 科学、基础、矩阵、方程、图形及无右侧动作模块；
+- API 23；
+- API 26 浅色模式；
+- 基础、矩阵、方程、图形及无右侧动作模块；
 - 菜单、撤销、重做、历史与图形编辑；
 - 侧边栏打开/关闭、历史 Sheet 打开/关闭；
-- 状态栏安全区、手机与平板、横竖屏；
+- 平板与横屏；
 - 系统沉浸光感不同档位下的按钮对比度与反馈。
 
 构建成功不能代替上述真机视觉与交互验收。
@@ -203,7 +224,7 @@ docs: 记录 TopBar 沉浸光感迁移
 - TopBar 的尺寸、模块规则、Semantic ID 和点击行为没有改变；
 - 动态内容、侧边栏和历史 Sheet 的层级关系保持不变；
 - 三种构建目标通过并恢复 debug 产物；
-- 文档准确区分构建结果和未执行的真机验收。
+- 文档准确区分已完成的 API 26 手机验证和其余未执行场景。
 
 ## 8. 官方参考
 

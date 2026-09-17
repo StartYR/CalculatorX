@@ -1,6 +1,6 @@
 # API 26 与沉浸光感迁移
 
-- 状态：代码实施完成，待真机验证
+- 状态：API 26 手机竖屏验证完成，API 23 与其他设备形态待验证
 - 类型：功能、兼容性配置
 - 分支：`feature/api-update`
 - 完成日期：2026-09-18
@@ -24,7 +24,9 @@ CalculatorX 的目标 API 已从 `6.1.1(24)` 升级到 `26.0.0`，最低兼容 A
 
 `ImmersiveMaterialUtils.ets` 集中提供 Sheet、弹窗、菜单和 TopBar 四类材质。每个 API 26 专属构造器都在函数内部直接使用正向 `deviceInfo.apiAvailable('26.0.0')` 分支保护；不可用时返回 `undefined`，让组件回到原有行为。
 
-主页使用静态 `Navigation` 包裹动态计算模块，并将 TopBar 作为 56vp 自定义标题栏；`BarStyle.STACK` 保持标题栏覆盖内容的原布局关系，外层侧边栏层级和历史记录 Sheet 绑定不变。TopBar 的五类按钮共用同一个 `AttributeModifier`：API 26 仅应用系统材质，API 23 才应用旧模糊外观，避免两套视觉叠加。
+主页使用静态 `Navigation` 包裹动态计算模块，并将 TopBar 作为自定义标题栏；`BarStyle.STACK` 保持标题栏覆盖内容的原布局关系，外层侧边栏层级和历史记录 Sheet 绑定不变。标题栏以 56vp 作为内容高度，并叠加窗口实时上报的状态栏避让高度；TopBar 使用同一避让值设置顶部内边距，保证按钮完整位于系统状态栏下方。
+
+TopBar 的五类按钮共用同一个 `AttributeModifier`：API 26 先使用无强调背景的 `ButtonStyleMode.TEXTUAL`，再应用系统材质；API 23 才应用旧模糊外观，避免两套视觉叠加，也避免默认按钮强调色透入材质。
 
 自定义弹窗通过同一版本判断选择表面背景：API 26 使用透明表面显示系统材质，API 23 保留原系统背景色。隐私弹窗的全屏 `backdropBlur(50)` 和遮罩没有移除，以维持合规文本与底层内容的视觉隔离。
 
@@ -34,9 +36,10 @@ CalculatorX 的目标 API 已从 `6.1.1(24)` 升级到 `26.0.0`，最低兼容 A
 
 - `targetSdkVersion` 为 `26.0.0`，`compatibleSdkVersion` 仍为 `6.1.0(23)`。
 - TopBar 已迁入 `Navigation` 自定义标题栏；模块可见性规则、按钮尺寸、Semantic ID 和事件回调保持不变。
+- 顶部安全距离来自 `TYPE_SYSTEM` 避让区并随窗口变化更新，不使用固定状态栏高度。
 - 侧边栏关闭遮罩、货币列表羽化与搜索框、汇率键盘、图形键盘、自定义滑动气泡和隐私弹窗全屏背景模糊保持现状。
 - 图形编辑全屏 Sheet 暂缓迁移，待真机评估长时间显示时的功耗、图表透出和公式可读性。
-- 本次构建成功不等于 API 23 运行兼容或 API 26 实际材质效果已通过；两类设备仍需分别安装和验收。
+- API 26 当前只完成手机深色竖屏的有限验收；API 23 和其余设备、主题及布局场景仍需分别安装和验证。
 
 ## 验证
 
@@ -46,12 +49,14 @@ CalculatorX 的目标 API 已从 `6.1.1(24)` 升级到 `26.0.0`，最低兼容 A
 - 生成配置确认 `compileSdkVersion = 26.0.0.105`、目标 API 为 26、最低 API 为 23，主包 metadata 中的材质状态为 `default`。
 - 新增的沉浸光感调用没有产生 API 26 兼容告警。构建仍报告项目既有弃用/异常处理告警，以及图形模块两处 `Circle.fill` 的 SDK 重载兼容告警；本次未改写这些无关代码。
 - 已静态复核保留的 `backgroundBlurStyle`、`backdropBlur` 和 HDS `systemMaterialEffect` 归属。
-- 未安装 HAP，未执行 API 23/API 26 真机启动、交互、深浅色、系统材质档位、帧率、发热或功耗验证，也未执行 DevEco Studio API Change Assistant 的人工检查。
+- 已在 API 26 手机上安装并启动 debug HAP，完成深色竖屏截图与 UI 树检查：四个可见 TopBar 按钮完整位于系统状态图标下方，背景为透明中性材质；实际点击菜单按钮可正常打开侧边栏。
+- 尚未执行 API 23、浅色模式、平板、横屏、全部模块、系统材质档位、帧率、发热或功耗验证，也未执行 DevEco Studio API Change Assistant 的人工检查。
 
 ## 主要文件
 
 - `build-profile.json5.template`
 - `entry/src/main/module.json5`
+- `entry/src/main/ets/entryability/EntryAbility.ets`
 - `entry/src/main/ets/utils/ImmersiveMaterialUtils.ets`
 - `entry/src/main/ets/components/TopBar.ets`
 - `entry/src/main/ets/pages/Index.ets`
