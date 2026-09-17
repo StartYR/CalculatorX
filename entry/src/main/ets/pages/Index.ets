@@ -17,6 +17,7 @@ import { SideBarMenu } from '../components/SideBarMenu';
 import { HistorySheet } from '../components/HistorySheet';
 import { HistoryRepository } from '../database/HistoryRepository';
 import { SemanticIds, getModuleSemanticId } from '../utils/SemanticIds';
+import { createSheetMaterial } from '../utils/ImmersiveMaterialUtils';
 
 // 所有功能模块组件
 import { ScientificCalc } from '../components/ScientificCalc';
@@ -228,6 +229,7 @@ struct Index {
           height: '75%',
           dragBar: true,
           backgroundColor: $r('sys.color.background_secondary'),
+          systemMaterial: createSheetMaterial(),
           showClose: false
         })
 

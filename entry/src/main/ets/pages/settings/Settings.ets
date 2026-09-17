@@ -23,6 +23,7 @@ import Logger from '../../utils/Logger'
 // 引入全局菜单组件库
 import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from '../../components/common/MenuComponents';
 import { SemanticIds } from '../../utils/SemanticIds';
+import { createSheetMaterial } from '../../utils/ImmersiveMaterialUtils';
 
 // ==================== 底部半模态面板内容：数学公式样式选择 ====================
 @Component
@@ -668,6 +669,7 @@ export struct Settings {
       height: SheetSize.FIT_CONTENT, // 优雅所在：面板高度自适应内容，不占用全屏
       dragBar: true,                 // 顶部显示可拖拽的灰色小横条
       backgroundColor: $r('sys.color.background_secondary'), // 统一底色
+      systemMaterial: createSheetMaterial(),
       showClose: false               // 隐藏右上角默认关闭按钮，保持 UI 极简
     })
     .bindToScrollable([this.scrollerForScroll])
