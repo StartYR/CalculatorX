@@ -30,15 +30,15 @@
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/AdvMath_dark.webp">
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/AdvMath-dark.webp">
     <img src="https://img.startyi.com/CalcX/AdvMath.webp" width="30%" alt="CalculatorX 科学计算">
   </picture>
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/Matrix_dark.webp">
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/Matrix-dark.webp">
     <img src="https://img.startyi.com/CalcX/Matrix.webp" width="30%" alt="CalculatorX 矩阵运算">
   </picture>
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/Graph_dark.webp">
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/Graph-dark.webp">
     <img src="https://img.startyi.com/CalcX/Graph.webp" width="30%" alt="CalculatorX 函数图像">
   </picture>
 
