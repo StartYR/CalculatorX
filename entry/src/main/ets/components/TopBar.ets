@@ -34,6 +34,7 @@ enum TopBarTrailingAction {
 class TopBarButtonVisualModifier implements AttributeModifier<ButtonAttribute> {
   applyNormalAttribute(instance: ButtonAttribute): void {
     if (deviceInfo.apiAvailable('26.0.0')) {
+      instance.buttonStyle(ButtonStyleMode.TEXTUAL);
       instance.systemMaterial(createTopBarMaterial());
     } else {
       instance.backgroundColor('#54ffffff');
@@ -48,6 +49,7 @@ const topBarButtonVisualModifier: TopBarButtonVisualModifier = new TopBarButtonV
 
 @Component
 export struct TopBar {
+  @StorageProp('statusBarHeight') statusBarHeight: number = 0;
   @Prop isShift: boolean = false;
   @Prop isRad: boolean = false;
   @Prop currentModule: string = 'scientific';
@@ -206,6 +208,6 @@ export struct TopBar {
     .width('100%')
     .height('100%')
     .alignItems(VerticalAlign.Center)
-    .padding({ left: 12, right: 12 })
+    .padding({ top: this.statusBarHeight, left: 12, right: 12 })
   }
 }

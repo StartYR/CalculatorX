@@ -51,6 +51,7 @@ interface IndexSemanticState {
 @Component
 struct Index {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
+  @StorageProp('statusBarHeight') statusBarHeight: number = 0;
   @StorageProp('isRad') isRad: boolean = true;
   @StorageProp(PreferenceConfigs.KEY_ANSWER_OUTPUT_MODE) answerOutputMode: number = 0;
   @StorageProp(PreferenceConfigs.KEY_DECIMAL_PRECISION) decimalPrecision: number = 13;
@@ -236,7 +237,7 @@ struct Index {
       .width('100%')
       .height('100%')
       .mode(NavigationMode.Stack)
-      .title({ builder: this.MainNavigationTitleBuilder, height: 56 }, {
+      .title({ builder: this.MainNavigationTitleBuilder, height: 56 + this.statusBarHeight }, {
         backgroundColor: Color.Transparent,
         barStyle: BarStyle.STACK
       })

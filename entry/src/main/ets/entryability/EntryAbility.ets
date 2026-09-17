@@ -80,12 +80,16 @@ export default class EntryAbility extends UIAbility {
 
       windowStage.getMainWindow().then(mainWindow => {
         mainWindow.setWindowLayoutFullScreen(true);
-        let avoidArea = mainWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR);
-        AppStorage.setOrCreate('navBarHeight', px2vp(avoidArea.bottomRect.height));
+        let navigationAvoidArea = mainWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR);
+        let systemAvoidArea = mainWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM);
+        AppStorage.setOrCreate('navBarHeight', px2vp(navigationAvoidArea.bottomRect.height));
+        AppStorage.setOrCreate('statusBarHeight', px2vp(systemAvoidArea.topRect.height));
 
         mainWindow.on('avoidAreaChange', (data) => {
           if (data.type === window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR) {
             AppStorage.setOrCreate('navBarHeight', px2vp(data.area.bottomRect.height));
+          } else if (data.type === window.AvoidAreaType.TYPE_SYSTEM) {
+            AppStorage.setOrCreate('statusBarHeight', px2vp(data.area.topRect.height));
           }
         });
       }).catch((err: Error) => {
