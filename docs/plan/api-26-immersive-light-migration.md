@@ -70,7 +70,7 @@ API 26 起版本号采用语义化格式，因此目标值应写为 `"26.0.0"`�
 - 已为矩阵维度、函数类型、隐私声明和特别鸣谢四个自定义弹窗配置 `ULTRA_THICK` 材质；
 - 已为原生按键长按菜单配置 `THICK` 材质；
 - API 26 专属材质构造均使用直接、正向的 `deviceInfo.apiAvailable('26.0.0')` 分支保护；自定义弹窗在 API 23 保留原背景，在 API 26 使用透明表面显示系统材质；
-- 已完成 `entry@default/debug` 的阶段性构建验证，生成配置保持最低 API 23；
+- 已完成 `entry@default/debug`、`entry@ohosTest/debug` 和 `entry@default/release` 构建，并在 release 后重新生成主包 debug 产物；生成配置保持最低 API 23；
 - TopBar 的 Navigation 结构改造和图形编辑全屏 Sheet 继续暂缓；HDS `systemMaterialEffect`、键盘、遮罩、自定义滑动气泡及渐变羽化等原有模糊保持不变。
 
 仍未完成的验证：
