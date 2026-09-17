@@ -18,11 +18,8 @@
 
   <p>
     <a href="https://github.com/StartYR/CalculatorX"><img src="./docs/image/GitHub.svg" height="30" alt="GitHub"></a>
-    &nbsp;
     <a href="https://calcx.startyi.com"><img src="./docs/image/Web.svg" height="30" alt="CalculatorX 官网"></a>
-    &nbsp;
     <a href="https://calcx.startyi.com/docs"><img src="./docs/image/Help.svg" height="30" alt="CalculatorX 帮助文档"></a>
-    &nbsp;
     <a href="https://github.com/StartYR/CalculatorX/issues/new"><img src="./docs/image/Issue.svg" height="30" alt="提交 Issue"></a>
   </p>
 
