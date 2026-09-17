@@ -1,6 +1,6 @@
 # TopBar 沉浸光感与 Navigation 标题栏迁移计划
 
-- 状态：待执行
+- 状态：代码实施与构建验证完成，待真机视觉验收
 - 编写日期：2026-09-18
 - 适用分支：`feature/api-update`
 - 目标 API：`26.0.0`
@@ -73,9 +73,9 @@ Stack
 
 ### 阶段 0：保存计划
 
-- [ ] 新增并核对本计划；
-- [ ] 单独提交计划文档；
-- [ ] 计划提交前不修改 ArkTS 源码。
+- [x] 新增并核对本计划；
+- [x] 单独提交计划文档；
+- [x] 计划提交前不修改 ArkTS 源码。
 
 建议提交：
 
@@ -92,15 +92,15 @@ docs: 新增 TopBar 沉浸光感迁移计划
 
 步骤：
 
-- [ ] 在 `Index` 中新增主页标题栏 Builder，集中创建 `TopBar` 并保留全部回调；
-- [ ] 用静态 `Navigation` 包裹动态计算内容；
-- [ ] 将 TopBar Builder 设置为 56vp 自定义标题栏；
-- [ ] 设置 `NavigationMode.Stack`、隐藏返回键，并使用 `BarStyle.STACK` 保持覆盖布局；
-- [ ] 保持外层 `Stack` 和 `SideBarMenu` 层级不变；
-- [ ] 将 TopBar 顶部内边距交给 Navigation 安全区处理，保持左右 12vp 和按钮尺寸不变；
-- [ ] 保留所有 Semantic ID、标题状态、Shift 状态和事件回调；
-- [ ] 保留现有按钮模糊样式，先隔离结构变化与材质变化；
-- [ ] 构建 `entry@default/debug`。
+- [x] 在 `Index` 中新增主页标题栏 Builder，集中创建 `TopBar` 并保留全部回调；
+- [x] 用静态 `Navigation` 包裹动态计算内容；
+- [x] 将 TopBar Builder 设置为 56vp 自定义标题栏；
+- [x] 设置 `NavigationMode.Stack`、隐藏返回键，并使用 `BarStyle.STACK` 保持覆盖布局；
+- [x] 保持外层 `Stack` 和 `SideBarMenu` 层级不变；
+- [x] 将 TopBar 顶部内边距交给 Navigation 安全区处理，保持左右 12vp 和按钮尺寸不变；
+- [x] 保留所有 Semantic ID、标题状态、Shift 状态和事件回调；
+- [x] 保留现有按钮模糊样式，先隔离结构变化与材质变化；
+- [x] 构建 `entry@default/debug`。
 
 检查点：
 
@@ -125,14 +125,14 @@ refactor: 将主页顶栏纳入 Navigation 标题栏
 
 步骤：
 
-- [ ] 新增 TopBar 专用 `ULTRA_THIN` 材质；
-- [ ] 开启 `colorInvert`、`interactive` 和系统默认点光源反馈；
-- [ ] 使用按钮 AttributeModifier 集中处理 API 26 材质和 API 23 旧样式；
-- [ ] 在 Modifier 内直接使用正向 `deviceInfo.apiAvailable('26.0.0')` 分支；
-- [ ] API 26 路径只设置 `systemMaterial`，不叠加旧背景、模糊、边框和阴影；
-- [ ] API 23 路径保留现有半透明背景、`COMPONENT_THICK` 模糊、边框和阴影；
-- [ ] 五类按钮共用同一个视觉 Modifier，宽度、点击行为和 Semantic ID 保持不变；
-- [ ] 构建 `entry@default/debug`，确认新增调用没有 API 26 兼容告警。
+- [x] 新增 TopBar 专用 `ULTRA_THIN` 材质；
+- [x] 开启 `colorInvert`、`interactive` 和系统默认点光源反馈；
+- [x] 使用按钮 AttributeModifier 集中处理 API 26 材质和 API 23 旧样式；
+- [x] 在 Modifier 内直接使用正向 `deviceInfo.apiAvailable('26.0.0')` 分支；
+- [x] API 26 路径只设置 `systemMaterial`，不叠加旧背景、模糊、边框和阴影；
+- [x] API 23 路径保留现有半透明背景、`COMPONENT_THICK` 模糊、边框和阴影；
+- [x] 五类按钮共用同一个视觉 Modifier，宽度、点击行为和 Semantic ID 保持不变；
+- [x] 构建 `entry@default/debug`，确认新增调用没有 API 26 兼容告警。
 
 检查点：
 
@@ -149,13 +149,13 @@ feat: 为主页顶栏启用沉浸光感
 
 ### 阶段 3：收敛文档与最终验证
 
-- [ ] 更新本计划为“代码实施完成，待真机视觉验收”；
-- [ ] 更新 `docs/changes/2026-09-18-api-26-immersive-light.md`；
-- [ ] 扫描 TopBar、Navigation、`systemMaterial` 和旧模糊归属；
-- [ ] 执行 `git diff --check`；
-- [ ] 构建 `entry@ohosTest/debug` 与 `entry@default/release`；
-- [ ] release 后重新构建 `entry@default/debug`，恢复开发产物；
-- [ ] 不安装 HAP，不执行真机操作，除非另有明确授权。
+- [x] 更新本计划为当前实施状态；
+- [x] 更新 `docs/changes/2026-09-18-api-26-immersive-light.md`；
+- [x] 扫描 TopBar、Navigation、`systemMaterial` 和旧模糊归属；
+- [x] 执行 `git diff --check`；
+- [x] 构建 `entry@ohosTest/debug` 与 `entry@default/release`；
+- [x] release 后重新构建 `entry@default/debug`，恢复开发产物；
+- [x] 不安装 HAP，不执行真机操作，除非另有明确授权。
 
 建议提交：
 

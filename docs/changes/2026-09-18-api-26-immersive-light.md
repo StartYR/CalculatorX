@@ -7,21 +7,24 @@
 
 ## 变更摘要
 
-CalculatorX 的目标 API 已从 `6.1.1(24)` 升级到 `26.0.0`，最低兼容 API 继续保持 `6.1.0(23)`。应用使用系统默认沉浸光感策略，并为适合材质化的常用 Sheet、自定义弹窗和原生菜单显式配置系统材质。
+CalculatorX 的目标 API 已从 `6.1.1(24)` 升级到 `26.0.0`，最低兼容 API 继续保持 `6.1.0(23)`。应用使用系统默认沉浸光感策略，并为 TopBar、适合材质化的常用 Sheet、自定义弹窗和原生菜单显式配置系统材质。
 
-本次没有把所有模糊效果机械替换为沉浸光感。普通布局中的 TopBar、全屏遮罩、键盘、自定义滑动气泡和渐变羽化等场景继续保留原有实现，避免在不受支持的容器中引入无效属性或牺牲可读性与性能。
+本次没有把所有模糊效果机械替换为沉浸光感。TopBar 已迁入 `Navigation` 自定义标题栏，以满足普通组件使用沉浸光感的容器要求；全屏遮罩、键盘、自定义滑动气泡和渐变羽化等场景继续保留原有实现，避免在不适合的区域牺牲可读性与性能。
 
 ## 用户可见行为
 
 - API 26 设备上的历史记录、数学说明和货币选择 Sheet 使用 `REGULAR` 沉浸光感材质。
 - 矩阵维度、函数类型、隐私声明和特别鸣谢弹窗使用 `ULTRA_THICK` 材质。
 - 计算按键的原生长按菜单使用 `THICK` 材质；同组件中的自定义滑动选择气泡保持原有模糊效果。
+- 主页 TopBar 的菜单、撤销、重做、图形编辑和历史记录按钮使用 `ULTRA_THIN` 材质，并开启颜色反转、交互反馈和系统默认点光源效果。
 - 应用级 `ohos.arkui.UIMaterial.state` 设为 `default`，由系统继续适配支持的原生组件和用户设置。
-- API 23 路径不会构造 API 26 材质，自定义弹窗仍使用原有不透明背景。
+- API 23 路径不会构造 API 26 材质；TopBar 保留原有半透明背景、模糊、边框和阴影，自定义弹窗仍使用原有不透明背景。
 
 ## 设计与实现
 
-`ImmersiveMaterialUtils.ets` 集中提供 Sheet、弹窗和菜单三类材质。每个 API 26 专属构造器都在函数内部直接使用正向 `deviceInfo.apiAvailable('26.0.0')` 分支保护；不可用时返回 `undefined`，让组件回到原有行为。
+`ImmersiveMaterialUtils.ets` 集中提供 Sheet、弹窗、菜单和 TopBar 四类材质。每个 API 26 专属构造器都在函数内部直接使用正向 `deviceInfo.apiAvailable('26.0.0')` 分支保护；不可用时返回 `undefined`，让组件回到原有行为。
+
+主页使用静态 `Navigation` 包裹动态计算模块，并将 TopBar 作为 56vp 自定义标题栏；`BarStyle.STACK` 保持标题栏覆盖内容的原布局关系，外层侧边栏层级和历史记录 Sheet 绑定不变。TopBar 的五类按钮共用同一个 `AttributeModifier`：API 26 仅应用系统材质，API 23 才应用旧模糊外观，避免两套视觉叠加。
 
 自定义弹窗通过同一版本判断选择表面背景：API 26 使用透明表面显示系统材质，API 23 保留原系统背景色。隐私弹窗的全屏 `backdropBlur(50)` 和遮罩没有移除，以维持合规文本与底层内容的视觉隔离。
 
@@ -30,7 +33,7 @@ CalculatorX 的目标 API 已从 `6.1.1(24)` 升级到 `26.0.0`，最低兼容 A
 ## 兼容性与边界
 
 - `targetSdkVersion` 为 `26.0.0`，`compatibleSdkVersion` 仍为 `6.1.0(23)`。
-- TopBar 的五处普通布局模糊没有替换；若要使用沉浸光感，需要另行评估 `Navigation`/`NavDestination` 标题栏结构改造。
+- TopBar 已迁入 `Navigation` 自定义标题栏；模块可见性规则、按钮尺寸、Semantic ID 和事件回调保持不变。
 - 侧边栏关闭遮罩、货币列表羽化与搜索框、汇率键盘、图形键盘、自定义滑动气泡和隐私弹窗全屏背景模糊保持现状。
 - 图形编辑全屏 Sheet 暂缓迁移，待真机评估长时间显示时的功耗、图表透出和公式可读性。
 - 本次构建成功不等于 API 23 运行兼容或 API 26 实际材质效果已通过；两类设备仍需分别安装和验收。
@@ -50,6 +53,7 @@ CalculatorX 的目标 API 已从 `6.1.1(24)` 升级到 `26.0.0`，最低兼容 A
 - `build-profile.json5.template`
 - `entry/src/main/module.json5`
 - `entry/src/main/ets/utils/ImmersiveMaterialUtils.ets`
+- `entry/src/main/ets/components/TopBar.ets`
 - `entry/src/main/ets/pages/Index.ets`
 - `entry/src/main/ets/pages/settings/Settings.ets`
 - `entry/src/main/ets/pages/settings/About.ets`
@@ -61,6 +65,6 @@ CalculatorX 的目标 API 已从 `6.1.1(24)` 升级到 `26.0.0`，最低兼容 A
 
 ## 发布说明素材
 
-目标 API 升级至 26，并为历史记录、数学说明、货币选择、常用弹窗和原生长按菜单接入系统沉浸光感；最低兼容 API 仍为 23，不适合材质化的键盘、遮罩和普通布局模糊继续保留原有效果。
+目标 API 升级至 26，并为主页 TopBar、历史记录、数学说明、货币选择、常用弹窗和原生长按菜单接入系统沉浸光感；最低兼容 API 仍为 23，不适合材质化的键盘、遮罩和局部视觉模糊继续保留原有效果。
 
 [返回分支变更说明](README.md)
