@@ -1,6 +1,10 @@
 # Windows 语义 CLI 自动化
 
-本文档说明如何在 Windows 上通过仓库根目录的 `calcx.ps1` 驱动 CalculatorX 真机测试。CLI 面向自动化回归、问题复现和 AI Agent，支持直接计算、界面状态读取、语义点击、测试状态准备和 JSON 场景；它不是正式应用面向普通用户的命令行功能。
+本文档说明如何在 Windows 上通过仓库根目录的 `calcx.ps1` 驱动 CalculatorX 真机测试。CLI 面向自动化回归、问题复现和 AI Agent；它不是正式应用面向普通用户的命令行功能，也不是追求界面全覆盖的通用自动化框架。
+
+CLI 的首要目标是省去重复的手工公式输入，以批量方式向真实计算链路提交 LaTeX 表达式并取得结构化结果，从而高效判断解析和计算逻辑是否正确。界面状态、语义点击、测试状态准备和 JSON 场景是为核心计算回归、必要的问题复现与少量关键交互提供的辅助能力，不与批量计算具有同等扩展优先级。
+
+是否增加一项 CLI 能力，应优先判断它能否显著减少高频、重复的人工测试，并且能否稳定地产生适合自动断言的结果。滑块、复杂选择器、长按拖拽、视觉表现等便于人工检查、与核心计算逻辑关系较弱或自动化成本明显偏高的场景，默认继续人工测试；未被 CLI 覆盖不表示功能或测试体系不完整。
 
 ## 1. 能力模型
 
@@ -166,7 +170,7 @@ hdc -t $device install -r `
 
 点击白名单只接受 `nav.*`、`module.*`、`calc.key.*`、`settings.*` 和 `overlay.sidebar.dismiss`。目标必须在当前 UI 树中唯一、可见且启用；目标缺失或重复时不会退化为文字匹配或任意坐标点击。
 
-不支持长按滑动气泡、拖拽、MathLive 光标精细控制、系统权限弹窗、外部浏览器、图像曲线正确性判断或像素级视觉验证。
+不支持长按滑动气泡、拖拽、MathLive 光标精细控制、滑块与复杂选择器的完整操作、系统权限弹窗、外部浏览器、图像曲线正确性判断或像素级视觉验证。这些场景除非将来成为高频、稳定且直接影响核心计算正确性的回归路径，否则不应仅为了提高 CLI 覆盖率而实现。
 
 ## 7. 公式与设置准备
 
@@ -348,13 +352,13 @@ CLI 控制能力依赖单独安装的 `entry-ohosTest-signed.hap`。发布时只
 - 稳定 ID：`entry/src/main/ets/utils/SemanticIds.ets` 及各 UI 组件。
 - debug 状态描述：`entry/src/main/ets/pages/Index.ets`、`entry/src/main/ets/components/FormulaScreen.ets`。
 
-修改后至少执行：
+修改后按受影响范围验证：
 
-1. 所有 PowerShell 文件 AST 解析和 `./calcx.ps1 -SelfTest`。
-2. 构建并安装 `entry@default/debug` 与 `entry@ohosTest/debug`。
-3. 运行引擎批量、导航场景和公式 UI 场景。
-4. 抽样真实逐键输入并与 `engine` 结果对照。
-5. 若修改发布边界，重建 `entry@default/release` 并执行 HAP 隔离检查。
+1. 所有 PowerShell 文件执行 AST 解析和 `./calcx.ps1 -SelfTest`。
+2. 修改计算协议、MathLive 转换、`EngineService` 或原生引擎时，优先运行引擎批量用例；这也是 CLI 最核心的回归入口。
+3. 只有修改公式准备、语义 ID、页面导航或其他 UI 辅助能力时，才运行对应的 UI 场景，并抽样真实逐键输入与 `engine` 结果对照。
+4. 需要设备验证时，构建并安装 `entry@default/debug` 与 `entry@ohosTest/debug`。
+5. 修改发布边界时，重建 `entry@default/release` 并执行 HAP 隔离检查。
 
 ## 14. 已验证基线
 

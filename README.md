@@ -153,7 +153,7 @@ cd CalculatorX
 | [架构文档](docs/architecture.md)                     | 项目全貌、系统分层、核心数据流和专题索引 |
 | [完整项目目录](docs/architecture/project-structure.md) | ArkTS、C++、资源和关键配置结构 |
 | [计算管线](docs/architecture/compute-pipeline.md)    | LaTeX、MathJSON、N-API、SymEngine 与 Giac |
-| [Windows 语义 CLI 自动化](docs/calculation-cli-automation.md) | LaTeX 计算、界面状态、语义点击、场景回归与发布隔离 |
+| [Windows 语义 CLI 自动化](docs/calculation-cli-automation.md) | 以批量 LaTeX 计算回归为主，辅以必要的状态准备、语义交互与发布隔离 |
 | [函数图像架构](docs/architecture/graphing.md)          | 编辑、RPN、采样、Canvas 与手势 |
 | [汇率架构](docs/architecture/exchange.md)            | 网络刷新、缓存、货币选择和交叉换算 |
 | [故障定位指南](docs/architecture/troubleshooting.md)   | 按现象和调用链定位源码 |
