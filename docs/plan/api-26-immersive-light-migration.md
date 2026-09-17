@@ -1,7 +1,8 @@
 # API 26 沉浸光感迁移执行计划
 
-- 状态：待执行
+- 状态：代码实施完成，待 API 23/API 26 真机验证
 - 编写日期：2026-09-17
+- 最近更新：2026-09-18
 - 适用分支：`feature/api-update`
 - 目标 API：`26.0.0`
 - 最低兼容 API：`6.1.0(23)`，保持不变
@@ -21,11 +22,11 @@
 - 隐私声明、公式、键盘和图表等高可读性场景不因透光效果降低可用性；
 - 每次视觉变化都能单独验证和回退。
 
-## 2. 当前基线
+## 2. 实施前基线
 
 ### 2.1 构建与应用配置
 
-当前配置事实：
+开始实施时的配置事实：
 
 - `build-profile.json5`：`targetSdkVersion` 为 `6.1.1(24)`，`compatibleSdkVersion` 为 `6.1.0(23)`；
 - `build-profile.json5.template`：版本配置与实际文件相同；
@@ -58,6 +59,28 @@ API 26 起版本号采用语义化格式，因此目标值应写为 `"26.0.0"`�
 - `entry/src/main/ets/pages/DocViewer.ets`
 
 这些位置属于 UI Design Kit 的 HDS 导航材质路径。官方文档明确区分 HDS `systemMaterialEffect` 与 ArkUI `uiMaterial` 的适用范围，迁移时不应为了统一写法而替换它们。
+
+### 2.3 当前实施进度
+
+截至 2026-09-18，代码侧迁移已经完成：
+
+- `targetSdkVersion` 已更新为 `26.0.0`，`compatibleSdkVersion` 仍为 `6.1.0(23)`；
+- entry module 的 `ohos.arkui.UIMaterial.state` 已设为 `default`；
+- 已为历史记录、数学说明和货币选择三个 Sheet 配置 `REGULAR` 材质；
+- 已为矩阵维度、函数类型、隐私声明和特别鸣谢四个自定义弹窗配置 `ULTRA_THICK` 材质；
+- 已为原生按键长按菜单配置 `THICK` 材质；
+- API 26 专属材质构造均使用直接、正向的 `deviceInfo.apiAvailable('26.0.0')` 分支保护；自定义弹窗在 API 23 保留原背景，在 API 26 使用透明表面显示系统材质；
+- 已完成 `entry@default/debug` 的阶段性构建验证，生成配置保持最低 API 23；
+- TopBar 的 Navigation 结构改造和图形编辑全屏 Sheet 继续暂缓；HDS `systemMaterialEffect`、键盘、遮罩、自定义滑动气泡及渐变羽化等原有模糊保持不变。
+
+仍未完成的验证：
+
+- API 23 与 API 26 真机安装、启动和交互回归；
+- 深色、浅色以及系统沉浸光感不同档位下的视觉验收；
+- 长列表、连续弹层操作的帧率、发热与功耗评估；
+- DevEco Studio API Change Assistant 的人工检查。
+
+因此，本计划尚未达到第 9 节的全部完成标准，不能据此宣称 API 23 运行兼容或 API 26 实际视觉已经通过。
 
 ## 3. 官方能力边界
 
