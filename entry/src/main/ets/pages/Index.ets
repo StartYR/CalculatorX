@@ -237,7 +237,7 @@ struct Index {
       .width('100%')
       .height('100%')
       .mode(NavigationMode.Stack)
-      .title({ builder: this.MainNavigationTitleBuilder, height: 56 + this.statusBarHeight }, {
+      .title({ builder: this.MainNavigationTitleBuilder, height: 36 + this.statusBarHeight }, {
         backgroundColor: Color.Transparent,
         barStyle: BarStyle.STACK
       })
