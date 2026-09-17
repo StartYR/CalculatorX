@@ -20,6 +20,7 @@ import { CurrencySelector } from './CurrencySelector';
 import promptAction from '@ohos.promptAction';
 import connection from '@ohos.net.connection';
 import curves from '@ohos.curves';
+import { createSheetMaterial } from '../../../utils/ImmersiveMaterialUtils';
 
 // ==================== 主组件 ====================
 @Component
@@ -823,7 +824,8 @@ export struct ExchangeRate {
     .backgroundColor($r('sys.color.background_secondary'))
     // ✅ 精简后的半模态窗口调用点
     .bindSheet($$this.isSelectorShow, this.SelectorSheetBuilder(), {
-      height: SheetSize.LARGE
+      height: SheetSize.LARGE,
+      systemMaterial: createSheetMaterial()
     })
   }
 }
