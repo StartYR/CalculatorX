@@ -31,18 +31,22 @@
 <div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/AdvMath-dark.webp">
-    <img src="https://img.startyi.com/CalcX/AdvMath.webp" width="30%" alt="CalculatorX 科学计算">
+    <img src="https://img.startyi.com/CalcX/AdvMath.webp" width="20%" alt="CalculatorX 科学计算">
   </picture>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/Matrix-dark.webp">
-    <img src="https://img.startyi.com/CalcX/Matrix.webp" width="30%" alt="CalculatorX 矩阵运算">
+    <img src="https://img.startyi.com/CalcX/Matrix.webp" width="20%" alt="CalculatorX 矩阵运算">
   </picture>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/Graph-dark.webp">
-    <img src="https://img.startyi.com/CalcX/Graph.webp" width="30%" alt="CalculatorX 函数图像">
+    <img src="https://img.startyi.com/CalcX/Graph.webp" width="20%" alt="CalculatorX 函数图像">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/Exchange-dark.webp">
+    <img src="https://img.startyi.com/CalcX/Exchange.webp" width="20%" alt="CalculatorX 汇率转换">
   </picture>
 
-  <p><em>科学计算 · 矩阵与线性代数 · 函数图像</em></p>
+  <p><em>科学计算 · 矩阵与线性代数 · 函数图像 · 汇率转换</em></p>
 </div>
 
 ## 不只是一台计算器
@@ -117,9 +121,14 @@ ArkUI 原生界面
 ## 获取 CalculatorX
 
 <p align="center">
-  <a href="https://appgallery.huawei.com/app/detail?id=com.startyi.calcx"><img src="https://img.startyi.com/CalcX/AppGallery.webp" alt="从 AppGallery 获取 CalculatorX" height="64"></a>
+  <a href="https://appgallery.huawei.com/app/detail?id=com.startyi.calcx">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/AppGallery-dark.png">
+      <img src="https://img.startyi.com/AppGallery.webp" alt="从 AppGallery 获取" height="64">
+    </picture>
+  </a>
   &emsp;&emsp;
-  <a href="https://github.com/StartYR/CalculatorX/releases"><img src="https://img.startyi.com/CalcX/GitHub-Releases.webp" alt="从 GitHub Releases 获取 CalculatorX" height="64"></a>
+  <a href="https://github.com/StartYR/CalculatorX/releases"><img src="https://img.startyi.com/GitHub-Releases.webp" alt="从 GitHub Releases 获取" height="64"></a>
 </p>
 
 - 普通用户推荐通过 **AppGallery** 安装和更新。
