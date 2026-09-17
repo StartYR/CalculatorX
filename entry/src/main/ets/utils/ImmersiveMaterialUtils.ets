@@ -34,3 +34,16 @@ export function createMenuMaterial(): uiMaterial.Material | undefined {
 
   return undefined;
 }
+
+export function createTopBarMaterial(): uiMaterial.Material | undefined {
+  if (deviceInfo.apiAvailable('26.0.0')) {
+    return new uiMaterial.ImmersiveMaterial({
+      style: uiMaterial.ImmersiveStyle.ULTRA_THIN,
+      colorInvert: true,
+      interactive: true,
+      lightEffect: {}
+    });
+  }
+
+  return undefined;
+}
