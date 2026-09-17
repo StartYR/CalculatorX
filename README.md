@@ -18,26 +18,16 @@
 
   <p>
 
-[![官网](https://img.shields.io/badge/官网-calcx.startyi.com-1890ff?style=for-the-badge&logo=googlechrome&logoColor=white)](https://calcx.startyi.com)
-[![帮助](https://img.shields.io/badge/帮助-Documentation-00b4ab?style=for-the-badge&logo=readthedocs&logoColor=white)](https://calcx.startyi.com/docs)
-[![Issue](https://img.shields.io/badge/Issue-Bug_Report-e34f26?style=for-the-badge&logo=github&logoColor=white)](https://github.com/StartYR/CalculatorX/issues/new)
+[![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/StartYR/CalculatorX)
+[![Web](https://img.shields.io/badge/Web-1890ff?style=for-the-badge&logo=googlechrome&logoColor=white)](https://calcx.startyi.com)
+[![Help](https://img.shields.io/badge/Help-00b4ab?style=for-the-badge&logo=readthedocs&logoColor=white)](https://calcx.startyi.com/docs)
+[![Issue](https://img.shields.io/badge/Issue-e34f26?style=for-the-badge&logo=github&logoColor=white)](https://github.com/StartYR/CalculatorX/issues/new)
 
   </p>
-</div>
-
-
-<div align="center">
-
-[![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/StartYR/CalculatorX)
-
-
-
-
-
-</div>
-
 
 ---
+</div>
+
 ## 效果一览
 
 <div align="center">
