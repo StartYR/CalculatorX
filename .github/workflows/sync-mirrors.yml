@@ -1,0 +1,70 @@
+name: Sync Repository Mirrors
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-repository-mirrors
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync to Gitee and GitCode
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure SSH
+        env:
+          GITEE_SSH_PRIVATE_KEY: ${{ secrets.GITEE_SSH_PRIVATE_KEY }}
+          GITCODE_SSH_PRIVATE_KEY: ${{ secrets.GITCODE_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "$GITEE_SSH_PRIVATE_KEY" > ~/.ssh/gitee
+          printf '%s\n' "$GITCODE_SSH_PRIVATE_KEY" > ~/.ssh/gitcode
+
+          chmod 600 ~/.ssh/gitee ~/.ssh/gitcode
+
+          ssh-keyscan gitee.com >> ~/.ssh/known_hosts
+          ssh-keyscan gitcode.com >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          cat > ~/.ssh/config <<'EOF'
+          Host gitee-mirror
+            HostName gitee.com
+            User git
+            IdentityFile ~/.ssh/gitee
+            IdentitiesOnly yes
+
+          Host gitcode-mirror
+            HostName gitcode.com
+            User git
+            IdentityFile ~/.ssh/gitcode
+            IdentitiesOnly yes
+          EOF
+
+          chmod 600 ~/.ssh/config
+
+      - name: Clone source repository
+        run: |
+          set -euo pipefail
+          git clone --bare "https://github.com/${GITHUB_REPOSITORY}.git" repository.git
+
+      - name: Sync to Gitee
+        run: |
+          set -euo pipefail
+          cd repository.git
+          git push --mirror git@gitee-mirror:StartYi/CalculatorX.git
+
+      - name: Sync to GitCode
+        run: |
+          set -euo pipefail
+          cd repository.git
+          git push --mirror git@gitcode-mirror:StartYi/CalculatorX.git
