@@ -34,7 +34,7 @@
       {
         "name": "default",
         // "signingConfig": "default",  // 配置签名后取消此行注释
-        "targetSdkVersion": "6.1.1(24)",
+        "targetSdkVersion": "26.0.0",
         "compatibleSdkVersion": "6.1.0(23)",
         "runtimeOS": "HarmonyOS",
         "buildOption": {
