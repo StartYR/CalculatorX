@@ -20,6 +20,7 @@ import {
 import { SymbolGlyphModifier, promptAction } from '@kit.ArkUI';
 import Logger from '../../utils/Logger'
 import { SemanticIds } from '../../utils/SemanticIds';
+import { createDialogMaterial } from '../../utils/ImmersiveMaterialUtils';
 
 import pasteboard from '@ohos.pasteboard'; // 剪贴板
 
@@ -109,6 +110,7 @@ export struct HistoryManager {
         : `确定要清空【${currentTitle}】历史记录吗？\n此操作无法撤销。`,
       alignment: DialogAlignment.Bottom,
       offset: { dx: 0, dy: -280 },
+      systemMaterial: createDialogMaterial(),
       primaryButton: {
         value: '取消',
         action: () => {}
