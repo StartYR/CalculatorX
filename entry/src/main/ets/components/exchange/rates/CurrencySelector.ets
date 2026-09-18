@@ -10,6 +10,13 @@ import Logger from '../../../utils/Logger';
 import { CURRENCY_WHITELIST, CURRENCY_MAP, CurrencyInfo } from './CurrencyData';
 import { GroupHeader, MenuGroup, ItemDivider } from '../../common/MenuComponents';
 import deviceInfo from '@ohos.deviceInfo';
+import {
+  BottomBuilderShowType,
+  HdsNavigation,
+  HdsNavigationTitleMode,
+  hdsMaterial,
+  ScrollEffectType
+} from '@kit.UIDesignKit';
 import { createSearchMaterial } from '../../../utils/ImmersiveMaterialUtils';
 
 class CurrencySearchVisualModifier implements AttributeModifier<SearchAttribute> {
@@ -172,16 +179,8 @@ export struct CurrencySelector {
   // ---------------------------------------------------------
 
   @Builder
-  CurrencySelectorTitleBuilder() {
-    Column() {
-      Text('选择货币')
-        .fontSize(22)
-        .fontWeight(FontWeight.Bold)
-        .fontColor($r('sys.color.font_primary'))
-        .width('100%')
-        .textAlign(TextAlign.Start)
-        .margin({ left: 20, bottom: 8 })
-
+  CurrencySelectorSearchBuilder() {
+    Row() {
       Search({ placeholder: '搜索货币代码或名称...', value: $$this.searchQuery })
         .width('100%')
         .height(40)
@@ -202,11 +201,11 @@ export struct CurrencySelector {
     }
     .width('100%')
     .height('100%')
-    .padding({ left: 24, right: 24, top: 16, bottom: 16 })
+    .padding({ left: 24, right: 24, top: 4, bottom: 20 })
   }
 
   build() {
-    Navigation() {
+    HdsNavigation() {
       Stack({ alignContent: Alignment.Top }) {
 
         // ================= 层级 1 (底层)：全屏滚动的列表 =================
@@ -345,7 +344,7 @@ export struct CurrencySelector {
         }
         .width('100%')
         .height('100%')
-        .padding({ left: 24, right: 36, top: 120 })
+        .padding({ left: 24, right: 36, top: 128 })
         .clip(false)
         .scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring)
@@ -398,11 +397,30 @@ export struct CurrencySelector {
     .width('100%')
     .height('100%')
     .mode(NavigationMode.Stack)
-    .title({ builder: this.CurrencySelectorTitleBuilder, height: 124 }, {
-      backgroundColor: Color.Transparent,
-      barStyle: BarStyle.STACK
+    .titleBar({
+      content: {
+        title: { mainTitle: '选择货币' },
+        bottomBuilder: {
+          builder: (): void => this.CurrencySelectorSearchBuilder(),
+          height: 64,
+          showType: BottomBuilderShowType.DIRECTLY_SHOW
+        }
+      },
+      style: {
+        scrollEffectOpts: {
+          enableScrollEffect: true,
+          scrollEffectType: ScrollEffectType.IMMERSIVE_GRADIENT_BLUR
+        },
+        systemMaterialEffect: {
+          materialType: hdsMaterial.MaterialType.ADAPTIVE,
+          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+        }
+      },
+      enableComponentSafeArea: false
     })
     .hideBackButton(true)
+    .bindToScrollable([this.scroller])
+    .titleMode(HdsNavigationTitleMode.MODAL)
     .backgroundColor($r('sys.color.background_secondary'))
   }
 }
