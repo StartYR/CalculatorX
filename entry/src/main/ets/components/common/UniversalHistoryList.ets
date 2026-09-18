@@ -16,6 +16,9 @@ export struct UniversalHistoryList {
   @Prop moduleType: string = 'scientific';
   @Prop isGlobalPage: boolean = false;
   @Prop @Watch('loadData') refreshCounter: number = 0;
+  @Prop topContentPadding: number = 0;
+
+  scroller: Scroller = new Scroller();
 
   @State historyList: HistoryRecord[] = [];
 
@@ -165,10 +168,7 @@ export struct UniversalHistoryList {
         .justifyContent(FlexAlign.Center)
         .width('100%')
       } else {
-        List({ space: 8 }) {
-          if (this.isGlobalPage) {
-            ListItem() { Row().width('100%').height(96) }
-          }
+        List({ space: 8, scroller: this.scroller }) {
           // 外层循环只绑定纯净的标题字符串
           ForEach(this.getGroupedTitles(), (title: string) => {
             ListItemGroup({ header: this.itemHead(title), space: 8 }) {
@@ -259,11 +259,12 @@ export struct UniversalHistoryList {
             ListItem() { Row().width('100%').height(12) }
           }
         }
+        .contentStartOffset(this.isGlobalPage ? 81 : this.topContentPadding)
         .sticky(StickyStyle.Header)
-        // .margin({ top: this.isGlobalPage ? 96 : 0 })
         .layoutWeight(1)
         .width('100%')
         .padding({ top: 0, bottom: 0 })
+        .clip(false)
         .scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring)
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
