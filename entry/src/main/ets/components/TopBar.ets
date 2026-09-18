@@ -208,6 +208,6 @@ export struct TopBar {
     .width('100%')
     .height('100%')
     .alignItems(VerticalAlign.Center)
-    .padding({ top: this.statusBarHeight, left: 12, right: 12 })
+    .padding({ top: this.statusBarHeight, left: 12, right: 12, bottom: 20 })
   }
 }
