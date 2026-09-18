@@ -83,17 +83,36 @@ export struct HistorySheet {
     })
   }
 
+  @Builder
+  HistorySheetTitleBuilder() {
+    Row() {
+      Text('历史记录')
+        .fontSize(26)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('sys.color.font_primary'))
+
+      Button({ type: ButtonType.Circle, stateEffect: true }) {
+        SymbolGlyph($r('sys.symbol.questionmark_circle'))
+          .fontSize(16)
+          .fontColor([$r('sys.color.icon_primary')])
+      }
+      .width(36)
+      .height(36)
+      .margin({ left: 4 })
+      .backgroundColor(Color.Transparent)
+      .accessibilityText('历史记录使用帮助')
+      .onClick(() => {
+        this.helpDialogController.open();
+      })
+    }
+    .width('100%')
+    .height('100%')
+    .padding({ left: 24 })
+    .alignItems(VerticalAlign.Center)
+  }
+
   private getTitleBarMenuItems(): HdsNavigationMenuItemOptions[] {
     const menuItems: HdsNavigationMenuItemOptions[] = [
-      {
-        content: {
-          icon: new SymbolGlyphModifier($r('sys.symbol.questionmark_circle'))
-            .fontSize(20)
-            .fontColor([$r('sys.color.icon_primary')]),
-          label: '历史记录使用帮助',
-          action: () => this.helpDialogController.open()
-        }
-      },
       {
         content: {
           icon: new SymbolGlyphModifier($r('sys.symbol.arrow_counterclockwise_clock_fill'))
@@ -144,10 +163,11 @@ export struct HistorySheet {
     .titleBar({
       padding: { start: LengthMetrics.vp(24) },
       content: {
-        title: { mainTitle: '历史记录' },
+        title: { mainTitle: '' },
+        stackBuilder: (): void => this.HistorySheetTitleBuilder(),
         menu: {
           value: this.getTitleBarMenuItems(),
-          maxCount: 3
+          maxCount: 2
         }
       },
       style: {
