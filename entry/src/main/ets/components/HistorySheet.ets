@@ -87,7 +87,7 @@ export struct HistorySheet {
   HistorySheetTitleBuilder() {
     Row() {
       Text('历史记录')
-        .fontSize(26)
+        .fontSize(20)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('sys.color.font_primary'))
 
@@ -107,7 +107,7 @@ export struct HistorySheet {
     }
     .width('100%')
     .height('100%')
-    .padding({ left: 24 })
+    .padding({ left: 24, top: 24 })
     .alignItems(VerticalAlign.Center)
   }
 
