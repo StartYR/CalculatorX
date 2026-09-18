@@ -36,17 +36,17 @@ export struct SideBarMenu {
   SideBarTitleBuilder() {
     Row() {
       Text('Calc')
-        .fontSize(28)
+        .fontSize(32)
         .fontWeight(FontWeight.Bolder)
         .fontColor($r('sys.color.font_primary'))
       Text('X')
-        .fontSize(28)
+        .fontSize(32)
         .fontWeight(FontWeight.Bolder)
         .fontColor($r('sys.color.font_emphasize'))
     }
     .width('100%')
     .height('100%')
-    .padding({ left: 24 })
+    .padding({ left: 24, top: 20 })
     .alignItems(VerticalAlign.Center)
   }
 
@@ -248,7 +248,7 @@ export struct SideBarMenu {
             }
             .width('100%')
             .justifyContent(FlexAlign.Start)
-            .padding({ top: 120 })
+            .padding({ top: 110 })
           }
           .width('100%')
           .height('100%')
@@ -330,7 +330,7 @@ export struct SideBarMenu {
                 this.dragOffsetX = 0; // 动画的同时将拖拽偏移量归零
               });
             } else {
-              // 没达到关闭阈值，触发回弹动画，乖乖回到原位
+              // 没达到关闭阈值，触发回弹动画
               animateTo({ duration: 350, curve: Curve.Friction }, () => {
                 this.dragOffsetX = 0;
               });
