@@ -1,9 +1,9 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  *
  * @file ExchangeRate.ets
  * @description 汇率换算主视图控制器，负责列表交互、网络拉取与持久化调度
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026/7/24 22:53
  */
 

@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * @file ExchangeTypes.ets
  * @description 汇率模块的类型与接口声明文件
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026/8/16 17:58
  */
 

@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * @file engine.cpp
  * @description AST 树解析与精度控制枢纽 (指挥官全局路由版)
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026
  */
 #include "napi/native_api.h"

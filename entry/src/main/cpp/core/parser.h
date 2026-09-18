@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * @file parser.h
  * @description MathJSON AST 递归下降解析器，将 JSON AST 转换为 SymEngine 表达式
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026
  */
 

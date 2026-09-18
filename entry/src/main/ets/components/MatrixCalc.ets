@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * @file MatrixCalc.ets
  * @description 矩阵与线性代数核心业务面板组件
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026/7/3 02:32
  */
 

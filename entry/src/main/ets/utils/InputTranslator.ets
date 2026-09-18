@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * * @file InputTranslator.ets
  * @description 翻译中枢，负责将用户按键指令无状态地翻译为标准 LaTeX
- * * @author 易睿 (Yi Rui)
+ * * @author StartYi
  * @date 2026/6/26 21:11
  */
 

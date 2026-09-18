@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * * @file Settings.ets
  * @description 全局设置页面，管理计算精度、颜色模式、震动反馈等偏好配置
-* * @author 易睿 (Yi Rui)
+* * @author StartYi
  * @date 2026
  */
 

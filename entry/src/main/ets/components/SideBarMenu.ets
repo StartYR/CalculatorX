@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * @file SideBarMenu.ets
  * @description 手势驱动的侧边栏菜单
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026
  */
 

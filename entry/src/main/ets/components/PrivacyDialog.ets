@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * @file PrivacyDialog.ets
  * @description 首次启动隐私合规声明弹窗
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026/8/6 11:55
  */
 

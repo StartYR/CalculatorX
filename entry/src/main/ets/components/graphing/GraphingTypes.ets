@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * @file GraphingTypes.ets
  * @description 图形计算器相关基础数据结构和类型声明
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026/8/3 19:46
  */
 

@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * @file KeyGestureWrapper.ets
  * @description 全能按键基类：统管连续触发、原生菜单、滑动气泡与直出 Shift 等复杂手势状态机
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026/7/28 20:26
  */
 

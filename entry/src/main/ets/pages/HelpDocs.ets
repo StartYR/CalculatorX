@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * * @file HelpDocs.ets
  * @description 帮助中心页面，基于 Webview 离线加载本地用户手册与说明书
- * * @author 易睿 (Yi Rui)
+ * * @author StartYi
  * @date 2026/6/30 01:37
  */
 

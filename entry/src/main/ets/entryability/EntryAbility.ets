@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * * @file EntryAbility.ets
  * @description 应用主入口 Ability，负责初始化全局首选项配置并注入 AppStorage
-* * @author 易睿 (Yi Rui)
+* * @author StartYi
  * @date 2026
  */
 

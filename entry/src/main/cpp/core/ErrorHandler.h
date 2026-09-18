@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * @file ErrorHandler.h
  * @description 异常状态机：精准拦截除零、溢出等业务错误
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026
  */
 #ifndef ERROR_HANDLER_H

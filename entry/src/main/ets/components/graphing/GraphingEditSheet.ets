@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * @file GraphingEditSheet.ets
  * @description 图形计算器编辑面板：管理函数列表、状态流转及键盘交互中枢
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026/8/3 19:46
  */
 

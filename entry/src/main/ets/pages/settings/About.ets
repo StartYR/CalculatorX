@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * * @file About.ets
  * @description 关于此应用页面，展示版本信息、官方链接与开源许可声明
-* * @author 易睿 (Yi Rui)
+* * @author StartYi
  * @date 2026
  */
 
