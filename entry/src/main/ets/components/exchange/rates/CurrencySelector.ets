@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * @file CurrencySelector.ets
  * @description 货币选择器半模态窗口，负责全量货币的检索、分组与选择展示
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026/8/19 23:35
  */
 

@@ -1,13 +1,15 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * @file TopBar.ets
  * @description 顶部悬浮控制栏（搭载动态状态岛）
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026
  */
 
 import Logger from '../utils/Logger'
+import deviceInfo from '@ohos.deviceInfo';
 import { SemanticIds } from '../utils/SemanticIds';
+import { createTopBarMaterial } from '../utils/ImmersiveMaterialUtils';
 
 // 定义模块名称映射
 const MODULE_TITLES: Record<string, string> = {
@@ -29,8 +31,25 @@ enum TopBarTrailingAction {
   EDIT
 }
 
+class TopBarButtonVisualModifier implements AttributeModifier<ButtonAttribute> {
+  applyNormalAttribute(instance: ButtonAttribute): void {
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      instance.buttonStyle(ButtonStyleMode.TEXTUAL);
+      instance.systemMaterial(createTopBarMaterial());
+    } else {
+      instance.backgroundColor('#54ffffff');
+      instance.backgroundBlurStyle(BlurStyle.COMPONENT_THICK);
+      instance.border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 });
+      instance.shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 });
+    }
+  }
+}
+
+const topBarButtonVisualModifier: TopBarButtonVisualModifier = new TopBarButtonVisualModifier();
+
 @Component
 export struct TopBar {
+  @StorageProp('statusBarHeight') statusBarHeight: number = 0;
   @Prop isShift: boolean = false;
   @Prop isRad: boolean = false;
   @Prop currentModule: string = 'scientific';
@@ -71,10 +90,7 @@ export struct TopBar {
         .height(32)
         .id(SemanticIds.NAV_SIDEBAR_OPEN)
         .accessibilityText('打开导航菜单')
-        .backgroundColor('#54ffffff')
-        .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
-        .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })
-        .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
+        .attributeModifier(topBarButtonVisualModifier)
         .onClick(() => { if (this.onMenuClick) this.onMenuClick(); })
         if (this.showUndoRedo()) {
           // 2. 撤销按钮
@@ -87,15 +103,7 @@ export struct TopBar {
           .height(32)
           .id(SemanticIds.NAV_UNDO)
           .accessibilityText('撤销')
-          .backgroundColor('#54ffffff')
-          .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
-          .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })
-          .shadow({
-            radius: 32,
-            color: '#25000000',
-            offsetX: 3,
-            offsetY: 6
-          })
+          .attributeModifier(topBarButtonVisualModifier)
           .onClick(() => {
             if (this.onUndoClick) this.onUndoClick();
           })
@@ -154,15 +162,7 @@ export struct TopBar {
           .height(32)
           .id(SemanticIds.NAV_REDO)
           .accessibilityText('重做')
-          .backgroundColor('#54ffffff')
-          .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
-          .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })
-          .shadow({
-            radius: 32,
-            color: '#25000000',
-            offsetX: 3,
-            offsetY: 6
-          })
+          .attributeModifier(topBarButtonVisualModifier)
           .onClick(() => {
             if (this.onRedoClick) this.onRedoClick();
           })
@@ -178,10 +178,7 @@ export struct TopBar {
           .height(32)
           .id(SemanticIds.NAV_GRAPHING_EDIT)
           .accessibilityText('编辑函数')
-          .backgroundColor('#54ffffff')
-          .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
-          .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })
-          .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
+          .attributeModifier(topBarButtonVisualModifier)
           .onClick(() => {
             // 抛出全局事件，通知 GraphingCalc 唤起面板
             Logger.info('[TopBar] 打开编辑面板');
@@ -198,10 +195,7 @@ export struct TopBar {
           .height(32)
           .id(SemanticIds.NAV_HISTORY_SHEET)
           .accessibilityText('历史记录')
-          .backgroundColor('#54ffffff')
-          .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
-          .border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 })
-          .shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 })
+          .attributeModifier(topBarButtonVisualModifier)
           .onClick(() => { if (this.onHistoryClick) this.onHistoryClick(); })
         } else {
           // 与左侧菜单按钮等宽，确保没有右侧操作时标题仍保持居中
@@ -212,6 +206,8 @@ export struct TopBar {
       }
     }
     .width('100%')
-    .padding({ top: 36, left: 12, right: 12 })
+    .height('100%')
+    .alignItems(VerticalAlign.Center)
+    .padding({ top: this.statusBarHeight, left: 12, right: 12, bottom: 20 })
   }
 }

@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * * @file DocViewer.ets
  * @description 内置文档查看器页面，基于 Webview 加载在线帮助文档与使用指南
-* * @author 易睿 (Yi Rui)
+* * @author StartYi
  * @date 2026
  */
 import router from '@ohos.router';

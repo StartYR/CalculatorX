@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * * @file UniversalHistoryList.ets
  * @description 通用历史记录列表组件，支持按模块类型筛选展示计算图文记录
-* * @author 易睿 (Yi Rui)
+* * @author StartYi
  * @date 2026
  */
 

@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * @file KeyGestureWrapper.ets
  * @description 全能按键基类：统管连续触发、原生菜单、滑动气泡与直出 Shift 等复杂手势状态机
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026/7/28 20:26
  */
 
@@ -10,6 +10,7 @@ import { display } from '@kit.ArkUI'; // 用于获取屏幕宽度
 import { HapticUtils } from '../../utils/HapticUtils';
 import { icon_power2, icon_sqrtx, icon_sqrt3 } from '../../utils/CalculatorConfigs';
 import { getCalculatorKeySemanticId } from '../../utils/SemanticIds';
+import { createMenuMaterial } from '../../utils/ImmersiveMaterialUtils';
 
 export type LongPressStrategy = 'CONTINUOUS' | 'NATIVE_MENU' | 'SLIDE_BUBBLE' | 'DIRECT_SHIFT' | 'NONE';
 
@@ -200,6 +201,7 @@ export struct KeyGestureWrapper {
       }
     })
     .bindContextMenu(this.isNativeMenuShow, this.NativeMenuBuilder, {
+      systemMaterial: createMenuMaterial(),
       onDisappear: () => { this.isNativeMenuShow = false; }
     })
     .onTouch((event: TouchEvent) => {

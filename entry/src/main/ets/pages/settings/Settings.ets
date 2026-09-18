@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * * @file Settings.ets
  * @description 全局设置页面，管理计算精度、颜色模式、震动反馈等偏好配置
-* * @author 易睿 (Yi Rui)
+* * @author StartYi
  * @date 2026
  */
 
@@ -23,6 +23,19 @@ import Logger from '../../utils/Logger'
 // 引入全局菜单组件库
 import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from '../../components/common/MenuComponents';
 import { SemanticIds } from '../../utils/SemanticIds';
+import { createMenuMaterial, createSheetMaterial } from '../../utils/ImmersiveMaterialUtils';
+import deviceInfo from '@ohos.deviceInfo';
+
+class SettingsSelectMenuMaterialModifier implements AttributeModifier<SelectAttribute> {
+  applyNormalAttribute(instance: SelectAttribute): void {
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      instance.menuSystemMaterial(createMenuMaterial());
+    }
+  }
+}
+
+const settingsSelectMenuMaterialModifier: SettingsSelectMenuMaterialModifier =
+  new SettingsSelectMenuMaterialModifier();
 
 // ==================== 底部半模态面板内容：数学公式样式选择 ====================
 @Component
@@ -213,6 +226,7 @@ export struct Settings {
                   .value(this.isRad ? '弧度制 (Rad)' : '角度制 (Deg)')
                   .font({ size: 14 })
                   .fontColor($r('sys.color.font_primary'))
+                  .attributeModifier(settingsSelectMenuMaterialModifier)
                   .onSelect((index: number) => {
                     // 改变 UI 状态
                     this.isRad = (index === 1);
@@ -245,6 +259,7 @@ export struct Settings {
                   .value(this.answerOutputMode === 0 ? '自动模式' : '小数模式')
                   .font({ size: 14 })
                   .fontColor($r('sys.color.font_primary'))
+                  .attributeModifier(settingsSelectMenuMaterialModifier)
                   .onSelect((index: number) => {
                     // 改变 UI 状态
                     this.answerOutputMode = index;
@@ -438,6 +453,7 @@ export struct Settings {
                   .value(['记忆上次', '基础计算', '科学计算', '矩阵与向量', '函数图像', '方程求解', '统计分析', '单位转换', '进制转换', '汇率'][this.startupPageMode] || '记忆上次')
                   .font({ size: 14 })
                   .fontColor($r('sys.color.font_primary'))
+                  .attributeModifier(settingsSelectMenuMaterialModifier)
                   .onSelect((index: number) => {
                     this.startupPageMode = index;
                     PreferenceManager.set(PreferenceConfigs.KEY_STARTUP_PAGE, index);
@@ -469,6 +485,7 @@ export struct Settings {
                   .value(this.colorModeIndex === 0 ? '浅色' : this.colorModeIndex === 1 ? '深色' : '系统')
                   .font({ size: 14 })
                   .fontColor($r('sys.color.font_primary'))
+                  .attributeModifier(settingsSelectMenuMaterialModifier)
                   .onSelect((index: number) => {
 
                     // 改变 UI 状态
@@ -552,6 +569,7 @@ export struct Settings {
                         this.vibrationCurve === 2 ? '轻柔' : '厚重')
                     .font({ size: 14 })
                     .fontColor($r('sys.color.font_primary'))
+                    .attributeModifier(settingsSelectMenuMaterialModifier)
                     .onSelect((index: number) => {
                       // 改变 UI 状态
                       this.vibrationCurve = index;
@@ -668,6 +686,7 @@ export struct Settings {
       height: SheetSize.FIT_CONTENT, // 优雅所在：面板高度自适应内容，不占用全屏
       dragBar: true,                 // 顶部显示可拖拽的灰色小横条
       backgroundColor: $r('sys.color.background_secondary'), // 统一底色
+      systemMaterial: createSheetMaterial(),
       showClose: false               // 隐藏右上角默认关闭按钮，保持 UI 极简
     })
     .bindToScrollable([this.scrollerForScroll])

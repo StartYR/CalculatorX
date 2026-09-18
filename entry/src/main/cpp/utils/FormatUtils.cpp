@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * @file FormatUtils.cpp
  * @description 统一格式化与字符串工具中枢
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026
  */
 #include "FormatUtils.h"

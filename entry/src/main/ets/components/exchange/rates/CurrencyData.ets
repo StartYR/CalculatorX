@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * @file CurrencyData.ets
  * @description 汇率模块静态白名单字典，包含所有支持的货币代码、中文名与符号
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026/8/16 17:29
  */
 

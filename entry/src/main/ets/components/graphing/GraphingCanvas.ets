@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * @file GraphingCanvas.ets
  * @description 图形计算器画布组件：负责坐标系渲染、引擎对接与手势交互
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026/8/3 19:46
  */
 

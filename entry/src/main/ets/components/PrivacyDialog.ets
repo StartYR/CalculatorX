@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * @file PrivacyDialog.ets
  * @description 首次启动隐私合规声明弹窗
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026/8/6 11:55
  */
 
@@ -10,6 +10,7 @@ import { common, Want } from '@kit.AbilityKit';
 import { PreferenceManager } from '../utils/PreferenceManager';
 import { PreferenceConfigs, CURRENT_PRIVACY_VERSION } from '../utils/CalculatorConfigs';
 import Logger from '../utils/Logger';
+import { isImmersiveMaterialAvailable } from '../utils/ImmersiveMaterialUtils';
 
 @CustomDialog
 export struct PrivacyDialog {
@@ -117,7 +118,7 @@ export struct PrivacyDialog {
         .width('100%')
         .padding({ left: 16, right: 16, bottom: 16 })
       }
-      .backgroundColor($r('sys.color.comp_background_primary'))
+      .backgroundColor(isImmersiveMaterialAvailable() ? Color.Transparent : $r('sys.color.comp_background_primary'))
       .borderRadius(32)
       .width('85%')
     }

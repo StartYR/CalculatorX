@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * @file MatrixCalc.ets
  * @description 矩阵与线性代数核心业务面板组件
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026/7/3 02:32
  */
 
@@ -12,6 +12,7 @@ import { KeyGestureWrapper } from './common/KeyGestureWrapper';
 import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
 import { icon_backspace, icon_fraction, icon_dim } from '../utils/CalculatorConfigs';
 import Logger from '../utils/Logger'
+import { createDialogMaterial, isImmersiveMaterialAvailable } from '../utils/ImmersiveMaterialUtils';
 
 const icon_M_power: Resource = $rawfile('icons/matrix/icon_M_power.svg');
 const icon_abs: Resource = $rawfile('icons/matrix/icon_abs.svg');
@@ -170,7 +171,8 @@ export struct MatrixCalc {
     }),
     alignment: DialogAlignment.Center, // 居中弹出
     customStyle: true,                 // 开启自定义样式以去除系统默认白底
-    autoCancel: true                   // 允许点击遮罩层关闭
+    autoCancel: true,                  // 允许点击遮罩层关闭
+    systemMaterial: createDialogMaterial()
   })
 
   onShiftChange() {
@@ -314,7 +316,7 @@ struct DimDialog {
       .padding({ left: 10, right: 10, bottom: 10 })
     }
     .padding(16)
-    .backgroundColor($r('sys.color.comp_background_primary'))
+    .backgroundColor(isImmersiveMaterialAvailable() ? Color.Transparent : $r('sys.color.comp_background_primary'))
     .borderRadius(24)
     .width(320)
   }

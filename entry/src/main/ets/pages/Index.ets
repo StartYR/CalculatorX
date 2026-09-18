@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * * @file Index.ets
  * @description 全局唯一主入口，负责处理组件的动态挂载和系统级返回逻辑
- * * @author 易睿 (Yi Rui)
+ * * @author StartYi
  * @date 2026
  */
 
@@ -17,6 +17,7 @@ import { SideBarMenu } from '../components/SideBarMenu';
 import { HistorySheet } from '../components/HistorySheet';
 import { HistoryRepository } from '../database/HistoryRepository';
 import { SemanticIds, getModuleSemanticId } from '../utils/SemanticIds';
+import { createDialogMaterial, createSheetMaterial } from '../utils/ImmersiveMaterialUtils';
 
 // 所有功能模块组件
 import { ScientificCalc } from '../components/ScientificCalc';
@@ -50,6 +51,7 @@ interface IndexSemanticState {
 @Component
 struct Index {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
+  @StorageProp('statusBarHeight') statusBarHeight: number = 0;
   @StorageProp('isRad') isRad: boolean = true;
   @StorageProp(PreferenceConfigs.KEY_ANSWER_OUTPUT_MODE) answerOutputMode: number = 0;
   @StorageProp(PreferenceConfigs.KEY_DECIMAL_PRECISION) decimalPrecision: number = 13;
@@ -72,7 +74,8 @@ struct Index {
     builder: PrivacyDialog({ isUpdate: this.isPrivacyUpdate }),
     autoCancel: false, // 禁止点击弹窗外部的遮罩层关闭，必须显式点击“同意”或“不同意”
     alignment: DialogAlignment.Center,
-    customStyle: true  // 允许使用在 PrivacyDialog 内部定义的背景色和圆角
+    customStyle: true, // 允许使用在 PrivacyDialog 内部定义的背景色和圆角
+    systemMaterial: createDialogMaterial()
   });
 
   // 历史记录面板的生成器 (作为全局遮罩，保留在主入口)
@@ -87,6 +90,35 @@ struct Index {
         this.isShowHistorySheet = false;
       }
     })
+  }
+
+  @Builder MainNavigationTitleBuilder() {
+    TopBar({
+      isShift: this.topBarIsShift,
+      isRad: this.isRad,
+      currentModule: this.currentModule,
+      onMenuClick: () => {
+        animateTo({ duration: 350, curve: Curve.Friction }, () => {
+          this.isSidebarOpen = true;
+        });
+      },
+      onUndoClick: () => {
+        getContext(this).eventHub.emit('event_math_undo');
+      },
+      onRedoClick: () => {
+        getContext(this).eventHub.emit('event_math_redo');
+      },
+      onHistoryClick: () => {
+        this.isShowHistorySheet = true;
+      }
+    })
+      .bindSheet($$this.isShowHistorySheet, this.HistorySheetBuilder(), {
+        height: '75%',
+        dragBar: true,
+        backgroundColor: $r('sys.color.background_secondary'),
+        systemMaterial: createSheetMaterial(),
+        showClose: false
+      })
   }
 
   aboutToAppear() {
@@ -160,78 +192,58 @@ struct Index {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      // ================= 1. 动态内容区 =================
-      Column() {
-        if (this.currentModule === 'scientific') {
-          ScientificCalc()
-        } else if (this.currentModule === 'basic') {
-          BasicCalc()
-        } else if (this.currentModule === 'matrix') {
-          MatrixCalc()
-        } else if (this.currentModule === 'graphing') {
-          GraphingCalc()
-        } else if (this.currentModule === 'equation') {
-          EquationSolver()
-        } else if (this.currentModule === 'statistics') {
-          StatisticsCalc()
-        } else if (this.currentModule === 'unit') {
-          UnitConverter()
-        } else if (this.currentModule === 'base') {
-          BaseConverter()
-        } else if (this.currentModule === 'exchange') {
-          ExchangeRate()
-        } else {
-          // 兜底保护，防止出现白屏
-          Column() {
-            Text('模块正在开发中...')
-              .fontSize(18)
-              .fontColor($r('sys.color.font_secondary'))
+      Navigation() {
+        // ================= 1. 动态内容区 =================
+        Column() {
+          if (this.currentModule === 'scientific') {
+            ScientificCalc()
+          } else if (this.currentModule === 'basic') {
+            BasicCalc()
+          } else if (this.currentModule === 'matrix') {
+            MatrixCalc()
+          } else if (this.currentModule === 'graphing') {
+            GraphingCalc()
+          } else if (this.currentModule === 'equation') {
+            EquationSolver()
+          } else if (this.currentModule === 'statistics') {
+            StatisticsCalc()
+          } else if (this.currentModule === 'unit') {
+            UnitConverter()
+          } else if (this.currentModule === 'base') {
+            BaseConverter()
+          } else if (this.currentModule === 'exchange') {
+            ExchangeRate()
+          } else {
+            // 兜底保护，防止出现白屏
+            Column() {
+              Text('模块正在开发中...')
+                .fontSize(18)
+                .fontColor($r('sys.color.font_secondary'))
+            }
+            .width('100%')
+            .height('100%')
+            .justifyContent(FlexAlign.Center)
           }
-          .width('100%')
-          .height('100%')
-          .justifyContent(FlexAlign.Center)
         }
+        .width('100%')
+        .height('100%')
+        .id(getModuleSemanticId(this.currentModule) + '.page')
+        .accessibilityText(this.currentModule)
+        // 侧边栏开启时的缩放卡片动效保持不变
+        .scale({ x: this.isSidebarOpen ? 0.92 : 1.0, y: this.isSidebarOpen ? 0.92 : 1.0 })
+        .borderRadius(this.isSidebarOpen ? 32 : 0)
+        .backgroundColor($r('sys.color.background_primary'))
       }
       .width('100%')
       .height('100%')
-      .id(getModuleSemanticId(this.currentModule) + '.page')
-      .accessibilityText(this.currentModule)
-      // 侧边栏开启时的缩放卡片动效保持不变
-      .scale({ x: this.isSidebarOpen ? 0.92 : 1.0, y: this.isSidebarOpen ? 0.92 : 1.0 })
-      .borderRadius(this.isSidebarOpen ? 32 : 0)
-      .backgroundColor($r('sys.color.background_primary'))
-
-      // ================= 2. 全局顶部悬浮控制栏 =================
-      TopBar({
-        isShift: this.topBarIsShift,
-        isRad: this.isRad,
-        // 根据当前模块动态显示顶栏标题
-        currentModule: this.currentModule,
-        onMenuClick: () => {
-          animateTo({ duration: 350, curve: Curve.Friction }, () => {
-            this.isSidebarOpen = true;
-          });
-        },
-        onUndoClick: () => {
-          // 跨组件触发撤销
-          getContext(this).eventHub.emit('event_math_undo');
-        },
-        onRedoClick: () => {
-          // 跨组件触发重做
-          getContext(this).eventHub.emit('event_math_redo');
-        },
-        onHistoryClick: () => {
-          this.isShowHistorySheet = true;
-        }
+      .mode(NavigationMode.Stack)
+      .title({ builder: this.MainNavigationTitleBuilder, height: 56 + this.statusBarHeight }, {
+        backgroundColor: Color.Transparent,
+        barStyle: BarStyle.STACK
       })
-        .bindSheet($$this.isShowHistorySheet, this.HistorySheetBuilder(), {
-          height: '75%',
-          dragBar: true,
-          backgroundColor: $r('sys.color.background_secondary'),
-          showClose: false
-        })
+      .hideBackButton(true)
 
-      // ================= 3. 全局左侧侧边栏 =================
+      // ================= 2. 全局左侧侧边栏 =================
       if (this.isSidebarOpen) {
         SideBarMenu({
           isSidebarOpen: $isSidebarOpen,

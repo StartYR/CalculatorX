@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * * @file Credits.ets
  * @description 鸣谢页面，展示项目所依赖的开源组件与第三方库及其主页链接
-* * @author 易睿 (Yi Rui)
+* * @author StartYi
  * @date 2026
  */
 

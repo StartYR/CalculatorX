@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * @file FastMath.cpp
  * @description 极速降维模块：O(1) 时间计算宇宙级超大数
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026
  */
 #include "FastMath.h"

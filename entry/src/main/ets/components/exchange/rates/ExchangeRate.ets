@@ -1,9 +1,9 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  *
  * @file ExchangeRate.ets
  * @description 汇率换算主视图控制器，负责列表交互、网络拉取与持久化调度
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026/7/24 22:53
  */
 
@@ -20,6 +20,7 @@ import { CurrencySelector } from './CurrencySelector';
 import promptAction from '@ohos.promptAction';
 import connection from '@ohos.net.connection';
 import curves from '@ohos.curves';
+import { createSheetMaterial } from '../../../utils/ImmersiveMaterialUtils';
 
 // ==================== 主组件 ====================
 @Component
@@ -823,7 +824,8 @@ export struct ExchangeRate {
     .backgroundColor($r('sys.color.background_secondary'))
     // ✅ 精简后的半模态窗口调用点
     .bindSheet($$this.isSelectorShow, this.SelectorSheetBuilder(), {
-      height: SheetSize.LARGE
+      height: SheetSize.LARGE,
+      systemMaterial: createSheetMaterial()
     })
   }
 }

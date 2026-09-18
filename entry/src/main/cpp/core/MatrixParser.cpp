@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * @file MatrixParser.cpp
  * @description 集中式矩阵运算路由与解析器
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026/7/26 17:50
 */
 

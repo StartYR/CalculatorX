@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * * @file CalculatorConfigs.ets
  * @description 全局配置与状态映射
- * * @author 易睿 (Yi Rui)
+ * * @author StartYi
  * @date 2026
  */
 

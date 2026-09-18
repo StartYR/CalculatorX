@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * * @file BasicCalc.ets
  * @description 基础计算器独立业务面板插件
- * * @author 易睿 (Yi Rui)
+ * * @author StartYi
  * @date 2026/6/26 02:20
  */
 

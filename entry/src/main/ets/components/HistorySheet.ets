@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * * @file HistorySheet.ets
  * @description 局部历史半模态抽屉
- * * @author 易睿 (Yi Rui)
+ * * @author StartYi
  * @date 2026
  */
 
@@ -10,6 +10,7 @@ import { HistoryRepository, HistoryRecord } from '../database/HistoryRepository'
 import { UniversalHistoryList } from './common/UniversalHistoryList';
 import { TipsDialog } from '@kit.ArkUI';
 import { router } from '@kit.ArkUI';
+import { createDialogMaterial } from '../utils/ImmersiveMaterialUtils';
 
 @Component
 export struct HistorySheet {
@@ -25,7 +26,8 @@ export struct HistorySheet {
     builder: this.helpDialogBuilder,
     alignment: DialogAlignment.Center,
     autoCancel: true,
-    cornerRadius: 16
+    cornerRadius: 16,
+    systemMaterial: createDialogMaterial()
   });
 
   @Builder
@@ -130,6 +132,7 @@ export struct HistorySheet {
               message: '确定要清空此模式下的所有历史记录吗？此操作无法撤销。',
               alignment: DialogAlignment.Bottom,
               offset: { dx: 0, dy: -280 },
+              systemMaterial: createDialogMaterial(),
               primaryButton: {
                 value: '取消',
                 action: () => {} // 点击取消

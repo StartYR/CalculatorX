@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * * @file FormulaScreen.ets
  * @description 全能公式屏幕，负责渲染、引擎通信及入库闭环
- * * @author 易睿 (Yi Rui)
+ * * @author StartYi
  * @date 2026/6/26 21:12
  */
 

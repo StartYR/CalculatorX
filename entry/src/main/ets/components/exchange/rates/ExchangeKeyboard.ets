@@ -1,9 +1,9 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  *
  * @file ExchangeKeyboard.ets
  * @description 汇率模块的专属底部小键盘，1+1+1+1 功能键阶梯色彩布局
- * @author 易睿 (Yi Rui)
+ * @author StartYi
  * @date 2026/8/20
  */
 

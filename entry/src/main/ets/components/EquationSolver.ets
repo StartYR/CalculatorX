@@ -1,8 +1,8 @@
 /**
- * Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+ * Copyright (c) 2026 StartYi. All rights reserved.
  * * @file EquationSolver.ets
  * @description 方程求解核心业务面板组件
- * * @author 易睿 (Yi Rui)
+ * * @author StartYi
  * @date 2026/7/24 22:52
  */
 

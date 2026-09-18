@@ -1,12 +1,12 @@
 # ============================================================================
-# Copyright (c) 2026 易睿 (Yi Rui). All rights reserved.
+# Copyright (c) 2026 StartYi. All rights reserved.
 #
 # @file CMakeLists.txt
 # @description CalculatorX 底层 C++ 代数系统 (CAS) 构建脚本。
 #              负责配置交叉编译环境、引入 N-API 接口，并静态链接 SymEngine、
 #              Giac 核心引擎库以及 Boost 高性能大数支持库。
 #
-# @author 易睿 (Yi Rui)
+# @author StartYi
 # @date 2026-05-30
 # ============================================================================
 
