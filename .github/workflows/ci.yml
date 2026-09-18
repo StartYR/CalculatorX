@@ -1,0 +1,81 @@
+name: Quality Gate
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-check:
+    name: Code & Doc Quality Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 1. 未解决的冲突标记
+      - name: Check Git conflict markers & whitespace
+        run: |
+          echo "🔍 检查未解决的冲突标记与空白异常..."
+          git diff --check
+
+      # 2. 私钥、签名证书意外提交
+      - name: Check for sensitive certificate/key files
+        run: |
+          echo "🔍 检查是否意外提交了签名私钥或证书文件..."
+          FORBIDDEN_FILES=$(git ls-files | grep -E '\.(p12|cer|p7b)$' || true)
+          if [ -n "$FORBIDDEN_FILES" ]; then
+            echo "::error::发现禁止提交到公共仓库的签名或私钥文件："
+            echo "$FORBIDDEN_FILES"
+            exit 1
+          fi
+          echo "✅ 敏感文件检查通过。"
+
+      # 3. 代码模板占位符
+      - name: Check for placeholder text in source code
+        run: |
+          echo "🔍 检查源代码中残留的 DevEco 模板占位符..."
+          PLACEHOLDERS=$(git grep -nE '(@description 请在此处输入|@file 1\.ets)' -- '*.ets' '*.cpp' '*.h' '*.ts' || true)
+          if [ -n "$PLACEHOLDERS" ]; then
+            echo "::warning::提示：以下文件仍保留有模板占位符，有空时可以顺手补全："
+            echo "$PLACEHOLDERS"
+          else
+            echo "✅ 未发现模板占位符。"
+          fi
+
+      # 4. Target SDK 文档一致性
+      - name: Check Target SDK consistency
+        run: |
+          echo "🔍 检查 README.md 与 build-profile.json5 的 Target SDK..."
+          TARGET_SDK=$(grep -oE '"targetSdkVersion":\s*"[^"]+"' build-profile.json5 | sed -E 's/.*"targetSdkVersion":\s*"([^"]+)".*/\1/' || true)
+          
+          if [ -n "$TARGET_SDK" ] && ! grep -q "$TARGET_SDK" README.md; then
+            echo "::warning file=README.md::提示：README.md 中的 Target SDK 似乎与 build-profile.json5 ($TARGET_SDK) 不一致，后续记得同步。"
+          else
+            echo "✅ Target SDK 版本一致。"
+          fi
+
+      # 5. 提交信息格式
+      - name: Check commit message conventions
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "🔍 检查 PR 提交信息格式..."
+          COMMITS=$(git log --no-merges origin/${{ github.base_ref }}..HEAD --pretty=format:"%h %s")
+
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            
+            # 仅做黄色警示提醒，绝不阻断 CI
+            if echo "$line" | grep -q '：'; then
+              echo "::warning::提示：Commit 标题中包含全角冒号 '：'，合并 PR 时可顺手改为半角英文冒号 -> $line"
+            fi
+          done <<< "$COMMITS"
+          echo "✅ Commit 检查完成。"
