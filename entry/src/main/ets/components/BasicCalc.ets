@@ -10,6 +10,10 @@ import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { getActionId, getFontColor, getBgColor, PreferenceConfigs, icon_backspace } from '../utils/CalculatorConfigs';
 import { getCalculatorKeySemanticId } from '../utils/SemanticIds';
+import {
+  keyboardButtonImmersiveMaterialModifier,
+  keyboardButtonMaterialDisabledModifier
+} from '../utils/ImmersiveMaterialUtils';
 
 // 按键布局
 const basicButtons: Array<string | Resource> = [
@@ -38,6 +42,7 @@ function getLocalBgColor(btn: string | Resource, isShift: boolean): ResourceColo
 struct BasicKeyItem {
   btn: string | Resource = '';
   @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
+  @StorageProp(PreferenceConfigs.KEY_KEYBOARD_IMMERSIVE_LIGHT) keyboardImmersiveLight: boolean = false;
   private startDelayTimer: number = -1;
   private repeatDeleteTimer: number = -1;
 
@@ -75,6 +80,9 @@ struct BasicKeyItem {
       pressed: { .opacity(0.75).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
       normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
     })
+    .attributeModifier(this.keyboardImmersiveLight
+      ? keyboardButtonImmersiveMaterialModifier
+      : keyboardButtonMaterialDisabledModifier)
     .onClick(() => {
       this.onKeyPress(this.btn as string);
     })
