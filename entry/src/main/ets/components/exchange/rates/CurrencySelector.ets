@@ -398,7 +398,7 @@ export struct CurrencySelector {
     .width('100%')
     .height('100%')
     .mode(NavigationMode.Stack)
-    .title({ builder: this.CurrencySelectorTitleBuilder, height: 104 }, {
+    .title({ builder: this.CurrencySelectorTitleBuilder, height: 124 }, {
       backgroundColor: Color.Transparent,
       barStyle: BarStyle.STACK
     })
