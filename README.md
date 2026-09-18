@@ -161,6 +161,7 @@ cd CalculatorX
 | [汇率架构](docs/architecture/exchange.md)            | 网络刷新、缓存、货币选择和交叉换算 |
 | [故障定位指南](docs/architecture/troubleshooting.md)   | 按现象和调用链定位源码 |
 | [贡献指南](docs/CONTRIBUTING.md)                     | 模块开发、状态管理和 Git 提交规范 |
+| [代码风格指南](docs/code-style.md)                    | ArkTS、C++、PowerShell、注释与检查约定 |
 | [更新日志](docs/CHANGELOG.md)                        | 历史版本与重要改动 |
 
 ## 参与贡献
