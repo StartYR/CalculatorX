@@ -11,7 +11,7 @@ import hilog from '@ohos.hilog';
 class Logger {
   private domain: number;
   private prefix: string;
-  private isDebug: boolean = true; // 上架时改为false
+  private isDebug: boolean = false; // 正式包仅输出 warn 及以上日志
 
   constructor(prefix: string) {
     this.prefix = prefix;

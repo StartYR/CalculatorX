@@ -16,7 +16,7 @@
 #define LOG_TAG "CalcX_Engine"
 
 // 生产环境总开关：打正式包时，将 1 改为 0
-#define ENABLE_CALCX_DEBUG_LOG 1
+#define ENABLE_CALCX_DEBUG_LOG 0
 
 // ========= 调试与信息日志 =========
 #if ENABLE_CALCX_DEBUG_LOG

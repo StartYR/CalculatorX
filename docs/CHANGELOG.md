@@ -8,6 +8,19 @@
 
 `v1.3.1` 至 `v1.6.3` 期间没有持续维护本文件，暂不追溯补写。下方保留已有的早期版本记录。
 
+## [v1.6.5] - 2026-09-19
+
+### ✨ 体验优化 (Improvements)
+
+- 优化计算完成后的连续输入：基础、科学和矩阵模式现在会保留上一表达式与结果，数字或函数按键可直接开始新一笔计算，运算符与后缀操作可自动接续上一答案，并支持点击表达式返回原式编辑；同时修复了结果接续百分号可能出现 `Unknown_Error` 的问题。（[result-ready-input-flow.md](./changes/2026-09-15-result-ready-input-flow.md)）
+- 目标 API 升级至 26，为主页 TopBar、历史记录、数学说明、货币选择、常用弹窗和原生长按菜单接入系统沉浸光感；最低兼容 API 仍为 23，不适合材质化的键盘、遮罩和局部视觉模糊继续保留原有效果。（[api-26-immersive-light.md](./changes/2026-09-18-api-26-immersive-light.md)）
+- 优化历史记录、货币选择和侧边栏的沉浸光感体验：半模态标题栏与货币搜索框获得更自然的自适应模糊，历史日期分组可稳定吸附在标题栏下方，并修复搜索框阴影裁剪及标题间距、对比度等细节问题。（[immersive-sheet-and-sidebar.md](./changes/2026-09-19-immersive-sheet-and-sidebar.md)）
+
+### 🛠️ 工程与测试 (Engineering)
+
+- 为开发测试新增 Windows 到 HarmonyOS 设备的 LaTeX 计算自动化入口，可验证真实 MathLive、N-API 与 C++ 计算链路；该入口仅存在于测试包，不进入正式应用。（[windows-calculation-cli.md](./changes/2026-09-15-windows-calculation-cli.md)）
+- 为开发测试新增 Windows 语义 CLI，可读取 CalculatorX 真机界面状态、按稳定控件 ID 操作普通界面并执行 JSON 回归场景；控制入口仍隔离在测试包中，不进入正式发布包。（[semantic-cli-automation.md](./changes/2026-09-16-semantic-cli-automation.md)）
+
 ## [1.3.0 Beta] - 2026-06
 
 ### 🚀 新增特性 (Features)
