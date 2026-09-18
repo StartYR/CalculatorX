@@ -6,8 +6,17 @@
  * @date 2026
  */
 
-import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from './common/MenuComponents';
 import router from '@ohos.router';
+import { LengthMetrics, SymbolGlyphModifier } from '@kit.ArkUI';
+import {
+  HdsNavigation,
+  HdsNavigationMenuItemOptions,
+  HdsNavigationTitleMode,
+  hdsMaterial,
+  ScrollEffectType
+} from '@kit.UIDesignKit';
+
+import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from './common/MenuComponents';
 import { RoutePath } from '../utils/CalculatorConfigs';
 import { SemanticIds, getModuleSemanticId } from '../utils/SemanticIds';
 
@@ -20,6 +29,61 @@ export struct SideBarMenu {
 
   // 用于实时记录手指拖拽的横向偏移量
   @State dragOffsetX: number = 0;
+
+  private scroller: Scroller = new Scroller();
+
+  @Builder
+  SideBarTitleBuilder() {
+    Row() {
+      Text('Calc')
+        .fontSize(28)
+        .fontWeight(FontWeight.Bolder)
+        .fontColor($r('sys.color.font_primary'))
+      Text('X')
+        .fontSize(28)
+        .fontWeight(FontWeight.Bolder)
+        .fontColor($r('sys.color.font_emphasize'))
+    }
+    .width('100%')
+    .height('100%')
+    .padding({ left: 24 })
+    .alignItems(VerticalAlign.Center)
+  }
+
+  private getTitleBarMenuItems(): HdsNavigationMenuItemOptions[] {
+    return [
+      {
+        content: {
+          icon: new SymbolGlyphModifier($r('sys.symbol.arrow_counterclockwise_clock_fill'))
+            .fontSize(24)
+            .fontColor([$r('sys.color.icon_primary')]),
+          label: '历史记录',
+          componentId: SemanticIds.NAV_HISTORY_PAGE,
+          action: () => {
+            animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+            if (this.onHistoryClick) {
+              this.onHistoryClick();
+            }
+          }
+        }
+      },
+      {
+        content: {
+          icon: new SymbolGlyphModifier($r('sys.symbol.gearshape_fill'))
+            .fontSize(20)
+            .fontColor([$r('sys.color.icon_primary')]),
+          label: '设置',
+          componentId: SemanticIds.NAV_SETTINGS,
+          action: () => {
+            animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+            if (this.onSettingsClick) {
+              this.onSettingsClick();
+            }
+          }
+        }
+      }
+    ];
+  }
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -41,233 +105,202 @@ export struct SideBarMenu {
 
       // 2. 顶层：左侧抽屉面板
       Column() {
-        // 头部：标志与独立的设置按钮
-        Row() {
-          // 左侧标志
-          Row() {
-            Text('Calc')
-              .fontSize(28)
-              .fontWeight(FontWeight.Bolder)
-              .fontColor($r('sys.color.font_primary'))
-            Text('X')
-              .fontSize(28)
-              .fontWeight(FontWeight.Bolder)
-              .fontColor($r('sys.color.font_emphasize'))
-          }
-
-          Blank()
-
-          // 历史记录
-          Button({ type: ButtonType.Circle, stateEffect: true }) {
-            SymbolGlyph($r('sys.symbol.arrow_counterclockwise_clock_fill'))
-              .fontSize(24)
-              .fontColor([$r('sys.color.icon_primary')])
-          }
-          .width(40)
-          .height(40)
-          .id(SemanticIds.NAV_HISTORY_PAGE)
-          .accessibilityText('历史记录')
-          .backgroundColor($r('sys.color.comp_background_tertiary'))
-          .margin({ right: 12 }) // 按钮间距
-          .border({
-            width: 0.5,
-            color: $r('sys.color.comp_divider'),
-            radius: 16
-          })
-          .shadow({
-            radius: 32,
-            color: '#25000000',
-            offsetX: 3,
-            offsetY: 6
-          })
-          .onClick(() => {
-            // 点击后先收起侧边栏，再触发外部回调
-            animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
-            if (this.onHistoryClick) {
-              this.onHistoryClick();
-            }
-          })
-
-          // 设置
-          Button({ type: ButtonType.Circle, stateEffect: true }) {
-            SymbolGlyph($r('sys.symbol.gearshape_fill'))
-              .fontSize(20)
-              .fontColor([$r('sys.color.icon_primary')])
-          }
-          .width(40)
-          .height(40)
-          .id(SemanticIds.NAV_SETTINGS)
-          .accessibilityText('设置')
-          .backgroundColor($r('sys.color.comp_background_tertiary')) // 底色
-          .border({
-            width: 0.5,
-            color: $r('sys.color.comp_divider'),
-            radius: 16
-          })
-          .shadow({
-            radius: 32,
-            color: '#25000000',
-            offsetX: 3,
-            offsetY: 6
-          })
-          .onClick(() => {
-            animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
-            if (this.onSettingsClick) {
-              this.onSettingsClick();
-            }
-          })
-        }
-        .width('100%')
-        .padding({ left: 24, right: 24, top: 64, bottom: 16 })
-
-        // 菜单项区域
-        Scroll() {
-          Column() {
-            // ====================== 1. 模式 ==========================
+        HdsNavigation() {
+          // 菜单项区域
+          Scroll(this.scroller) {
             Column() {
-              GroupHeader({ title: '模式' })
-              MenuGroup() {
-                MenuButton({
-                  icon: $r('sys.symbol.calculator_1'),
-                  title: '基础计算',
-                  semanticId: getModuleSemanticId('basic'),
-                  onClickAction: () => {
-                    animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
-                    if (this.onModuleSelect) { this.onModuleSelect('basic'); }
-                  }
-                })
-                ItemDivider()
-                MenuButton({
-                  icon: $r('sys.symbol.calculator'),
-                  title: '科学计算',
-                  semanticId: getModuleSemanticId('scientific'),
-                  onClickAction: () => {
-                    animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
-                    if (this.onModuleSelect) { this.onModuleSelect('scientific'); }
-                  }
-                })
+              // ====================== 1. 模式 ==========================
+              Column() {
+                GroupHeader({ title: '模式' })
+                MenuGroup() {
+                  MenuButton({
+                    icon: $r('sys.symbol.calculator_1'),
+                    title: '基础计算',
+                    semanticId: getModuleSemanticId('basic'),
+                    onClickAction: () => {
+                      animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+                      if (this.onModuleSelect) { this.onModuleSelect('basic'); }
+                    }
+                  })
+                  ItemDivider()
+                  MenuButton({
+                    icon: $r('sys.symbol.calculator'),
+                    title: '科学计算',
+                    semanticId: getModuleSemanticId('scientific'),
+                    onClickAction: () => {
+                      animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+                      if (this.onModuleSelect) { this.onModuleSelect('scientific'); }
+                    }
+                  })
+                }
               }
-            }
-            .padding({ left: 16, right: 16, bottom: 12 })
+              .padding({ left: 16, right: 16, bottom: 12 })
 
-            // ====================== 2. 进阶 ==========================
-            Column() {
-              GroupHeader({ title: '进阶' })
-              MenuGroup() {
-                MenuButton({
-                  icon: $r('sys.symbol.foldline_screen'),
-                  title: '函数图像',
-                  semanticId: getModuleSemanticId('graphing'),
-                  onClickAction: () => {
-                    animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
-                    if (this.onModuleSelect) { this.onModuleSelect('graphing'); }
-                  }
-                })
-                ItemDivider()
-                MenuButton({
-                  icon: $r('sys.symbol.exponentiation'),
-                  title: '方程求解',
-                  semanticId: getModuleSemanticId('equation'),
-                  onClickAction: () => {
-                    animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
-                    if (this.onModuleSelect) { this.onModuleSelect('equation'); }
-                  }
-                })
-                ItemDivider()
-                MenuButton({
-                  icon: $r('sys.symbol.square_grid_2x2'),
-                  title: '矩阵与向量',
-                  semanticId: getModuleSemanticId('matrix'),
-                  onClickAction: () => {
-                    animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
-                    if (this.onModuleSelect) { this.onModuleSelect('matrix'); }
-                  }
-                })
-                ItemDivider()
-                MenuButton({
-                  icon: $r('sys.symbol.data'),
-                  title: '统计分析',
-                  semanticId: getModuleSemanticId('statistics'),
-                  onClickAction: () => {
-                    animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
-                    if (this.onModuleSelect) { this.onModuleSelect('statistics'); }
-                  }
-                })
+              // ====================== 2. 进阶 ==========================
+              Column() {
+                GroupHeader({ title: '进阶' })
+                MenuGroup() {
+                  MenuButton({
+                    icon: $r('sys.symbol.foldline_screen'),
+                    title: '函数图像',
+                    semanticId: getModuleSemanticId('graphing'),
+                    onClickAction: () => {
+                      animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+                      if (this.onModuleSelect) { this.onModuleSelect('graphing'); }
+                    }
+                  })
+                  ItemDivider()
+                  MenuButton({
+                    icon: $r('sys.symbol.exponentiation'),
+                    title: '方程求解',
+                    semanticId: getModuleSemanticId('equation'),
+                    onClickAction: () => {
+                      animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+                      if (this.onModuleSelect) { this.onModuleSelect('equation'); }
+                    }
+                  })
+                  ItemDivider()
+                  MenuButton({
+                    icon: $r('sys.symbol.square_grid_2x2'),
+                    title: '矩阵与向量',
+                    semanticId: getModuleSemanticId('matrix'),
+                    onClickAction: () => {
+                      animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+                      if (this.onModuleSelect) { this.onModuleSelect('matrix'); }
+                    }
+                  })
+                  ItemDivider()
+                  MenuButton({
+                    icon: $r('sys.symbol.data'),
+                    title: '统计分析',
+                    semanticId: getModuleSemanticId('statistics'),
+                    onClickAction: () => {
+                      animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+                      if (this.onModuleSelect) { this.onModuleSelect('statistics'); }
+                    }
+                  })
+                }
               }
-            }
-            .padding({ left: 16, right: 16, bottom: 12 })
+              .padding({ left: 16, right: 16, bottom: 12 })
 
-            // ====================== 3. 转换 ==========================
-            Column() {
-              GroupHeader({ title: '转换' })
-              MenuGroup() {
-                MenuButton({
-                  icon: $r('sys.symbol.arrow_left_arrow_right'),
-                  title: '单位转换',
-                  semanticId: getModuleSemanticId('unit'),
-                  onClickAction: () => {
-                    animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
-                    if (this.onModuleSelect) { this.onModuleSelect('unit'); }
-                  }
-                })
-                ItemDivider()
-                MenuButton({
-                  icon: $r('sys.symbol.gobackward_10'),
-                  title: '进制转换',
-                  semanticId: getModuleSemanticId('base'),
-                  onClickAction: () => {
-                    animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
-                    if (this.onModuleSelect) { this.onModuleSelect('base'); }
-                  }
-                })
-                ItemDivider()
-                MenuButton({
-                  icon: $r('sys.symbol.yuansign_arrow_2_circlepath'),
-                  title: '汇率',
-                  semanticId: getModuleSemanticId('exchange'),
-                  onClickAction: () => {
-                    animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
-                    if (this.onModuleSelect) { this.onModuleSelect('exchange'); }
-                  }
-                })
+              // ====================== 3. 转换 ==========================
+              Column() {
+                GroupHeader({ title: '转换' })
+                MenuGroup() {
+                  MenuButton({
+                    icon: $r('sys.symbol.arrow_left_arrow_right'),
+                    title: '单位转换',
+                    semanticId: getModuleSemanticId('unit'),
+                    onClickAction: () => {
+                      animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+                      if (this.onModuleSelect) { this.onModuleSelect('unit'); }
+                    }
+                  })
+                  ItemDivider()
+                  MenuButton({
+                    icon: $r('sys.symbol.gobackward_10'),
+                    title: '进制转换',
+                    semanticId: getModuleSemanticId('base'),
+                    onClickAction: () => {
+                      animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+                      if (this.onModuleSelect) { this.onModuleSelect('base'); }
+                    }
+                  })
+                  ItemDivider()
+                  MenuButton({
+                    icon: $r('sys.symbol.yuansign_arrow_2_circlepath'),
+                    title: '汇率',
+                    semanticId: getModuleSemanticId('exchange'),
+                    onClickAction: () => {
+                      animateTo({ duration: 350, curve: Curve.Friction }, () => { this.isSidebarOpen = false; });
+                      if (this.onModuleSelect) { this.onModuleSelect('exchange'); }
+                    }
+                  })
+                }
               }
-            }
-            .padding({ left: 16, right: 16, bottom: 12 })
+              .padding({ left: 16, right: 16, bottom: 12 })
 
-            // ====================== 4. 参考 ==========================
-            Column() {
-              GroupHeader({ title: '参考' })
-              MenuGroup() {
-                MenuButton({ icon: $r('sys.symbol.doc_plaintext'), title: '公式库', onClickAction: () => { /* TODO */ } })
-                ItemDivider()
-                MenuButton({ icon: $r('sys.symbol.e'), title: '科学常数', onClickAction: () => { /* TODO */ } })
-                ItemDivider()
-                MenuButton({
-                  icon: $r('sys.symbol.questionmark_circle'),
-                  title: '帮助',
-                  onClickAction: () => {
-                    // 1. 先触发侧边栏丝滑收起动画
-                    animateTo({ duration: 350, curve: Curve.Friction }, () => {
-                      this.isSidebarOpen = false;
-                    });
-                    // 2. 触发系统级路由跳转
-                    router.pushUrl({
-                      url: RoutePath.HELP
-                    });
-                  }
-                })
+              // ====================== 4. 参考 ==========================
+              Column() {
+                GroupHeader({ title: '参考' })
+                MenuGroup() {
+                  MenuButton({ icon: $r('sys.symbol.doc_plaintext'), title: '公式库', onClickAction: () => { /* TODO */ } })
+                  ItemDivider()
+                  MenuButton({ icon: $r('sys.symbol.e'), title: '科学常数', onClickAction: () => { /* TODO */ } })
+                  ItemDivider()
+                  MenuButton({
+                    icon: $r('sys.symbol.questionmark_circle'),
+                    title: '帮助',
+                    onClickAction: () => {
+                      // 1. 先触发侧边栏丝滑收起动画
+                      animateTo({ duration: 350, curve: Curve.Friction }, () => {
+                        this.isSidebarOpen = false;
+                      });
+                      // 2. 触发系统级路由跳转
+                      router.pushUrl({
+                        url: RoutePath.HELP
+                      });
+                    }
+                  })
+                }
               }
+              .padding({ left: 16, right: 16, bottom: 32 })
             }
-            .padding({ left: 16, right: 16, bottom: 32 })
+            .width('100%')
+            .justifyContent(FlexAlign.Start)
+            .padding({ top: 120 })
           }
           .width('100%')
-          .justifyContent(FlexAlign.Start)
+          .height('100%')
+          .align(Alignment.Top)
+          .scrollBar(BarState.Off)
+          .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true }) // 触底触顶回弹
+          .fadingEdge(true)
         }
-        .layoutWeight(1)
-        .align(Alignment.Top)
-        .scrollBar(BarState.Off)
-        .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true }) // 触底触顶回弹
-        .fadingEdge(true)//
+        .width('100%')
+        .height('100%')
+        .mode(NavigationMode.Stack)
+        .titleBar({
+          padding: { end: LengthMetrics.vp(24) },
+          content: {
+            title: { mainTitle: '' },
+            stackBuilder: (): void => this.SideBarTitleBuilder(),
+            menu: {
+              value: this.getTitleBarMenuItems(),
+              maxCount: 2
+            }
+          },
+          style: {
+            scrollEffectOpts: {
+              enableScrollEffect: true,
+              scrollEffectType: ScrollEffectType.IMMERSIVE_GRADIENT_BLUR
+            },
+            originalStyle: {
+              contentStyle: {
+                titleStyle: { mainTitleColor: $r('sys.color.font_primary') },
+                menuStyle: { iconColor: $r('sys.color.icon_primary') }
+              }
+            },
+            scrollEffectStyle: {
+              contentStyle: {
+                titleStyle: { mainTitleColor: $r('sys.color.font_primary') },
+                menuStyle: { iconColor: $r('sys.color.icon_primary') }
+              }
+            },
+            systemMaterialEffect: {
+              materialType: hdsMaterial.MaterialType.ADAPTIVE,
+              materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+            }
+          },
+          avoidLayoutSafeArea: true,
+          enableComponentSafeArea: false
+        })
+        .hideBackButton(true)
+        .bindToScrollable([this.scroller])
+        .titleMode(HdsNavigationTitleMode.MODAL)
+        .backgroundColor($r('sys.color.background_secondary'))
+        .borderRadius({ topRight: 32, bottomRight: 32 })
+        .clip(true)
       }
       .width('70%')
       .height('100%')
