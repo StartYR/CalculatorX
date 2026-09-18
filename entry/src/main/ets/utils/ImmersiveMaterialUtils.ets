@@ -66,6 +66,21 @@ export function createMenuMaterial(): uiMaterial.Material | undefined {
 }
 
 /**
+ * 创建用于搜索框的薄款沉浸光感材质。
+ *
+ * @returns 支持时返回材质实例，否则返回 `undefined`
+ */
+export function createSearchMaterial(): uiMaterial.Material | undefined {
+  if (deviceInfo.apiAvailable('26.0.0')) {
+    return new uiMaterial.ImmersiveMaterial({
+      style: uiMaterial.ImmersiveStyle.THIN
+    });
+  }
+
+  return undefined;
+}
+
+/**
  * 创建用于 TopBar 按钮的超薄交互式沉浸光感材质。
  *
  * @returns 支持时返回材质实例，否则返回 `undefined`

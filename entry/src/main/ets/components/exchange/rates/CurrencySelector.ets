@@ -9,6 +9,23 @@
 import Logger from '../../../utils/Logger';
 import { CURRENCY_WHITELIST, CURRENCY_MAP, CurrencyInfo } from './CurrencyData';
 import { GroupHeader, MenuGroup, ItemDivider } from '../../common/MenuComponents';
+import deviceInfo from '@ohos.deviceInfo';
+import { createSearchMaterial } from '../../../utils/ImmersiveMaterialUtils';
+
+class CurrencySearchVisualModifier implements AttributeModifier<SearchAttribute> {
+  applyNormalAttribute(instance: SearchAttribute): void {
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      instance.systemMaterial(createSearchMaterial());
+    } else {
+      instance.borderWidth(0.1);
+      instance.borderColor($r('sys.color.comp_divider'));
+      instance.backgroundColor(Color.Transparent);
+      instance.backgroundBlurStyle(BlurStyle.Thin);
+    }
+  }
+}
+
+const currencySearchVisualModifier: CurrencySearchVisualModifier = new CurrencySearchVisualModifier();
 
 // 定义分组数据接口
 class CurrencyGroup {
@@ -154,11 +171,46 @@ export struct CurrencySelector {
   // 4. UI 渲染 (Main Build)
   // ---------------------------------------------------------
 
-  build() {
-    Stack({ alignContent: Alignment.Top }) {
+  @Builder
+  CurrencySelectorTitleBuilder() {
+    Column() {
+      Text('选择货币')
+        .fontSize(22)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('sys.color.font_primary'))
+        .width('100%')
+        .textAlign(TextAlign.Start)
+        .margin({ left: 20, bottom: 8 })
 
-      // ================= 层级 1 (底层)：全屏滚动的列表 =================
-      List({ scroller: this.scroller }) {
+      Search({ placeholder: '搜索货币代码或名称...', value: $$this.searchQuery })
+        .width('100%')
+        .height(40)
+        .attributeModifier(currencySearchVisualModifier)
+        .onChange((val: string) => {
+          this.searchQuery = val.toUpperCase();
+        })
+        .onFocus(() => {
+          animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+            this.keyboardAvoidHeight = 340;
+          });
+        })
+        .onBlur(() => {
+          animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
+            this.keyboardAvoidHeight = 40;
+          });
+        })
+    }
+    .width('100%')
+    .height('100%')
+    .padding({ left: 24, right: 24, top: 16, bottom: 16 })
+  }
+
+  build() {
+    Navigation() {
+      Stack({ alignContent: Alignment.Top }) {
+
+        // ================= 层级 1 (底层)：全屏滚动的列表 =================
+        List({ scroller: this.scroller }) {
 
         // 调用刚刚写好的分组函数获取数据
         if (this.getGroupedCurrencies().length === 0) {
@@ -290,129 +342,67 @@ export struct CurrencySelector {
         ListItem() {
           Row().width('100%').height(this.keyboardAvoidHeight)
         }
+        }
+        .width('100%')
+        .height('100%')
+        .padding({ left: 24, right: 36, top: 120 })
+        .clip(false)
+        .scrollBar(BarState.Off)
+        .edgeEffect(EdgeEffect.Spring)
+        // 监听列表滚动事件，实现反向联动 (滑动列表 -> 点亮字母)
+        .onScrollIndex((firstIndex: number) => {
+          // 如果处于搜索状态，右侧索引条是隐藏的，不需要进行任何计算
+          if (this.searchQuery) return;
+
+          // List 分组对应右侧字母
+          let activeGroupIndex = firstIndex;
+
+          // 越界安全兜底：防止用户在最顶部使劲往下拉，导致 firstIndex 小于0
+          if (activeGroupIndex < 0) {
+            activeGroupIndex = 0;
+          }
+
+          // 只有当索引真正发生变化时才更新状态，避免无意义的 UI 重绘
+          if (this.selectedIndex !== activeGroupIndex) {
+            this.selectedIndex = activeGroupIndex;
+          }
+        })
+
+        // ================= 层级 2 (上层)：右侧字母索引条 =================
+        // 只有在非搜索状态下才显示索引条
+        if (!this.searchQuery) {
+          AlphabetIndexer({
+            // 动态映射数据源，把“常用”替换成星星图标，保持右侧字母表的窄宽度
+            arrayValue: this.getGroupedCurrencies().map(group => group.letter === '常用' ? '★' : group.letter),
+            selected: this.selectedIndex
+          })
+            .alignStyle(IndexerAlign.Right)    // 右侧对齐
+            .position({ right: 4, top: 150 })  // 避开顶部的搜索框
+            .itemSize(18)                      // 字母触控热区大小
+            .itemBorderRadius(10086)           // 字母圆角
+            .usingPopup(true)                  // 放大气泡反馈
+            .popupPosition({ x: 48, y: 0 })    // 气泡向左偏移，防止被手指遮挡
+            .selectedBackgroundColor($r('sys.color.background_emphasize')) // 选中项底色
+            .selectedColor(Color.White)        // 选中项文字颜色
+            .popupColor($r('sys.color.font_emphasize'))          // 气泡文字颜色
+            .onSelect((index: number) => {
+              // 手按索引条，列表跟随跳转
+              this.selectedIndex = index;
+              this.scroller.scrollToIndex(index);
+            })
+        }
       }
       .width('100%')
       .height('100%')
-      .padding({ left: 24, right: 36, top: 120})
-      .clip(false)
-      .scrollBar(BarState.Off)
-      .edgeEffect(EdgeEffect.Spring)
-      // 监听列表滚动事件，实现反向联动 (滑动列表 -> 点亮字母)
-      .onScrollIndex((firstIndex: number) => {
-        // 如果处于搜索状态，右侧索引条是隐藏的，不需要进行任何计算
-        if (this.searchQuery) return;
-
-        // List 分组对应右侧字母
-        let activeGroupIndex = firstIndex;
-
-        // 越界安全兜底：防止用户在最顶部使劲往下拉，导致 firstIndex 小于0
-        if (activeGroupIndex < 0) {
-          activeGroupIndex = 0;
-        }
-
-        // 只有当索引真正发生变化时才更新状态，避免无意义的 UI 重绘
-        if (this.selectedIndex !== activeGroupIndex) {
-          this.selectedIndex = activeGroupIndex;
-        }
-      })
-
-      // ================= 层级 2 (中层)：真正的渐变毛玻璃特效引擎 =================
-      Stack() {
-        // 2.1 毛玻璃实体层
-        Column()
-          .width('100%')
-          .height(84)
-          .backgroundBlurStyle(BlurStyle.Thin)
-
-        // 2.2 渐变透明度遮罩层 (Alpha Mask)
-        Column()
-          .width('100%')
-          .height(84)
-          .linearGradient({
-            angle: 180,
-            colors: [
-              // 顶部到搜索框下半部分：100% 纯白（完整保留底层毛玻璃效果）
-              ['#FFFFFFFF', 0.0],
-              ['#FFFFFFFF', 0.4],
-              // 指定透明色，底部边缘：过渡到 100% 透明白（让毛玻璃平滑羽化溶解）
-              ['#32ffffff', 1.0]
-            ]
-          })
-          // 将自己的透明度通道作为蒙版，扣除下方的毛玻璃
-          .blendMode(BlendMode.DST_IN)
-      }
-      .width('100%')
-      .height(84)
-      // 开启离屏渲染，隔离混合作用域，确保蒙版只作用于内部的毛玻璃，不破坏底部的 List
-      .blendMode(BlendMode.SRC_OVER, BlendApplyType.OFFSCREEN)
-      // 中层特效无需接收点击事件，放行给底部的列表滑动
-      .hitTestBehavior(HitTestMode.None)
-
-      // ================= 层级 3 (上层)：纯粹悬浮的药丸形搜索框 =================
-      Column() {
-        // 标题
-        Text('选择货币')
-          .fontSize(22)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('sys.color.font_primary'))
-          .width('100%')
-          .textAlign(TextAlign.Start)
-          .margin({ left: 20, top: 4, bottom: 8 })
-
-        // 搜索框
-        Search({ placeholder: '搜索货币代码或名称...', value: $$this.searchQuery })
-          .width('100%')
-          .height(40)
-          .borderWidth(0.1)
-          .borderColor($r('sys.color.comp_divider'))
-          .backgroundColor(Color.Transparent)
-          .backgroundBlurStyle(BlurStyle.Thin)
-          .onChange((val: string) => {
-            this.searchQuery = val.toUpperCase();
-          })
-          // 监听焦点，动态撑开底部空间
-          .onFocus(() => {
-            // 键盘弹出时，用动画将底部留白撑高
-            animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
-              this.keyboardAvoidHeight = 340;
-            });
-          })
-          .onBlur(() => {
-            // 键盘收起时，恢复原本的安全区高度
-            animateTo({ duration: 300, curve: Curve.FastOutSlowIn }, () => {
-              this.keyboardAvoidHeight = 40;
-            });
-          })
-      }
-      .width('100%')
-      .padding({ left: 24, right: 24, top: 24 })
-
-      // ================= 层级 4 (最上层)：右侧字母索引条 =================
-      // 只有在非搜索状态下才显示索引条
-      if (!this.searchQuery) {
-        AlphabetIndexer({
-          // 动态映射数据源，把“常用”替换成星星图标，保持右侧字母表的窄宽度
-          arrayValue: this.getGroupedCurrencies().map(group => group.letter === '常用' ? '★' : group.letter),
-          selected: this.selectedIndex
-        })
-          .alignStyle(IndexerAlign.Right)    // 右侧对齐
-          .position({ right: 4, top: 150 })  // 避开顶部的搜索框和毛玻璃区域
-          .itemSize(18)                      // 字母触控热区大小
-          .itemBorderRadius(10086)           // 字母圆角
-          .usingPopup(true)                  // 放大气泡反馈
-          .popupPosition({ x: 48, y: 0 })    // 气泡向左偏移，防止被手指遮挡
-          .selectedBackgroundColor($r('sys.color.background_emphasize')) // 选中项底色
-          .selectedColor(Color.White)        // 选中项文字颜色
-          .popupColor($r('sys.color.font_emphasize'))          // 气泡文字颜色
-          .onSelect((index: number) => {
-            // 手按索引条，列表跟随跳转
-            this.selectedIndex = index;
-            this.scroller.scrollToIndex(index);
-          })
-      }
     }
     .width('100%')
     .height('100%')
+    .mode(NavigationMode.Stack)
+    .title({ builder: this.CurrencySelectorTitleBuilder, height: 104 }, {
+      backgroundColor: Color.Transparent,
+      barStyle: BarStyle.STACK
+    })
+    .hideBackButton(true)
     .backgroundColor($r('sys.color.background_secondary'))
   }
 }
