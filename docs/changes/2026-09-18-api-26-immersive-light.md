@@ -1,6 +1,6 @@
 # API 26 与沉浸光感迁移
 
-- 状态：API 26 手机竖屏验证完成，API 23 与其他设备形态待验证
+- 状态：TopBar 已完成 API 26 手机竖屏验证；新增菜单与历史界面待真机验证，API 23 与其他设备形态待验证
 - 类型：功能、兼容性配置
 - 分支：`feature/api-update`
 - 完成日期：2026-09-18
@@ -16,7 +16,10 @@ CalculatorX 的目标 API 已从 `6.1.1(24)` 升级到 `26.0.0`，最低兼容 A
 - API 26 设备上的历史记录、数学说明和货币选择 Sheet 使用 `REGULAR` 沉浸光感材质。
 - 矩阵维度、函数类型、隐私声明和特别鸣谢弹窗使用 `ULTRA_THICK` 材质。
 - 计算按键的原生长按菜单使用 `THICK` 材质；同组件中的自定义滑动选择气泡保持原有模糊效果。
+- 设置页的角度单位、答案输出、启动页、颜色模式和振动风格五个 `Select` 弹出菜单使用 `THICK` 材质。
 - 主页 TopBar 的菜单、撤销、重做、图形编辑和历史记录按钮使用 `ULTRA_THIN` 材质，并开启颜色反转、交互反馈和系统默认点光源效果。
+- 全局历史记录的删除操作位于 HDS 标题栏菜单中，沿用标题栏的自适应材质；当前分类没有记录时不显示。
+- 历史记录帮助弹窗，以及半模态历史和全局历史的清空确认弹窗使用 `ULTRA_THICK` 材质。
 - 应用级 `ohos.arkui.UIMaterial.state` 设为 `default`，由系统继续适配支持的原生组件和用户设置。
 - API 23 路径不会构造 API 26 材质；TopBar 保留原有半透明背景、模糊、边框和阴影，自定义弹窗仍使用原有不透明背景。
 
@@ -38,6 +41,7 @@ TopBar 的五类按钮共用同一个 `AttributeModifier`：API 26 先使用无�
 - TopBar 已迁入 `Navigation` 自定义标题栏；模块可见性规则、按钮尺寸、Semantic ID 和事件回调保持不变。
 - 顶部安全距离来自 `TYPE_SYSTEM` 避让区并随窗口变化更新，不使用固定状态栏高度。
 - 侧边栏关闭遮罩、货币列表羽化与搜索框、汇率键盘、图形键盘、自定义滑动气泡和隐私弹窗全屏背景模糊保持现状。
+- 货币选择搜索框的材质化仍需单独制作真机原型；历史记录 Sheet 顶部需先重构为受支持的标题栏容器，两项均未在本轮直接迁移。
 - 图形编辑全屏 Sheet 暂缓迁移，待真机评估长时间显示时的功耗、图表透出和公式可读性。
 - API 26 当前只完成手机深色竖屏的有限验收；API 23 和其余设备、主题及布局场景仍需分别安装和验证。
 
@@ -48,6 +52,7 @@ TopBar 的五类按钮共用同一个 `AttributeModifier`：API 26 先使用无�
 - `entry@default/release` 构建成功，随后重新构建 `entry@default/debug`，开发输出已恢复为 debug。
 - 生成配置确认 `compileSdkVersion = 26.0.0.105`、目标 API 为 26、最低 API 为 23，主包 metadata 中的材质状态为 `default`。
 - 新增的沉浸光感调用没有产生 API 26 兼容告警。构建仍报告项目既有弃用/异常处理告警，以及图形模块两处 `Circle.fill` 的 SDK 重载兼容告警；本次未改写这些无关代码。
+- 设置页 `Select` 菜单、全局历史标题栏菜单与三个历史弹窗的改动均已通过 `entry@default/debug` 构建；尚未对这些新增位置执行真机视觉验收。
 - 已静态复核保留的 `backgroundBlurStyle`、`backdropBlur` 和 HDS `systemMaterialEffect` 归属。
 - 已在 API 26 手机上安装并启动 debug HAP，完成深色竖屏截图与 UI 树检查：四个可见 TopBar 按钮完整位于系统状态图标下方，背景为透明中性材质；实际点击菜单按钮可正常打开侧边栏。
 - 尚未执行 API 23、浅色模式、平板、横屏、全部模块、系统材质档位、帧率、发热或功耗验证，也未执行 DevEco Studio API Change Assistant 的人工检查。
@@ -64,9 +69,11 @@ TopBar 的五类按钮共用同一个 `AttributeModifier`：API 26 先使用无�
 - `entry/src/main/ets/pages/settings/About.ets`
 - `entry/src/main/ets/components/MatrixCalc.ets`
 - `entry/src/main/ets/components/PrivacyDialog.ets`
+- `entry/src/main/ets/components/HistorySheet.ets`
 - `entry/src/main/ets/components/common/KeyGestureWrapper.ets`
 - `entry/src/main/ets/components/graphing/GraphingEditSheet.ets`
 - `entry/src/main/ets/components/exchange/rates/ExchangeRate.ets`
+- `entry/src/main/ets/pages/history/HistoryManager.ets`
 
 ## 发布说明素材
 
