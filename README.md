@@ -136,7 +136,7 @@ ArkUI 原生界面
 ### 环境要求
 
 - DevEco Studio（支持 HarmonyOS NEXT SDK 6.1）
-- Target SDK：`6.1.1 (24)`
+- Target SDK：`26.0.0`
 - Compatible SDK：`6.1.0 (23)`
 - CMake / BiSheng Native 工具链
 

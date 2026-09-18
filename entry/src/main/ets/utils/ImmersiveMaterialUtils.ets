@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2026 StartYi. All rights reserved.
- * @file 1.ets
- * @description 请在此处输入文件描述...
+ * @file ImmersiveMaterialUtils.ets
+ * @description 封装 API 26 沉浸光感与材质能力检测及系统 Material 对象创建
  * @author StartYi
  * @date 2026/9/18 13:55
  */
