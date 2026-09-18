@@ -15,6 +15,7 @@ import {
   ScrollEffectType,
   HdsTabs,
   HdsTabsController,
+  HdsNavigationMenuItemOptions,
 } from '@kit.UIDesignKit';
 import { SymbolGlyphModifier, promptAction } from '@kit.ArkUI';
 import Logger from '../../utils/Logger'
@@ -97,48 +98,47 @@ export struct HistoryManager {
     ];
   }
 
-  // ==================== 上下文感知垃圾桶 ====================
-  @Builder
-  TopRightMenu() {
-    // 显隐逻辑绑定到当前 Tab 的专属状态上
-    if (this.currentTabHasData) {
-      Button({ type: ButtonType.Circle, stateEffect: true }) {
-        SymbolGlyph($r('sys.symbol.trash'))
-          .fontSize(24)
-          .fontColor([$r('sys.color.icon_primary')])
-      }
-      .width(40)
-      .height(40)
-      .backgroundColor(Color.Transparent)
-      .onClick(() => {
-        // 提取当前 Tab 的名字和模块标识符
-        const currentTitle = this.getTabItems()[this.currentIndex].label;
-        const targetModule = this.getModuleTypeByIndex(this.currentIndex);
+  private showClearHistoryDialog(): void {
+    const currentTitle = this.getTabItems()[this.currentIndex].label;
+    const targetModule = this.getModuleTypeByIndex(this.currentIndex);
 
-        // 智能动态警告弹窗
-        AlertDialog.show({
-          title: `清空【${currentTitle}】历史记录`,
-          message: targetModule === 'all'
-            ? '确定要清空所有模式的历史记录吗？\n此操作无法撤销。'
-            : `确定要清空【${currentTitle}】历史记录吗？\n此操作无法撤销。`,
-          alignment: DialogAlignment.Bottom,
-          offset: { dx: 0, dy: -280 },
-          primaryButton: {
-            value: '取消',
-            action: () => {}
-          },
-          secondaryButton: {
-            value: '清空',
-            fontColor: '#FF3B30',
-            action: async () => {
-              await HistoryRepository.clearHistory(targetModule);// 只清空当前 moduleType 的数据
-              this.currentTabHasData = false; // 状态断言：清空完毕后，垃圾桶原地消失
-              this.refreshSignal++; // 动画刷新：触发底层 UniversalHistoryList 的清空动画
-            }
-          }
-        })
-      })
+    AlertDialog.show({
+      title: `清空【${currentTitle}】历史记录`,
+      message: targetModule === 'all'
+        ? '确定要清空所有模式的历史记录吗？\n此操作无法撤销。'
+        : `确定要清空【${currentTitle}】历史记录吗？\n此操作无法撤销。`,
+      alignment: DialogAlignment.Bottom,
+      offset: { dx: 0, dy: -280 },
+      primaryButton: {
+        value: '取消',
+        action: () => {}
+      },
+      secondaryButton: {
+        value: '清空',
+        fontColor: '#FF3B30',
+        action: async () => {
+          await HistoryRepository.clearHistory(targetModule);
+          this.currentTabHasData = false;
+          this.refreshSignal++;
+        }
+      }
+    })
+  }
+
+  private getTitleBarMenuItems(): HdsNavigationMenuItemOptions[] {
+    if (!this.currentTabHasData) {
+      return [];
     }
+
+    return [{
+      content: {
+        icon: new SymbolGlyphModifier($r('sys.symbol.trash'))
+          .fontSize(24)
+          .fontColor([$r('sys.color.icon_primary')]),
+        label: '清空历史记录',
+        action: () => this.showClearHistoryDialog()
+      }
+    }];
   }
 
   // 引擎装配流水线
@@ -196,31 +196,29 @@ export struct HistoryManager {
   }
 
   build() {
-    Stack({ alignContent: Alignment.TopEnd }) {
-      HdsNavigation() {
-        this.buildTabs(this.getTabItems())
-      }
-      .mode(NavigationMode.Stack)
-      .titleBar({
-        content: { title: { mainTitle: '全局历史记录' } },
-        style: {
-          scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: ScrollEffectType.GRADIENT_BLUR },
-          systemMaterialEffect: { materialType: hdsMaterial.MaterialType.ADAPTIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE }
-        },
-        avoidLayoutSafeArea: true,
-        enableComponentSafeArea: false
-      })
-      .hideBackButton(false)
-      .titleMode(HdsNavigationTitleMode.MINI)
-      .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
-      .backgroundColor($r('sys.color.background_secondary'))
-
-      Row() {
-        this.TopRightMenu()
-      }
-      .height(133)
-      .padding({ right: 16 })
+    HdsNavigation() {
+      this.buildTabs(this.getTabItems())
     }
+    .mode(NavigationMode.Stack)
+    .titleBar({
+      content: {
+        title: { mainTitle: '全局历史记录' },
+        menu: {
+          value: this.getTitleBarMenuItems(),
+          maxCount: 1
+        },
+      },
+      style: {
+        scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: ScrollEffectType.GRADIENT_BLUR },
+        systemMaterialEffect: { materialType: hdsMaterial.MaterialType.ADAPTIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE }
+      },
+      avoidLayoutSafeArea: true,
+      enableComponentSafeArea: false
+    })
+    .hideBackButton(false)
+    .titleMode(HdsNavigationTitleMode.MINI)
+    .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.TOP, LayoutSafeAreaEdge.BOTTOM])
+    .backgroundColor($r('sys.color.background_secondary'))
     .width('100%')
     .height('100%')
     .id(SemanticIds.PAGE_HISTORY)
