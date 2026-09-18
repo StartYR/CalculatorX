@@ -147,7 +147,7 @@ export struct HistorySheet {
         moduleType: this.moduleType,
         isGlobalPage: false,
         refreshCounter: this.refreshSignal,
-        topContentPadding: 64,
+        topContentPadding: 56,
         scroller: this.scroller,
         onItemClick: (item: HistoryRecord, insertType: 'input' | 'output') => {
           if (this.onItemClick) this.onItemClick(item, insertType);

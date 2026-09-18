@@ -259,7 +259,7 @@ export struct UniversalHistoryList {
             ListItem() { Row().width('100%').height(12) }
           }
         }
-        .contentStartOffset(this.isGlobalPage ? 96 : this.topContentPadding)
+        .contentStartOffset(this.isGlobalPage ? 81 : this.topContentPadding)
         .sticky(StickyStyle.Header)
         .layoutWeight(1)
         .width('100%')
