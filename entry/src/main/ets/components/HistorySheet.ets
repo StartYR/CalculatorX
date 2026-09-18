@@ -43,7 +43,7 @@ export struct HistorySheet {
     builder: this.helpDialogBuilder,
     alignment: DialogAlignment.Center,
     autoCancel: true,
-    cornerRadius: 16,
+    cornerRadius: 32,
     systemMaterial: createDialogMaterial()
   });
 
@@ -149,7 +149,7 @@ export struct HistorySheet {
     .width('100%')
     .height('100%')
     .alignItems(VerticalAlign.Center)
-    .padding({ left: 24, right: 24, top: 12, bottom: 20 })
+    .padding({ left: 24, right: 24, top: 24, bottom: 20 })
   }
 
   build() {
