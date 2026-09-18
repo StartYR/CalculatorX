@@ -158,6 +158,7 @@ export struct Settings {
   @StorageLink('decimalPrecision') decimalPrecision: number = 6;
   @StorageLink('colorModeIndex') colorModeIndex: number = 2;
   @StorageLink('answerOutputMode') answerOutputMode: number = 0;
+  @StorageLink(PreferenceConfigs.KEY_KEYBOARD_IMMERSIVE_LIGHT) keyboardImmersiveLight: boolean = false;
 
   // 读取启动偏好的状态 (默认值为0: 记忆上次)
   @State startupPageMode: number = 0;
@@ -416,6 +417,41 @@ export struct Settings {
                 this.currentSheetType = 'perm';
                 this.isShowMathSheet = true;
               })
+
+              ItemDivider()
+
+              Row() {
+                SymbolGlyph($r('sys.symbol.calculator'))
+                  .fontSize(20)
+                  .fontColor([$r('sys.color.icon_secondary')])
+                  .margin({ right: 12 })
+
+                Text('按键沉浸光感')
+                  .fontSize(16)
+                  .fontColor($r('sys.color.font_primary'))
+
+                Blank()
+
+                Toggle({ type: ToggleType.Switch, isOn: this.keyboardImmersiveLight })
+                  .id('settings.keyboard-immersive-light')
+                  .accessibilityText(this.keyboardImmersiveLight ? 'true' : 'false')
+                  .enabled(deviceInfo.apiAvailable('26.0.0'))
+                  .onChange((isOn: boolean) => {
+                    this.keyboardImmersiveLight = isOn;
+                    PreferenceManager.set(PreferenceConfigs.KEY_KEYBOARD_IMMERSIVE_LIGHT, isOn);
+                  })
+              }
+              .width('100%')
+              .padding({ left: 16, right: 16, top: 10, bottom: 5 })
+
+              Text(deviceInfo.apiAvailable('26.0.0')
+                ? '为计算键盘按键启用交互式沉浸光感，可能增加 GPU 负载与功耗。'
+                : '需要 HarmonyOS API 26 或更高版本。')
+                .fontSize(12)
+                .fontColor($r('sys.color.font_tertiary'))
+                .lineHeight(16)
+                .width('100%')
+                .padding({ left: 48, right: 8, top: 0, bottom: 14 })
             }
           }
           .padding({ left: 16, right: 16, bottom: 12 })
