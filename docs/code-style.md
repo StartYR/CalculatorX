@@ -72,7 +72,7 @@
  * @file FileName.ext
  * @description 用一句话说明文件当前职责
  * @author StartYi
- * @date YYYY-MM-DD HH:mm
+ * @date YYYY/MM/DD HH:mm
  */
 ```
 

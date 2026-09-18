@@ -6,15 +6,22 @@
 ## 目录结构
 ```text
 CalculatorX/
-├── entry/
+├── entry/                # 📦 主应用模块 (ArkTS/ArkUI 前端与 C++ 核心引擎)
 ├── AppScope/             # HarmonyOS 应用级配置：Bundle、版本、全局字符串与应用图标
 ├── docs/                 # 📚 项目文档：架构、规划、变更日志、贡献指南与技术审查
-├── hvigor/               # Hvigor 构建系统配置
+├── hvigor/               # Hvigor 构建系统脚本与配置
+├── test/                 # 🧪 自动化测试套件：Windows 语义 CLI 自动化脚本与测试用例
 ├── .clang-tidy           # C/C++ 静态检查规则
 ├── .clangd               # clangd 配置
 ├── .gitignore            # Git 忽略规则
+├── AGENTS.md             # 智能编程助手项目级开发规范与指示
 ├── build-profile.json5   # 工程级产品、签名与模块构建配置
+├── build-profile.json5.template # 构建配置安全模板 (不含私钥凭据)
+├── calcx.ps1             # Windows CLI 统一自动化与工程管理工具
 ├── code-linter.json5     # ArkTS/ETS 代码检查规则
+├── hvigorfile.ts         # Hvigor 任务定义脚本
+├── local.properties.template # SDK 本地路径配置模板
+├── oh-package.json5      # OHPM 包依赖定义
 ├── README.md             # 项目介绍、功能与构建说明
 └── LICENSE               # 开源许可证
 ```
