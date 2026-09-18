@@ -10,7 +10,24 @@ import { HistoryRepository, HistoryRecord } from '../database/HistoryRepository'
 import { UniversalHistoryList } from './common/UniversalHistoryList';
 import { TipsDialog } from '@kit.ArkUI';
 import { router } from '@kit.ArkUI';
-import { createDialogMaterial } from '../utils/ImmersiveMaterialUtils';
+import deviceInfo from '@ohos.deviceInfo';
+import { createDialogMaterial, createTopBarMaterial } from '../utils/ImmersiveMaterialUtils';
+
+class HistorySheetActionButtonVisualModifier implements AttributeModifier<ButtonAttribute> {
+  applyNormalAttribute(instance: ButtonAttribute): void {
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      instance.buttonStyle(ButtonStyleMode.TEXTUAL);
+      instance.systemMaterial(createTopBarMaterial());
+    } else {
+      instance.backgroundColor($r('sys.color.background_tertiary'));
+      instance.border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 });
+      instance.shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 });
+    }
+  }
+}
+
+const historySheetActionButtonVisualModifier: HistorySheetActionButtonVisualModifier =
+  new HistorySheetActionButtonVisualModifier();
 
 @Component
 export struct HistorySheet {
@@ -52,125 +69,110 @@ export struct HistorySheet {
     })
   }
 
-  build() {
-    Column() {
-      // 1. 顶部实体标题栏
-      Row() {
-        Text('历史记录')
-          .fontSize(20)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('sys.color.font_primary'))
+  @Builder
+  HistorySheetTitleBuilder() {
+    Row() {
+      Text('历史记录')
+        .fontSize(20)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('sys.color.font_primary'))
 
-        // 帮助引导按钮
-        Button({ type: ButtonType.Circle, stateEffect: true }) {
-          SymbolGlyph($r('sys.symbol.questionmark_circle'))
-            .fontSize(16)
-            .fontColor([$r('sys.color.icon_primary')])
-        }
-        .width(36)
-        .height(36)
-        .backgroundColor(Color.Transparent)
-        .margin({ left: 0 })
-        .onClick(() => {
-          this.helpDialogController.open(); // 召唤图文弹窗
+      // 帮助引导按钮
+      Button({ type: ButtonType.Circle, stateEffect: true }) {
+        SymbolGlyph($r('sys.symbol.questionmark_circle'))
+          .fontSize(16)
+          .fontColor([$r('sys.color.icon_primary')])
+      }
+      .width(36)
+      .height(36)
+      .backgroundColor(Color.Transparent)
+      .accessibilityText('历史记录使用帮助')
+      .onClick(() => {
+        this.helpDialogController.open();
+      })
+
+      Blank()
+
+      // 全局历史记录
+      Button({ type: ButtonType.Circle, stateEffect: true }) {
+        SymbolGlyph($r('sys.symbol.arrow_counterclockwise_clock_fill'))
+          .fontSize(24)
+          .fontColor([$r('sys.color.icon_primary')])
+      }
+      .width(40)
+      .height(40)
+      .margin({ right: 12 })
+      .accessibilityText('打开全局历史记录')
+      .attributeModifier(historySheetActionButtonVisualModifier)
+      .onClick(() => {
+        router.pushUrl({
+          url: 'pages/history/HistoryManager'
         })
+      })
 
-        Blank()
-
-        // 全局历史记录
+      // 删除
+      if (this.hasData) {
         Button({ type: ButtonType.Circle, stateEffect: true }) {
-          SymbolGlyph($r('sys.symbol.arrow_counterclockwise_clock_fill'))
-            .fontSize(24)
+          SymbolGlyph($r('sys.symbol.trash'))
+            .fontSize(20)
             .fontColor([$r('sys.color.icon_primary')])
         }
         .width(40)
         .height(40)
-        .backgroundColor($r('sys.color.background_tertiary'))
-        .margin({ right: 12 })
-        .border({
-          width: 0.5,
-          color: $r('sys.color.comp_divider'),
-          radius: 16
-        })
-        .shadow({
-          radius: 32,
-          color: '#25000000',
-          offsetX: 3,
-          offsetY: 6
-        })
+        .accessibilityText('清空当前历史记录')
+        .attributeModifier(historySheetActionButtonVisualModifier)
         .onClick(() => {
-          router.pushUrl({
-            url: 'pages/history/HistoryManager'
+          // 防误触弹窗
+          AlertDialog.show({
+            title: '清空历史记录',
+            message: '确定要清空此模式下的所有历史记录吗？此操作无法撤销。',
+            alignment: DialogAlignment.Bottom,
+            offset: { dx: 0, dy: -280 },
+            systemMaterial: createDialogMaterial(),
+            primaryButton: {
+              value: '取消',
+              action: () => {}
+            },
+            secondaryButton: {
+              value: '清空',
+              fontColor: '#FF3B30',
+              action: async () => {
+                await HistoryRepository.clearHistory(this.moduleType);
+                this.hasData = false;
+                this.refreshSignal++;
+              }
+            }
           })
         })
-
-        // 删除
-        if (this.hasData) {
-          Button({ type: ButtonType.Circle, stateEffect: true }) {
-            SymbolGlyph($r('sys.symbol.trash'))
-              .fontSize(20)
-              .fontColor([$r('sys.color.icon_primary')])
-          }
-          .width(40)
-          .height(40)
-          .backgroundColor($r('sys.color.background_tertiary'))
-          .border({
-            width: 0.5,
-            color: $r('sys.color.comp_divider'),
-            radius: 16
-          })
-          .shadow({
-            radius: 32,
-            color: '#25000000',
-            offsetX: 3,
-            offsetY: 6
-          })
-          .onClick(() => {
-            // 防误触弹窗
-            AlertDialog.show({
-              title: '清空历史记录',
-              message: '确定要清空此模式下的所有历史记录吗？此操作无法撤销。',
-              alignment: DialogAlignment.Bottom,
-              offset: { dx: 0, dy: -280 },
-              systemMaterial: createDialogMaterial(),
-              primaryButton: {
-                value: '取消',
-                action: () => {} // 点击取消
-              },
-              secondaryButton: {
-                value: '清空',
-                fontColor: '#FF3B30',
-                action: async () => {
-                  await HistoryRepository.clearHistory(this.moduleType);
-                  this.hasData = false;
-                  this.refreshSignal++;
-                }
-              }
-            })
-          })
-        }
       }
-      .width('100%')
-      .padding({ left: 24, right: 24, top: 24, bottom: 0 })
+    }
+    .width('100%')
+    .height('100%')
+    .alignItems(VerticalAlign.Center)
+    .padding({ left: 24, right: 24, top: 12, bottom: 20 })
+  }
 
-      // 2. 召唤底层引擎！
+  build() {
+    Navigation() {
       UniversalHistoryList({
         moduleType: this.moduleType,
         isGlobalPage: false,
         refreshCounter: this.refreshSignal,
-        // onItemClick: (item: HistoryRecord) => {
-        //   if (this.onItemClick) this.onItemClick(item);
-        //   if (this.onClose) this.onClose();
-        // }
         onItemClick: (item: HistoryRecord, insertType: 'input' | 'output') => {
           if (this.onItemClick) this.onItemClick(item, insertType);
           if (this.onClose) this.onClose();
         }
       })
-        .layoutWeight(1) // 撑满标题下方的所有剩余空间
+        .width('100%')
+        .height('100%')
     }
     .width('100%')
     .height('100%')
+    .mode(NavigationMode.Stack)
+    .title({ builder: this.HistorySheetTitleBuilder, height: 72 }, {
+      backgroundColor: Color.Transparent
+    })
+    .hideBackButton(true)
     .backgroundColor($r('sys.color.background_secondary'))
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
   }
