@@ -1,3 +1,11 @@
+/**
+ * Copyright (c) 2026 StartYi. All rights reserved.
+ * @file 1.ets
+ * @description 请在此处输入文件描述...
+ * @author StartYi
+ * @date 2026/9/18 13:55
+ */
+
 import deviceInfo from '@ohos.deviceInfo';
 import { uiMaterial } from '@kit.ArkUI';
 
