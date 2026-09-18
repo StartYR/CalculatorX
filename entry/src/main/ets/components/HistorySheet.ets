@@ -154,6 +154,18 @@ export struct HistorySheet {
           enableScrollEffect: true,
           scrollEffectType: ScrollEffectType.IMMERSIVE_GRADIENT_BLUR
         },
+        originalStyle: {
+          contentStyle: {
+            titleStyle: { mainTitleColor: $r('sys.color.font_primary') },
+            menuStyle: { iconColor: $r('sys.color.icon_primary') }
+          }
+        },
+        scrollEffectStyle: {
+          contentStyle: {
+            titleStyle: { mainTitleColor: $r('sys.color.font_primary') },
+            menuStyle: { iconColor: $r('sys.color.icon_primary') }
+          }
+        },
         systemMaterialEffect: {
           materialType: hdsMaterial.MaterialType.ADAPTIVE,
           materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE

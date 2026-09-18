@@ -411,6 +411,16 @@ export struct CurrencySelector {
           enableScrollEffect: true,
           scrollEffectType: ScrollEffectType.IMMERSIVE_GRADIENT_BLUR
         },
+        originalStyle: {
+          contentStyle: {
+            titleStyle: { mainTitleColor: $r('sys.color.font_primary') }
+          }
+        },
+        scrollEffectStyle: {
+          contentStyle: {
+            titleStyle: { mainTitleColor: $r('sys.color.font_primary') }
+          }
+        },
         systemMaterialEffect: {
           materialType: hdsMaterial.MaterialType.ADAPTIVE,
           materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
