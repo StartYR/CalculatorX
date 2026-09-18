@@ -10,6 +10,7 @@ import Logger from '../../../utils/Logger';
 import { CURRENCY_WHITELIST, CURRENCY_MAP, CurrencyInfo } from './CurrencyData';
 import { GroupHeader, MenuGroup, ItemDivider } from '../../common/MenuComponents';
 import deviceInfo from '@ohos.deviceInfo';
+import { LengthMetrics } from '@kit.ArkUI';
 import {
   BottomBuilderShowType,
   HdsNavigation,
@@ -398,6 +399,7 @@ export struct CurrencySelector {
     .height('100%')
     .mode(NavigationMode.Stack)
     .titleBar({
+      padding: { start: LengthMetrics.vp(24) },
       content: {
         title: { mainTitle: '选择货币' },
         bottomBuilder: {

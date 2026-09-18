@@ -8,7 +8,7 @@
 
 import { HistoryRepository, HistoryRecord } from '../database/HistoryRepository';
 import { UniversalHistoryList } from './common/UniversalHistoryList';
-import { router, SymbolGlyphModifier, TipsDialog } from '@kit.ArkUI';
+import { LengthMetrics, router, SymbolGlyphModifier, TipsDialog } from '@kit.ArkUI';
 import {
   HdsNavigation,
   HdsNavigationMenuItemOptions,
@@ -142,6 +142,7 @@ export struct HistorySheet {
     .height('100%')
     .mode(NavigationMode.Stack)
     .titleBar({
+      padding: { start: LengthMetrics.vp(24) },
       content: {
         title: { mainTitle: '历史记录' },
         menu: {
