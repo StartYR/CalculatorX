@@ -30,15 +30,46 @@ include_directories(${NATIVERENDER_ROOT_PATH}
 
 include(FetchContent)
 
+# ================= C++ 第三方依赖 =================
+# 优先使用本地 third_party 中的依赖包。
+# 若本地不存在，则从 GitHub deps-v1 Release 自动下载。
+set(CALCX_DEPS_RELEASE
+    "https://github.com/StartYR/CalculatorX/releases/download/deps-v1"
+)
+
+set(CALCX_THIRD_PARTY_DIR
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party"
+)
+
+function(calcx_dependency_url OUT_VAR FILE_NAME)
+    set(LOCAL_ARCHIVE "${CALCX_THIRD_PARTY_DIR}/${FILE_NAME}")
+
+    if(EXISTS "${LOCAL_ARCHIVE}")
+        set(${OUT_VAR} "${LOCAL_ARCHIVE}" PARENT_SCOPE)
+        message(STATUS "CalculatorX dependency: using local ${FILE_NAME}")
+    else()
+        set(${OUT_VAR} "${CALCX_DEPS_RELEASE}/${FILE_NAME}" PARENT_SCOPE)
+        message(STATUS "CalculatorX dependency: downloading ${FILE_NAME}")
+    endif()
+endfunction()
+
 # ================= 引入 Boost =================
+calcx_dependency_url(
+    BOOST_SOURCE_URL
+    "boost_1_82_0.tar.gz"
+)
+
 FetchContent_Declare(
     boost
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/boost_1_82_0.tar.gz
+    URL "${BOOST_SOURCE_URL}"
+    URL_HASH SHA256=66a469b6e608a51f8347236f4912e27dc5c60c60d7d53ae9bfe4683316c6f04c
 )
+
 FetchContent_GetProperties(boost)
 if(NOT boost_POPULATED)
     FetchContent_Populate(boost)
 endif()
+
 set(BOOST_ROOT ${boost_SOURCE_DIR} CACHE PATH "Boost root" FORCE)
 set(Boost_INCLUDE_DIR ${boost_SOURCE_DIR} CACHE PATH "Boost include" FORCE)
 include_directories(${boost_SOURCE_DIR})
@@ -50,9 +81,15 @@ set_target_properties(gmp PROPERTIES IMPORTED_LOCATION
     ${CMAKE_CURRENT_SOURCE_DIR}/libs/${OHOS_ARCH}/libgmp.a)
 
 # ================= 引入 SymEngine =================
+calcx_dependency_url(
+    SYMENGINE_SOURCE_URL
+    "symengine-0.11.2.tar.gz"
+)
+
 FetchContent_Declare(
     symengine
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/symengine-0.11.2.tar.gz
+    URL "${SYMENGINE_SOURCE_URL}"
+    URL_HASH SHA256=f6972acd6a65354f6414e69460d2e175729470632bdac05919bc2f7f32e48cbd
 )
 
 set(WITH_GMP OFF CACHE BOOL "Disable GMP" FORCE)
@@ -64,6 +101,7 @@ set(BUILD_BENCHMARKS OFF CACHE BOOL "Disable benchmarks" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build as static library" FORCE)
 
 FetchContent_MakeAvailable(symengine)
+
 include_directories(
     ${symengine_SOURCE_DIR}
     ${symengine_BINARY_DIR}
@@ -71,10 +109,17 @@ include_directories(
 )
 
 # ================= 引入 Giac =================
+calcx_dependency_url(
+    GIAC_SOURCE_URL
+    "giac-1.9.0.tar.gz"
+)
+
 FetchContent_Declare(
     giac
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/third_party/giac-1.9.0.tar.gz
+    URL "${GIAC_SOURCE_URL}"
+    URL_HASH SHA256=998d43ab2fa42738a00427a482cd426a0ea5fee9856c89959312cccdbfd7912e
 )
+
 FetchContent_GetProperties(giac)
 if(NOT giac_POPULATED)
     FetchContent_Populate(giac)
