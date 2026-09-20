@@ -10,7 +10,6 @@ import { common, Want } from '@kit.AbilityKit';
 import { PreferenceManager } from '../utils/PreferenceManager';
 import { PreferenceConfigs, CURRENT_PRIVACY_VERSION } from '../utils/CalculatorConfigs';
 import Logger from '../utils/Logger';
-import { isImmersiveMaterialAvailable } from '../utils/ImmersiveMaterialUtils';
 
 @CustomDialog
 export struct PrivacyDialog {
@@ -118,7 +117,7 @@ export struct PrivacyDialog {
         .width('100%')
         .padding({ left: 16, right: 16, bottom: 16 })
       }
-      .backgroundColor(isImmersiveMaterialAvailable() ? Color.Transparent : $r('sys.color.comp_background_primary'))
+      .backgroundColor($r('sys.color.comp_background_primary'))
       .borderRadius(32)
       .width('85%')
     }
