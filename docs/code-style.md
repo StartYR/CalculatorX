@@ -27,7 +27,7 @@
 - `entry/src/main/ets/database/`：持久化模型与仓库。
 - `entry/src/main/cpp/core/`：解析、计算和图像等核心能力。
 - `entry/src/main/cpp/utils/`：可复用的原生工具。
-- `test/` 与 `entry/src/ohosTest/`：主机侧脚本、场景数据和设备侧测试桥接。
+- `tools/calcx/` 与 `entry/src/ohosTest/`：Windows CLI、主机侧场景数据和设备侧测试桥接。
 
 组件应尽量闭环管理局部状态，通过明确的 `@Prop`、回调或数据对象与上层通信。`AppStorage`、`@StorageProp` 等全局状态只用于确实需要跨页面或跨模块共享的设置，不用于省略正常的数据传递。
 
