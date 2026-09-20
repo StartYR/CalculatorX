@@ -40,7 +40,7 @@
 
 ## 主要文件
 
-- `test/Invoke-CalcXCalculation.ps1`
+- `tools/calcx/runtime/commands/Invoke-CalcXCalculation.ps1`
 - `entry/src/ohosTest/ets/test/CalculationCli.test.ets`
 - `entry/src/ohosTest/ets/utils/CalculationTestBridge.ets`
 - `entry/src/ohosTest/ets/testrunner/OpenHarmonyTestRunner.ets`

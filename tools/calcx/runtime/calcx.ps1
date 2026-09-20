@@ -26,30 +26,31 @@ param(
 Set-StrictMode -Version 3.0
 $ErrorActionPreference = 'Stop'
 
-$calculationScript = Join-Path $PSScriptRoot 'test\Invoke-CalcXCalculation.ps1'
-$batchScript = Join-Path $PSScriptRoot 'test\Invoke-CalcXBatch.ps1'
-$uiScript = Join-Path $PSScriptRoot 'test\Invoke-CalcXUi.ps1'
-$setupScript = Join-Path $PSScriptRoot 'test\Invoke-CalcXSetup.ps1'
-$formulaScript = Join-Path $PSScriptRoot 'test\Invoke-CalcXFormula.ps1'
-$scenarioScript = Join-Path $PSScriptRoot 'test\Invoke-CalcXScenario.ps1'
+$commandRoot = Join-Path $PSScriptRoot 'commands'
+$calculationScript = Join-Path $commandRoot 'Invoke-CalcXCalculation.ps1'
+$batchScript = Join-Path $commandRoot 'Invoke-CalcXBatch.ps1'
+$uiScript = Join-Path $commandRoot 'Invoke-CalcXUi.ps1'
+$setupScript = Join-Path $commandRoot 'Invoke-CalcXSetup.ps1'
+$formulaScript = Join-Path $commandRoot 'Invoke-CalcXFormula.ps1'
+$scenarioScript = Join-Path $commandRoot 'Invoke-CalcXScenario.ps1'
 
 function Show-CalcXHelp {
     [Console]::Out.WriteLine(@'
 CalculatorX semantic CLI
 
 Usage:
-  .\calcx.ps1 '<latex>'
-  .\calcx.ps1 engine calculate '<latex>'
-  .\calcx.ps1 engine batch <json-file>
-  .\calcx.ps1 app status|start|stop
-  .\calcx.ps1 screen get|controls|find <semantic-id>
-  .\calcx.ps1 formula get|set <latex>|clear
-  .\calcx.ps1 settings get
-  .\calcx.ps1 setup settings set <key> <value>
-  .\calcx.ps1 scenario run <json-file> [-ContinueOnFailure]
-  .\calcx.ps1 ui click <semantic-id>
-  .\calcx.ps1 ui back
-  .\calcx.ps1 -SelfTest
+  calcx '<latex>'
+  calcx engine calculate '<latex>'
+  calcx engine batch <json-file>
+  calcx app status|start|stop
+  calcx screen get|controls|find <semantic-id>
+  calcx formula get|set <latex>|clear
+  calcx settings get
+  calcx setup settings set <key> <value>
+  calcx scenario run <json-file> [-ContinueOnFailure]
+  calcx ui click <semantic-id>
+  calcx ui back
+  calcx -SelfTest
 
 Common options:
   -Mode standard|matrix|equation
@@ -172,7 +173,7 @@ try {
 
     if ($Command -eq 'engine') {
         if ($CommandArguments.Count -ne 2 -or $CommandArguments[0] -notin @('calculate', 'batch')) {
-            [Console]::Error.WriteLine("Usage: .\calcx.ps1 engine calculate '<latex>' | engine batch <json-file>")
+            [Console]::Error.WriteLine("Usage: calcx engine calculate '<latex>' | calcx engine batch <json-file>")
             exit 2
         }
         if ($CommandArguments[0] -eq 'batch') {
@@ -183,7 +184,7 @@ try {
 
     if ($Command -eq 'app') {
         if ($CommandArguments.Count -ne 1 -or $CommandArguments[0] -notin @('status', 'start', 'stop')) {
-            [Console]::Error.WriteLine('Usage: .\calcx.ps1 app status|start|stop')
+            [Console]::Error.WriteLine('Usage: calcx app status|start|stop')
             exit 2
         }
         exit (Invoke-UiCommand -UiCommand $CommandArguments[0])
@@ -191,7 +192,7 @@ try {
 
     if ($Command -eq 'screen') {
         if ($CommandArguments.Count -lt 1 -or $CommandArguments[0] -notin @('get', 'controls', 'find')) {
-            [Console]::Error.WriteLine('Usage: .\calcx.ps1 screen get|controls|find <semantic-id>')
+            [Console]::Error.WriteLine('Usage: calcx screen get|controls|find <semantic-id>')
             exit 2
         }
         if ($CommandArguments[0] -eq 'find') {
@@ -216,7 +217,7 @@ try {
         if ($CommandArguments.Count -eq 2 -and $CommandArguments[0] -eq 'click') {
             exit (Invoke-UiCommand -UiCommand 'click' -Target $CommandArguments[1])
         }
-        [Console]::Error.WriteLine('Usage: .\calcx.ps1 ui click <semantic-id> | ui back')
+        [Console]::Error.WriteLine('Usage: calcx ui click <semantic-id> | calcx ui back')
         exit 2
     }
 
@@ -230,13 +231,13 @@ try {
         if ($CommandArguments.Count -eq 2 -and $CommandArguments[0] -eq 'set') {
             exit (Invoke-FormulaCommand -FormulaCommand 'set' -Latex $CommandArguments[1])
         }
-        [Console]::Error.WriteLine('Usage: .\calcx.ps1 formula get|set <latex>|clear')
+        [Console]::Error.WriteLine('Usage: calcx formula get|set <latex>|clear')
         exit 2
     }
 
     if ($Command -eq 'settings') {
         if ($CommandArguments.Count -ne 1 -or $CommandArguments[0] -ne 'get') {
-            [Console]::Error.WriteLine('Usage: .\calcx.ps1 settings get')
+            [Console]::Error.WriteLine('Usage: calcx settings get')
             exit 2
         }
         exit (Invoke-UiCommand -UiCommand 'settings')
@@ -244,7 +245,7 @@ try {
 
     if ($Command -eq 'setup') {
         if ($CommandArguments.Count -ne 4 -or $CommandArguments[0] -ne 'settings' -or $CommandArguments[1] -ne 'set') {
-            [Console]::Error.WriteLine('Usage: .\calcx.ps1 setup settings set <key> <value>')
+            [Console]::Error.WriteLine('Usage: calcx setup settings set <key> <value>')
             exit 2
         }
         exit (Invoke-SetupSettingCommand -Setting $CommandArguments[2] -Value $CommandArguments[3])
@@ -252,7 +253,7 @@ try {
 
     if ($Command -eq 'scenario') {
         if ($CommandArguments.Count -ne 2 -or $CommandArguments[0] -ne 'run') {
-            [Console]::Error.WriteLine('Usage: .\calcx.ps1 scenario run <json-file> [-ContinueOnFailure]')
+            [Console]::Error.WriteLine('Usage: calcx scenario run <json-file> [-ContinueOnFailure]')
             exit 2
         }
         $forwardArguments = @{

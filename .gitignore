@@ -50,3 +50,7 @@ entry/src/main/ets/utils/ApiConfig.ets
 
 # Temp
 /temp/
+
+# CalculatorX CLI 构建产物
+/tools/calcx/.build/
+/tools/calcx/dist/

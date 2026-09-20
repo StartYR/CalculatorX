@@ -13,7 +13,7 @@
 
 ## 行为变化
 
-- 仓库根目录 `calcx.ps1` 提供相对路径短命令，保留旧单次计算入口兼容性。
+- `tools/calcx/runtime/calcx.ps1` 提供统一命令分派，并由可安装的 `calcx.exe` 启动。
 - 支持单次及批量计算、APP 启停、屏幕和控件读取、公式和设置读取、语义点击、返回、测试状态准备及场景执行。
 - 普通 UI 命令复用已经启动的 APP；只有公式和设置准备为同步真实状态而受控重启。
 - 真实点击按稳定 ID 查找当前控件，再根据 UI 树中的实时边界执行，不依赖截图、界面文字或硬编码坐标。
@@ -47,12 +47,12 @@
 
 ## 主要文件
 
-- `calcx.ps1`
-- `test/CalcXCli.Common.psm1`
-- `test/Invoke-CalcXUi.ps1`
-- `test/Invoke-CalcXFormula.ps1`
-- `test/Invoke-CalcXSetup.ps1`
-- `test/Invoke-CalcXScenario.ps1`
+- `tools/calcx/runtime/calcx.ps1`
+- `tools/calcx/runtime/CalcXCli.Common.psm1`
+- `tools/calcx/runtime/commands/Invoke-CalcXUi.ps1`
+- `tools/calcx/runtime/commands/Invoke-CalcXFormula.ps1`
+- `tools/calcx/runtime/commands/Invoke-CalcXSetup.ps1`
+- `tools/calcx/runtime/commands/Invoke-CalcXScenario.ps1`
 - `entry/src/main/ets/utils/SemanticIds.ets`
 - `entry/src/main/ets/pages/Index.ets`
 - `entry/src/main/ets/components/FormulaScreen.ets`

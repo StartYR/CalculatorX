@@ -15,7 +15,7 @@ param(
 Set-StrictMode -Version 3.0
 $ErrorActionPreference = 'Stop'
 
-Import-Module (Join-Path $PSScriptRoot 'CalcXCli.Common.psm1') -Force
+Import-Module (Join-Path (Split-Path -Parent $PSScriptRoot) 'CalcXCli.Common.psm1') -Force
 
 $resultPrefix = 'CALCX_TEST_RESULT:'
 $summaryPrefix = 'CALCX_TEST_BATCH_SUMMARY:'

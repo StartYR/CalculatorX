@@ -1,6 +1,6 @@
 # Windows 语义 CLI 自动化
 
-本文档说明如何在 Windows 上通过仓库根目录的 `calcx.ps1` 驱动 CalculatorX 真机测试。CLI 面向自动化回归、问题复现和 AI Agent；它不是正式应用面向普通用户的命令行功能，也不是追求界面全覆盖的通用自动化框架。
+本文档说明如何在 Windows 上通过 `calcx` 命令驱动 CalculatorX 真机测试。CLI 面向自动化回归、问题复现和 AI Agent；它不是正式应用面向普通用户的命令行功能，也不是追求界面全覆盖的通用自动化框架。
 
 CLI 的首要目标是省去重复的手工公式输入，以批量方式向真实计算链路提交 LaTeX 表达式并取得结构化结果，从而高效判断解析和计算逻辑是否正确。界面状态、语义点击、测试状态准备和 JSON 场景是为核心计算回归、必要的问题复现与少量关键交互提供的辅助能力，不与批量计算具有同等扩展优先级。
 
@@ -19,7 +19,8 @@ CLI 将操作分为三条互不冒充的路径：
 直接计算链路为：
 
 ```text
-calcx.ps1
+calcx.exe
+  -> runtime/calcx.ps1
   -> hdc shell aa test
   -> entry_test / CalculationTestAbility
   -> calculator.html / MathLive Compute Engine
@@ -36,10 +37,11 @@ calcx.ps1
 ## 2. 前置条件
 
 - Windows PowerShell 7。
+- 构建启动器需要 CMake、Ninja 和位于 `PATH` 中的 MinGW g++。
 - 已安装 DevEco Studio、HarmonyOS SDK 和 HDC。
 - 设备已连接并授权调试，能出现在 `hdc list targets` 中。
 - 设备上安装了同一次构建产生且签名匹配的 debug 主应用 HAP 和 `entry-ohosTest-signed.hap`。
-- 在仓库根目录执行命令，以便始终使用相对路径 `./calcx.ps1`。
+- 已按下节构建并安装 `calcx`；仅使用仓库内便携版本时，可直接运行 `./tools/calcx/dist/calcx.exe`。
 
 先检查工具和设备：
 
@@ -50,7 +52,33 @@ hdc list targets
 
 调用器依次从 `PATH`、`DEVECO_SDK_HOME`、`HARMONYOS_SDK_HOME`、DevEco 相关环境变量和 Windows 安装信息查找 HDC。仍无法找到时使用 `-HdcPath`；多台设备并存时使用 `-DeviceId`。
 
-## 3. 构建与安装
+## 3. CLI 构建与安装
+
+`calcx.exe` 是轻量 Windows 启动器，实际命令分派仍由同目录下的 `runtime/calcx.ps1` 完成。启动器按自身位置定位运行时，不保存仓库绝对路径；安装后可以从任意工作目录调用。
+
+首次使用或修改 CLI 后，在仓库根目录构建并安装：
+
+```powershell
+.\tools\calcx\scripts\Build-CalcXLauncher.ps1 -Clean
+.\tools\calcx\scripts\Install-CalcXCli.ps1
+```
+
+安装脚本默认复制到 `%LOCALAPPDATA%\CalculatorX\CLI`，并把该目录加入当前用户的 `PATH`。打开新终端后验证：
+
+```powershell
+calcx -SelfTest
+calcx help
+```
+
+更新源码后重新执行构建和安装即可覆盖旧版本。卸载命令为：
+
+```powershell
+.\tools\calcx\scripts\Uninstall-CalcXCli.ps1
+```
+
+如只想在隔离目录验证安装内容而不修改用户 `PATH`，安装和卸载脚本均可添加 `-SkipPathUpdate` 与自定义 `-InstallRoot`。构建产物位于 `tools/calcx/dist/`，不会纳入 Git。
+
+## 4. 应用构建与安装
 
 可在 DevEco Studio 中分别构建 `entry/default/debug` 和 `entry/ohosTest/debug`。从终端构建时，将 `$devEcoHome` 指向本机 DevEco Studio 安装目录：
 
@@ -94,26 +122,26 @@ hdc -t $device install -r `
 
 修改正式 ArkTS、资源、`EngineService` 或原生引擎后应重新构建并安装两者。只修改 `ohosTest` 时通常只需重建并覆盖安装测试 HAP。构建模式会复用同一正式 HAP 路径，因此 release 构建后若要继续运行 CLI，应重新构建并安装 debug 主包。
 
-## 4. 最短调用方式
+## 5. 最短调用方式
 
 在仓库根目录直接输入 LaTeX：
 
 ```powershell
-.\calcx.ps1 '1+1'
+calcx '1+1'
 ```
 
 等价的完整写法：
 
 ```powershell
-.\calcx.ps1 engine calculate '1+1'
+calcx engine calculate '1+1'
 ```
 
 分数、角度制和精度：
 
 ```powershell
-.\calcx.ps1 engine calculate '\frac{1}{2}+\frac{1}{3}'
-.\calcx.ps1 engine calculate '\sin\left(30\right)' -Angle degree
-.\calcx.ps1 engine calculate '1\div3' -Precision 4
+calcx engine calculate '\frac{1}{2}+\frac{1}{3}'
+calcx engine calculate '\sin\left(30\right)' -Angle degree
+calcx engine calculate '1\div3' -Precision 4
 ```
 
 公共选项：
@@ -127,18 +155,18 @@ hdc -t $device install -r `
 | `-HdcPath` | 自动查找 | HDC 可执行文件路径 |
 | `-TimeoutSeconds` | 依命令而定 | 允许范围通常为 5 至 300 秒 |
 
-## 5. 应用生命周期与状态读取
+## 6. 应用生命周期与状态读取
 
 ```powershell
-.\calcx.ps1 app status
-.\calcx.ps1 app start
-.\calcx.ps1 app stop
+calcx app status
+calcx app start
+calcx app stop
 
-.\calcx.ps1 screen get
-.\calcx.ps1 screen controls
-.\calcx.ps1 screen find calc.key.equals
-.\calcx.ps1 formula get
-.\calcx.ps1 settings get
+calcx screen get
+calcx screen controls
+calcx screen find calc.key.equals
+calcx formula get
+calcx settings get
 ```
 
 `app start` 启动真实 `EntryAbility`。随后执行 `screen`、`formula get`、`settings get`、`ui click` 或 `ui back` 不会主动关闭或重启 APP，可以连续发送命令。每条命令会重新导出当前 UI 树，避免复用过期页面状态。
@@ -147,15 +175,15 @@ hdc -t $device install -r `
 
 公式和设置机器状态只在 debug 主包中写入 `accessibilityDescription`。release 下这些描述为空，避免屏幕阅读器朗读机器 JSON；普通无障碍文本和稳定控件 ID 不受影响。
 
-## 6. 语义点击与导航
+## 7. 语义点击与导航
 
 ```powershell
-.\calcx.ps1 ui click nav.sidebar.open
-.\calcx.ps1 ui click module.scientific
-.\calcx.ps1 ui click calc.key.1
-.\calcx.ps1 ui click calc.key.plus
-.\calcx.ps1 ui click calc.key.equals
-.\calcx.ps1 ui back
+calcx ui click nav.sidebar.open
+calcx ui click module.scientific
+calcx ui click calc.key.1
+calcx ui click calc.key.plus
+calcx ui click calc.key.equals
+calcx ui back
 ```
 
 首版稳定 ID 包括：
@@ -172,13 +200,13 @@ hdc -t $device install -r `
 
 不支持长按滑动气泡、拖拽、MathLive 光标精细控制、滑块与复杂选择器的完整操作、系统权限弹窗、外部浏览器、图像曲线正确性判断或像素级视觉验证。这些场景除非将来成为高频、稳定且直接影响核心计算正确性的回归路径，否则不应仅为了提高 CLI 覆盖率而实现。
 
-## 7. 公式与设置准备
+## 8. 公式与设置准备
 
 直接把完整 LaTeX 放入真实主界面：
 
 ```powershell
-.\calcx.ps1 formula set '\frac{1}{2}+\frac{1}{3}'
-.\calcx.ps1 formula clear
+calcx formula set '\frac{1}{2}+\frac{1}{3}'
+calcx formula clear
 ```
 
 `formula set/clear` 属于 `setup` 路径。它会先停止 APP，通过测试包写入一次性公式记录，再启动真实 `EntryAbility`；正式 UI 消费后立即删除该记录，并从 UI 树核对实际输入。因此这两条命令会有一次受控重启，不能用来证明逐键输入行为正确。
@@ -186,9 +214,9 @@ hdc -t $device install -r `
 直接准备白名单设置：
 
 ```powershell
-.\calcx.ps1 setup settings set angle degree
-.\calcx.ps1 setup settings set decimal-precision 4
-.\calcx.ps1 setup settings set haptic-feedback false
+calcx setup settings set angle degree
+calcx setup settings set decimal-precision 4
+calcx setup settings set haptic-feedback false
 ```
 
 支持的设置和值：
@@ -207,12 +235,12 @@ hdc -t $device install -r `
 
 设置准备同样会停止并重启 APP。测试模块通过 `AbilityMonitor` 取得新创建的正式 `EntryAbility`，使用它的真实 Context 写入偏好；不能用 `ohosTest` 自己的 Context，因为两个模块的 Preferences 空间相互隔离。命令成功后仍应使用 `settings get` 或实际设置页面核对。
 
-## 8. 批量计算
+## 9. 批量计算
 
-默认用例文件位于 `test/cases/engine-smoke.json`：
+默认用例文件位于 `tools/calcx/tests/cases/engine-smoke.json`：
 
 ```powershell
-.\calcx.ps1 engine batch .\test\cases\engine-smoke.json
+calcx engine batch .\tools\calcx\tests\cases\engine-smoke.json
 ```
 
 格式：
@@ -229,13 +257,13 @@ hdc -t $device install -r `
 
 批量模式在一次测试会话和一次 WebView 初始化中顺序执行项目。每项具有独立 `requestId` 和结果，单项失败不会阻止其余项目，最终汇总决定进程退出码。
 
-## 9. JSON 场景
+## 10. JSON 场景
 
 仓库提供两个真机冒烟场景：
 
 ```powershell
-.\calcx.ps1 scenario run .\test\scenarios\navigation-smoke.json
-.\calcx.ps1 scenario run .\test\scenarios\calculation-ui-smoke.json
+calcx scenario run .\tools\calcx\tests\scenarios\navigation-smoke.json
+calcx scenario run .\tools\calcx\tests\scenarios\calculation-ui-smoke.json
 ```
 
 场景文件支持 `app.start`、`app.status`、`screen.get`、`screen.controls`、`screen.find`、`formula.get`、`formula.set`、`formula.clear`、`settings.get`、`ui.click`、`ui.back`、`engine.calculate`、`setup.settings.set`、`assert` 和 `wait`。顶层 `variables` 可通过 `${name}` 插入字符串。
@@ -259,7 +287,7 @@ hdc -t $device install -r `
 
 场景中的普通读取和点击复用已经启动的 APP；只有 `formula set/clear` 和 `setup settings set` 为同步正式状态而有意重启。
 
-## 10. 输出、退出码与 CI
+## 11. 输出、退出码与 CI
 
 成功时标准输出为紧凑 JSON 或 NDJSON，诊断信息写入标准错误。所有结构化响应包含协议版本、请求 ID、`ok` 和执行路径。
 
@@ -282,10 +310,10 @@ Hypium 用例失败时，部分系统上的 `hdc shell aa test` 仍可能返回�
 仅验证 Windows 端参数、JSON、UTF-8 和 URL-safe Base64：
 
 ```powershell
-.\calcx.ps1 -SelfTest
+calcx -SelfTest
 ```
 
-## 11. debug 与 release 隔离
+## 12. debug 与 release 隔离
 
 CLI 控制能力依赖单独安装的 `entry-ohosTest-signed.hap`。发布时只分发 `entry@default/release` 的正式 HAP，不分发测试 HAP。
 
@@ -313,11 +341,11 @@ CLI 控制能力依赖单独安装的 `entry-ohosTest-signed.hap`。发布时只
 
 正式字节码不应包含 `OpenHarmonyTestRunner`、`CALCX_TEST_RESULT`、`calcxRequest` 等测试协议标记。测试 HAP 则应包含这些标记和真实 `libentry.so` 引用，同时不包含 `Libentry.mock`、`NativeMock` 或 `src/mock`，以此作为扫描正对照。
 
-## 12. 常见问题
+## 13. 常见问题
 
 ### UI 命令提示 APP 不在当前组件树
 
-先执行 `./calcx.ps1 app start`。UI 命令不会为了隐藏状态问题而自动重启 APP。
+先执行 `calcx app start`。UI 命令不会为了隐藏状态问题而自动重启 APP。
 
 ### 公式或设置字段显示 `UNAVAILABLE`
 
@@ -326,6 +354,10 @@ CLI 控制能力依赖单独安装的 `entry-ohosTest-signed.hap`。发布时只
 ### 没有返回 `CALCX_TEST_RESULT`
 
 检查主应用和测试 HAP 是否都已安装，以及 bundle、测试模块和 TestRunner 是否仍分别为 `com.startyi.calcx`、`entry_test` 和 `/ets/testrunner/OpenHarmonyTestRunner`。
+
+### 安装测试 HAP 时提示版本降级
+
+不要只判断 `hdc install` 的进程退出码；部分安装失败仍可能返回 `0`，必须同时检查输出中是否出现 `install bundle successfully` 或 `error`。如果提示 `install version downgrade`，重新构建当前源码的 `entry@ohosTest/debug`，确保它与设备上的主应用版本一致，再覆盖安装。
 
 ### 请求参数在测试端为空
 
@@ -339,28 +371,29 @@ CLI 控制能力依赖单独安装的 `entry-ohosTest-signed.hap`。发布时只
 
 先比较 `inputLatex`、`normalizedLatex`、`mathJson` 和配置：最终 LaTeX 不同通常属于按键映射或编辑器状态差异；MathJSON 与配置相同但结果不同，应检查主包与测试 HAP 是否来自同一次构建，以及测试 HAP 是否误用了原生 mock。
 
-## 13. 维护与验证清单
+## 14. 维护与验证清单
 
 主要实现位置：
 
-- 根入口：`calcx.ps1`。
-- 公共 HDC、协议和 UI 树解析：`test/CalcXCli.Common.psm1`。
-- 单次/批量计算：`test/Invoke-CalcXCalculation.ps1`、`test/Invoke-CalcXBatch.ps1`。
-- UI 与准备命令：`test/Invoke-CalcXUi.ps1`、`test/Invoke-CalcXFormula.ps1`、`test/Invoke-CalcXSetup.ps1`。
-- 场景执行：`test/Invoke-CalcXScenario.ps1`。
+- Windows 启动器：`tools/calcx/launcher/`。
+- 构建、安装与卸载脚本：`tools/calcx/scripts/`。
+- PowerShell 入口：`tools/calcx/runtime/calcx.ps1`。
+- 公共 HDC、协议和 UI 树解析：`tools/calcx/runtime/CalcXCli.Common.psm1`。
+- 具体命令实现：`tools/calcx/runtime/commands/`。
+- 批量用例与场景：`tools/calcx/tests/`。
 - 设备协议：`entry/src/ohosTest/ets/test/CalculationCli.test.ets`、`entry/src/ohosTest/ets/utils/CalculationTestBridge.ets`。
 - 稳定 ID：`entry/src/main/ets/utils/SemanticIds.ets` 及各 UI 组件。
 - debug 状态描述：`entry/src/main/ets/pages/Index.ets`、`entry/src/main/ets/components/FormulaScreen.ets`。
 
 修改后按受影响范围验证：
 
-1. 所有 PowerShell 文件执行 AST 解析和 `./calcx.ps1 -SelfTest`。
+1. 所有 PowerShell 文件执行 AST 解析，并通过构建后的 `calcx.exe -SelfTest`。
 2. 修改计算协议、MathLive 转换、`EngineService` 或原生引擎时，优先运行引擎批量用例；这也是 CLI 最核心的回归入口。
 3. 只有修改公式准备、语义 ID、页面导航或其他 UI 辅助能力时，才运行对应的 UI 场景，并抽样真实逐键输入与 `engine` 结果对照。
 4. 需要设备验证时，构建并安装 `entry@default/debug` 与 `entry@ohosTest/debug`。
 5. 修改发布边界时，重建 `entry@default/release` 并执行 HAP 隔离检查。
 
-## 14. 已验证基线
+## 15. 已验证基线
 
 2026-09-16 的真机基线：
 
@@ -374,5 +407,7 @@ CLI 控制能力依赖单独安装的 `entry-ohosTest-signed.hap`。发布时只
 - release 主 HAP 为 `debug=false`、`buildMode=release`，只包含正式 Ability，未命中测试协议标记。
 - release UI 树不暴露公式/设置机器 JSON；恢复 debug 主包后完整状态重新可见。
 - 未自动验证长按滑动、MathLive 光标、图像曲线、系统弹窗、浏览器或视觉表现，这些属于明确排除项。
+
+2026-09-20 完成 `calcx.exe` 与 `tools/calcx/` 迁移后再次验证：启动器本地自检通过；真机单次 `1+1`、引擎批量 4/4、导航场景 5/5、公式计算场景 6/6 通过；真实语义点击 `1 → + → 1 → =` 的界面结果仍为 `2`。
 
 [返回项目 README](../README.md)
