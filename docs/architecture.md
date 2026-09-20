@@ -117,7 +117,7 @@ Preferences / RDB 持久化
 | 汇率换算 | 已实现 | `exchange/rates/ExchangeRate.ets` | HTTP/缓存 → ArkTS 交叉换算 |
 | 统计分析 | 开发中 | `StatisticsCalc.ets` | 占位组件 |
 | 单位转换 | 开发中 | `UnitConverter.ets` | 占位组件 |
-| 进制转换 | 开发中 | `exchange/BaseConverter.ets` | 占位组件 |
+| 进制转换 | 开发中 | `exchange/base/BaseConverter.ets` | 占位组件 |
 
 模块的键盘、共享 UI 和交互机制详见 [模块与 UI](architecture/modules-and-ui.md)。
 

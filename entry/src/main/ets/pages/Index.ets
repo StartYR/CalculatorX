@@ -27,7 +27,7 @@ import { GraphingCalc } from '../components/graphing/GraphingCalc';
 import { EquationSolver } from '../components/EquationSolver';
 import { StatisticsCalc } from '../components/StatisticsCalc';
 import { UnitConverter } from '../components/UnitConverter';
-import { BaseConverter } from '../components/exchange/BaseConverter';
+import { BaseConverter } from '../components/exchange/base/BaseConverter';
 import { ExchangeRate } from '../components/exchange/rates/ExchangeRate';
 
 interface IndexSemanticSettingsState {

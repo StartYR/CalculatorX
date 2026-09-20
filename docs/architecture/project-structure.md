@@ -87,7 +87,8 @@ entry/src/main/                   # 📦 主 HAP 模块源码
 │   │   │   └── GraphingTypes.ets         # FunctionType 与 GraphFunctionItem 类型
 │   │   │
 │   │   └── exchange/                 # 🔄 转换类插件
-│   │       ├── BaseConverter.ets         # 进制转换插件（占位，开发中）
+│   │       ├── base/                     # 💻 进制转换子系统
+│   │       │   └── BaseConverter.ets         # 进制转换插件（占位，开发中）
 │   │       └── rates/                    # 💱 汇率换算子系统
 │   │           ├── ExchangeRate.ets          # 主控制器：交叉换算、联网刷新、缓存、列表增删排序
 │   │           ├── ExchangeKeyboard.ets      # 汇率专属数字键盘：金额、AC、退格、确定与收起
