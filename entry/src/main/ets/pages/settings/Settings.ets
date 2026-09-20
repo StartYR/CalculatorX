@@ -603,6 +603,25 @@ export struct Settings {
 
               ItemDivider()
 
+              // 反馈与建议
+              MenuButton({
+                icon: $r('sys.symbol.envelope'),
+                title: '反馈与建议',
+                onClickAction: () => {
+                  Logger.info('点击：反馈与建议');
+                  router.pushUrl({
+                    url: RoutePath.DOC_VIEWER,
+                    params: {
+                      title: '反馈与建议',
+                      url: 'https://calcx.startyi.com/feedback',
+                      enableDomStorage: 'true'
+                    }
+                  });
+                }
+              })
+
+              ItemDivider()
+
               // 隐私政策
               MenuButton({
                 icon: $r('sys.symbol.private_browsing_mode'),

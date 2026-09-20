@@ -20,6 +20,7 @@ struct DocViewer {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @State pageTitle: string = '加载中...';
   @State pageUrl: string = 'https://calcx.startyi.com';
+  @State enableDomStorage: boolean = false;
 
   private scrollerForContent: Scroller = new Scroller(); // 创建滚动控制器
 
@@ -31,6 +32,7 @@ struct DocViewer {
       // if (params.title) this.pageTitle = params.title;
       if (params.title) this.pageTitle = '';
       if (params.url) this.pageUrl = params.url;
+      this.enableDomStorage = params.enableDomStorage === 'true';
     }
   }
 
@@ -43,6 +45,8 @@ struct DocViewer {
           .height('100%')
           .padding({ bottom: this.navBarHeight })
           .darkMode(WebDarkMode.Auto)
+          .javaScriptAccess(true)
+          .domStorageAccess(this.enableDomStorage)
       }
       .scrollable(ScrollDirection.Vertical)
       .scrollBar(BarState.Off)
