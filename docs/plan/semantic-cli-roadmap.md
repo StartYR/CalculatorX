@@ -29,7 +29,7 @@
 
 #### 命令入口
 
-- `tools/calcx/` 提供可构建、可安装的 `calcx.exe` 入口与 PowerShell 运行时。
+- 仓库根目录提供纳入 Git 的 `calcx.exe`，实际 PowerShell 运行时位于 `tools/calcx/`。
 - 使用 `$PSScriptRoot` 定位仓库文件，不写入机器专属项目绝对路径。
 - 保留单次 LaTeX 作为首个位置参数的既有调用兼容性。
 - 标准输出保持机器可解析，诊断信息写入标准错误。
@@ -113,9 +113,9 @@ CLI 对外暴露三类命令，输出中必须标明 `executionPath`：
 例如：
 
 ```powershell
-calcx engine calculate '1+1'
-calcx setup settings set angle degree
-calcx ui click settings.angle.degree
+.\calcx engine calculate '1+1'
+.\calcx setup settings set angle degree
+.\calcx ui click settings.angle.degree
 ```
 
 `setup` 成功只能证明测试环境被正确准备，不能证明对应设置控件能够显示和响应。需要验证 UI 时必须使用 `ui` 路径。
@@ -184,9 +184,9 @@ CLI 不维护第二套计算、设置或页面规则。所有实际行为继续�
 ### 4.1 应用生命周期
 
 ```powershell
-calcx app status
-calcx app start
-calcx app stop
+.\calcx app status
+.\calcx app start
+.\calcx app stop
 ```
 
 `app start` 应启动真实主界面，而不是仅启动独立计算测试页。重复执行时应识别 APP 已运行，避免不必要的重新启动。
@@ -194,11 +194,11 @@ calcx app stop
 ### 4.2 屏幕与状态
 
 ```powershell
-calcx screen get
-calcx screen controls
-calcx screen find calc.key.equals
-calcx settings get
-calcx formula get
+.\calcx screen get
+.\calcx screen controls
+.\calcx screen find calc.key.equals
+.\calcx settings get
+.\calcx formula get
 ```
 
 建议的 `screen get` 输出：
@@ -231,12 +231,12 @@ calcx formula get
 ### 4.3 普通操作
 
 ```powershell
-calcx ui click nav.sidebar.open
-calcx ui click module.scientific
-calcx ui click calc.key.1
-calcx ui click calc.key.plus
-calcx ui click calc.key.equals
-calcx ui back
+.\calcx ui click nav.sidebar.open
+.\calcx ui click module.scientific
+.\calcx ui click calc.key.1
+.\calcx ui click calc.key.plus
+.\calcx ui click calc.key.equals
+.\calcx ui back
 ```
 
 点击命令必须：
@@ -250,10 +250,10 @@ calcx ui back
 ### 4.4 公式与计算
 
 ```powershell
-calcx formula set '\frac{1}{2}+\frac{1}{3}'
-calcx formula clear
-calcx engine calculate '1+1'
-calcx engine batch .\tools\calcx\tests\cases\engine-smoke.json
+.\calcx formula set '\frac{1}{2}+\frac{1}{3}'
+.\calcx formula clear
+.\calcx engine calculate '1+1'
+.\calcx engine batch .\tools\calcx\tests\cases\engine-smoke.json
 ```
 
 `formula set` 用于直接准备真实界面的公式输入区；`engine calculate` 用于绕过 UI 的高频计算回归。两者必须使用不同命令和 `executionPath`。
@@ -261,9 +261,9 @@ calcx engine batch .\tools\calcx\tests\cases\engine-smoke.json
 ### 4.5 设置
 
 ```powershell
-calcx settings get angle
-calcx setup settings set angle degree
-calcx ui click settings.angle.degree
+.\calcx settings get angle
+.\calcx setup settings set angle degree
+.\calcx ui click settings.angle.degree
 ```
 
 直接设置接口只允许预定义键和值，禁止通过 CLI 写入任意 Preferences 键。
@@ -271,9 +271,9 @@ calcx ui click settings.angle.degree
 ### 4.6 等待与断言
 
 ```powershell
-calcx wait screen.module scientific -TimeoutSeconds 10
-calcx assert formula.resultLatex '2'
-calcx assert control.exists calc.key.equals
+.\calcx wait screen.module scientific -TimeoutSeconds 10
+.\calcx assert formula.resultLatex '2'
+.\calcx assert control.exists calc.key.equals
 ```
 
 断言失败必须返回非零退出码，并在 JSON 中报告期望值、实际值和数据来源。
@@ -281,7 +281,7 @@ calcx assert control.exists calc.key.equals
 ### 4.7 场景文件
 
 ```powershell
-calcx scenario run .\tools\calcx\tests\scenarios\scientific-basic.json
+.\calcx scenario run .\tools\calcx\tests\scenarios\scientific-basic.json
 ```
 
 场景示例：
@@ -402,7 +402,7 @@ calcx scenario run .\tools\calcx\tests\scenarios\scientific-basic.json
 
 步骤：
 
-1. 新增使用启动器自身位置定位 `runtime/calcx.ps1` 的 `calcx.exe`。
+1. 新增使用启动器自身位置定位 `tools/calcx/runtime/calcx.ps1` 的根目录 `calcx.exe`。
 2. 建立统一命令解析、请求 ID、协议版本、超时和退出码。
 3. 保留旧计算脚本和位置参数兼容性。
 4. 统一 HDC、设备选择、Base64 和 JSON 处理。
@@ -596,7 +596,7 @@ calcx scenario run .\tools\calcx\tests\scenarios\scientific-basic.json
 | 阶段 | 实施结果 | 验证结果 |
 | --- | --- | --- |
 | 0 设备能力探测 | 使用 `uitest dumpLayout` 读取组件树，按实时控件边界执行点击 | 页面、模块和普通控件可在不截图的情况下识别；真实点击有效 |
-| 1 便携入口和协议 | 新增 `calcx.exe` 与 `tools/calcx/runtime/`，公共逻辑按启动器位置定位 | 本地自检通过，仓库文件未写入项目绝对路径 |
+| 1 便携入口和协议 | 新增根目录 `calcx.exe` 与 `tools/calcx/runtime/`，公共逻辑按启动器位置定位 | 本地自检通过，仓库文件未写入项目绝对路径 |
 | 2 批量计算 | 新增批量请求和 `engine-smoke.json` | 同一测试会话 4/4 通过 |
 | 3 稳定语义 ID | 为页面、公式、导航、模块、设置和普通按键补充稳定 ID | UI 树可唯一查找并点击目标 |
 | 4 只读屏幕快照 | 实现 APP、屏幕、控件、公式和设置读取 | debug 真机返回页面、模块、公式和设置状态 |
@@ -613,7 +613,7 @@ calcx scenario run .\tools\calcx\tests\scenarios\scientific-basic.json
 
 满足以下条件后，本计划视为完成：
 
-- 任意合作者可从任意克隆路径构建并安装 `calcx`，安装后可在任意工作目录运行。
+- 任意合作者克隆仓库后，无需安装或修改 `PATH`，即可在根目录运行 `.\calcx`。
 - 现有单次计算 CLI 保持兼容，批量计算可复用一次测试会话。
 - CLI 能稳定识别 CalculatorX 当前页面、模块、输入、结果、设置和核心控件。
 - 普通核心控件可按语义 ID 点击，不依赖截图和硬编码坐标。

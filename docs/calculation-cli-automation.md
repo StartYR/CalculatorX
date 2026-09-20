@@ -1,6 +1,6 @@
 # Windows 语义 CLI 自动化
 
-本文档说明如何在 Windows 上通过 `calcx` 命令驱动 CalculatorX 真机测试。CLI 面向自动化回归、问题复现和 AI Agent；它不是正式应用面向普通用户的命令行功能，也不是追求界面全覆盖的通用自动化框架。
+本文档说明如何在 Windows PowerShell 7 中从仓库根目录通过 `.\calcx` 驱动 CalculatorX 真机测试。CLI 面向自动化回归、问题复现和 AI Agent；它不是正式应用面向普通用户的命令行功能，也不是追求界面全覆盖的通用自动化框架。
 
 CLI 的首要目标是省去重复的手工公式输入，以批量方式向真实计算链路提交 LaTeX 表达式并取得结构化结果，从而高效判断解析和计算逻辑是否正确。界面状态、语义点击、测试状态准备和 JSON 场景是为核心计算回归、必要的问题复现与少量关键交互提供的辅助能力，不与批量计算具有同等扩展优先级。
 
@@ -19,8 +19,8 @@ CLI 将操作分为三条互不冒充的路径：
 直接计算链路为：
 
 ```text
-calcx.exe
-  -> runtime/calcx.ps1
+仓库根目录 calcx.exe
+  -> tools/calcx/runtime/calcx.ps1
   -> hdc shell aa test
   -> entry_test / CalculationTestAbility
   -> calculator.html / MathLive Compute Engine
@@ -37,11 +37,10 @@ calcx.exe
 ## 2. 前置条件
 
 - Windows PowerShell 7。
-- 构建启动器需要 CMake、Ninja 和位于 `PATH` 中的 MinGW g++。
 - 已安装 DevEco Studio、HarmonyOS SDK 和 HDC。
 - 设备已连接并授权调试，能出现在 `hdc list targets` 中。
 - 设备上安装了同一次构建产生且签名匹配的 debug 主应用 HAP 和 `entry-ohosTest-signed.hap`。
-- 已按下节构建并安装 `calcx`；仅使用仓库内便携版本时，可直接运行 `./tools/calcx/dist/calcx.exe`。
+- 在仓库根目录执行命令；仓库已经包含 `calcx.exe`，无需安装或修改用户 `PATH`。
 
 先检查工具和设备：
 
@@ -52,31 +51,26 @@ hdc list targets
 
 调用器依次从 `PATH`、`DEVECO_SDK_HOME`、`HARMONYOS_SDK_HOME`、DevEco 相关环境变量和 Windows 安装信息查找 HDC。仍无法找到时使用 `-HdcPath`；多台设备并存时使用 `-DeviceId`。
 
-## 3. CLI 构建与安装
+## 3. CLI 入口与重新构建
 
-`calcx.exe` 是轻量 Windows 启动器，实际命令分派仍由同目录下的 `runtime/calcx.ps1` 完成。启动器按自身位置定位运行时，不保存仓库绝对路径；安装后可以从任意工作目录调用。
+根目录的 `calcx.exe` 是纳入 Git 的轻量 Windows 启动器，实际命令分派仍由 `tools/calcx/runtime/calcx.ps1` 完成。启动器按自身位置定位运行时，不保存仓库绝对路径；其他开发者克隆仓库后无需执行安装脚本。
 
-首次使用或修改 CLI 后，在仓库根目录构建并安装：
+PowerShell 不会默认从当前目录查找命令，因此使用：
+
+```powershell
+.\calcx -SelfTest
+.\calcx help
+```
+
+CMD 会自动查找当前目录，可以使用 `calcx "1+1"`，但不推荐将 CMD 用于复杂 LaTeX。CMD 会预先解释 `%`、`^`、`&`、`|`、`<`、`>` 和引号等字符，启动器无法恢复已经被 Shell 改写的参数；本文档统一使用 PowerShell 示例。
+
+修改 PowerShell 命令、协议或场景时不需要重新编译。只有修改 `tools/calcx/launcher/` 下的启动器源码时，才需要准备 CMake、Ninja 和位于 `PATH` 中的 MinGW g++，然后在仓库根目录执行：
 
 ```powershell
 .\tools\calcx\scripts\Build-CalcXLauncher.ps1 -Clean
-.\tools\calcx\scripts\Install-CalcXCli.ps1
 ```
 
-安装脚本默认复制到 `%LOCALAPPDATA%\CalculatorX\CLI`，并把该目录加入当前用户的 `PATH`。打开新终端后验证：
-
-```powershell
-calcx -SelfTest
-calcx help
-```
-
-更新源码后重新执行构建和安装即可覆盖旧版本。卸载命令为：
-
-```powershell
-.\tools\calcx\scripts\Uninstall-CalcXCli.ps1
-```
-
-如只想在隔离目录验证安装内容而不修改用户 `PATH`，安装和卸载脚本均可添加 `-SkipPathUpdate` 与自定义 `-InstallRoot`。构建产物位于 `tools/calcx/dist/`，不会纳入 Git。
+构建脚本会覆盖仓库根目录的 `calcx.exe`；中间产物位于被 Git 忽略的 `tools/calcx/.build/`。重新生成启动器后应提交新的根目录 EXE，并重新执行本地自检和真机回归。
 
 ## 4. 应用构建与安装
 
@@ -127,21 +121,21 @@ hdc -t $device install -r `
 在仓库根目录直接输入 LaTeX：
 
 ```powershell
-calcx '1+1'
+.\calcx '1+1'
 ```
 
 等价的完整写法：
 
 ```powershell
-calcx engine calculate '1+1'
+.\calcx engine calculate '1+1'
 ```
 
 分数、角度制和精度：
 
 ```powershell
-calcx engine calculate '\frac{1}{2}+\frac{1}{3}'
-calcx engine calculate '\sin\left(30\right)' -Angle degree
-calcx engine calculate '1\div3' -Precision 4
+.\calcx engine calculate '\frac{1}{2}+\frac{1}{3}'
+.\calcx engine calculate '\sin\left(30\right)' -Angle degree
+.\calcx engine calculate '1\div3' -Precision 4
 ```
 
 公共选项：
@@ -158,15 +152,15 @@ calcx engine calculate '1\div3' -Precision 4
 ## 6. 应用生命周期与状态读取
 
 ```powershell
-calcx app status
-calcx app start
-calcx app stop
+.\calcx app status
+.\calcx app start
+.\calcx app stop
 
-calcx screen get
-calcx screen controls
-calcx screen find calc.key.equals
-calcx formula get
-calcx settings get
+.\calcx screen get
+.\calcx screen controls
+.\calcx screen find calc.key.equals
+.\calcx formula get
+.\calcx settings get
 ```
 
 `app start` 启动真实 `EntryAbility`。随后执行 `screen`、`formula get`、`settings get`、`ui click` 或 `ui back` 不会主动关闭或重启 APP，可以连续发送命令。每条命令会重新导出当前 UI 树，避免复用过期页面状态。
@@ -178,12 +172,12 @@ calcx settings get
 ## 7. 语义点击与导航
 
 ```powershell
-calcx ui click nav.sidebar.open
-calcx ui click module.scientific
-calcx ui click calc.key.1
-calcx ui click calc.key.plus
-calcx ui click calc.key.equals
-calcx ui back
+.\calcx ui click nav.sidebar.open
+.\calcx ui click module.scientific
+.\calcx ui click calc.key.1
+.\calcx ui click calc.key.plus
+.\calcx ui click calc.key.equals
+.\calcx ui back
 ```
 
 首版稳定 ID 包括：
@@ -205,8 +199,8 @@ calcx ui back
 直接把完整 LaTeX 放入真实主界面：
 
 ```powershell
-calcx formula set '\frac{1}{2}+\frac{1}{3}'
-calcx formula clear
+.\calcx formula set '\frac{1}{2}+\frac{1}{3}'
+.\calcx formula clear
 ```
 
 `formula set/clear` 属于 `setup` 路径。它会先停止 APP，通过测试包写入一次性公式记录，再启动真实 `EntryAbility`；正式 UI 消费后立即删除该记录，并从 UI 树核对实际输入。因此这两条命令会有一次受控重启，不能用来证明逐键输入行为正确。
@@ -214,9 +208,9 @@ calcx formula clear
 直接准备白名单设置：
 
 ```powershell
-calcx setup settings set angle degree
-calcx setup settings set decimal-precision 4
-calcx setup settings set haptic-feedback false
+.\calcx setup settings set angle degree
+.\calcx setup settings set decimal-precision 4
+.\calcx setup settings set haptic-feedback false
 ```
 
 支持的设置和值：
@@ -240,7 +234,7 @@ calcx setup settings set haptic-feedback false
 默认用例文件位于 `tools/calcx/tests/cases/engine-smoke.json`：
 
 ```powershell
-calcx engine batch .\tools\calcx\tests\cases\engine-smoke.json
+.\calcx engine batch .\tools\calcx\tests\cases\engine-smoke.json
 ```
 
 格式：
@@ -262,8 +256,8 @@ calcx engine batch .\tools\calcx\tests\cases\engine-smoke.json
 仓库提供两个真机冒烟场景：
 
 ```powershell
-calcx scenario run .\tools\calcx\tests\scenarios\navigation-smoke.json
-calcx scenario run .\tools\calcx\tests\scenarios\calculation-ui-smoke.json
+.\calcx scenario run .\tools\calcx\tests\scenarios\navigation-smoke.json
+.\calcx scenario run .\tools\calcx\tests\scenarios\calculation-ui-smoke.json
 ```
 
 场景文件支持 `app.start`、`app.status`、`screen.get`、`screen.controls`、`screen.find`、`formula.get`、`formula.set`、`formula.clear`、`settings.get`、`ui.click`、`ui.back`、`engine.calculate`、`setup.settings.set`、`assert` 和 `wait`。顶层 `variables` 可通过 `${name}` 插入字符串。
@@ -310,7 +304,7 @@ Hypium 用例失败时，部分系统上的 `hdc shell aa test` 仍可能返回�
 仅验证 Windows 端参数、JSON、UTF-8 和 URL-safe Base64：
 
 ```powershell
-calcx -SelfTest
+.\calcx -SelfTest
 ```
 
 ## 12. debug 与 release 隔离
@@ -345,7 +339,7 @@ CLI 控制能力依赖单独安装的 `entry-ohosTest-signed.hap`。发布时只
 
 ### UI 命令提示 APP 不在当前组件树
 
-先执行 `calcx app start`。UI 命令不会为了隐藏状态问题而自动重启 APP。
+先执行 `.\calcx app start`。UI 命令不会为了隐藏状态问题而自动重启 APP。
 
 ### 公式或设置字段显示 `UNAVAILABLE`
 
@@ -376,7 +370,7 @@ CLI 控制能力依赖单独安装的 `entry-ohosTest-signed.hap`。发布时只
 主要实现位置：
 
 - Windows 启动器：`tools/calcx/launcher/`。
-- 构建、安装与卸载脚本：`tools/calcx/scripts/`。
+- 启动器构建脚本：`tools/calcx/scripts/Build-CalcXLauncher.ps1`。
 - PowerShell 入口：`tools/calcx/runtime/calcx.ps1`。
 - 公共 HDC、协议和 UI 树解析：`tools/calcx/runtime/CalcXCli.Common.psm1`。
 - 具体命令实现：`tools/calcx/runtime/commands/`。

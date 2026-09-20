@@ -17,6 +17,7 @@ CalculatorX/
 ├── AGENTS.md             # 智能编程助手项目级开发规范与指示
 ├── build-profile.json5   # 工程级产品、签名与模块构建配置
 ├── build-profile.json5.template # 构建配置安全模板 (不含私钥凭据)
+├── calcx.exe             # Windows 语义 CLI 根目录启动器
 ├── code-linter.json5     # ArkTS/ETS 代码检查规则
 ├── hvigorfile.ts         # Hvigor 任务定义脚本
 ├── local.properties.template # SDK 本地路径配置模板
@@ -32,7 +33,7 @@ tools/calcx/
 ├── launcher/             # calcx.exe 原生 Windows 启动器与 CMake 配置
 ├── runtime/              # PowerShell 命令分派、公共模块和具体命令实现
 │   └── commands/         # 计算、批量、UI、设置准备与场景命令
-├── scripts/              # 启动器构建、用户级安装和卸载脚本
+├── scripts/              # 根目录启动器构建脚本
 └── tests/                # 批量计算用例与 JSON 场景
     ├── cases/
     └── scenarios/

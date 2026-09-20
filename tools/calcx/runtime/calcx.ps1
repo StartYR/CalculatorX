@@ -38,19 +38,21 @@ function Show-CalcXHelp {
     [Console]::Out.WriteLine(@'
 CalculatorX semantic CLI
 
-Usage:
-  calcx '<latex>'
-  calcx engine calculate '<latex>'
-  calcx engine batch <json-file>
-  calcx app status|start|stop
-  calcx screen get|controls|find <semantic-id>
-  calcx formula get|set <latex>|clear
-  calcx settings get
-  calcx setup settings set <key> <value>
-  calcx scenario run <json-file> [-ContinueOnFailure]
-  calcx ui click <semantic-id>
-  calcx ui back
-  calcx -SelfTest
+PowerShell usage from the repository root:
+  .\calcx '<latex>'
+  .\calcx engine calculate '<latex>'
+  .\calcx engine batch <json-file>
+  .\calcx app status|start|stop
+  .\calcx screen get|controls|find <semantic-id>
+  .\calcx formula get|set <latex>|clear
+  .\calcx settings get
+  .\calcx setup settings set <key> <value>
+  .\calcx scenario run <json-file> [-ContinueOnFailure]
+  .\calcx ui click <semantic-id>
+  .\calcx ui back
+  .\calcx -SelfTest
+
+CMD can omit .\, but PowerShell is recommended for LaTeX arguments.
 
 Common options:
   -Mode standard|matrix|equation
@@ -173,7 +175,7 @@ try {
 
     if ($Command -eq 'engine') {
         if ($CommandArguments.Count -ne 2 -or $CommandArguments[0] -notin @('calculate', 'batch')) {
-            [Console]::Error.WriteLine("Usage: calcx engine calculate '<latex>' | calcx engine batch <json-file>")
+            [Console]::Error.WriteLine("Usage: .\calcx engine calculate '<latex>' | .\calcx engine batch <json-file>")
             exit 2
         }
         if ($CommandArguments[0] -eq 'batch') {
@@ -184,7 +186,7 @@ try {
 
     if ($Command -eq 'app') {
         if ($CommandArguments.Count -ne 1 -or $CommandArguments[0] -notin @('status', 'start', 'stop')) {
-            [Console]::Error.WriteLine('Usage: calcx app status|start|stop')
+            [Console]::Error.WriteLine('Usage: .\calcx app status|start|stop')
             exit 2
         }
         exit (Invoke-UiCommand -UiCommand $CommandArguments[0])
@@ -192,7 +194,7 @@ try {
 
     if ($Command -eq 'screen') {
         if ($CommandArguments.Count -lt 1 -or $CommandArguments[0] -notin @('get', 'controls', 'find')) {
-            [Console]::Error.WriteLine('Usage: calcx screen get|controls|find <semantic-id>')
+            [Console]::Error.WriteLine('Usage: .\calcx screen get|controls|find <semantic-id>')
             exit 2
         }
         if ($CommandArguments[0] -eq 'find') {
@@ -217,7 +219,7 @@ try {
         if ($CommandArguments.Count -eq 2 -and $CommandArguments[0] -eq 'click') {
             exit (Invoke-UiCommand -UiCommand 'click' -Target $CommandArguments[1])
         }
-        [Console]::Error.WriteLine('Usage: calcx ui click <semantic-id> | calcx ui back')
+        [Console]::Error.WriteLine('Usage: .\calcx ui click <semantic-id> | .\calcx ui back')
         exit 2
     }
 
@@ -231,13 +233,13 @@ try {
         if ($CommandArguments.Count -eq 2 -and $CommandArguments[0] -eq 'set') {
             exit (Invoke-FormulaCommand -FormulaCommand 'set' -Latex $CommandArguments[1])
         }
-        [Console]::Error.WriteLine('Usage: calcx formula get|set <latex>|clear')
+        [Console]::Error.WriteLine('Usage: .\calcx formula get|set <latex>|clear')
         exit 2
     }
 
     if ($Command -eq 'settings') {
         if ($CommandArguments.Count -ne 1 -or $CommandArguments[0] -ne 'get') {
-            [Console]::Error.WriteLine('Usage: calcx settings get')
+            [Console]::Error.WriteLine('Usage: .\calcx settings get')
             exit 2
         }
         exit (Invoke-UiCommand -UiCommand 'settings')
@@ -245,7 +247,7 @@ try {
 
     if ($Command -eq 'setup') {
         if ($CommandArguments.Count -ne 4 -or $CommandArguments[0] -ne 'settings' -or $CommandArguments[1] -ne 'set') {
-            [Console]::Error.WriteLine('Usage: calcx setup settings set <key> <value>')
+            [Console]::Error.WriteLine('Usage: .\calcx setup settings set <key> <value>')
             exit 2
         }
         exit (Invoke-SetupSettingCommand -Setting $CommandArguments[2] -Value $CommandArguments[3])
@@ -253,7 +255,7 @@ try {
 
     if ($Command -eq 'scenario') {
         if ($CommandArguments.Count -ne 2 -or $CommandArguments[0] -ne 'run') {
-            [Console]::Error.WriteLine('Usage: calcx scenario run <json-file> [-ContinueOnFailure]')
+            [Console]::Error.WriteLine('Usage: .\calcx scenario run <json-file> [-ContinueOnFailure]')
             exit 2
         }
         $forwardArguments = @{
