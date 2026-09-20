@@ -95,7 +95,8 @@ int wmain(int argc, wchar_t* argv[]) {
   }
 
   const std::wstring executableDirectory = GetParentDirectory(executablePath);
-  const std::wstring scriptPath = executableDirectory + L"\\runtime\\calcx.ps1";
+  const std::wstring scriptPath =
+      executableDirectory + L"\\tools\\calcx\\runtime\\calcx.ps1";
   if (!IsFile(scriptPath)) {
     WriteError(L"calcx: runtime script was not found: " + scriptPath);
     return kLauncherError;

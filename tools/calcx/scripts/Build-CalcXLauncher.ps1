@@ -7,10 +7,9 @@ Set-StrictMode -Version 3.0
 $ErrorActionPreference = 'Stop'
 
 $toolRoot = Split-Path -Parent $PSScriptRoot
+$repositoryRoot = Split-Path -Parent (Split-Path -Parent $toolRoot)
 $launcherRoot = Join-Path $toolRoot 'launcher'
-$runtimeRoot = Join-Path $toolRoot 'runtime'
 $buildRoot = Join-Path $toolRoot '.build'
-$distRoot = Join-Path $toolRoot 'dist'
 
 function Remove-GeneratedDirectory {
     param(
@@ -61,15 +60,7 @@ if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) {
     throw "Launcher output was not found: $launcher"
 }
 
-Remove-GeneratedDirectory -Path $distRoot -ExpectedLeaf 'dist'
-$distRuntime = Join-Path $distRoot 'runtime'
-$distCommands = Join-Path $distRuntime 'commands'
-New-Item -ItemType Directory -Path $distCommands -Force | Out-Null
+$destination = Join-Path $repositoryRoot 'calcx.exe'
+Copy-Item -LiteralPath $launcher -Destination $destination -Force
 
-Copy-Item -LiteralPath $launcher -Destination (Join-Path $distRoot 'calcx.exe')
-Copy-Item -LiteralPath (Join-Path $runtimeRoot 'calcx.ps1') -Destination $distRuntime
-Copy-Item -LiteralPath (Join-Path $runtimeRoot 'CalcXCli.Common.psm1') -Destination $distRuntime
-Get-ChildItem -LiteralPath (Join-Path $runtimeRoot 'commands') -Filter '*.ps1' -File |
-    Copy-Item -Destination $distCommands
-
-[Console]::Out.WriteLine((Join-Path $distRoot 'calcx.exe'))
+[Console]::Out.WriteLine($destination)
