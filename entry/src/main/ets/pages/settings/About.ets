@@ -242,7 +242,7 @@ struct About {
               .fontSize(12)
               .fontColor($r('sys.color.font_tertiary'))
               .margin({ top: 4, bottom: 4 })
-            Text('赣ICP备2026021841号-1A')
+            Text('赣ICP备2026021841号-2A')
               .fontSize(12)
               .fontColor($r('sys.color.font_tertiary'))
               .margin({ top: 4, bottom: 4 })
