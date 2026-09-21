@@ -11,7 +11,7 @@ import { HapticUtils } from '../utils/HapticUtils';
 import { getActionId, getFontColor, getBgColor, PreferenceConfigs, icon_backspace } from '../utils/CalculatorConfigs';
 import { getCalculatorKeySemanticId } from '../utils/SemanticIds';
 import deviceInfo from '@ohos.deviceInfo';
-import { createKeyboardMaterial } from '../utils/ImmersiveMaterialUtils';
+import { createKeyboardMaterial, KeyboardMaterialRole } from '../utils/ImmersiveMaterialUtils';
 
 // 按键布局
 const basicButtons: Array<string | Resource> = [
@@ -33,6 +33,14 @@ function getLocalFontSize(btn: string | Resource): number {
 function getLocalBgColor(btn: string | Resource, isShift: boolean): ResourceColor {
   if (btn === '%') return getBgColor('0', false);
   return getBgColor(btn, isShift);
+}
+
+function getKeyboardMaterialRole(btn: string | Resource): KeyboardMaterialRole {
+  const action = getActionId(btn);
+  if (action === 'AC' || action === '⌫') return KeyboardMaterialRole.DANGER;
+  if (action === '=') return KeyboardMaterialRole.EMPHASIS;
+  if (['+', '−', '×', '÷'].includes(action)) return KeyboardMaterialRole.OPERATOR;
+  return KeyboardMaterialRole.NORMAL;
 }
 
 // 按键
@@ -105,7 +113,7 @@ struct BasicKeyItem {
         pressed: { .opacity(1.0).shadow({ radius: 0 }) },
         normal: { .opacity(1.0).shadow({ radius: 0 }) }
       })
-      .systemMaterial(createKeyboardMaterial())
+      .systemMaterial(createKeyboardMaterial(getKeyboardMaterialRole(this.btn)))
       .onClick(() => {
         this.handleClick();
       })

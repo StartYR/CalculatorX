@@ -9,7 +9,17 @@
 import deviceInfo from '@ohos.deviceInfo';
 import { uiMaterial } from '@kit.ArkUI';
 
-let keyboardMaterial: uiMaterial.Material | undefined = undefined;
+export enum KeyboardMaterialRole {
+  NORMAL,
+  OPERATOR,
+  DANGER,
+  EMPHASIS
+}
+
+let normalKeyboardMaterial: uiMaterial.Material | undefined = undefined;
+let operatorKeyboardMaterial: uiMaterial.Material | undefined = undefined;
+let dangerKeyboardMaterial: uiMaterial.Material | undefined = undefined;
+let emphasisKeyboardMaterial: uiMaterial.Material | undefined = undefined;
 
 /**
  * 检查当前设备是否支持沉浸光感材质，仅用于不直接引用新 API 的样式分支。
@@ -103,21 +113,57 @@ export function createTopBarMaterial(): uiMaterial.Material | undefined {
 /**
  * 创建用于计算按键的超薄交互式沉浸光感材质。
  *
- * 相同参数的按键共用材质实例，避免为每个按键重复构造。
+ * 每类语义按键共用材质实例，避免为每个按键重复构造。
  *
  * @returns 支持时返回材质实例，否则返回 `undefined`
  */
-export function createKeyboardMaterial(): uiMaterial.Material | undefined {
+export function createKeyboardMaterial(role: KeyboardMaterialRole): uiMaterial.Material | undefined {
   if (deviceInfo.apiAvailable('26.0.0')) {
-    if (!keyboardMaterial) {
-      keyboardMaterial = new uiMaterial.ImmersiveMaterial({
+    if (role === KeyboardMaterialRole.OPERATOR) {
+      if (!operatorKeyboardMaterial) {
+        operatorKeyboardMaterial = new uiMaterial.ImmersiveMaterial({
+          style: uiMaterial.ImmersiveStyle.ULTRA_THIN,
+          materialColor: $r('app.color.keyboard_material_operator'),
+          interactive: true,
+          lightEffect: {}
+        });
+      }
+      return operatorKeyboardMaterial;
+    }
+
+    if (role === KeyboardMaterialRole.DANGER) {
+      if (!dangerKeyboardMaterial) {
+        dangerKeyboardMaterial = new uiMaterial.ImmersiveMaterial({
+          style: uiMaterial.ImmersiveStyle.ULTRA_THIN,
+          materialColor: $r('app.color.keyboard_material_danger'),
+          interactive: true,
+          lightEffect: {}
+        });
+      }
+      return dangerKeyboardMaterial;
+    }
+
+    if (role === KeyboardMaterialRole.EMPHASIS) {
+      if (!emphasisKeyboardMaterial) {
+        emphasisKeyboardMaterial = new uiMaterial.ImmersiveMaterial({
+          style: uiMaterial.ImmersiveStyle.ULTRA_THIN,
+          materialColor: $r('app.color.keyboard_material_emphasis'),
+          interactive: true,
+          lightEffect: {}
+        });
+      }
+      return emphasisKeyboardMaterial;
+    }
+
+    if (!normalKeyboardMaterial) {
+      normalKeyboardMaterial = new uiMaterial.ImmersiveMaterial({
         style: uiMaterial.ImmersiveStyle.ULTRA_THIN,
         interactive: true,
         lightEffect: {}
       });
     }
 
-    return keyboardMaterial;
+    return normalKeyboardMaterial;
   }
 
   return undefined;

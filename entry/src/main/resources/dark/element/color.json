@@ -7,6 +7,18 @@
     {
       "name": "btn_highlight",
       "value": "#26FFFFFF"
+    },
+    {
+      "name": "keyboard_material_operator",
+      "value": "#26FFFFFF"
+    },
+    {
+      "name": "keyboard_material_danger",
+      "value": "#66FF5D3E"
+    },
+    {
+      "name": "keyboard_material_emphasis",
+      "value": "#660A84FF"
     }
   ]
 }
