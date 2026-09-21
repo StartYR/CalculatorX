@@ -1,8 +1,8 @@
 # API 26 沉浸光感迁移执行计划
 
-- 状态：代码实施完成，待 API 23/API 26 真机验证
+- 状态：第一批迁移完成；TopBar 与基础键盘专项试点已通过，其他键盘进入全局规划
 - 编写日期：2026-09-17
-- 最近更新：2026-09-18
+- 最近更新：2026-09-22
 - 适用分支：`feature/api-update`
 - 目标 API：`26.0.0`
 - 最低兼容 API：`6.1.0(23)`，保持不变
@@ -71,7 +71,7 @@ API 26 起版本号采用语义化格式，因此目标值应写为 `"26.0.0"`�
 - 已为原生按键长按菜单配置 `THICK` 材质；
 - API 26 专属材质构造均使用直接、正向的 `deviceInfo.apiAvailable('26.0.0')` 分支保护；自定义弹窗在 API 23 保留原背景，在 API 26 使用透明表面显示系统材质；
 - 已完成 `entry@default/debug`、`entry@ohosTest/debug` 和 `entry@default/release` 构建，并在 release 后重新生成主包 debug 产物；生成配置保持最低 API 23；
-- TopBar 的 Navigation 结构改造和图形编辑全屏 Sheet 继续暂缓；HDS `systemMaterialEffect`、键盘、遮罩、自定义滑动气泡及渐变羽化等原有模糊保持不变。
+- TopBar 的 Navigation 结构改造和基础计算键盘试点已在后续专项中完成；基础键盘确认可以通过自定义底部 TabBar 获得逐键原生材质，其他键盘按独立全局计划逐模块迁移。图形编辑全屏 Sheet、遮罩、自定义滑动气泡及渐变羽化仍保持原实现。
 
 仍未完成的验证：
 
@@ -314,6 +314,12 @@ API 26 起版本号采用语义化格式，因此目标值应写为 `"26.0.0"`�
 - 不在未授权时执行编译、构建、安装、真机测试、提交或发布。
 
 ## 11. 官方参考
+
+相关专项计划：
+
+- [TopBar 沉浸光感迁移计划](./topbar-immersive-light-navigation-migration.md)
+- [基础计算键盘沉浸光感试点计划](./basic-keyboard-immersive-light-prototype.md)
+- [全局计算键盘沉浸光感迁移计划](./global-keyboard-immersive-light-migration.md)
 
 - [沉浸光感简介](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-immersive-light-sense-overview)
 - [开启沉浸光感](https://developer.huawei.com/consumer/cn/doc/HarmonyOS-Guides/arkts-immersive-light-sense-enable)
