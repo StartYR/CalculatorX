@@ -10,15 +10,15 @@
     },
     {
       "name": "keyboard_material_operator",
-      "value": "#26FFFFFF"
+      "value": "#12FFFFFF"
     },
     {
       "name": "keyboard_material_danger",
-      "value": "#66FF5D3E"
+      "value": "#E6FF5D3E"
     },
     {
       "name": "keyboard_material_emphasis",
-      "value": "#660A84FF"
+      "value": "#E6307AF7"
     }
   ]
 }
