@@ -112,6 +112,43 @@ export struct BasicCalc {
     getContext(this).eventHub.emit('screen_handle_action', action, false);
   }
 
+  @Builder
+  private BasicKeyboardBuilder() {
+    Column() {
+      Grid() {
+        ForEach(basicButtons, (btn: string | Resource, index: number) => {
+          if (btn !== '') {
+            GridItem() {
+              BasicKeyItem({
+                btn: btn,
+                onKeyPress: (b: string | Resource): void => {
+                  this.handleKeyPress(b);
+                }
+              })
+            }
+            // 如果是等号 (索引 15)，强制其纵向跨越第 4 行和第 5 行 (索引从 0 开始：3 到 4)
+            .rowStart(index === 15 ? 3 : undefined)
+            .rowEnd(index === 15 ? 4 : undefined)
+          }
+        })
+      }
+      .rowsTemplate('1fr 1fr 1fr 1fr 1fr')
+      .columnsTemplate('1fr 1fr 1fr 1fr')
+      .rowsGap(12)
+      .columnsGap(18)
+      .padding({ left: 16, right: 16, top: 20, bottom: 5 })
+      .clip(false)
+      .width('100%')
+      .height('100%')
+    }
+    .width('100%')
+    .height('55%')
+    .backgroundColor($r('sys.color.comp_background_primary')) // 主背景色
+    .borderRadius(40)
+    .shadow({ radius: 16, color: '#1A000000', offsetY: -12 })
+    .padding({ bottom: this.navBarHeight - 8 })
+  }
+
   build() {
     Column() {
       // 屏幕，占位 45%
@@ -119,39 +156,7 @@ export struct BasicCalc {
         .height('45%')
         .width('100%')
 
-      Column() {
-        Grid() {
-          ForEach(basicButtons, (btn: string | Resource, index: number) => {
-            if (btn !== '') {
-              GridItem() {
-                BasicKeyItem({
-                  btn: btn,
-                  onKeyPress: (b: string | Resource): void => {
-                    this.handleKeyPress(b);
-                  }
-                })
-              }
-              // 如果是等号 (索引 15)，强制其纵向跨越第 4 行和第 5 行 (索引从 0 开始：3 到 4)
-              .rowStart(index === 15 ? 3 : undefined)
-              .rowEnd(index === 15 ? 4 : undefined)
-            }
-          })
-        }
-        .rowsTemplate('1fr 1fr 1fr 1fr 1fr')
-        .columnsTemplate('1fr 1fr 1fr 1fr')
-        .rowsGap(12)
-        .columnsGap(18)
-        .padding({ left: 16, right: 16, top: 20, bottom: 5 })
-        .clip(false)
-        .width('100%')
-        .height('100%')
-      }
-      .width('100%')
-      .height('55%')
-      .backgroundColor($r('sys.color.comp_background_primary')) // 主背景色
-      .borderRadius(40)
-      .shadow({ radius: 16, color: '#1A000000', offsetY: -12 })
-      .padding({ bottom: this.navBarHeight - 8 })
+      this.BasicKeyboardBuilder()
     }
     .width('100%')
     .height('100%')
