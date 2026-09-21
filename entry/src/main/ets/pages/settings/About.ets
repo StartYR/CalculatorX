@@ -226,9 +226,9 @@ struct About {
               // 联系开发者
               MenuButton({
                 icon: $r('sys.symbol.envelope'),
-                title: '联系开发者',
+                title: '联系我们',
                 onClickAction: (): void => {
-                  Logger.info('点击：联系开发者');
+                  Logger.info('点击：联系我们');
                   this.sendEmail('support@startyi.com');
                 }
               })
