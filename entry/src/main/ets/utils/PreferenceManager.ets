@@ -62,6 +62,10 @@ export class PreferenceManager {
 
     AppStorage.setOrCreate('isRad', PreferenceManager.get(PreferenceConfigs.KEY_IS_RAD, true));
     AppStorage.setOrCreate('hapticFeedback', PreferenceManager.get(PreferenceConfigs.KEY_HAPTIC_FEEDBACK, true));
+    AppStorage.setOrCreate(
+      PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL,
+      PreferenceManager.get(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL, false)
+    );
     AppStorage.setOrCreate('vibrationCurve', PreferenceManager.get(PreferenceConfigs.KEY_VIBRATION_CURVE, 0));
     AppStorage.setOrCreate('decimalPrecision', PreferenceManager.get(PreferenceConfigs.KEY_DECIMAL_PRECISION, 6));
     AppStorage.setOrCreate('colorModeIndex', PreferenceManager.get(PreferenceConfigs.KEY_COLOR_MODE, 2));

@@ -13,6 +13,7 @@ export class SemanticIds {
   static readonly NAV_HISTORY_PAGE = 'nav.history.page';
   static readonly NAV_SETTINGS = 'nav.settings';
   static readonly NAV_GRAPHING_EDIT = 'nav.graphing.edit';
+  static readonly SETTINGS_KEY_IMMERSIVE_MATERIAL = 'settings.keyboard-immersive-material';
 }
 
 const KEY_NAMES: Record<string, string> = {

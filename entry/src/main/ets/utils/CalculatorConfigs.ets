@@ -202,6 +202,7 @@ export class PreferenceConfigs {
   static readonly KEY_COMBINATION_SELECT = 'combinationSelectIndex';
   static readonly KEY_PERMUTATION_SELECT = 'permutationSelectIndex';
   static readonly KEY_HAPTIC_FEEDBACK = 'hapticFeedback';
+  static readonly KEY_KEY_IMMERSIVE_MATERIAL = 'keyImmersiveMaterial';
   static readonly KEY_CLI_PENDING_FORMULA = 'calcxCliPendingFormula';
 
   // 隐私声明同意状态标识
