@@ -142,7 +142,7 @@ export struct BasicCalc {
       .height('100%')
     }
     .width('100%')
-    .height('55%')
+    .height('100%')
     .backgroundColor($r('sys.color.comp_background_primary')) // 主背景色
     .borderRadius(40)
     .shadow({ radius: 16, color: '#1A000000', offsetY: -12 })
@@ -150,14 +150,18 @@ export struct BasicCalc {
   }
 
   build() {
-    Column() {
-      // 屏幕，占位 45%
-      FormulaScreen({ moduleType: 'basic' })
-        .height('45%')
-        .width('100%')
-
-      this.BasicKeyboardBuilder()
+    Tabs({ barPosition: BarPosition.End }) {
+      TabContent() {
+        FormulaScreen({ moduleType: 'basic' })
+          .height('100%')
+          .width('100%')
+      }
+      .tabBar(this.BasicKeyboardBuilder)
     }
+    .vertical(false)
+    .scrollable(false)
+    .animationDuration(0)
+    .barHeight('55%')
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.comp_background_tertiary'))
