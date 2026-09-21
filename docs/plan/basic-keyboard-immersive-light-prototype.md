@@ -1,6 +1,7 @@
 # 基础计算键盘沉浸光感试点计划
 
-- 状态：实现完成，待人工编译与 API 26 真机验证
+- 状态：实现完成，主包 debug 构建通过，待 API 26 真机验证
+- 最近验证：2026-09-21，`entry/default/debug assembleHap` 构建成功
 - 编写日期：2026-09-21
 - 适用分支：`feature/api-26-sensation`
 - 目标 API：`26.0.0`
