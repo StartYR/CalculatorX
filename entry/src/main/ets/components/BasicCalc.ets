@@ -35,39 +35,6 @@ function getLocalBgColor(btn: string | Resource, isShift: boolean): ResourceColo
   return getBgColor(btn, isShift);
 }
 
-class BasicKeyVisualModifier implements AttributeModifier<ButtonAttribute> {
-  private readonly btn: string | Resource;
-
-  constructor(btn: string | Resource) {
-    this.btn = btn;
-  }
-
-  applyNormalAttribute(instance: ButtonAttribute): void {
-    if (deviceInfo.apiAvailable('26.0.0')) {
-      instance.buttonStyle(ButtonStyleMode.TEXTUAL);
-      instance.backgroundColor(Color.Transparent);
-      instance.borderWidth(0);
-      instance.shadow({ radius: 0 });
-      instance.clickEffect({ level: ClickEffectLevel.LIGHT, scale: 1.0 });
-      instance.stateStyles({
-        pressed: { .opacity(1.0).shadow({ radius: 0 }) },
-        normal: { .opacity(1.0).shadow({ radius: 0 }) }
-      });
-      instance.systemMaterial(createKeyboardMaterial());
-    } else {
-      instance.backgroundColor(getLocalBgColor(this.btn, false));
-      instance.shadow(ShadowStyle.OUTER_DEFAULT_SM);
-      instance.borderWidth({ top: 1, left: 1, bottom: 0, right: 0 });
-      instance.borderColor($r('app.color.btn_highlight'));
-      instance.clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.92 });
-      instance.stateStyles({
-        pressed: { .opacity(0.75).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
-        normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
-      });
-    }
-  }
-}
-
 // 按键
 @Component
 struct BasicKeyItem {
@@ -78,50 +45,100 @@ struct BasicKeyItem {
 
   onKeyPress: (btn: string | Resource) => void = () => {};
 
-  build() {
-    Button() {
-      if (typeof this.btn === 'string') {
-        Text(this.btn)
-          .fontFamily('HarmonyOS Sans')
-          .fontSize(getLocalFontSize(this.btn))
-          .fontWeight(FontWeight.Medium)
-          .fontColor(getFontColor(this.btn))
-      } else {
-        Image(this.btn)
-          .width(48)
-          .height(48)
-          .fillColor(getFontColor(this.btn))
-          .draggable(false)
+  @Builder
+  private KeyContentBuilder() {
+    if (typeof this.btn === 'string') {
+      Text(this.btn)
+        .fontFamily('HarmonyOS Sans')
+        .fontSize(getLocalFontSize(this.btn))
+        .fontWeight(FontWeight.Medium)
+        .fontColor(getFontColor(this.btn))
+    } else {
+      Image(this.btn)
+        .width(48)
+        .height(48)
+        .fillColor(getFontColor(this.btn))
+        .draggable(false)
+    }
+  }
+
+  private handleClick(): void {
+    this.onKeyPress(this.btn as string);
+  }
+
+  private handleTouch(event: TouchEvent): void {
+    if (this.btn === icon_backspace) {
+      if (event.type === TouchType.Down) {
+        clearTimeout(this.startDelayTimer);
+        clearInterval(this.repeatDeleteTimer);
+
+        this.startDelayTimer = setTimeout(() => {
+          this.repeatDeleteTimer = setInterval(() => {
+            this.onKeyPress(this.btn as string);
+          }, 80);
+        }, 500);
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        clearTimeout(this.startDelayTimer);
+        clearInterval(this.repeatDeleteTimer);
       }
     }
-    .type(ButtonType.Normal)
-    .id(getCalculatorKeySemanticId(getActionId(this.btn)))
-    .accessibilityText(getActionId(this.btn))
-    .borderRadius(40)
-    .width('100%')
-    .height('100%')
-    .padding({ left: 4, right: 4 })
-    .attributeModifier(new BasicKeyVisualModifier(this.btn))
-    .onClick(() => {
-      this.onKeyPress(this.btn as string);
-    })
-    .onTouch((event: TouchEvent) => {
-      if (this.btn === icon_backspace) {
-        if (event.type === TouchType.Down) {
-          clearTimeout(this.startDelayTimer);
-          clearInterval(this.repeatDeleteTimer);
+  }
 
-          this.startDelayTimer = setTimeout(() => {
-            this.repeatDeleteTimer = setInterval(() => {
-              this.onKeyPress(this.btn as string);
-            }, 80);
-          }, 500);
-        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-          clearTimeout(this.startDelayTimer);
-          clearInterval(this.repeatDeleteTimer);
-        }
+  build() {
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      Button() {
+        this.KeyContentBuilder()
       }
-    })
+      .type(ButtonType.Normal)
+      .id(getCalculatorKeySemanticId(getActionId(this.btn)))
+      .accessibilityText(getActionId(this.btn))
+      .borderRadius(40)
+      .width('100%')
+      .height('100%')
+      .padding({ left: 4, right: 4 })
+      .buttonStyle(ButtonStyleMode.TEXTUAL)
+      .backgroundColor(Color.Transparent)
+      .borderWidth(0)
+      .shadow({ radius: 0 })
+      .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 1.0 })
+      .stateStyles({
+        pressed: { .opacity(1.0).shadow({ radius: 0 }) },
+        normal: { .opacity(1.0).shadow({ radius: 0 }) }
+      })
+      .systemMaterial(createKeyboardMaterial())
+      .onClick(() => {
+        this.handleClick();
+      })
+      .onTouch((event: TouchEvent) => {
+        this.handleTouch(event);
+      })
+    } else {
+      Button() {
+        this.KeyContentBuilder()
+      }
+      .type(ButtonType.Normal)
+      .id(getCalculatorKeySemanticId(getActionId(this.btn)))
+      .accessibilityText(getActionId(this.btn))
+      .borderRadius(40)
+      .width('100%')
+      .height('100%')
+      .padding({ left: 4, right: 4 })
+      .backgroundColor(getLocalBgColor(this.btn, false))
+      .shadow(ShadowStyle.OUTER_DEFAULT_SM)
+      .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
+      .borderColor($r('app.color.btn_highlight'))
+      .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.92 })
+      .stateStyles({
+        pressed: { .opacity(0.75).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
+        normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
+      })
+      .onClick(() => {
+        this.handleClick();
+      })
+      .onTouch((event: TouchEvent) => {
+        this.handleTouch(event);
+      })
+    }
   }
 }
 
