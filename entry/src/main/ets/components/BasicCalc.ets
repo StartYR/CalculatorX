@@ -10,6 +10,8 @@ import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { getActionId, getFontColor, getBgColor, PreferenceConfigs, icon_backspace } from '../utils/CalculatorConfigs';
 import { getCalculatorKeySemanticId } from '../utils/SemanticIds';
+import deviceInfo from '@ohos.deviceInfo';
+import { createKeyboardMaterial } from '../utils/ImmersiveMaterialUtils';
 
 // 按键布局
 const basicButtons: Array<string | Resource> = [
@@ -31,6 +33,39 @@ function getLocalFontSize(btn: string | Resource): number {
 function getLocalBgColor(btn: string | Resource, isShift: boolean): ResourceColor {
   if (btn === '%') return getBgColor('0', false);
   return getBgColor(btn, isShift);
+}
+
+class BasicKeyVisualModifier implements AttributeModifier<ButtonAttribute> {
+  private readonly btn: string | Resource;
+
+  constructor(btn: string | Resource) {
+    this.btn = btn;
+  }
+
+  applyNormalAttribute(instance: ButtonAttribute): void {
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      instance.buttonStyle(ButtonStyleMode.TEXTUAL);
+      instance.backgroundColor(Color.Transparent);
+      instance.borderWidth(0);
+      instance.shadow({ radius: 0 });
+      instance.clickEffect({ level: ClickEffectLevel.LIGHT, scale: 1.0 });
+      instance.stateStyles({
+        pressed: { .opacity(1.0).shadow({ radius: 0 }) },
+        normal: { .opacity(1.0).shadow({ radius: 0 }) }
+      });
+      instance.systemMaterial(createKeyboardMaterial());
+    } else {
+      instance.backgroundColor(getLocalBgColor(this.btn, false));
+      instance.shadow(ShadowStyle.OUTER_DEFAULT_SM);
+      instance.borderWidth({ top: 1, left: 1, bottom: 0, right: 0 });
+      instance.borderColor($r('app.color.btn_highlight'));
+      instance.clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.92 });
+      instance.stateStyles({
+        pressed: { .opacity(0.75).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
+        normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
+      });
+    }
+  }
 }
 
 // 按键
@@ -66,15 +101,7 @@ struct BasicKeyItem {
     .width('100%')
     .height('100%')
     .padding({ left: 4, right: 4 })
-    .backgroundColor(getLocalBgColor(this.btn, false))
-    .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-    .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
-    .borderColor($r('app.color.btn_highlight'))
-    .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.92 })
-    .stateStyles({
-      pressed: { .opacity(0.75).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
-      normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
-    })
+    .attributeModifier(new BasicKeyVisualModifier(this.btn))
     .onClick(() => {
       this.onKeyPress(this.btn as string);
     })
