@@ -47,6 +47,7 @@ function getKeyboardMaterialRole(btn: string | Resource): KeyboardMaterialRole {
 @Component
 struct BasicKeyItem {
   btn: string | Resource = '';
+  immersive: boolean = false;
   @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
   private startDelayTimer: number = -1;
   private repeatDeleteTimer: number = -1;
@@ -92,60 +93,69 @@ struct BasicKeyItem {
     }
   }
 
+  @Builder
+  private LegacyButtonBuilder() {
+    Button() {
+      this.KeyContentBuilder()
+    }
+    .type(ButtonType.Normal)
+    .id(getCalculatorKeySemanticId(getActionId(this.btn)))
+    .accessibilityText(getActionId(this.btn))
+    .borderRadius(40)
+    .width('100%')
+    .height('100%')
+    .padding({ left: 4, right: 4 })
+    .backgroundColor(getLocalBgColor(this.btn, false))
+    .shadow(ShadowStyle.OUTER_DEFAULT_SM)
+    .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
+    .borderColor($r('app.color.btn_highlight'))
+    .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.92 })
+    .stateStyles({
+      pressed: { .opacity(0.75).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
+      normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
+    })
+    .onClick(() => {
+      this.handleClick();
+    })
+    .onTouch((event: TouchEvent) => {
+      this.handleTouch(event);
+    })
+  }
+
   build() {
     if (deviceInfo.apiAvailable('26.0.0')) {
-      Button() {
-        this.KeyContentBuilder()
+      if (this.immersive) {
+        Button() {
+          this.KeyContentBuilder()
+        }
+        .type(ButtonType.Normal)
+        .id(getCalculatorKeySemanticId(getActionId(this.btn)))
+        .accessibilityText(getActionId(this.btn))
+        .borderRadius(40)
+        .width('100%')
+        .height('100%')
+        .padding({ left: 4, right: 4 })
+        .buttonStyle(ButtonStyleMode.TEXTUAL)
+        .backgroundColor(Color.Transparent)
+        .borderWidth(0)
+        .shadow({ radius: 0 })
+        .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 1.0 })
+        .stateStyles({
+          pressed: { .opacity(1.0).shadow({ radius: 0 }) },
+          normal: { .opacity(1.0).shadow({ radius: 0 }) }
+        })
+        .systemMaterial(createKeyboardMaterial(getKeyboardMaterialRole(this.btn)))
+        .onClick(() => {
+          this.handleClick();
+        })
+        .onTouch((event: TouchEvent) => {
+          this.handleTouch(event);
+        })
+      } else {
+        this.LegacyButtonBuilder()
       }
-      .type(ButtonType.Normal)
-      .id(getCalculatorKeySemanticId(getActionId(this.btn)))
-      .accessibilityText(getActionId(this.btn))
-      .borderRadius(40)
-      .width('100%')
-      .height('100%')
-      .padding({ left: 4, right: 4 })
-      .buttonStyle(ButtonStyleMode.TEXTUAL)
-      .backgroundColor(Color.Transparent)
-      .borderWidth(0)
-      .shadow({ radius: 0 })
-      .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 1.0 })
-      .stateStyles({
-        pressed: { .opacity(1.0).shadow({ radius: 0 }) },
-        normal: { .opacity(1.0).shadow({ radius: 0 }) }
-      })
-      .systemMaterial(createKeyboardMaterial(getKeyboardMaterialRole(this.btn)))
-      .onClick(() => {
-        this.handleClick();
-      })
-      .onTouch((event: TouchEvent) => {
-        this.handleTouch(event);
-      })
     } else {
-      Button() {
-        this.KeyContentBuilder()
-      }
-      .type(ButtonType.Normal)
-      .id(getCalculatorKeySemanticId(getActionId(this.btn)))
-      .accessibilityText(getActionId(this.btn))
-      .borderRadius(40)
-      .width('100%')
-      .height('100%')
-      .padding({ left: 4, right: 4 })
-      .backgroundColor(getLocalBgColor(this.btn, false))
-      .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-      .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
-      .borderColor($r('app.color.btn_highlight'))
-      .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.92 })
-      .stateStyles({
-        pressed: { .opacity(0.75).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
-        normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
-      })
-      .onClick(() => {
-        this.handleClick();
-      })
-      .onTouch((event: TouchEvent) => {
-        this.handleTouch(event);
-      })
+      this.LegacyButtonBuilder()
     }
   }
 }
@@ -156,6 +166,7 @@ export struct BasicCalc {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
+  @StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
 
   // 作为传声筒，无脑呼叫 FormulaScreen
   private handleKeyPress(btn: string | Resource) {
@@ -165,50 +176,84 @@ export struct BasicCalc {
   }
 
   @Builder
-  private BasicKeyboardBuilder() {
-    Column() {
-      Grid() {
-        ForEach(basicButtons, (btn: string | Resource, index: number) => {
-          if (btn !== '') {
-            GridItem() {
-              BasicKeyItem({
-                btn: btn,
-                onKeyPress: (b: string | Resource): void => {
-                  this.handleKeyPress(b);
-                }
-              })
-            }
-            // 如果是等号 (索引 15)，强制其纵向跨越第 4 行和第 5 行 (索引从 0 开始：3 到 4)
-            .rowStart(index === 15 ? 3 : undefined)
-            .rowEnd(index === 15 ? 4 : undefined)
+  private BasicKeyGridBuilder(immersive: boolean) {
+    Grid() {
+      ForEach(basicButtons, (btn: string | Resource, index: number) => {
+        if (btn !== '') {
+          GridItem() {
+            BasicKeyItem({
+              btn: btn,
+              immersive: immersive,
+              onKeyPress: (b: string | Resource): void => {
+                this.handleKeyPress(b);
+              }
+            })
           }
-        })
-      }
-      .rowsTemplate('1fr 1fr 1fr 1fr 1fr')
-      .columnsTemplate('1fr 1fr 1fr 1fr')
-      .rowsGap(12)
-      .columnsGap(18)
-      .padding({ left: 16, right: 16, top: 20, bottom: 5 })
-      .clip(false)
-      .width('100%')
-      .height('100%')
+          // 如果是等号 (索引 15)，强制其纵向跨越第 4 行和第 5 行 (索引从 0 开始：3 到 4)
+          .rowStart(index === 15 ? 3 : undefined)
+          .rowEnd(index === 15 ? 4 : undefined)
+        }
+      })
     }
+    .rowsTemplate('1fr 1fr 1fr 1fr 1fr')
+    .columnsTemplate('1fr 1fr 1fr 1fr')
+    .rowsGap(12)
+    .columnsGap(18)
+    .padding({ left: 16, right: 16, top: 20, bottom: 5 })
+    .clip(false)
     .width('100%')
     .height('100%')
+  }
+
+  @Builder
+  private LegacyBasicKeyboardBuilder() {
+    Column() {
+      this.BasicKeyGridBuilder(false)
+    }
+    .width('100%')
+    .height('55%')
     .backgroundColor($r('sys.color.comp_background_primary')) // 主背景色
     .borderRadius(40)
     .shadow({ radius: 16, color: '#1A000000', offsetY: -12 })
     .padding({ bottom: this.navBarHeight - 8 })
   }
 
-  build() {
+  @Builder
+  private ImmersiveBasicKeyboardBuilder() {
+    Column() {
+      this.BasicKeyGridBuilder(true)
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('sys.color.comp_background_primary'))
+    .borderRadius(40)
+    .shadow({ radius: 16, color: '#1A000000', offsetY: -12 })
+    .padding({ bottom: this.navBarHeight - 8 })
+  }
+
+  @Builder
+  private LegacyBasicLayout() {
+    Column() {
+      FormulaScreen({ moduleType: 'basic' })
+        .height('45%')
+        .width('100%')
+
+      this.LegacyBasicKeyboardBuilder()
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('sys.color.comp_background_tertiary'))
+  }
+
+  @Builder
+  private ImmersiveBasicLayout() {
     Tabs({ barPosition: BarPosition.End }) {
       TabContent() {
         FormulaScreen({ moduleType: 'basic' })
           .height('100%')
           .width('100%')
       }
-      .tabBar(this.BasicKeyboardBuilder)
+      .tabBar(this.ImmersiveBasicKeyboardBuilder)
     }
     .vertical(false)
     .scrollable(false)
@@ -217,5 +262,17 @@ export struct BasicCalc {
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.comp_background_tertiary'))
+  }
+
+  build() {
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      if (this.keyImmersiveMaterial) {
+        this.ImmersiveBasicLayout()
+      } else {
+        this.LegacyBasicLayout()
+      }
+    } else {
+      this.LegacyBasicLayout()
+    }
   }
 }
