@@ -82,6 +82,11 @@ struct Index {
     HistorySheet({
       moduleType: this.currentModule, // 根据当前模块动态拉取历史记录
       onItemClick: (record, insertType: 'input' | 'output') => {
+        if (this.currentModule === 'base') {
+          getContext(this).eventHub.emit('event_programmer_restore', record, insertType);
+          this.isShowHistorySheet = false;
+          return;
+        }
         let insertStr = insertType === 'input' ? record.inputContent : record.outputContent;
         getContext(this).eventHub.emit('event_math_insert', insertStr);
       },

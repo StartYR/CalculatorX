@@ -60,7 +60,7 @@ export struct TopBar {
   onRedoClick?: () => void;
 
   private showUndoRedo(): boolean {
-    return ['scientific', 'equation', 'matrix'].includes(this.currentModule);
+    return ['scientific', 'equation', 'matrix', 'base'].includes(this.currentModule);
   }
 
   private trailingAction(): TopBarTrailingAction {
@@ -68,7 +68,7 @@ export struct TopBar {
       return TopBarTrailingAction.EDIT;
     }
 
-    if (['basic', 'scientific', 'equation', 'matrix'].includes(this.currentModule)) {
+    if (['basic', 'scientific', 'equation', 'matrix', 'base'].includes(this.currentModule)) {
       return TopBarTrailingAction.HISTORY;
     }
 

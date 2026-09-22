@@ -95,14 +95,16 @@ export class HistoryRepository {
       predicates.limitAs(1);
 
       // 查询时只抽取出我们需要的字段，进一步压榨性能
-      const resultSet = await HistoryRepository.rdbStore.query(predicates, ['id', 'input_content']);
+      const resultSet = await HistoryRepository.rdbStore.query(predicates, ['id', 'input_content', 'extra_params']);
 
       if (resultSet.goToFirstRow()) {
         const lastInput = resultSet.getString(resultSet.getColumnIndex('input_content'));
         const lastId = resultSet.getLong(resultSet.getColumnIndex('id'));
 
         // 如果用户刚刚算过的公式，和现在企图插入的公式完全一样
-        if (lastInput === record.inputContent) {
+        const sameContext = record.moduleType !== 'base' ||
+          resultSet.getString(resultSet.getColumnIndex('extra_params')) === (record.extraParams || '');
+        if (lastInput === record.inputContent && sameContext) {
           Logger.info('HistoryRepository: 拦截到连续重复计算，已执行静默去重');
           resultSet.close();
           // 极其致命的细节：返回上一条记录的 ID，骗过外部 UI，完成静默拦截！
