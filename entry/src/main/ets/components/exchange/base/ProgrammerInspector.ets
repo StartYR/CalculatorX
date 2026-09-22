@@ -6,6 +6,7 @@
 import { ProgrammerSession } from '../../../utils/base/ProgrammerSession';
 import { encodingRows, decodeEncoding, EncodingRow } from '../../../utils/base/ProgrammerEngine';
 import { FloatFormat, decodeFloat } from '../../../utils/base/Ieee754';
+import { Natural } from '../../../utils/base/Natural';
 
 @Component
 export struct ProgrammerInspector {
@@ -29,6 +30,13 @@ export struct ProgrammerInspector {
       index >= format.fractionBits ? $r('sys.color.font_emphasize') : $r('sys.color.font_primary');
   }
 
+  private ranges(): string {
+    const sign = Natural.small(1).shift(this.session.width - 1);
+    const maximum = sign.subtract(Natural.small(1)).toString();
+    return '无符号：0 … ' + sign.shift(1).subtract(Natural.small(1)).toString() +
+      '\n补码：-' + sign.toString() + ' … ' + maximum + '\n原码/反码：-' + maximum + ' … ' + maximum;
+  }
+
   @Builder
   private Bits() {
     Text('点击翻转 bit · 从高位到低位，每行 1 byte')
@@ -47,7 +55,7 @@ export struct ProgrammerInspector {
           .id('base.bit.' + index.toString())
           .accessibilityText('第 ' + index + ' 位，' + this.bit(index) + '，点击翻转')
           .onClick(() => this.onFlip(index))
-        }
+        }.padding({ right: index % 8 === 4 ? 4 : 0 })
       }, (index: number) => index.toString())
     }.columnsTemplate('1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr').rowsGap(4).columnsGap(3)
     .height(this.indices().length / 8 * 48).width('100%')
@@ -71,6 +79,7 @@ export struct ProgrammerInspector {
     })
     Text('原码/反码保留负零；最小补码负数无法编码为同宽原码/反码。此面板用于观察，运算仍采用无符号或补码。')
       .fontSize(12).fontColor($r('sys.color.font_secondary')).margin({ top: 10 })
+    Text(this.ranges()).fontSize(12).fontColor($r('sys.color.font_secondary')).margin({ top: 8 })
   }
 
   @Builder
@@ -87,6 +96,12 @@ export struct ProgrammerInspector {
       .copyOption(CopyOptions.LocalDevice).margin({ top: 8 })
     Text('精确解释：' + decodeFloat(this.session.floatBits, this.session.floatWidth).exact)
       .fontSize(13).fontColor($r('sys.color.font_secondary')).copyOption(CopyOptions.LocalDevice).margin({ top: 8 })
+    if (!decodeFloat(this.session.floatBits, this.session.floatWidth).category.includes('NaN') &&
+      decodeFloat(this.session.floatBits, this.session.floatWidth).category !== '无穷') {
+      Text('实际指数：' + decodeFloat(this.session.floatBits, this.session.floatWidth).actualExponent +
+        ' · 有效数字：' + (decodeFloat(this.session.floatBits, this.session.floatWidth).exponent === 0 ? '0.F' : '1.F'))
+        .fontSize(13).fontColor($r('sys.color.font_secondary')).margin({ top: 8 })
+    }
     Text('十进制显示采用简短表示；输入按 roundTiesToEven 舍入。修改位模式保留 NaN payload，切换格式重新编码。')
       .fontSize(12).fontColor($r('sys.color.font_secondary')).margin({ top: 8, bottom: 12 })
     this.Bits()

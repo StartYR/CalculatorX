@@ -9,6 +9,7 @@
 import deviceInfo from '@ohos.deviceInfo';
 import pasteboard from '@ohos.pasteboard';
 import { PreferenceConfigs } from '../../../utils/CalculatorConfigs';
+import { getCalculatorKeySemanticId } from '../../../utils/SemanticIds';
 import { HapticUtils } from '../../../utils/HapticUtils';
 import { KeyboardKeySurface } from '../../common/keyboard/KeyboardKeySurface';
 import { KeyboardKeyRole } from '../../common/keyboard/KeyboardKeyTypes';
@@ -17,7 +18,7 @@ import { decodeFloat } from '../../../utils/base/Ieee754';
 import { ProgrammerInspector } from './ProgrammerInspector';
 import { PreferenceManager } from '../../../utils/PreferenceManager';
 import { HistoryRepository, HistoryRecord } from '../../../database/HistoryRepository';
-import { ProgrammerMemory, ProgrammerSettings, settingsOf, recordOf, restoreSettings, restoreRecord } from '../../../utils/base/ProgrammerState';
+import { ProgrammerMemory, ProgrammerSettings, settingsOf, recordOf, historyRecordOf, restoreSettings, restoreRecord } from '../../../utils/base/ProgrammerState';
 
 const INTEGER_KEYS: string[] = [
   'A', 'B', 'C', 'AND', 'SHL',
@@ -82,7 +83,9 @@ struct ProgrammerKey {
   private Surface() {
     KeyboardKeySurface({
       immersive: this.immersive, role: keyRole(this.keyText), keyBorderRadius: 16,
-      semanticId: 'base.key.' + this.keyText,
+      semanticId: this.keyText === 'e' ? 'base.key.exponent' :
+        getCalculatorKeySemanticId(this.keyText === '-' ? '−' : this.keyText === '*' ? '×' : this.keyText === '/' ? '÷' : this.keyText)
+          .replace('calc.key.', 'base.key.'),
       keyAccessibilityText: this.keyText + (this.available ? '' : '，当前进制不可用') +
         (this.integerMode && alternatives(this.keyText).length ? '，长按更多操作' : ''),
       onKeyClick: () => { if (this.available && !this.repeated) this.onPress(this.keyText); },
@@ -153,7 +156,7 @@ export struct BaseConverter {
   aboutToAppear(): void {
     try {
       this.session = ProgrammerMemory.session ? ProgrammerMemory.session.copy() :
-        restoreSettings(JSON.parse(PreferenceManager.get('programmer.settings.v1', JSON.stringify(settingsOf(this.session))) as string) as ProgrammerSettings);
+        restoreSettings(JSON.parse(PreferenceManager.get(PreferenceConfigs.KEY_PROGRAMMER_SETTINGS, JSON.stringify(settingsOf(this.session))) as string) as ProgrammerSettings);
     } catch (_) { this.session = new ProgrammerSession(); }
     getContext(this).eventHub.on('event_math_undo', this.undoHandler);
     getContext(this).eventHub.on('event_math_redo', this.redoHandler);
@@ -169,7 +172,9 @@ export struct BaseConverter {
 
   private persistSettings(): void {
     const settings = JSON.stringify(settingsOf(this.session));
-    if (settings !== PreferenceManager.get('programmer.settings.v1', '')) PreferenceManager.set('programmer.settings.v1', settings);
+    if (settings !== PreferenceManager.get(PreferenceConfigs.KEY_PROGRAMMER_SETTINGS, '')) {
+      PreferenceManager.set(PreferenceConfigs.KEY_PROGRAMMER_SETTINGS, settings);
+    }
   }
 
   private saveHistory(): void {
@@ -178,12 +183,13 @@ export struct BaseConverter {
       inputContent: integer ? this.session.expression : this.session.floatText,
       outputContent: integer ? this.session.word.format(this.session.radix, this.session.signed) :
         decodeFloat(this.session.floatBits, this.session.floatWidth).decimal + ' · 0x' + this.session.floatBits.toString(16),
-      extraParams: JSON.stringify(recordOf(this.session)), timestamp: Date.now() });
+      extraParams: JSON.stringify(historyRecordOf(this.session)), timestamp: Date.now() });
   }
 
   private semanticState(): string {
     if (!getContext(this).applicationInfo.debug) return '';
-    return JSON.stringify(recordOf(this.session));
+    return JSON.stringify({ data: recordOf(this.session), error: this.session.error,
+      integerConfirmed: this.session.evaluated, floatConfirmed: this.session.floatEvaluated });
   }
 
   private apply(action: () => void): void {
@@ -203,6 +209,11 @@ export struct BaseConverter {
     if (key === '=' && this.session.error.length === 0) this.saveHistory();
   }
 
+  private select(action: () => void): void {
+    HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
+    this.apply(action);
+  }
+
   private undo(): void {
     const previous = this.undoStack.pop();
     if (previous) { this.redoStack.push(this.session.copy()); this.session = previous; this.persistSettings(); }
@@ -217,6 +228,7 @@ export struct BaseConverter {
       const data = await pasteboard.getSystemPasteboard().getData();
       const text = data.getPrimaryText().trim();
       this.apply(() => {
+        if (text.length > (this.session.mode === 'integer' ? 1024 : 768)) throw new Error('剪贴板输入过长');
         if (this.session.mode === 'integer') { this.session.expression = text; this.session.evaluated = false; }
         else { this.session.floatText = text; this.session.floatEvaluated = false; }
         this.session.confirm();
@@ -239,7 +251,10 @@ export struct BaseConverter {
       .fontColor(selected ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary'))
       .backgroundColor(selected ? $r('sys.color.comp_background_secondary') : Color.Transparent)
       .height(32).padding({ left: 10, right: 10 }).id(identifier)
-      .accessibilityText(label + (selected ? '，已选中' : '')).onClick(action)
+      .accessibilityText(label + (selected ? '，已选中' : '')).onClick(() => {
+        HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
+        action();
+      })
   }
 
   @Builder
@@ -255,7 +270,7 @@ export struct BaseConverter {
     .backgroundColor(this.session.currentRadix() === radix ? $r('sys.color.comp_background_secondary') : Color.Transparent)
     .id('base.radix.' + radix.toString())
     .accessibilityText(label + ' ' + this.value(radix) + (this.session.currentRadix() === radix ? '，当前输入进制' : '，点击切换'))
-    .onClick(() => this.apply(() => this.session.changeRadix(radix)))
+    .onClick(() => this.select(() => this.session.changeRadix(radix)))
   }
 
   @Builder
@@ -287,6 +302,9 @@ export struct BaseConverter {
         }.scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).height(40).width('100%').id('base.expression')
         if (this.session.error.length > 0) {
           Text(this.session.error).fontSize(12).fontColor($r('sys.color.warning')).width('100%').id('base.error')
+        } else if (this.session.mode === 'integer' && !this.session.evaluated) {
+          Text('输入预览 · 按 = 确认；不完整输入保留最近有效值')
+            .fontSize(12).fontColor($r('sys.color.font_secondary')).width('100%')
         }
         this.RadixRow('HEX', 16)
         this.RadixRow('DEC', 10)
@@ -296,7 +314,7 @@ export struct BaseConverter {
           Row({ space: 6 }) {
             Select([{ value: '8 bit · BYTE' }, { value: '16 bit · WORD' }, { value: '32 bit · DWORD' }, { value: '64 bit · QWORD' }])
               .selected([8, 16, 32, 64].indexOf(this.session.width)).value(this.session.width + ' bit').font({ size: 14 }).height(34)
-              .id('base.width').onSelect((index: number) => this.apply(() => this.session.changeWidth([8, 16, 32, 64][index])))
+              .id('base.width').onSelect((index: number) => this.select(() => this.session.changeWidth([8, 16, 32, 64][index])))
             this.Chip(this.session.signed ? '有符号' : '无符号', this.session.signed,
               () => this.apply(() => this.session.changeSigned()), 'base.signed')
             Blank()
@@ -326,7 +344,7 @@ export struct BaseConverter {
         }
         if (this.panel.length > 0) {
           ProgrammerInspector({ session: this.session, panel: this.panel,
-            onFlip: (index: number) => this.apply(() => this.session.flip(index)) })
+            onFlip: (index: number) => this.select(() => this.session.flip(index)) })
         }
       }.width('100%').padding({ left: 14, right: 14, top: 8, bottom: 12 })
     }.width('100%').height('100%').scrollBar(BarState.Auto).align(Alignment.Top)
