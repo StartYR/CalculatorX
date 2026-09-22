@@ -522,6 +522,7 @@ API 26 还需覆盖系统沉浸光感关闭或降低、默认和较高强度。�
 
 ## 14. 参考
 
+- [沉浸光感与传统界面双渲染架构重构计划](./immersive-legacy-dual-render-architecture-refactor.md)
 - [基础计算键盘沉浸光感试点计划](./basic-keyboard-immersive-light-prototype.md)
 - [API 26 沉浸光感迁移执行计划](./api-26-immersive-light-migration.md)
 - [TopBar 沉浸光感迁移计划](./topbar-immersive-light-navigation-migration.md)
