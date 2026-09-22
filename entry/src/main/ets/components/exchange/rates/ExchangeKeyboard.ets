@@ -11,7 +11,9 @@ import { HapticUtils } from '../../../utils/HapticUtils';
 import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor, icon_backspace, PreferenceConfigs } from '../../../utils/CalculatorConfigs';
 import { KeyGestureWrapper } from '../../common/KeyGestureWrapper';
 import deviceInfo from '@ohos.deviceInfo';
-import { createKeyboardMaterial, KeyboardMaterialRole } from '../../../utils/ImmersiveMaterialUtils';
+import { createKeyboardMaterial } from '../../../utils/ImmersiveMaterialUtils';
+import { KeyboardKeyRole } from '../../common/keyboard/KeyboardKeyTypes';
+import { resolveKeyboardKeyRole } from '../../common/keyboard/KeyboardVisualPolicy';
 
 // ==================== 键盘数据源 ====================
 // 恢复错落有致的标准 4 列布局
@@ -22,13 +24,8 @@ export const exchangeButtons: Array<string | Resource> = [
   '0', '.', '确定'
 ];
 
-function getExchangeKeyboardMaterialRole(btn: string | Resource): KeyboardMaterialRole {
-  const action = getActionId(btn);
-  if (action === 'AC' || action === '⌫') return KeyboardMaterialRole.DANGER;
-  if (action === '确定') return KeyboardMaterialRole.EMPHASIS;
-
-  const isNumber = typeof btn === 'string' && btn >= '0' && btn <= '9';
-  return isNumber || action === '.' ? KeyboardMaterialRole.NORMAL : KeyboardMaterialRole.OPERATOR;
+function getExchangeKeyboardKeyRole(btn: string | Resource): KeyboardKeyRole {
+  return resolveKeyboardKeyRole(btn, ['确定']);
 }
 
 // ==================== 独立按键组件 ====================
@@ -110,7 +107,7 @@ export struct BottomKeyItem {
             pressed: { .opacity(1.0).shadow({ radius: 0 }) },
             normal: { .opacity(1.0).shadow({ radius: 0 }) }
           })
-          .systemMaterial(createKeyboardMaterial(getExchangeKeyboardMaterialRole(this.btn)))
+          .systemMaterial(createKeyboardMaterial(getExchangeKeyboardKeyRole(this.btn)))
         } else {
           this.LegacyButtonBuilder()
         }

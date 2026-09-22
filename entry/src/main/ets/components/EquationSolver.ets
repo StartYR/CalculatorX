@@ -22,7 +22,9 @@ import {
 } from '../utils/CalculatorConfigs';
 import {KeyGestureWrapper} from './common/KeyGestureWrapper'
 import deviceInfo from '@ohos.deviceInfo';
-import { createKeyboardMaterial, KeyboardMaterialRole } from '../utils/ImmersiveMaterialUtils';
+import { createKeyboardMaterial } from '../utils/ImmersiveMaterialUtils';
+import { KeyboardKeyRole } from './common/keyboard/KeyboardKeyTypes';
+import { resolveKeyboardKeyRole } from './common/keyboard/KeyboardVisualPolicy';
 
 const icon_cases: Resource = $rawfile('icons/equation/icon_cases.svg');
 
@@ -76,17 +78,8 @@ function getLocalActionId(btn: string | Resource): string {
   return getActionId(btn);
 }
 
-function getEquationKeyboardMaterialRole(btn: string | Resource, isShift: boolean): KeyboardMaterialRole {
-  const action = getLocalActionId(btn);
-  if (action === 'AC' || action === '⌫') return KeyboardMaterialRole.DANGER;
-  if (action === 'EXE') return KeyboardMaterialRole.EMPHASIS;
-  if (action === '⇧Shift') {
-    return isShift ? KeyboardMaterialRole.SHIFT_ACTIVE : KeyboardMaterialRole.SHIFT;
-  }
-
-  const isNumber = typeof btn === 'string' && btn >= '0' && btn <= '9';
-  const isPrimary = isNumber || action === '.' || btn === 'π' || ['⇦', '⇨', '⇧', '⇩'].includes(action);
-  return isPrimary ? KeyboardMaterialRole.NORMAL : KeyboardMaterialRole.OPERATOR;
+function getEquationKeyboardKeyRole(btn: string | Resource): KeyboardKeyRole {
+  return resolveKeyboardKeyRole(btn, ['EXE'], ['π']);
 }
 
 // ================= 键盘组件 =================
@@ -205,7 +198,7 @@ struct TopKeyItem {
                 pressed: { .opacity(1.0).shadow({ radius: 0 }) },
                 normal: { .opacity(1.0).shadow({ radius: 0 }) }
               })
-              .systemMaterial(createKeyboardMaterial(getEquationKeyboardMaterialRole(this.btn, this.isShift)))
+              .systemMaterial(createKeyboardMaterial(getEquationKeyboardKeyRole(this.btn), this.isShift))
             } else {
               this.LegacyButtonBuilder()
             }
@@ -300,7 +293,7 @@ struct BottomKeyItem {
             pressed: { .opacity(1.0).shadow({ radius: 0 }) },
             normal: { .opacity(1.0).shadow({ radius: 0 }) }
           })
-          .systemMaterial(createKeyboardMaterial(getEquationKeyboardMaterialRole(this.btn, false)))
+          .systemMaterial(createKeyboardMaterial(getEquationKeyboardKeyRole(this.btn)))
         } else {
           this.LegacyButtonBuilder()
         }

@@ -37,7 +37,9 @@ import {
   icon_backspace
 } from '../utils/CalculatorConfigs';
 import deviceInfo from '@ohos.deviceInfo';
-import { createKeyboardMaterial, KeyboardMaterialRole } from '../utils/ImmersiveMaterialUtils';
+import { createKeyboardMaterial } from '../utils/ImmersiveMaterialUtils';
+import { KeyboardKeyRole } from './common/keyboard/KeyboardKeyTypes';
+import { resolveKeyboardKeyRole } from './common/keyboard/KeyboardVisualPolicy';
 
 // ================= 按键布局数组 =================
 const topShiftButtons: Array<string | Resource> = [
@@ -63,17 +65,8 @@ const bottomButtons: Array<string | Resource> = [
   '.', '0', icon_exp, 'Ans', '=',
 ];
 
-function getScientificKeyboardMaterialRole(btn: string | Resource, isShift: boolean): KeyboardMaterialRole {
-  const action = getActionId(btn);
-  if (action === 'AC' || action === '⌫') return KeyboardMaterialRole.DANGER;
-  if (action === '=') return KeyboardMaterialRole.EMPHASIS;
-  if (action === '⇧Shift') {
-    return isShift ? KeyboardMaterialRole.SHIFT_ACTIVE : KeyboardMaterialRole.SHIFT;
-  }
-
-  const isNumber = typeof btn === 'string' && btn >= '0' && btn <= '9';
-  const isPrimary = isNumber || ['.', 'dim', '⇦', '⇨', '⇧', '⇩', 'icon_exp'].includes(action);
-  return isPrimary ? KeyboardMaterialRole.NORMAL : KeyboardMaterialRole.OPERATOR;
+function getScientificKeyboardKeyRole(btn: string | Resource): KeyboardKeyRole {
+  return resolveKeyboardKeyRole(btn, ['=']);
 }
 
 // ================= 键盘组件 =================
@@ -209,7 +202,7 @@ struct TopKeyItem {
               pressed: { .opacity(1.0).shadow({ radius: 0 }) },
               normal: { .opacity(1.0).shadow({ radius: 0 }) }
             })
-            .systemMaterial(createKeyboardMaterial(getScientificKeyboardMaterialRole(this.btn, this.isShift)))
+            .systemMaterial(createKeyboardMaterial(getScientificKeyboardKeyRole(this.btn), this.isShift))
           } else {
             this.LegacyButtonBuilder()
           }
@@ -315,7 +308,7 @@ struct BottomKeyItem {
             pressed: { .opacity(1.0).shadow({ radius: 0 }) },
             normal: { .opacity(1.0).shadow({ radius: 0 }) }
           })
-          .systemMaterial(createKeyboardMaterial(getScientificKeyboardMaterialRole(this.btn, false)))
+          .systemMaterial(createKeyboardMaterial(getScientificKeyboardKeyRole(this.btn)))
         } else {
           this.LegacyButtonBuilder()
         }

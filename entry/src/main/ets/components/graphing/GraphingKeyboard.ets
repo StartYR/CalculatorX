@@ -15,7 +15,9 @@ import {
 import { KeyGestureWrapper } from '../common/KeyGestureWrapper';
 import { FunctionType } from './GraphingTypes'; // 引入函数类型进行动态感知
 import deviceInfo from '@ohos.deviceInfo';
-import { createKeyboardMaterial, KeyboardMaterialRole } from '../../utils/ImmersiveMaterialUtils';
+import { createKeyboardMaterial } from '../../utils/ImmersiveMaterialUtils';
+import { KeyboardKeyRole } from '../common/keyboard/KeyboardKeyTypes';
+import { resolveKeyboardKeyRole } from '../common/keyboard/KeyboardVisualPolicy';
 
 // ==================== 按键布局配置 ====================
 
@@ -78,18 +80,8 @@ function getLocalActionId(btn: string | Resource): string {
   return getActionId(btn);
 }
 
-function getGraphingKeyboardMaterialRole(btn: string | Resource, isShift: boolean): KeyboardMaterialRole {
-  const action = getLocalActionId(btn);
-  if (action === 'AC' || action === '⌫') return KeyboardMaterialRole.DANGER;
-  if (action === '确定') return KeyboardMaterialRole.EMPHASIS;
-  if (action === '⇧Shift') {
-    return isShift ? KeyboardMaterialRole.SHIFT_ACTIVE : KeyboardMaterialRole.SHIFT;
-  }
-
-  const isNumber = typeof btn === 'string' && btn >= '0' && btn <= '9';
-  const isPrimary = isNumber || action === '.' || btn === 'π' || btn === 'e' ||
-    ['⇦', '⇨', '⇧', '⇩'].includes(action);
-  return isPrimary ? KeyboardMaterialRole.NORMAL : KeyboardMaterialRole.OPERATOR;
+function getGraphingKeyboardKeyRole(btn: string | Resource): KeyboardKeyRole {
+  return resolveKeyboardKeyRole(btn, ['确定'], ['π', 'e']);
 }
 
 @Component
@@ -209,7 +201,7 @@ export struct TopKeyItem {
                   pressed: { .opacity(1.0).shadow({ radius: 0 }) },
                   normal: { .opacity(1.0).shadow({ radius: 0 }) }
                 })
-                .systemMaterial(createKeyboardMaterial(getGraphingKeyboardMaterialRole(this.btn, this.isShift)))
+                .systemMaterial(createKeyboardMaterial(getGraphingKeyboardKeyRole(this.btn), this.isShift))
               } else {
                 this.LegacyButtonBuilder()
               }
@@ -306,7 +298,7 @@ export struct BottomKeyItem {
             pressed: { .opacity(1.0).shadow({ radius: 0 }) },
             normal: { .opacity(1.0).shadow({ radius: 0 }) }
           })
-          .systemMaterial(createKeyboardMaterial(getGraphingKeyboardMaterialRole(this.btn, false)))
+          .systemMaterial(createKeyboardMaterial(getGraphingKeyboardKeyRole(this.btn)))
         } else {
           this.LegacyButtonBuilder()
         }

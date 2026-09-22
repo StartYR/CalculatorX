@@ -22,10 +22,11 @@ import Logger from '../utils/Logger'
 import {
   createDialogMaterial,
   createKeyboardMaterial,
-  isImmersiveMaterialAvailable,
-  KeyboardMaterialRole
+  isImmersiveMaterialAvailable
 } from '../utils/ImmersiveMaterialUtils';
 import deviceInfo from '@ohos.deviceInfo';
+import { KeyboardKeyRole } from './common/keyboard/KeyboardKeyTypes';
+import { resolveKeyboardKeyRole } from './common/keyboard/KeyboardVisualPolicy';
 
 const icon_M_power: Resource = $rawfile('icons/matrix/icon_M_power.svg');
 const icon_abs: Resource = $rawfile('icons/matrix/icon_abs.svg');
@@ -63,17 +64,8 @@ function getLocalActionId(btn: string | Resource): string {
   return getActionId(btn);
 }
 
-function getMatrixKeyboardMaterialRole(btn: string | Resource, isShift: boolean): KeyboardMaterialRole {
-  const action = getLocalActionId(btn);
-  if (action === 'AC' || action === '⌫') return KeyboardMaterialRole.DANGER;
-  if (action === '=') return KeyboardMaterialRole.EMPHASIS;
-  if (action === '⇧Shift') {
-    return isShift ? KeyboardMaterialRole.SHIFT_ACTIVE : KeyboardMaterialRole.SHIFT;
-  }
-
-  const isNumber = typeof btn === 'string' && btn >= '0' && btn <= '9';
-  const isPrimary = isNumber || ['.', 'dim', '⇦', '⇨', '⇧', '⇩'].includes(action);
-  return isPrimary ? KeyboardMaterialRole.NORMAL : KeyboardMaterialRole.OPERATOR;
+function getMatrixKeyboardKeyRole(btn: string | Resource): KeyboardKeyRole {
+  return resolveKeyboardKeyRole(btn, ['=']);
 }
 
 @Component
@@ -187,7 +179,7 @@ struct MatrixKeyItem {
             pressed: { .opacity(1.0).shadow({ radius: 0 }) },
             normal: { .opacity(1.0).shadow({ radius: 0 }) }
           })
-          .systemMaterial(createKeyboardMaterial(getMatrixKeyboardMaterialRole(this.btn, this.isShift)))
+          .systemMaterial(createKeyboardMaterial(getMatrixKeyboardKeyRole(this.btn), this.isShift))
         } else {
           this.LegacyButtonBuilder()
         }

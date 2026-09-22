@@ -8,15 +8,7 @@
 
 import deviceInfo from '@ohos.deviceInfo';
 import { uiMaterial } from '@kit.ArkUI';
-
-export enum KeyboardMaterialRole {
-  NORMAL,
-  OPERATOR,
-  DANGER,
-  EMPHASIS,
-  SHIFT,
-  SHIFT_ACTIVE
-}
+import { KeyboardKeyRole } from '../components/common/keyboard/KeyboardKeyTypes';
 
 let normalKeyboardMaterial: uiMaterial.Material | undefined = undefined;
 let operatorKeyboardMaterial: uiMaterial.Material | undefined = undefined;
@@ -121,9 +113,12 @@ export function createTopBarMaterial(): uiMaterial.Material | undefined {
  *
  * @returns 支持时返回材质实例，否则返回 `undefined`
  */
-export function createKeyboardMaterial(role: KeyboardMaterialRole): uiMaterial.Material | undefined {
+export function createKeyboardMaterial(
+  role: KeyboardKeyRole,
+  shiftActive: boolean = false
+): uiMaterial.Material | undefined {
   if (deviceInfo.apiAvailable('26.0.0')) {
-    if (role === KeyboardMaterialRole.OPERATOR) {
+    if (role === KeyboardKeyRole.FUNCTION || role === KeyboardKeyRole.OPERATOR) {
       if (!operatorKeyboardMaterial) {
         operatorKeyboardMaterial = new uiMaterial.ImmersiveMaterial({
           style: uiMaterial.ImmersiveStyle.ULTRA_THIN,
@@ -135,7 +130,7 @@ export function createKeyboardMaterial(role: KeyboardMaterialRole): uiMaterial.M
       return operatorKeyboardMaterial;
     }
 
-    if (role === KeyboardMaterialRole.DANGER) {
+    if (role === KeyboardKeyRole.DANGER) {
       if (!dangerKeyboardMaterial) {
         dangerKeyboardMaterial = new uiMaterial.ImmersiveMaterial({
           style: uiMaterial.ImmersiveStyle.ULTRA_THIN,
@@ -147,7 +142,7 @@ export function createKeyboardMaterial(role: KeyboardMaterialRole): uiMaterial.M
       return dangerKeyboardMaterial;
     }
 
-    if (role === KeyboardMaterialRole.EMPHASIS) {
+    if (role === KeyboardKeyRole.EMPHASIS) {
       if (!emphasisKeyboardMaterial) {
         emphasisKeyboardMaterial = new uiMaterial.ImmersiveMaterial({
           style: uiMaterial.ImmersiveStyle.ULTRA_THIN,
@@ -159,7 +154,7 @@ export function createKeyboardMaterial(role: KeyboardMaterialRole): uiMaterial.M
       return emphasisKeyboardMaterial;
     }
 
-    if (role === KeyboardMaterialRole.SHIFT) {
+    if (role === KeyboardKeyRole.SHIFT && !shiftActive) {
       if (!shiftKeyboardMaterial) {
         shiftKeyboardMaterial = new uiMaterial.ImmersiveMaterial({
           style: uiMaterial.ImmersiveStyle.ULTRA_THIN,
@@ -171,7 +166,7 @@ export function createKeyboardMaterial(role: KeyboardMaterialRole): uiMaterial.M
       return shiftKeyboardMaterial;
     }
 
-    if (role === KeyboardMaterialRole.SHIFT_ACTIVE) {
+    if (role === KeyboardKeyRole.SHIFT && shiftActive) {
       if (!activeShiftKeyboardMaterial) {
         activeShiftKeyboardMaterial = new uiMaterial.ImmersiveMaterial({
           style: uiMaterial.ImmersiveStyle.ULTRA_THIN,
