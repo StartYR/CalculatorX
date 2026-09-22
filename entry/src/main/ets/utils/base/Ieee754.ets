@@ -67,6 +67,12 @@ export function encodeFloat(text: string, width: number): Natural {
   const tenPower = Natural.parse('1' + '0'.repeat(Math.abs(power)), 10);
   if (power >= 0) numerator = numerator.multiply(tenPower);
   else denominator = tenPower;
+  return encodeRatio(numerator, denominator, sign, format);
+}
+
+function encodeRatio(numerator: Natural, denominator: Natural, sign: number, format: FloatFormat): Natural {
+  const maximumExponent = Math.pow(2, format.exponentBits) - 1;
+  if (numerator.isZero()) return compose(format, sign, 0, new Natural());
   let exponent = numerator.bits.length - denominator.bits.length;
   if ((exponent >= 0 ? numerator.compare(denominator.shift(exponent)) : numerator.shift(-exponent).compare(denominator)) < 0) {
     exponent--;
@@ -84,6 +90,22 @@ export function encodeFloat(text: string, width: number): Natural {
   }
   if (exponent + format.bias >= maximumExponent) return compose(format, sign, maximumExponent, new Natural());
   return compose(format, sign, exponent + format.bias, significand.low(format.fractionBits));
+}
+
+export function convertFloat(bits: Natural, fromWidth: number, toWidth: number): Natural {
+  if (fromWidth === toWidth) return new Natural(bits.bits);
+  const source = new FloatFormat(fromWidth);
+  const target = new FloatFormat(toWidth);
+  const details = decodeFloat(bits, fromWidth);
+  if (details.category.includes('NaN')) {
+    return compose(target, details.sign, Math.pow(2, target.exponentBits) - 1, Natural.small(1).shift(target.fractionBits - 1));
+  }
+  if (details.category === '无穷') return compose(target, details.sign, Math.pow(2, target.exponentBits) - 1, new Natural());
+  const fraction = bits.low(source.fractionBits);
+  const significand = details.exponent === 0 ? fraction : fraction.add(Natural.small(1).shift(source.fractionBits));
+  const power = details.actualExponent - source.fractionBits;
+  return encodeRatio(power >= 0 ? significand.shift(power) : significand,
+    power >= 0 ? Natural.small(1) : Natural.small(1).shift(-power), details.sign, target);
 }
 
 export function decodeFloat(bits: Natural, width: number): FloatDetails {

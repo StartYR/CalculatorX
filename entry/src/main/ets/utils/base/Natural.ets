@@ -120,7 +120,7 @@ export class Natural {
         next[i] = Math.floor(remainder / radix);
         remainder %= radix;
       }
-      output = alphabet[remainder] + output;
+      output = alphabet.charAt(remainder) + output;
       while (next.length > 0 && next[next.length - 1] === 0) next.pop();
       bits = next;
     }

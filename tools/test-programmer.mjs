@@ -17,7 +17,9 @@ registerHooks({
 const { Word, Flags, operate, encodingRows, decodeEncoding } = await import('../entry/src/main/ets/utils/base/ProgrammerEngine.ets');
 const { Natural } = await import('../entry/src/main/ets/utils/base/Natural.ets');
 const { ProgrammerExpression } = await import('../entry/src/main/ets/utils/base/ProgrammerExpression.ets');
-const { encodeFloat, decodeFloat } = await import('../entry/src/main/ets/utils/base/Ieee754.ets');
+const { encodeFloat, decodeFloat, convertFloat } = await import('../entry/src/main/ets/utils/base/Ieee754.ets');
+const { ProgrammerSession } = await import('../entry/src/main/ets/utils/base/ProgrammerSession.ets');
+const { recordOf, restoreRecord, settingsOf, restoreSettings } = await import('../entry/src/main/ets/utils/base/ProgrammerState.ets');
 let checks = 0;
 function equal(actual, expected) { assert.equal(actual, expected); checks++; }
 function word(value, width = 8) { return Word.parse(String(value), 10, width); }
@@ -104,6 +106,7 @@ for (const width of [16, 32, 64]) {
 for (let bits = 0; bits <= 65535; bits++) {
   const raw = Natural.small(bits), decoded = decodeFloat(raw, 16);
   if (!decoded.category.includes('NaN')) equal(encodeFloat(decoded.decimal, 16).toString(16), raw.toString(16));
+  if (!decoded.category.includes('NaN')) equal(convertFloat(convertFloat(raw, 16, 64), 64, 16).toString(16), raw.toString(16));
 }
 const buffer = new ArrayBuffer(8), view = new DataView(buffer);
 for (const width of [32, 64]) for (let i = 0; i < 300; i++) {
@@ -112,4 +115,42 @@ for (const width of [32, 64]) for (let i = 0; i < 300; i++) {
   const expected = width === 32 ? BigInt(view.getUint32(0)) : view.getBigUint64(0);
   equal(encodeFloat(input, width).toString(16), expected.toString(16).toUpperCase());
 }
-console.log(`Programmer core: ${checks} assertions passed.`);
+for (const width of [16, 32, 64]) {
+  for (const input of ['-0', '0', '-2.5', 'Infinity', 'NaN']) {
+    const session = new ProgrammerSession();
+    session.mode = 'float'; session.floatWidth = width; session.floatText = input; session.floatEvaluated = false;
+    session.confirm(); session.changeRadix(16);
+    const bits = session.floatBits.toString(16);
+    session.changeRadix(10); session.changeRadix(2);
+    equal(session.floatBits.toString(16), bits);
+    const restored = restoreRecord(JSON.stringify(recordOf(session)));
+    equal(restored.floatBits.toString(16), bits);
+    equal(restored.mode, 'float');
+  }
+}
+const session = new ProgrammerSession();
+session.changeWidth(8);
+for (const key of ['2', '5', '5', '+', '1', '=']) session.key(key);
+equal(session.word.format(10), '0'); equal(session.flags.cf, 1);
+session.changeRadix(16); equal(session.flags.cf, 1);
+session.changeSigned(); equal(session.flags.cf, 1);
+for (const key of ['SHL', '0', '=']) session.key(key);
+equal(session.flags.cf, 1);
+session.key('AC'); session.key('F'); session.key('F'); session.key('⌫');
+equal(session.expression, 'F');
+session.key('='); session.changeWidth(16); equal(session.word.format(16), '000F');
+session.changeRadix(10);
+for (const key of ['AC', '1', '/', '0']) session.key(key);
+const previous = session.word.format(10);
+assert.throws(() => session.key('=')); equal(session.word.format(10), previous);
+const oldRadix = session.radix;
+assert.throws(() => session.changeRadix(16)); equal(session.radix, oldRadix);
+session.key('AC'); session.changeWidth(64);
+session.expression = '9007199254740993'; session.evaluated = false; session.confirm();
+const recovered = restoreRecord(JSON.stringify(recordOf(session)));
+equal(recovered.word.format(10), '9007199254740993');
+equal(recovered.width, 64);
+equal(restoreSettings(settingsOf(session)).word.format(10), '0');
+assert.throws(() => restoreRecord('{}'));
+equal(convertFloat(encodeFloat('0.0000000894069671630859375', 64), 64, 16).toString(16), '2');
+console.log(`Programmer core and session: ${checks} assertions passed.`);
