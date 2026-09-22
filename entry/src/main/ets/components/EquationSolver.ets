@@ -9,7 +9,7 @@
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { vibrator } from '@kit.SensorServiceKit';
-import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
+import { getActionId, getFontFamily, getFontSize, getFontColor } from '../utils/CalculatorConfigs';
 import { PreferenceConfigs } from '../utils/CalculatorConfigs';
 import {
   icon_sqrt,
@@ -22,9 +22,9 @@ import {
 } from '../utils/CalculatorConfigs';
 import {KeyGestureWrapper} from './common/KeyGestureWrapper'
 import deviceInfo from '@ohos.deviceInfo';
-import { createKeyboardMaterial } from '../utils/ImmersiveMaterialUtils';
 import { KeyboardKeyRole } from './common/keyboard/KeyboardKeyTypes';
 import { resolveKeyboardKeyRole } from './common/keyboard/KeyboardVisualPolicy';
+import { KeyboardKeySurface } from './common/keyboard/KeyboardKeySurface';
 
 const icon_cases: Resource = $rawfile('icons/equation/icon_cases.svg');
 
@@ -57,13 +57,6 @@ function getLocalFontColor(btn: string | Resource): ResourceColor {
   if (btn === 'π') return getFontColor('0');
   if (btn === '=') return getFontColor('+');
   return getFontColor(btn);
-}
-
-// 按钮颜色
-function getLocalBgColor(btn: string | Resource, isShift: boolean): ResourceColor {
-  if (btn === 'π') return getBgColor('0', false);
-  if (btn === '=') return getBgColor('+', false);
-  return getBgColor(btn, isShift);
 }
 
 // 字体大小
@@ -119,27 +112,6 @@ struct TopKeyItem {
     .height('100%')
   }
 
-  @Builder
-  private LegacyButtonBuilder() {
-    Button() {
-      this.KeyContentBuilder()
-    }
-    .type(ButtonType.Normal)
-    .borderRadius(12)
-    .width('100%')
-    .height('100%')
-    .padding({ left: 2, right: 2, top: 0, bottom: 0 })
-    .backgroundColor(getLocalBgColor(this.btn, this.isShift))
-    .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-    .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
-    .borderColor($r('app.color.btn_highlight'))
-    .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
-    .stateStyles({
-      pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
-      normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
-    })
-  }
-
   build() {
     Column() {
       if (this.btnIndex >= 6) {
@@ -179,31 +151,14 @@ struct TopKeyItem {
           onKeyPress: this.onKeyPress,
           onMenuSelect: this.onMenuSelect
         }) {
-          if (deviceInfo.apiAvailable('26.0.0')) {
-            if (this.immersive) {
-              Button() {
-                this.KeyContentBuilder()
-              }
-              .type(ButtonType.Normal)
-              .borderRadius(12)
-              .width('100%')
-              .height('100%')
-              .padding({ left: 2, right: 2, top: 0, bottom: 0 })
-              .buttonStyle(ButtonStyleMode.TEXTUAL)
-              .backgroundColor(Color.Transparent)
-              .borderWidth(0)
-              .shadow({ radius: 0 })
-              .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 1.0 })
-              .stateStyles({
-                pressed: { .opacity(1.0).shadow({ radius: 0 }) },
-                normal: { .opacity(1.0).shadow({ radius: 0 }) }
-              })
-              .systemMaterial(createKeyboardMaterial(getEquationKeyboardKeyRole(this.btn), this.isShift))
-            } else {
-              this.LegacyButtonBuilder()
-            }
-          } else {
-            this.LegacyButtonBuilder()
+          KeyboardKeySurface({
+            immersive: this.immersive,
+            role: getEquationKeyboardKeyRole(this.btn),
+            shiftActive: this.isShift,
+            keyBorderRadius: 12,
+            horizontalPadding: 2
+          }) {
+            this.KeyContentBuilder()
           }
         }
       }
@@ -242,27 +197,6 @@ struct BottomKeyItem {
     }
   }
 
-  @Builder
-  private LegacyButtonBuilder() {
-    Button() {
-      this.KeyContentBuilder()
-    }
-    .type(ButtonType.Normal)
-    .borderRadius(16)
-    .width('100%')
-    .height('100%')
-    .padding({ left: 4, right: 4 })
-    .backgroundColor(getLocalBgColor(this.btn, false))
-    .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-    .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
-    .borderColor($r('app.color.btn_highlight'))
-    .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
-    .stateStyles({
-      pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
-      normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
-    })
-  }
-
   build() {
     KeyGestureWrapper({
       actionId: getLocalActionId(this.btn),
@@ -274,31 +208,13 @@ struct BottomKeyItem {
       onKeyPress: this.onKeyPress,
       onMenuSelect: this.onMenuSelect
     }) {
-      if (deviceInfo.apiAvailable('26.0.0')) {
-        if (this.immersive) {
-          Button() {
-            this.KeyContentBuilder()
-          }
-          .type(ButtonType.Normal)
-          .borderRadius(16)
-          .width('100%')
-          .height('100%')
-          .padding({ left: 4, right: 4 })
-          .buttonStyle(ButtonStyleMode.TEXTUAL)
-          .backgroundColor(Color.Transparent)
-          .borderWidth(0)
-          .shadow({ radius: 0 })
-          .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 1.0 })
-          .stateStyles({
-            pressed: { .opacity(1.0).shadow({ radius: 0 }) },
-            normal: { .opacity(1.0).shadow({ radius: 0 }) }
-          })
-          .systemMaterial(createKeyboardMaterial(getEquationKeyboardKeyRole(this.btn)))
-        } else {
-          this.LegacyButtonBuilder()
-        }
-      } else {
-        this.LegacyButtonBuilder()
+      KeyboardKeySurface({
+        immersive: this.immersive,
+        role: getEquationKeyboardKeyRole(this.btn),
+        keyBorderRadius: 16,
+        horizontalPadding: 4
+      }) {
+        this.KeyContentBuilder()
       }
     }
   }
