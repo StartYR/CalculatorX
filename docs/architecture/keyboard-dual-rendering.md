@@ -96,7 +96,7 @@ KeyboardKeySurface({
 
 | 类型 | 模块 | 传统路径 | 沉浸路径 |
 | --- | --- | --- | --- |
-| 页面型 | 基础、矩阵、方程、科学 | `Column` 同时排列公式区和传统键盘 | 单个横向 `Tabs`：内容区放在 `TabContent`，沉浸键盘放在底部 TabBar |
+| 页面型 | 基础、矩阵、方程、科学、程序员 | `Column` 同时排列显示区和传统键盘 | 单个横向 `Tabs`：内容区放在 `TabContent`，沉浸键盘放在底部 TabBar |
 | 悬浮型 | 汇率、图形定义域 | 直接挂载与键盘等高的传统 Builder | 与键盘等高的局部单 Tab `Tabs`，不接管页面其余区域 |
 | 图形主键盘 | `GraphingEditSheet` | `LegacyGraphingKeyboardBuilder()` | `ImmersiveGraphingKeyboardLayout()`，在 `GraphingKeyboardDockBuilder()` 内选择 |
 

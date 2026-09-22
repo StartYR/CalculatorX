@@ -97,15 +97,22 @@ function Get-SemanticState {
             }
         } catch { }
     }
+    $programmer = $null
+    $programmerRoot = @($AppLayout.Controls | Where-Object { $_.id -eq 'base.programmer' } | Select-Object -First 1)
+    if ($programmerRoot.Count -gt 0 -and $programmerRoot[0].description) {
+        try { $programmer = $programmerRoot[0].description | ConvertFrom-Json } catch { }
+    }
     return [pscustomobject]@{
         Formula = [pscustomobject]$formula
         Settings = [pscustomobject]$settings
+        Programmer = $programmer
     }
 }
 
 function Assert-SemanticTargetAllowed {
     param([Parameter(Mandatory)][string]$SemanticId)
     $allowed = $SemanticId -match '^(?:nav\.|module\.|calc\.key\.|settings\.|overlay\.sidebar\.dismiss$)'
+    $allowed = $allowed -or $SemanticId -match '^base\.(?:key\.[a-z0-9-]+|mode\.(?:integer|float)|radix\.(?:2|8|10|16)|float\.width\.(?:16|32|64)|signed|carry|bits|encoding|help)$'
     if (-not $allowed) {
         throw "Target is outside the semantic click whitelist: $SemanticId"
     }
@@ -202,6 +209,7 @@ try {
             screen = Get-ScreenSummary $appLayout
             formula = $semanticState.Formula
             settings = $semanticState.Settings
+            programmer = $semanticState.Programmer
             controlCount = $semanticControls.Count
         })
         exit 0

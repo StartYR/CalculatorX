@@ -222,6 +222,7 @@ export class PreferenceConfigs {
   static readonly KEY_EXCHANGE_BASE_AMOUNT = 'exchangeBaseAmount';
   static readonly KEY_EXCHANGE_RATES = 'exchangeRates';
   static readonly KEY_EXCHANGE_LAST_UPDATE = 'exchangeLastUpdateTime';
+  static readonly KEY_PROGRAMMER_SETTINGS = 'programmer.settings.v1';
 }
 
 /**

@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "name": "programmer-ui-smoke",
+  "steps": [
+    { "command": "ui.click", "target": "nav.sidebar.open" },
+    { "command": "ui.click", "target": "module.base" },
+    { "command": "wait", "path": "screen.module", "equals": "base", "timeoutSeconds": 10 },
+    { "command": "ui.click", "target": "base.mode.integer" },
+    { "command": "ui.click", "target": "base.key.clear" },
+    { "command": "ui.click", "target": "base.radix.10" },
+    { "command": "ui.click", "target": "base.key.1" },
+    { "command": "ui.click", "target": "base.key.plus" },
+    { "command": "ui.click", "target": "base.key.2" },
+    { "command": "ui.click", "target": "base.key.equals" },
+    { "command": "wait", "path": "programmer.integerConfirmed", "equals": true, "timeoutSeconds": 10 },
+    { "command": "ui.click", "target": "base.radix.16" },
+    { "command": "wait", "path": "programmer.data.expression", "equals": "3", "timeoutSeconds": 10 },
+    { "command": "ui.click", "target": "base.mode.float" },
+    { "command": "ui.click", "target": "base.key.clear" },
+    { "command": "ui.click", "target": "base.radix.10" },
+    { "command": "ui.click", "target": "base.float.width.32" },
+    { "command": "ui.click", "target": "base.key.1" },
+    { "command": "ui.click", "target": "base.key.equals" },
+    { "command": "wait", "path": "programmer.data.floatBits", "equals": "3F800000", "timeoutSeconds": 10 }
+  ]
+}

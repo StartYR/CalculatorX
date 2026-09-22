@@ -27,6 +27,7 @@
 ## 🛠️ 极客与专业场景工具 (Geek & Pro Tools)
 
 * **💻 [程序员模式 (Programmer Mode)](plan/programmer-mode-implementation.md)**
+    * 2026-09-23：首版已实现，核心回归与 debug 构建通过，真机视觉/交互待验收；[实际实现](architecture/programmer.md)。普通数值转换留待后续。
     * 多进制（BIN, OCT, DEC, HEX）实时同步转换。
     * 字长控制（8-bit 到 64-bit）及有符号/无符号整数溢出模拟。
     * 完整位运算支持（AND, OR, XOR, NOT、算术/逻辑移位、循环与带进位循环）。

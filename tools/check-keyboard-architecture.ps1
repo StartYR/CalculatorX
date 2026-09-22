@@ -16,6 +16,7 @@ $keyboardModules = @(
   'components\EquationSolver.ets',
   'components\ScientificCalc.ets',
   'components\exchange\rates\ExchangeKeyboard.ets',
+  'components\exchange\base\BaseConverter.ets',
   'components\graphing\GraphingKeyboard.ets'
 ) | ForEach-Object { Join-Path $sourceRoot $_ }
 

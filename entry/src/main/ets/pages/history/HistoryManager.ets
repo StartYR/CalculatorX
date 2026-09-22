@@ -58,10 +58,9 @@ export struct HistoryManager {
       case 0: return 'all';
       case 1: return 'basic,scientific';
       case 2: return 'equation';
-      case 3: return 'graph';
-      case 4: return 'matrix';
-      case 5: return 'conversion';
-      case 6: return 'pro';
+      case 3: return 'matrix';
+      case 4: return 'conversion,base';
+      case 5: return 'pro';
       default: return 'all';
     }
   }

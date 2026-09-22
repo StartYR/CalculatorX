@@ -32,6 +32,7 @@
 - [计算管线](architecture/compute-pipeline.md)
 - [函数图像架构](architecture/graphing.md)
 - [汇率架构](architecture/exchange.md)
+- [程序员模式](architecture/programmer.md)
 - [状态与持久化](architecture/state-and-storage.md)
 - [故障定位指南](architecture/troubleshooting.md)
 - [完整项目结构](architecture/project-structure.md)
@@ -118,7 +119,7 @@ Preferences / RDB 持久化
 | 汇率换算 | 已实现 | `exchange/rates/ExchangeRate.ets` | HTTP/缓存 → ArkTS 交叉换算 |
 | 统计分析 | 开发中 | `StatisticsCalc.ets` | 占位组件 |
 | 单位转换 | 开发中 | `UnitConverter.ets` | 占位组件 |
-| 进制转换 | 开发中 | `exchange/base/BaseConverter.ets` | 占位组件 |
+| 进制转换 | 程序员首版，待设备验收 | `exchange/base/BaseConverter.ets` | 独立 ArkTS 精确整数与 IEEE 754 核心；普通数值转换待开发 |
 
 模块的键盘、共享 UI 和交互机制详见 [模块与 UI](architecture/modules-and-ui.md)。
 
