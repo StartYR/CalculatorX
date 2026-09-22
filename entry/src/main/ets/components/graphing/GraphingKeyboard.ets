@@ -17,7 +17,7 @@ import { FunctionType } from './GraphingTypes'; // 引入函数类型进行动�
 import { KeyboardKeyRole } from '../common/keyboard/KeyboardKeyTypes';
 import { resolveKeyboardKeyRole } from '../common/keyboard/KeyboardVisualPolicy';
 import { KeyboardKeySurface } from '../common/keyboard/KeyboardKeySurface';
-import { KeyboardRenderSwitch } from '../common/keyboard/KeyboardRenderSwitch';
+import { DockedKeyboardHost } from '../common/keyboard/DockedKeyboardHost';
 
 // ==================== 按键布局配置 ====================
 
@@ -308,28 +308,11 @@ export struct DomainKeyboard {
     .padding({ bottom: this.navBarHeight - 16 })
   }
 
-  @Builder
-  private ImmersiveDomainKeyboardLayout() {
-    Tabs({ barPosition: BarPosition.End }) {
-      TabContent() {
-        Column()
-          .width('100%')
-          .height('100%')
-      }
-      .tabBar(this.ImmersiveDomainKeyboardBarBuilder)
-    }
-    .vertical(false)
-    .scrollable(false)
-    .animationDuration(0)
-    .barHeight('100%')
-    .width('100%')
-    .height(260 + this.navBarHeight - 16)
-  }
-
   build() {
-    KeyboardRenderSwitch({
-      legacyContent: this.LegacyDomainKeyboardBuilder,
-      immersiveContent: this.ImmersiveDomainKeyboardLayout
+    DockedKeyboardHost({
+      immersiveHeight: 260 + this.navBarHeight - 16,
+      legacyKeyboard: this.LegacyDomainKeyboardBuilder,
+      immersiveKeyboard: this.ImmersiveDomainKeyboardBarBuilder
     })
   }
 }
