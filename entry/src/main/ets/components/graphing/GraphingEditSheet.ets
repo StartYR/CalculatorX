@@ -11,7 +11,6 @@ import { GRAPHING_COLORS, getActionId, PreferenceConfigs } from '../../utils/Cal
 import { GraphFunctionItem, FunctionType } from './GraphingTypes';
 import { TopKeyItem, BottomKeyItem, getDynamicTopButtons, bottomButtons, DomainKeyboard } from './GraphingKeyboard';
 import { LengthMetrics } from '@kit.ArkUI';
-import { createDialogMaterial, isImmersiveMaterialAvailable } from '../../utils/ImmersiveMaterialUtils';
 import deviceInfo from '@ohos.deviceInfo';
 
 const MAX_FUNCTIONS = 10; // 面板支持的最大函数数量上限
@@ -104,7 +103,7 @@ export struct FunctionTypeDialog {
       .padding({ left: 16, right: 16, bottom: 16 })
     }
     .width('90%')
-    .backgroundColor(isImmersiveMaterialAvailable() ? Color.Transparent : $r('sys.color.background_primary'))
+    .backgroundColor($r('sys.color.background_primary'))
     .borderRadius(24)
   }
 }
@@ -445,8 +444,7 @@ export struct GraphingEditSheet {
     }),
     alignment: DialogAlignment.Center,
     autoCancel: true,
-    customStyle: true,
-    systemMaterial: createDialogMaterial()
+    customStyle: true
   });
 
   // --- 左滑删除专属组件 ---
