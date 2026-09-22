@@ -8,12 +8,12 @@
  */
 
 import { HapticUtils } from '../../../utils/HapticUtils';
-import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor, icon_backspace, PreferenceConfigs } from '../../../utils/CalculatorConfigs';
+import { getActionId, getFontFamily, getFontSize, getFontColor, icon_backspace, PreferenceConfigs } from '../../../utils/CalculatorConfigs';
 import { KeyGestureWrapper } from '../../common/KeyGestureWrapper';
 import deviceInfo from '@ohos.deviceInfo';
-import { createKeyboardMaterial } from '../../../utils/ImmersiveMaterialUtils';
 import { KeyboardKeyRole } from '../../common/keyboard/KeyboardKeyTypes';
 import { resolveKeyboardKeyRole } from '../../common/keyboard/KeyboardVisualPolicy';
+import { KeyboardKeySurface } from '../../common/keyboard/KeyboardKeySurface';
 
 // ==================== 键盘数据源 ====================
 // 恢复错落有致的标准 4 列布局
@@ -34,7 +34,7 @@ export struct BottomKeyItem {
   btn: string | Resource = '';
   immersive: boolean = false;
   @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
-  customRadius?: number = 16;
+  customRadius: number = 16;
   @State isShift: boolean = false; // 用于满足 KeyGestureWrapper 的双向绑定要求
 
   onKeyPress: (btn: string | Resource) => void = () => {};
@@ -57,27 +57,6 @@ export struct BottomKeyItem {
     }
   }
 
-  @Builder
-  private LegacyButtonBuilder() {
-    Button() {
-      this.KeyContentBuilder()
-    }
-    .type(ButtonType.Normal)
-    .borderRadius(this.customRadius)
-    .width('100%')
-    .height('100%')
-    .padding({ left: 4, right: 4 })
-    .backgroundColor(this.btn === '确定' ? getBgColor('=', false) : getBgColor(this.btn, false))
-    .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-    .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
-    .borderColor($r('app.color.btn_highlight'))
-    .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
-    .stateStyles({
-      pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
-      normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
-    })
-  }
-
   build() {
     KeyGestureWrapper({
       actionId: getActionId(this.btn),
@@ -88,31 +67,13 @@ export struct BottomKeyItem {
       onKeyPress: this.onKeyPress,
       onMenuSelect: this.onMenuSelect
     }) {
-      if (deviceInfo.apiAvailable('26.0.0')) {
-        if (this.immersive) {
-          Button() {
-            this.KeyContentBuilder()
-          }
-          .type(ButtonType.Normal)
-          .borderRadius(this.customRadius)
-          .width('100%')
-          .height('100%')
-          .padding({ left: 4, right: 4 })
-          .buttonStyle(ButtonStyleMode.TEXTUAL)
-          .backgroundColor(Color.Transparent)
-          .borderWidth(0)
-          .shadow({ radius: 0 })
-          .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 1.0 })
-          .stateStyles({
-            pressed: { .opacity(1.0).shadow({ radius: 0 }) },
-            normal: { .opacity(1.0).shadow({ radius: 0 }) }
-          })
-          .systemMaterial(createKeyboardMaterial(getExchangeKeyboardKeyRole(this.btn)))
-        } else {
-          this.LegacyButtonBuilder()
-        }
-      } else {
-        this.LegacyButtonBuilder()
+      KeyboardKeySurface({
+        immersive: this.immersive,
+        role: getExchangeKeyboardKeyRole(this.btn),
+        keyBorderRadius: this.customRadius,
+        horizontalPadding: 4
+      }) {
+        this.KeyContentBuilder()
       }
     }
   }
