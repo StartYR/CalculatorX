@@ -11,6 +11,7 @@ import { HapticUtils } from '../../../utils/HapticUtils';
 import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor, icon_backspace, PreferenceConfigs } from '../../../utils/CalculatorConfigs';
 import { KeyGestureWrapper } from '../../common/KeyGestureWrapper';
 import deviceInfo from '@ohos.deviceInfo';
+import { createKeyboardMaterial, KeyboardMaterialRole } from '../../../utils/ImmersiveMaterialUtils';
 
 // ==================== 键盘数据源 ====================
 // 恢复错落有致的标准 4 列布局
@@ -21,16 +22,64 @@ export const exchangeButtons: Array<string | Resource> = [
   '0', '.', '确定'
 ];
 
+function getExchangeKeyboardMaterialRole(btn: string | Resource): KeyboardMaterialRole {
+  const action = getActionId(btn);
+  if (action === 'AC' || action === '⌫') return KeyboardMaterialRole.DANGER;
+  if (action === '确定') return KeyboardMaterialRole.EMPHASIS;
+
+  const isNumber = typeof btn === 'string' && btn >= '0' && btn <= '9';
+  return isNumber || action === '.' ? KeyboardMaterialRole.NORMAL : KeyboardMaterialRole.OPERATOR;
+}
+
 // ==================== 独立按键组件 ====================
 @Component
 export struct BottomKeyItem {
   btn: string | Resource = '';
+  immersive: boolean = false;
   @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
   customRadius?: number = 16;
   @State isShift: boolean = false; // 用于满足 KeyGestureWrapper 的双向绑定要求
 
   onKeyPress: (btn: string | Resource) => void = () => {};
   onMenuSelect: (actionCode: string) => void = () => {};
+
+  @Builder
+  private KeyContentBuilder() {
+    if (typeof this.btn === 'string') {
+      Text(this.btn)
+        .fontFamily(getFontFamily(this.btn))
+        .fontSize(getFontSize(this.btn))
+        .fontWeight(FontWeight.Medium)
+        .fontColor(this.btn === '确定' ? getFontColor('=') : getFontColor(this.btn))
+    } else {
+      Image(this.btn)
+        .width(48)
+        .height(40)
+        .fillColor(getFontColor(this.btn))
+        .draggable(false)
+    }
+  }
+
+  @Builder
+  private LegacyButtonBuilder() {
+    Button() {
+      this.KeyContentBuilder()
+    }
+    .type(ButtonType.Normal)
+    .borderRadius(this.customRadius)
+    .width('100%')
+    .height('100%')
+    .padding({ left: 4, right: 4 })
+    .backgroundColor(this.btn === '确定' ? getBgColor('=', false) : getBgColor(this.btn, false))
+    .shadow(ShadowStyle.OUTER_DEFAULT_SM)
+    .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
+    .borderColor($r('app.color.btn_highlight'))
+    .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
+    .stateStyles({
+      pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
+      normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
+    })
+  }
 
   build() {
     KeyGestureWrapper({
@@ -42,35 +91,32 @@ export struct BottomKeyItem {
       onKeyPress: this.onKeyPress,
       onMenuSelect: this.onMenuSelect
     }) {
-      Button() {
-        if (typeof this.btn === 'string') {
-          Text(this.btn)
-            .fontFamily(getFontFamily(this.btn))
-            .fontSize(getFontSize(this.btn))
-            .fontWeight(FontWeight.Medium)
-            .fontColor(this.btn === '确定' ? getFontColor('=') : getFontColor(this.btn))
+      if (deviceInfo.apiAvailable('26.0.0')) {
+        if (this.immersive) {
+          Button() {
+            this.KeyContentBuilder()
+          }
+          .type(ButtonType.Normal)
+          .borderRadius(this.customRadius)
+          .width('100%')
+          .height('100%')
+          .padding({ left: 4, right: 4 })
+          .buttonStyle(ButtonStyleMode.TEXTUAL)
+          .backgroundColor(Color.Transparent)
+          .borderWidth(0)
+          .shadow({ radius: 0 })
+          .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 1.0 })
+          .stateStyles({
+            pressed: { .opacity(1.0).shadow({ radius: 0 }) },
+            normal: { .opacity(1.0).shadow({ radius: 0 }) }
+          })
+          .systemMaterial(createKeyboardMaterial(getExchangeKeyboardMaterialRole(this.btn)))
         } else {
-          Image(this.btn)
-            .width(48)
-            .height(40)
-            .fillColor(getFontColor(this.btn))
-            .draggable(false)
+          this.LegacyButtonBuilder()
         }
+      } else {
+        this.LegacyButtonBuilder()
       }
-      .type(ButtonType.Normal)
-      .borderRadius(this.customRadius)
-      .width('100%')
-      .height('100%')
-      .padding({ left: 4, right: 4 })
-      .backgroundColor(this.btn === '确定' ? getBgColor('=', false) : getBgColor(this.btn, false))
-      .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-      .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
-      .borderColor($r('app.color.btn_highlight'))
-      .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
-      .stateStyles({
-        pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
-        normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
-      })
     }
   }
 }
@@ -86,12 +132,13 @@ export struct ExchangeKeyboard {
   @StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
 
   @Builder
-  private KeyboardGridBuilder() {
+  private KeyboardGridBuilder(immersive: boolean) {
     Grid() {
       ForEach(exchangeButtons, (btn: string | Resource) => {
         GridItem() {
           BottomKeyItem({
             btn: btn,
+            immersive: immersive,
             customRadius: 36,
             onKeyPress: (b: string | Resource) => {
               let action = getActionId(b);
@@ -117,7 +164,7 @@ export struct ExchangeKeyboard {
   @Builder
   private LegacyKeyboardBuilder() {
     Column() {
-      this.KeyboardGridBuilder()
+      this.KeyboardGridBuilder(false)
     }
     .width('100%')
     .backgroundColor(Color.Transparent)
@@ -132,7 +179,7 @@ export struct ExchangeKeyboard {
   @Builder
   private ImmersiveKeyboardBuilder() {
     Column() {
-      this.KeyboardGridBuilder()
+      this.KeyboardGridBuilder(true)
     }
     .width('100%')
     .height('100%')
