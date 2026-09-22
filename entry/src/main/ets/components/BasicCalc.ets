@@ -13,7 +13,7 @@ import { getCalculatorKeySemanticId } from '../utils/SemanticIds';
 import { KeyboardKeyRole } from './common/keyboard/KeyboardKeyTypes';
 import { resolveKeyboardKeyRole } from './common/keyboard/KeyboardVisualPolicy';
 import { KeyboardKeySurface } from './common/keyboard/KeyboardKeySurface';
-import { KeyboardRenderSwitch } from './common/keyboard/KeyboardRenderSwitch';
+import deviceInfo from '@ohos.deviceInfo';
 
 // 按键布局
 const basicButtons: Array<string | Resource> = [
@@ -113,6 +113,7 @@ export struct BasicCalc {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
+  @StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
 
   // 作为传声筒，无脑呼叫 FormulaScreen
   private handleKeyPress(btn: string | Resource) {
@@ -211,9 +212,14 @@ export struct BasicCalc {
   }
 
   build() {
-    KeyboardRenderSwitch({
-      legacyContent: this.LegacyBasicLayout,
-      immersiveContent: this.ImmersiveBasicLayout
-    })
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      if (this.keyImmersiveMaterial) {
+        this.ImmersiveBasicLayout()
+      } else {
+        this.LegacyBasicLayout()
+      }
+    } else {
+      this.LegacyBasicLayout()
+    }
   }
 }

@@ -7,7 +7,7 @@ $sourceRoot = Join-Path $projectRoot 'entry\src\main\ets'
 $keyboardRoot = Join-Path $sourceRoot 'components\common\keyboard'
 
 $surfacePath = Join-Path $keyboardRoot 'KeyboardKeySurface.ets'
-$switchPath = Join-Path $keyboardRoot 'KeyboardRenderSwitch.ets'
+$removedSwitchPath = Join-Path $keyboardRoot 'KeyboardRenderSwitch.ets'
 $materialPath = Join-Path $sourceRoot 'utils\ImmersiveMaterialUtils.ets'
 
 $keyboardModules = @(
@@ -45,13 +45,12 @@ $allowedPreferenceReaders = @(
   (Join-Path $sourceRoot 'utils\CalculatorConfigs.ets'),
   (Join-Path $sourceRoot 'utils\PreferenceManager.ets'),
   (Join-Path $sourceRoot 'entryability\EntryAbility.ets'),
-  (Join-Path $sourceRoot 'pages\settings\Settings.ets'),
-  $switchPath
-)
+  (Join-Path $sourceRoot 'pages\settings\Settings.ets')
+) + $renderModules
 $preferenceReferences = $allEtsFiles | Select-String -SimpleMatch 'KEY_KEY_IMMERSIVE_MATERIAL'
 foreach ($match in $preferenceReferences) {
   if ($match.Path -notin $allowedPreferenceReaders) {
-    $errors.Add("键盘沉浸开关读取未集中到渲染选择器: $($match.Path):$($match.LineNumber)")
+    $errors.Add("键盘沉浸开关读取出现在非渲染入口: $($match.Path):$($match.LineNumber)")
   }
 }
 
@@ -64,16 +63,21 @@ foreach ($modulePath in $keyboardModules) {
 
 foreach ($modulePath in $renderModules) {
   $moduleText = Get-Content -LiteralPath $modulePath -Raw
-  if ($moduleText -notmatch 'KeyboardRenderSwitch') {
-    $errors.Add("键盘模块未使用公共渲染入口: $modulePath")
+  if ($moduleText -notmatch '@StorageProp\(PreferenceConfigs\.KEY_KEY_IMMERSIVE_MATERIAL\)') {
+    $errors.Add("键盘模块未订阅沉浸开关: $modulePath")
+  }
+  if ($moduleText -notmatch "if \(deviceInfo\.apiAvailable\('26\.0\.0'\)\)") {
+    $errors.Add("键盘模块缺少直接 API 26 正向保护: $modulePath")
   }
 }
 
-foreach ($guardPath in @($surfacePath, $switchPath)) {
-  $guardText = Get-Content -LiteralPath $guardPath -Raw
-  if ($guardText -notmatch "if \(deviceInfo\.apiAvailable\('26\.0\.0'\)\)") {
-    $errors.Add("公共组件缺少直接 API 26 正向保护: $guardPath")
-  }
+$surfaceText = Get-Content -LiteralPath $surfacePath -Raw
+if ($surfaceText -notmatch "if \(deviceInfo\.apiAvailable\('26\.0\.0'\)\)") {
+  $errors.Add("公共按键表面缺少直接 API 26 正向保护: $surfacePath")
+}
+
+if (Test-Path -LiteralPath $removedSwitchPath) {
+  $errors.Add("不应恢复通过 @BuilderParam 转交完整布局的渲染选择器: $removedSwitchPath")
 }
 
 if ($errors.Count -gt 0) {

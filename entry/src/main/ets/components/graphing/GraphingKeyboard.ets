@@ -17,7 +17,7 @@ import { FunctionType } from './GraphingTypes'; // 引入函数类型进行动�
 import { KeyboardKeyRole } from '../common/keyboard/KeyboardKeyTypes';
 import { resolveKeyboardKeyRole } from '../common/keyboard/KeyboardVisualPolicy';
 import { KeyboardKeySurface } from '../common/keyboard/KeyboardKeySurface';
-import { KeyboardRenderSwitch } from '../common/keyboard/KeyboardRenderSwitch';
+import deviceInfo from '@ohos.deviceInfo';
 
 // ==================== 按键布局配置 ====================
 
@@ -238,6 +238,7 @@ export const domainButtons: Array<string | Resource> = [
 export struct DomainKeyboard {
   // 占位状态，用于满足 BottomKeyItem 对 @Link isShift 的要求
   @State private isShift: boolean = false;
+  @StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
 
   // 暴露给外部的回调，专门处理点击事件
   onKeyPress: (btn: string | Resource) => void = () => {};
@@ -327,9 +328,14 @@ export struct DomainKeyboard {
   }
 
   build() {
-    KeyboardRenderSwitch({
-      legacyContent: this.LegacyDomainKeyboardBuilder,
-      immersiveContent: this.ImmersiveDomainKeyboardLayout
-    })
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      if (this.keyImmersiveMaterial) {
+        this.ImmersiveDomainKeyboardLayout()
+      } else {
+        this.LegacyDomainKeyboardBuilder()
+      }
+    } else {
+      this.LegacyDomainKeyboardBuilder()
+    }
   }
 }

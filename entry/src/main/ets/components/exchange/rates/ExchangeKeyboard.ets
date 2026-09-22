@@ -13,7 +13,7 @@ import { KeyGestureWrapper } from '../../common/KeyGestureWrapper';
 import { KeyboardKeyRole } from '../../common/keyboard/KeyboardKeyTypes';
 import { resolveKeyboardKeyRole } from '../../common/keyboard/KeyboardVisualPolicy';
 import { KeyboardKeySurface } from '../../common/keyboard/KeyboardKeySurface';
-import { KeyboardRenderSwitch } from '../../common/keyboard/KeyboardRenderSwitch';
+import deviceInfo from '@ohos.deviceInfo';
 
 // ==================== 键盘数据源 ====================
 // 恢复错落有致的标准 4 列布局
@@ -87,6 +87,7 @@ export struct ExchangeKeyboard {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
+  @StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
 
   @Builder
   private KeyboardGridBuilder(immersive: boolean) {
@@ -168,9 +169,14 @@ export struct ExchangeKeyboard {
   }
 
   build() {
-    KeyboardRenderSwitch({
-      legacyContent: this.LegacyKeyboardBuilder,
-      immersiveContent: this.ImmersiveKeyboardLayout
-    })
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      if (this.keyImmersiveMaterial) {
+        this.ImmersiveKeyboardLayout()
+      } else {
+        this.LegacyKeyboardBuilder()
+      }
+    } else {
+      this.LegacyKeyboardBuilder()
+    }
   }
 }

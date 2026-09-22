@@ -24,7 +24,7 @@ import {KeyGestureWrapper} from './common/KeyGestureWrapper'
 import { KeyboardKeyRole } from './common/keyboard/KeyboardKeyTypes';
 import { resolveKeyboardKeyRole } from './common/keyboard/KeyboardVisualPolicy';
 import { KeyboardKeySurface } from './common/keyboard/KeyboardKeySurface';
-import { KeyboardRenderSwitch } from './common/keyboard/KeyboardRenderSwitch';
+import deviceInfo from '@ohos.deviceInfo';
 
 const icon_cases: Resource = $rawfile('icons/equation/icon_cases.svg');
 
@@ -227,6 +227,7 @@ export struct EquationSolver {
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @StorageProp('activeBubbleId') activeBubbleId: string = '';
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
+  @StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
 
   @State @Watch('onShiftChange') isShift: boolean = false;
 
@@ -369,9 +370,14 @@ export struct EquationSolver {
   }
 
   build() {
-    KeyboardRenderSwitch({
-      legacyContent: this.LegacyEquationLayout,
-      immersiveContent: this.ImmersiveEquationLayout
-    })
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      if (this.keyImmersiveMaterial) {
+        this.ImmersiveEquationLayout()
+      } else {
+        this.LegacyEquationLayout()
+      }
+    } else {
+      this.LegacyEquationLayout()
+    }
   }
 }
