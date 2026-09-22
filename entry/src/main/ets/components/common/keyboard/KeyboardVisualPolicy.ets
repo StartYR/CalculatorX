@@ -7,7 +7,8 @@ const CORE_ACTIONS: string[] = ['.', 'dim', '⇦', '⇨', '⇧', '⇩', 'icon_ex
 export function resolveKeyboardKeyRole(
   content: string | Resource,
   emphasisActions: string[] = ['=', 'EXE', '确定'],
-  extraCoreActions: string[] = []
+  extraCoreActions: string[] = [],
+  extraOperatorActions: string[] = []
 ): KeyboardKeyRole {
   const action = getActionId(content);
   if (action === 'AC' || action === '⌫') return KeyboardKeyRole.DANGER;
@@ -18,19 +19,22 @@ export function resolveKeyboardKeyRole(
   if (isNumber || CORE_ACTIONS.includes(action) || extraCoreActions.includes(action)) {
     return KeyboardKeyRole.CORE;
   }
-  if (OPERATOR_ACTIONS.includes(action)) return KeyboardKeyRole.OPERATOR;
+  if (OPERATOR_ACTIONS.includes(action) || extraOperatorActions.includes(action)) {
+    return KeyboardKeyRole.OPERATOR;
+  }
   return KeyboardKeyRole.FUNCTION;
 }
 
 export function createKeyboardKeySpec(
   content: string | Resource,
   emphasisActions: string[] = ['=', 'EXE', '确定'],
-  extraCoreActions: string[] = []
+  extraCoreActions: string[] = [],
+  extraOperatorActions: string[] = []
 ): KeyboardKeySpec {
   return {
     content: content,
     actionId: getActionId(content),
-    role: resolveKeyboardKeyRole(content, emphasisActions, extraCoreActions)
+    role: resolveKeyboardKeyRole(content, emphasisActions, extraCoreActions, extraOperatorActions)
   };
 }
 

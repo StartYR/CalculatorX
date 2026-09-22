@@ -79,7 +79,7 @@ function getLocalActionId(btn: string | Resource): string {
 }
 
 function getEquationKeyboardKeyRole(btn: string | Resource): KeyboardKeyRole {
-  return resolveKeyboardKeyRole(btn, ['EXE'], ['π']);
+  return resolveKeyboardKeyRole(btn, ['EXE'], ['π'], ['=']);
 }
 
 // ================= 键盘组件 =================
