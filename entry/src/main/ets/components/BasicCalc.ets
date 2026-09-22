@@ -8,12 +8,12 @@
 
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
-import { getActionId, getFontColor, getBgColor, PreferenceConfigs, icon_backspace } from '../utils/CalculatorConfigs';
+import { getActionId, getFontColor, PreferenceConfigs, icon_backspace } from '../utils/CalculatorConfigs';
 import { getCalculatorKeySemanticId } from '../utils/SemanticIds';
-import deviceInfo from '@ohos.deviceInfo';
-import { createKeyboardMaterial } from '../utils/ImmersiveMaterialUtils';
 import { KeyboardKeyRole } from './common/keyboard/KeyboardKeyTypes';
 import { resolveKeyboardKeyRole } from './common/keyboard/KeyboardVisualPolicy';
+import { KeyboardKeySurface } from './common/keyboard/KeyboardKeySurface';
+import deviceInfo from '@ohos.deviceInfo';
 
 // 按键布局
 const basicButtons: Array<string | Resource> = [
@@ -29,12 +29,6 @@ function getLocalFontSize(btn: string | Resource): number {
   if (btn === '+' || btn === '−' || btn === 'π' || btn === '×' || btn === '÷' || btn === '=') return 40;
   if (btn === 'AC') return 26;
   return 30;
-}
-
-// 按钮颜色
-function getLocalBgColor(btn: string | Resource, isShift: boolean): ResourceColor {
-  if (btn === '%') return getBgColor('0', false);
-  return getBgColor(btn, isShift);
 }
 
 function getKeyboardKeyRole(btn: string | Resource): KeyboardKeyRole {
@@ -91,69 +85,24 @@ struct BasicKeyItem {
     }
   }
 
-  @Builder
-  private LegacyButtonBuilder() {
-    Button() {
-      this.KeyContentBuilder()
-    }
-    .type(ButtonType.Normal)
-    .id(getCalculatorKeySemanticId(getActionId(this.btn)))
-    .accessibilityText(getActionId(this.btn))
-    .borderRadius(40)
-    .width('100%')
-    .height('100%')
-    .padding({ left: 4, right: 4 })
-    .backgroundColor(getLocalBgColor(this.btn, false))
-    .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-    .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
-    .borderColor($r('app.color.btn_highlight'))
-    .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.92 })
-    .stateStyles({
-      pressed: { .opacity(0.75).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
-      normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
-    })
-    .onClick(() => {
-      this.handleClick();
-    })
-    .onTouch((event: TouchEvent) => {
-      this.handleTouch(event);
-    })
-  }
-
   build() {
-    if (deviceInfo.apiAvailable('26.0.0')) {
-      if (this.immersive) {
-        Button() {
-          this.KeyContentBuilder()
-        }
-        .type(ButtonType.Normal)
-        .id(getCalculatorKeySemanticId(getActionId(this.btn)))
-        .accessibilityText(getActionId(this.btn))
-        .borderRadius(40)
-        .width('100%')
-        .height('100%')
-        .padding({ left: 4, right: 4 })
-        .buttonStyle(ButtonStyleMode.TEXTUAL)
-        .backgroundColor(Color.Transparent)
-        .borderWidth(0)
-        .shadow({ radius: 0 })
-        .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 1.0 })
-        .stateStyles({
-          pressed: { .opacity(1.0).shadow({ radius: 0 }) },
-          normal: { .opacity(1.0).shadow({ radius: 0 }) }
-        })
-        .systemMaterial(createKeyboardMaterial(getKeyboardKeyRole(this.btn)))
-        .onClick(() => {
-          this.handleClick();
-        })
-        .onTouch((event: TouchEvent) => {
-          this.handleTouch(event);
-        })
-      } else {
-        this.LegacyButtonBuilder()
+    KeyboardKeySurface({
+      immersive: this.immersive,
+      role: getKeyboardKeyRole(this.btn),
+      keyBorderRadius: 40,
+      horizontalPadding: 4,
+      legacyScale: 0.92,
+      legacyPressedOpacity: 0.75,
+      semanticId: getCalculatorKeySemanticId(getActionId(this.btn)),
+      keyAccessibilityText: getActionId(this.btn),
+      onKeyClick: (): void => {
+        this.handleClick();
+      },
+      onKeyTouch: (event: TouchEvent): void => {
+        this.handleTouch(event);
       }
-    } else {
-      this.LegacyButtonBuilder()
+    }) {
+      this.KeyContentBuilder()
     }
   }
 }
