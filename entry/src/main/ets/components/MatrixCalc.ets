@@ -18,10 +18,6 @@ import {
 } from '../utils/CalculatorConfigs';
 import { icon_backspace, icon_fraction, icon_dim } from '../utils/CalculatorConfigs';
 import Logger from '../utils/Logger'
-import {
-  createDialogMaterial,
-  isImmersiveMaterialAvailable
-} from '../utils/ImmersiveMaterialUtils';
 import { KeyboardKeyRole } from './common/keyboard/KeyboardKeyTypes';
 import { resolveKeyboardKeyRole } from './common/keyboard/KeyboardVisualPolicy';
 import { KeyboardKeySurface } from './common/keyboard/KeyboardKeySurface';
@@ -184,8 +180,7 @@ export struct MatrixCalc {
     }),
     alignment: DialogAlignment.Center, // 居中弹出
     customStyle: true,                 // 开启自定义样式以去除系统默认白底
-    autoCancel: true,                  // 允许点击遮罩层关闭
-    systemMaterial: createDialogMaterial()
+    autoCancel: true                   // 允许点击遮罩层关闭
   })
 
   onShiftChange() {
@@ -385,7 +380,7 @@ struct DimDialog {
       .padding({ left: 10, right: 10, bottom: 10 })
     }
     .padding(16)
-    .backgroundColor(isImmersiveMaterialAvailable() ? Color.Transparent : $r('sys.color.comp_background_primary'))
+    .backgroundColor($r('sys.color.comp_background_primary'))
     .borderRadius(24)
     .width(320)
   }
