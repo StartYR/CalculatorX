@@ -28,6 +28,7 @@
 ### 专题文档索引
 
 - [模块与 UI](architecture/modules-and-ui.md)
+- [键盘双渲染架构](architecture/keyboard-dual-rendering.md)
 - [计算管线](architecture/compute-pipeline.md)
 - [函数图像架构](architecture/graphing.md)
 - [汇率架构](architecture/exchange.md)
@@ -285,6 +286,7 @@ entry/src/main/
 | 文档 | 阅读场景 |
 |------|------------|
 | [模块与 UI](architecture/modules-and-ui.md) | 修改计算器键盘、壳、手势、共享组件或页面 |
+| [键盘双渲染架构](architecture/keyboard-dual-rendering.md) | 新增或排查传统与沉浸光感双路径键盘 |
 | [计算管线](architecture/compute-pipeline.md) | 计算结果错误、LaTeX/AST、N-API、矩阵、方程或格式化 |
 | [函数图像架构](architecture/graphing.md) | 编辑函数、采样、Canvas、缩放平移或曲线异常 |
 | [汇率架构](architecture/exchange.md) | 汇率请求、缓存、选择器、列表或换算异常 |

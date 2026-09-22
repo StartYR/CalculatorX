@@ -19,7 +19,9 @@ CalculatorX 的全部计算键盘现在可以在 API 26 设备上使用系统原
 
 ## 设计与实现
 
-每个键盘保留 `Legacy` 与 `Immersive` 两套明确的布局入口。API 26 正向分支先读取全局开关，再选择局部单 Tab 底部栏或完整旧布局；按键数据、业务 Action、触感、Shift 和长按逻辑继续共享。
+键盘使用统一的语义、表面和路径选择基础设施。`KeyboardKeyRole` 同时驱动传统背景与沉浸材质；`KeyboardKeySurface` 集中维护两套 Button 属性链；`KeyboardRenderSwitch` 集中读取全局开关并选择完整组件树。按键数据、业务 Action、触感、Shift 和长按逻辑继续由模块持有。
+
+基础、矩阵、方程和科学计算复用页面型 Host；汇率与图形定义域复用无动画悬浮型 Host。图形主键盘继续保留专用容器，使焦点与展开收起动画仍可在模块内独立定位。
 
 键盘材质集中在 `ImmersiveMaterialUtils.ets` 中按六类角色缓存。沉浸按钮使用透明背景、零边框、零阴影和 `scale: 1.0`，避免旧表面与系统交互形变叠加。汇率和图形键盘使用与键盘等高的局部容器，保留原有 Stack 覆盖、占位和展开收起动画。图形定义域的 `TextInput.customKeyboard()` 内也使用同类局部容器。
 
@@ -27,6 +29,7 @@ CalculatorX 的全部计算键盘现在可以在 API 26 设备上使用系统原
 
 - `targetSdkVersion` 保持 `26.0.0`，`compatibleSdkVersion` 保持 `6.1.0(23)`；
 - `uiMaterial.ImmersiveMaterial` 的构造和使用位于直接的 `deviceInfo.apiAvailable('26.0.0')` 正向分支；
+- 逐键材质调用只存在于公共按键表面，全局键盘开关只由统一渲染选择器读取；
 - 发布默认值为 `false`，已有用户不会在升级后被强制切换键盘外观；
 - 小窗、横屏、平板、所有模块的 API 23 交叉覆盖和长期性能仍列为发布前回归项。
 
@@ -36,7 +39,10 @@ CalculatorX 的全部计算键盘现在可以在 API 26 设备上使用系统原
 - 基础键盘通过 API 23 回退、深浅色、系统光感强度联动和全部按键功能验证；
 - 静态审计确认 9 处逐键材质调用均清除了旧背景、边框、阴影和点击缩放，并确认六类材质实例集中缓存；
 - `entry@default/debug assembleHap` 最终构建成功；
+- 公共语义映射单元测试通过，键盘架构只读检查通过；
 - 构建仍包含项目既有的弃用、系统能力和第三方原生库告警，没有新增编译错误。
+
+本次架构重构后的 API 26、API 23、深浅色、长按、Shift、焦点和动画仍需真机复验；重构前的逐模块真机结果不能替代该复验。
 
 ## 主要文件
 
@@ -51,6 +57,9 @@ CalculatorX 的全部计算键盘现在可以在 API 26 设备上使用系统原
 - `entry/src/main/ets/components/exchange/rates/ExchangeKeyboard.ets`
 - `entry/src/main/ets/components/graphing/GraphingEditSheet.ets`
 - `entry/src/main/ets/components/graphing/GraphingKeyboard.ets`
+- `entry/src/main/ets/components/common/keyboard/`
+- `tools/check-keyboard-architecture.ps1`
+- `docs/architecture/keyboard-dual-rendering.md`
 
 ## 发布说明素材
 
