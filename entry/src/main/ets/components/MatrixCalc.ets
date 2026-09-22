@@ -9,10 +9,23 @@
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { KeyGestureWrapper } from './common/KeyGestureWrapper';
-import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
+import {
+  getActionId,
+  getFontFamily,
+  getFontSize,
+  getFontColor,
+  getBgColor,
+  PreferenceConfigs
+} from '../utils/CalculatorConfigs';
 import { icon_backspace, icon_fraction, icon_dim } from '../utils/CalculatorConfigs';
 import Logger from '../utils/Logger'
-import { createDialogMaterial, isImmersiveMaterialAvailable } from '../utils/ImmersiveMaterialUtils';
+import {
+  createDialogMaterial,
+  createKeyboardMaterial,
+  isImmersiveMaterialAvailable,
+  KeyboardMaterialRole
+} from '../utils/ImmersiveMaterialUtils';
+import deviceInfo from '@ohos.deviceInfo';
 
 const icon_M_power: Resource = $rawfile('icons/matrix/icon_M_power.svg');
 const icon_abs: Resource = $rawfile('icons/matrix/icon_abs.svg');
@@ -50,15 +63,94 @@ function getLocalActionId(btn: string | Resource): string {
   return getActionId(btn);
 }
 
+function getMatrixKeyboardMaterialRole(btn: string | Resource): KeyboardMaterialRole {
+  const action = getLocalActionId(btn);
+  if (action === 'AC' || action === '⌫') return KeyboardMaterialRole.DANGER;
+  if (action === '=') return KeyboardMaterialRole.EMPHASIS;
+  if (['×', '∘', '+', '−'].includes(action)) return KeyboardMaterialRole.OPERATOR;
+  return KeyboardMaterialRole.NORMAL;
+}
+
 @Component
 struct MatrixKeyItem {
   btn: string | Resource = '';
   btnIndex: number = 0;
+  immersive: boolean = false;
   @Link isShift: boolean;
 
   // 回调参数
   onKeyPress: (btn: string | Resource) => void = () => {};
   onMenuSelect: (actionCode: string) => void = () => {};
+
+  @Builder
+  private KeyContentBuilder() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      if (typeof this.btn === 'string') {
+        Text(this.btn)
+          .fontFamily(getFontFamily(this.btn))
+          .fontSize(getLocalFontSize(this.btn))
+          .fontWeight(FontWeight.Medium)
+          .fontColor(getFontColor(this.btn))
+          .width('100%')
+          .height('100%')
+          .textAlign(TextAlign.Center)
+      } else {
+        Column() {
+          Image(this.btn)
+            .width(48)
+            .height(40)
+            .fillColor(getFontColor(this.btn))
+            .objectFit(ImageFit.Contain)
+            .draggable(false)
+        }
+        .width('100%')
+        .height('100%')
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
+      }
+
+      if (matrixShiftButtons[this.btnIndex] !== '') {
+        if (typeof matrixShiftButtons[this.btnIndex] === 'string') {
+          Text(matrixShiftButtons[this.btnIndex] as string)
+            .fontFamily(getFontFamily(matrixShiftButtons[this.btnIndex] as string))
+            .fontSize(12)
+            .fontColor('#ffac8100')
+            .padding({ left: 6, top: 4 })
+        } else {
+          Image(matrixShiftButtons[this.btnIndex] as Resource)
+            .width(14)
+            .height(14)
+            .fillColor('#ffac8100')
+            .margin({ left: 6, top: 4 })
+            .objectFit(ImageFit.Contain)
+            .draggable(false)
+        }
+      }
+    }
+    .width('100%')
+    .height('100%')
+  }
+
+  @Builder
+  private LegacyButtonBuilder() {
+    Button() {
+      this.KeyContentBuilder()
+    }
+    .type(ButtonType.Normal)
+    .borderRadius(16)
+    .width('100%')
+    .height('100%')
+    .padding({ left: 2, right: 2 })
+    .backgroundColor(getBgColor(this.btn, this.isShift))
+    .shadow(ShadowStyle.OUTER_DEFAULT_SM)
+    .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
+    .borderColor($r('app.color.btn_highlight'))
+    .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
+    .stateStyles({
+      pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
+      normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
+    })
+  }
 
   build() {
     // 注入底层交互包装器
@@ -71,70 +163,32 @@ struct MatrixKeyItem {
       onKeyPress: this.onKeyPress,
       onMenuSelect: this.onMenuSelect
     }) {
-      Button() {
-        // 副文字悬浮左上角
-        Stack({ alignContent: Alignment.TopStart }) {
-          // ================= 1. 主功能文字或图标 =================
-          if (typeof this.btn === 'string') {
-            Text(this.btn)
-              .fontFamily(getFontFamily(this.btn))
-              .fontSize(getLocalFontSize(this.btn))
-              .fontWeight(FontWeight.Medium)
-              .fontColor(getFontColor(this.btn))
-              .width('100%')
-              .height('100%')
-              .textAlign(TextAlign.Center)
-          } else {
-            Column() {
-              Image(this.btn)
-                .width(48)
-                .height(40)
-                .fillColor(getFontColor(this.btn))
-                .objectFit(ImageFit.Contain)
-                .draggable(false)
-            }
-            .width('100%')
-            .height('100%')
-            .justifyContent(FlexAlign.Center)
-            .alignItems(HorizontalAlign.Center)
+      if (deviceInfo.apiAvailable('26.0.0')) {
+        if (this.immersive) {
+          Button() {
+            this.KeyContentBuilder()
           }
-
-          // ================= 2. Shift 副功能文字或图标 =================
-          if (matrixShiftButtons[this.btnIndex] !== '') {
-            if (typeof matrixShiftButtons[this.btnIndex] === 'string') {
-              Text(matrixShiftButtons[this.btnIndex] as string)
-                .fontFamily(getFontFamily(matrixShiftButtons[this.btnIndex] as string))
-                .fontSize(12)
-                .fontColor('#ffac8100')
-                .padding({ left: 6, top: 4 })
-            } else {
-              Image(matrixShiftButtons[this.btnIndex] as Resource)
-                .width(14)
-                .height(14)
-                .fillColor('#ffac8100')
-                .margin({ left: 6, top: 4 })
-                .objectFit(ImageFit.Contain)
-                .draggable(false)
-            }
-          }
+          .type(ButtonType.Normal)
+          .borderRadius(16)
+          .width('100%')
+          .height('100%')
+          .padding({ left: 2, right: 2 })
+          .buttonStyle(ButtonStyleMode.TEXTUAL)
+          .backgroundColor(Color.Transparent)
+          .borderWidth(0)
+          .shadow({ radius: 0 })
+          .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 1.0 })
+          .stateStyles({
+            pressed: { .opacity(1.0).shadow({ radius: 0 }) },
+            normal: { .opacity(1.0).shadow({ radius: 0 }) }
+          })
+          .systemMaterial(createKeyboardMaterial(getMatrixKeyboardMaterialRole(this.btn)))
+        } else {
+          this.LegacyButtonBuilder()
         }
-        .width('100%')
-        .height('100%')
+      } else {
+        this.LegacyButtonBuilder()
       }
-      .type(ButtonType.Normal)
-      .borderRadius(16)
-      .width('100%')
-      .height('100%')
-      .padding({ left: 2, right: 2 })
-      .backgroundColor(getBgColor(this.btn, this.isShift))
-      .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-      .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
-      .borderColor($r('app.color.btn_highlight'))
-      .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
-      .stateStyles({
-        pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
-        normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
-      })
     }
   }
 }
@@ -145,6 +199,7 @@ export struct MatrixCalc {
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
   @StorageProp('activeBubbleId') activeBubbleId: string = ''; // 接收全局层级提权信号
+  @StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
 
   @State @Watch('onShiftChange') isShift: boolean = false;
 
@@ -208,46 +263,102 @@ export struct MatrixCalc {
     getContext(this).eventHub.emit('screen_handle_action', actionCode, false);
   }
 
-  build() {
+  @Builder
+  private MatrixKeyGridBuilder(immersive: boolean) {
+    Grid() {
+      ForEach(matrixButtons, (btn: string | Resource, index: number) => {
+        GridItem() {
+          MatrixKeyItem({
+            btn: btn,
+            btnIndex: index,
+            immersive: immersive,
+            isShift: $isShift,
+            onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
+            onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
+          })
+        }
+        .zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
+      })
+    }
+    .rowsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
+    .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
+    .rowsGap(8)
+    .columnsGap(6)
+    .padding({ left: 10, right: 10, top: 6, bottom: 0 })
+    .clip(false)
+    .width('100%')
+    .height('100%')
+  }
+
+  @Builder
+  private LegacyMatrixKeyboardBuilder() {
+    Column() {
+      this.MatrixKeyGridBuilder(false)
+    }
+    .width('100%')
+    .height('45%')
+    .backgroundColor($r('sys.color.comp_background_primary'))
+    .borderRadius(24)
+    .shadow({ radius: 16, color: '#1A000000', offsetY: -4 })
+    .padding({ bottom: this.navBarHeight - 8 })
+  }
+
+  @Builder
+  private ImmersiveMatrixKeyboardBuilder() {
+    Column() {
+      this.MatrixKeyGridBuilder(true)
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('sys.color.comp_background_primary'))
+    .borderRadius(24)
+    .shadow({ radius: 16, color: '#1A000000', offsetY: -4 })
+    .padding({ bottom: this.navBarHeight - 8 })
+  }
+
+  @Builder
+  private LegacyMatrixLayout() {
     Column() {
       FormulaScreen({ moduleType: 'matrix' })
         .width('100%')
         .height('55%')
 
-      Column() {
-        Grid() {
-          ForEach(matrixButtons, (btn: string | Resource, index: number) => {
-            GridItem() {
-              MatrixKeyItem({
-                btn: btn,
-                btnIndex: index,
-                isShift: $isShift,
-                onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
-                onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
-              })
-            }
-            .zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
-          })
-        }
-        .rowsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
-        .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
-        .rowsGap(8)
-        .columnsGap(6)
-        .padding({ left: 10, right: 10, top: 6, bottom: 0 })
-        .clip(false)
-        .width('100%')
-        .height('100%')
-      }
-      .width('100%')
-      .height('45%')
-      .backgroundColor($r('sys.color.comp_background_primary'))
-      .borderRadius(24)
-      .shadow({ radius: 16, color: '#1A000000', offsetY: -4 })
-      .padding({ bottom: this.navBarHeight - 8 })
+      this.LegacyMatrixKeyboardBuilder()
     }
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.comp_background_tertiary'))
+  }
+
+  @Builder
+  private ImmersiveMatrixLayout() {
+    Tabs({ barPosition: BarPosition.End }) {
+      TabContent() {
+        FormulaScreen({ moduleType: 'matrix' })
+          .width('100%')
+          .height('100%')
+      }
+      .tabBar(this.ImmersiveMatrixKeyboardBuilder)
+    }
+    .vertical(false)
+    .scrollable(false)
+    .animationDuration(0)
+    .barHeight('45%')
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('sys.color.comp_background_tertiary'))
+  }
+
+  build() {
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      if (this.keyImmersiveMaterial) {
+        this.ImmersiveMatrixLayout()
+      } else {
+        this.LegacyMatrixLayout()
+      }
+    } else {
+      this.LegacyMatrixLayout()
+    }
   }
 }
 
