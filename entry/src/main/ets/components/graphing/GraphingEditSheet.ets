@@ -514,7 +514,7 @@ export struct GraphingEditSheet {
   }
 
   @Builder
-  private GraphingKeyboardContentBuilder() {
+  private GraphingKeyboardContentBuilder(immersive: boolean) {
     // 常驻引擎通信与渲染枢纽
     FormulaScreen({ moduleType: 'graphing' })
       .width('100%')
@@ -529,6 +529,7 @@ export struct GraphingEditSheet {
             TopKeyItem({
               btn: btn,
               btnIndex: index,
+              immersive: immersive,
               isShift: $isShift,
               onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
               onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
@@ -554,6 +555,7 @@ export struct GraphingEditSheet {
         GridItem() {
           BottomKeyItem({
             btn: btn,
+            immersive: immersive,
             isShift: $isShift,
             onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
             onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
@@ -575,7 +577,7 @@ export struct GraphingEditSheet {
   @Builder
   private LegacyGraphingKeyboardBuilder() {
     Column() {
-      this.GraphingKeyboardContentBuilder()
+      this.GraphingKeyboardContentBuilder(false)
     }
     .width('100%')
     .backgroundColor($r('sys.color.comp_background_primary'))
@@ -590,7 +592,7 @@ export struct GraphingEditSheet {
   @Builder
   private ImmersiveGraphingKeyboardBarBuilder() {
     Column() {
-      this.GraphingKeyboardContentBuilder()
+      this.GraphingKeyboardContentBuilder(true)
     }
     .width('100%')
     .height('100%')
