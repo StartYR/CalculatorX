@@ -10,10 +10,10 @@
 import { HapticUtils } from '../../../utils/HapticUtils';
 import { getActionId, getFontFamily, getFontSize, getFontColor, icon_backspace, PreferenceConfigs } from '../../../utils/CalculatorConfigs';
 import { KeyGestureWrapper } from '../../common/KeyGestureWrapper';
-import deviceInfo from '@ohos.deviceInfo';
 import { KeyboardKeyRole } from '../../common/keyboard/KeyboardKeyTypes';
 import { resolveKeyboardKeyRole } from '../../common/keyboard/KeyboardVisualPolicy';
 import { KeyboardKeySurface } from '../../common/keyboard/KeyboardKeySurface';
+import { KeyboardRenderSwitch } from '../../common/keyboard/KeyboardRenderSwitch';
 
 // ==================== 键盘数据源 ====================
 // 恢复错落有致的标准 4 列布局
@@ -87,7 +87,6 @@ export struct ExchangeKeyboard {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
-  @StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
 
   @Builder
   private KeyboardGridBuilder(immersive: boolean) {
@@ -169,14 +168,9 @@ export struct ExchangeKeyboard {
   }
 
   build() {
-    if (deviceInfo.apiAvailable('26.0.0')) {
-      if (this.keyImmersiveMaterial) {
-        this.ImmersiveKeyboardLayout()
-      } else {
-        this.LegacyKeyboardBuilder()
-      }
-    } else {
-      this.LegacyKeyboardBuilder()
-    }
+    KeyboardRenderSwitch({
+      legacyContent: this.LegacyKeyboardBuilder,
+      immersiveContent: this.ImmersiveKeyboardLayout
+    })
   }
 }
