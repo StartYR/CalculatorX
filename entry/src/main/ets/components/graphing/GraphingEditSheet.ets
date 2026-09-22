@@ -7,12 +7,12 @@
  */
 
 import { FormulaScreen } from '../FormulaScreen';
-import { GRAPHING_COLORS, getActionId, PreferenceConfigs } from '../../utils/CalculatorConfigs';
+import { GRAPHING_COLORS, getActionId } from '../../utils/CalculatorConfigs';
 import { GraphFunctionItem, FunctionType } from './GraphingTypes';
 import { TopKeyItem, BottomKeyItem, getDynamicTopButtons, bottomButtons, DomainKeyboard } from './GraphingKeyboard';
 import { LengthMetrics } from '@kit.ArkUI';
 import { createDialogMaterial, isImmersiveMaterialAvailable } from '../../utils/ImmersiveMaterialUtils';
-import deviceInfo from '@ohos.deviceInfo';
+import { KeyboardRenderSwitch } from '../common/keyboard/KeyboardRenderSwitch';
 
 const MAX_FUNCTIONS = 10; // 面板支持的最大函数数量上限
 
@@ -139,7 +139,6 @@ export struct GraphingEditSheet {
 
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageProp('activeBubbleId') activeBubbleId: string = '';
-  @StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
   private listScroller: Scroller = new Scroller();
 
   aboutToAppear() {
@@ -625,15 +624,10 @@ export struct GraphingEditSheet {
 
   @Builder
   private GraphingKeyboardDockBuilder() {
-    if (deviceInfo.apiAvailable('26.0.0')) {
-      if (this.keyImmersiveMaterial) {
-        this.ImmersiveGraphingKeyboardLayout()
-      } else {
-        this.LegacyGraphingKeyboardBuilder()
-      }
-    } else {
-      this.LegacyGraphingKeyboardBuilder()
-    }
+    KeyboardRenderSwitch({
+      legacyContent: this.LegacyGraphingKeyboardBuilder,
+      immersiveContent: this.ImmersiveGraphingKeyboardLayout
+    })
   }
 
   // ==================== UI 渲染骨架 ====================
