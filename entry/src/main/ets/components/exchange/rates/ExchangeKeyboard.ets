@@ -10,6 +10,7 @@
 import { HapticUtils } from '../../../utils/HapticUtils';
 import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor, icon_backspace, PreferenceConfigs } from '../../../utils/CalculatorConfigs';
 import { KeyGestureWrapper } from '../../common/KeyGestureWrapper';
+import deviceInfo from '@ohos.deviceInfo';
 
 // ==================== 键盘数据源 ====================
 // 恢复错落有致的标准 4 列布局
@@ -82,34 +83,41 @@ export struct ExchangeKeyboard {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
+  @StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
 
-  build() {
+  @Builder
+  private KeyboardGridBuilder() {
+    Grid() {
+      ForEach(exchangeButtons, (btn: string | Resource) => {
+        GridItem() {
+          BottomKeyItem({
+            btn: btn,
+            customRadius: 36,
+            onKeyPress: (b: string | Resource) => {
+              let action = getActionId(b);
+              HapticUtils.playVibration(action, this.hapticFeedback, this.vibrationCurve);
+              this.onKeyPress(b);
+            }
+          })
+        }
+        // 所有按钮都是 1×1，只有 0 横跨两列
+        .columnStart(btn === '0' ? 0 : undefined)
+        .columnEnd(btn === '0' ? 1 : undefined)
+      }, (btn: string | Resource) => typeof btn === 'string' ? btn : 'icon_backspace')
+    }
+    .columnsTemplate('1fr 1fr 1fr 1fr')
+    .rowsTemplate('1fr 1fr 1fr 1fr')
+    .columnsGap(8)
+    .rowsGap(8)
+    .width('100%')
+    .height(260)
+    .padding({ left: 10, right: 10, top: 12, bottom: 8 })
+  }
+
+  @Builder
+  private LegacyKeyboardBuilder() {
     Column() {
-      Grid() {
-        ForEach(exchangeButtons, (btn: string | Resource) => {
-          GridItem() {
-            BottomKeyItem({
-              btn: btn,
-              customRadius: 36,
-              onKeyPress: (b: string | Resource) => {
-                let action = getActionId(b);
-                HapticUtils.playVibration(action, this.hapticFeedback, this.vibrationCurve);
-                this.onKeyPress(b);
-              }
-            })
-          }
-          // 极简布局：所有按钮都是 1x1，只有 0 横跨两列
-          .columnStart(btn === '0' ? 0 : undefined)
-          .columnEnd(btn === '0' ? 1 : undefined)
-        }, (btn: string | Resource) => typeof btn === 'string' ? btn : 'icon_backspace')
-      }
-      .columnsTemplate('1fr 1fr 1fr 1fr')
-      .rowsTemplate('1fr 1fr 1fr 1fr')
-      .columnsGap(8)
-      .rowsGap(8)
-      .width('100%')
-      .height(260)
-      .padding({ left: 10, right: 10, top: 12, bottom: 8 })
+      this.KeyboardGridBuilder()
     }
     .width('100%')
     .backgroundColor(Color.Transparent)
@@ -119,5 +127,51 @@ export struct ExchangeKeyboard {
     .borderColor($r('sys.color.comp_divider'))
     .shadow({ radius: 16, color: '#1A000000', offsetY: -12 })
     .padding({ bottom: this.navBarHeight - 16 })
+  }
+
+  @Builder
+  private ImmersiveKeyboardBuilder() {
+    Column() {
+      this.KeyboardGridBuilder()
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(Color.Transparent)
+    .backgroundBlurStyle(BlurStyle.Thin)
+    .borderRadius({ topLeft: 36, topRight: 36 })
+    .borderWidth(0.7)
+    .borderColor($r('sys.color.comp_divider'))
+    .shadow({ radius: 16, color: '#1A000000', offsetY: -12 })
+    .padding({ bottom: this.navBarHeight - 16 })
+  }
+
+  @Builder
+  private ImmersiveKeyboardLayout() {
+    Tabs({ barPosition: BarPosition.End }) {
+      TabContent() {
+        Column()
+          .width('100%')
+          .height('100%')
+      }
+      .tabBar(this.ImmersiveKeyboardBuilder)
+    }
+    .vertical(false)
+    .scrollable(false)
+    .animationDuration(0)
+    .barHeight('100%')
+    .width('100%')
+    .height(260 + this.navBarHeight - 16)
+  }
+
+  build() {
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      if (this.keyImmersiveMaterial) {
+        this.ImmersiveKeyboardLayout()
+      } else {
+        this.LegacyKeyboardBuilder()
+      }
+    } else {
+      this.LegacyKeyboardBuilder()
+    }
   }
 }
