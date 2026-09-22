@@ -11,6 +11,11 @@ export struct DockedKeyboardHost {
   @BuilderParam immersiveKeyboard: () => void;
 
   @Builder
+  private LegacyLayout() {
+    this.legacyKeyboard()
+  }
+
+  @Builder
   private ImmersiveLayout() {
     Tabs({ barPosition: BarPosition.End }) {
       TabContent() {
@@ -30,7 +35,7 @@ export struct DockedKeyboardHost {
 
   build() {
     KeyboardRenderSwitch({
-      legacyContent: this.legacyKeyboard,
+      legacyContent: this.LegacyLayout,
       immersiveContent: this.ImmersiveLayout
     })
   }
