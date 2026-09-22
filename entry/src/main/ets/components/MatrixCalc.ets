@@ -13,8 +13,7 @@ import {
   getActionId,
   getFontFamily,
   getFontSize,
-  getFontColor,
-  PreferenceConfigs
+  getFontColor
 } from '../utils/CalculatorConfigs';
 import { icon_backspace, icon_fraction, icon_dim } from '../utils/CalculatorConfigs';
 import Logger from '../utils/Logger'
@@ -22,10 +21,10 @@ import {
   createDialogMaterial,
   isImmersiveMaterialAvailable
 } from '../utils/ImmersiveMaterialUtils';
-import deviceInfo from '@ohos.deviceInfo';
 import { KeyboardKeyRole } from './common/keyboard/KeyboardKeyTypes';
 import { resolveKeyboardKeyRole } from './common/keyboard/KeyboardVisualPolicy';
 import { KeyboardKeySurface } from './common/keyboard/KeyboardKeySurface';
+import { KeyboardRenderSwitch } from './common/keyboard/KeyboardRenderSwitch';
 
 const icon_M_power: Resource = $rawfile('icons/matrix/icon_M_power.svg');
 const icon_abs: Resource = $rawfile('icons/matrix/icon_abs.svg');
@@ -157,7 +156,6 @@ export struct MatrixCalc {
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
   @StorageProp('activeBubbleId') activeBubbleId: string = ''; // 接收全局层级提权信号
-  @StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
 
   @State @Watch('onShiftChange') isShift: boolean = false;
 
@@ -308,15 +306,10 @@ export struct MatrixCalc {
   }
 
   build() {
-    if (deviceInfo.apiAvailable('26.0.0')) {
-      if (this.keyImmersiveMaterial) {
-        this.ImmersiveMatrixLayout()
-      } else {
-        this.LegacyMatrixLayout()
-      }
-    } else {
-      this.LegacyMatrixLayout()
-    }
+    KeyboardRenderSwitch({
+      legacyContent: this.LegacyMatrixLayout,
+      immersiveContent: this.ImmersiveMatrixLayout
+    })
   }
 }
 
