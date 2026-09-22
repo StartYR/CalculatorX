@@ -1,6 +1,6 @@
 # 沉浸光感与传统界面双渲染架构重构计划
 
-- 状态：代码与自动化验证已完成；重构后真机回归待验收
+- 状态：公共表面与统一选择器已完成；公共容器真机失败后已拆回模块专用容器，待真机复验
 - 编写日期：2026-09-22
 - 适用分支：`feature/api-26-sensation`
 - 目标 API：`26.0.0`
@@ -12,14 +12,13 @@
 
 - 七类键盘的 Button 表面统一由 `KeyboardKeySurface` 渲染；
 - API 26 与全局开关判断集中到 `KeyboardRenderSwitch`；
-- 基础、矩阵、方程和科学键盘使用 `PageKeyboardHost`；
-- 汇率和图形定义域键盘使用 `DockedKeyboardHost`；
-- 图形主键盘因位移动画所有权不同而保留专用容器，并通过统一选择器接入；
+- 七类键盘均保留模块专用传统与沉浸容器，并将完整布局直接交给统一选择器；
+- 页面型与悬浮型公共 Host 曾通过构建，但页面型 Host 在真机运行时因二次转交 `@BuilderParam` 丢失绑定而崩溃；两个公共 Host 已一并移除；
 - 七类键盘范围内的 API 26 直接分支由 16 处收敛为公共表面和统一选择器中的 2 处；
 - 七类键盘范围内的全局开关读取由 7 处收敛为统一选择器中的 1 处；
 - 逐键 `systemMaterial(createKeyboardMaterial(...))` 由 9 处收敛为公共表面中的 1 处；
 - 语义单元测试、架构只读检查和最终主包 debug 构建均已通过；
-- 真机视觉、交互、焦点、动画和 API 23 回退需要在本次重构后重新验收。
+- 公共容器移除后的冷启动、模式切换、视觉、交互、焦点、动画和 API 23 回退需要重新验收。
 
 ## 1. 背景与目标
 
@@ -116,8 +115,8 @@ flowchart TD
   A --> F[共享按键内容与事件]
 
   G[API 版本与全局开关] --> H[KeyboardRenderSwitch]
-  H -->|传统| I[Legacy Host]
-  H -->|沉浸| J[Immersive Host]
+  H -->|传统| I[模块内 Legacy Layout]
+  H -->|沉浸| J[模块内 Immersive Layout]
 
   I --> K[KeyboardKeySurface 传统分支]
   J --> L[KeyboardKeySurface API 26 分支]
@@ -195,12 +194,12 @@ interface KeyboardKeySpec {
 1. 页面型：基础、矩阵、方程、科学；
 2. 悬浮型：汇率、图形主键盘、图形定义域键盘。
 
-在按键表面和路径选择稳定后，再评估两个薄容器：
+在按键表面和路径选择稳定后，曾评估两个薄容器：
 
 - `PageKeyboardHost`：共享 `Column` 与单 Tab 底部栏的切换骨架，接收内容区、键盘区和高度参数；
 - `DockedKeyboardHost`：共享与键盘等高的局部单 Tab 底部栏，接收键盘 Builder 和实际高度。
 
-容器只有在至少两个模块结构完全一致时才抽取。若需要模块名分支、屏幕坐标、负边距或大量布尔参数，则保留模块自己的容器 Builder。
+两个公共容器虽能通过 ArkTS 构建，但需要把上层收到的 `@BuilderParam` 再交给下层布局或 TabBar。API 26 真机冷启动科学计算时，`PageKeyboardHost` 的内容 Builder 丢失绑定并触发 `Cannot read property bind of undefined`。阶段 9 因此触发停止条件：删除两个公共 Host，所有模块恢复持有自己的完整容器 Builder，并只把完整传统与沉浸布局直接交给 `KeyboardRenderSwitch`。
 
 ## 5. 建议文件边界
 
@@ -211,9 +210,7 @@ entry/src/main/ets/components/common/keyboard/
 ├── KeyboardKeyTypes.ets
 ├── KeyboardVisualPolicy.ets
 ├── KeyboardKeySurface.ets
-├── KeyboardRenderSwitch.ets
-├── PageKeyboardHost.ets          # 通过阶段验证后再决定是否创建
-└── DockedKeyboardHost.ets        # 通过阶段验证后再决定是否创建
+└── KeyboardRenderSwitch.ets
 ```
 
 现有 `ImmersiveMaterialUtils.ets` 继续负责创建和缓存 ArkUI 材质，不把组件布局迁入工具类。
@@ -283,7 +280,7 @@ refactor: 建立统一键盘视觉语义
 - [x] 通过回调保留单击与 `onTouch` 连续退格；
 - [x] 保留按键 Semantic ID 和 accessibility 文本；
 - [x] 删除基础键盘中被公共表面取代的重复属性链；
-- [x] 保留基础 Grid 与等号跨行；页面容器在阶段 9 统一抽取。
+- [x] 保留基础 Grid 与等号跨行；页面容器在阶段 9 真机失败后保留在模块内。
 
 验证：
 
@@ -394,7 +391,7 @@ refactor: 迁移图形键盘双路径按键表面
 refactor: 为基础键盘接入统一渲染选择器
 ```
 
-### 阶段 9：评估并抽取两类容器
+### 阶段 9：评估两类公共容器并触发停止条件
 
 本阶段不是强制减少代码行数，而是根据迁移后的真实结构决定是否抽取。
 
@@ -402,14 +399,16 @@ refactor: 为基础键盘接入统一渲染选择器
 
 - [x] 先在基础与矩阵之间比较内容区、键盘高度和背景结构；
 - [x] 构建验证 `@BuilderParam` 内容区与键盘区组合；
-- [x] 原型通过后迁移方程和科学；
-- [x] 公共 Host 不包含模块名或业务分支。
+- [x] 构建通过后迁移方程和科学；
+- [x] 真机确认页面型 Host 的二次 Builder 转交会丢失绑定并导致运行时崩溃；
+- [x] 删除页面型 Host，四个模块恢复各自的完整布局 Builder。
 
 #### 9.2 悬浮型容器
 
 - [x] 在汇率与定义域键盘之间确认等高局部 Tabs 结构；
 - [x] 保留底部安全区、高度与原有 Stack / `customKeyboard()` 所有权；
 - [x] 评估图形主键盘并保留其独立动画和焦点处理；
+- [x] 因沉浸 TabBar 仍需二次转交 Builder，同步删除悬浮型 Host；
 - [x] 未移动动画所有权，也未增加第二套位移动画。
 
 停止抽取条件：
@@ -418,13 +417,17 @@ refactor: 为基础键盘接入统一渲染选择器
 - 需要超过三个与模块差异有关的 boolean 参数；
 - 需要负边距、屏幕坐标或隐藏 Tab 切换补丁；
 - 焦点、返回顺序、无障碍树或动画与当前版本不同；
+- 上层收到的 `@BuilderParam` 需要继续转交给内容区、TabBar 或另一个组件；
 - 公共 Host 使单模块问题无法独立定位。
+
+阶段结论：停止抽取。公共按键表面和统一渲染选择器继续保留；页面型与悬浮型容器由业务模块持有。
 
 建议提交：
 
 ```text
 refactor: 抽取页面型键盘双路径容器
 refactor: 抽取悬浮型键盘双路径容器
+fix: 修复键盘公共容器运行时崩溃
 ```
 
 ### 阶段 10：建立长期约束并全局收敛
@@ -515,7 +518,7 @@ docs: 记录键盘双路径架构重构结果
 1. 确认沉浸光感支持的组件和布局区域；
 2. 用 `KeyboardKeySpec` 声明内容、Action 和语义角色；
 3. 使用 `KeyboardKeySurface`，不自行复制两套 Button 属性；
-4. 选择页面型、悬浮型或保留模块专用容器；
+4. 在模块内实现完整传统与沉浸容器；
 5. 使用 `KeyboardRenderSwitch` 提供完整传统与沉浸 Builder；
 6. 在新 API 调用点保留直接版本保护；
 7. 完成 API 26 开关双态和 API 23 真机验证；

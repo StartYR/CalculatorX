@@ -26,8 +26,6 @@ KeyboardRenderSwitch
 | `KeyboardVisualPolicy.ets` | 从按键内容解析语义，并把语义映射为传统背景 |
 | `KeyboardKeySurface.ets` | 维护传统和沉浸两套 Button 属性链，并直接保护 API 26 调用 |
 | `KeyboardRenderSwitch.ets` | 集中读取全局开关，并选择完整传统或沉浸组件树 |
-| `PageKeyboardHost.ets` | 页面型计算器的 `Column` 与单 Tab 底部栏骨架 |
-| `DockedKeyboardHost.ets` | 无位移动画悬浮键盘的局部单 Tab 底部栏骨架 |
 
 `ImmersiveMaterialUtils.ets` 负责创建并缓存材质实例。逐键 `systemMaterial(createKeyboardMaterial(...))` 只允许出现在 `KeyboardKeySurface.ets` 中。
 
@@ -41,19 +39,20 @@ KeyboardRenderSwitch
 - `KeyGestureWrapper`、气泡层级与菜单；
 - 公式区、列表、焦点、Sheet 和展开收起动画。
 
-图形主键盘保留专用容器。它的位移动画在传统路径和沉浸路径中挂载于不同层级，把动画移入公共 Host 会改变动画所有权和焦点排障边界。
+每个键盘模块持有完整的传统容器与沉浸容器，并将两个模块内 `@Builder` 直接交给 `KeyboardRenderSwitch`。不要把组件收到的内容区或键盘区 `@BuilderParam` 再转交给第二层公共容器：该模式可以通过 ArkTS 构建，但在真机运行时可能丢失绑定并触发 `Cannot read property bind of undefined`。
+
+图形主键盘的位移动画在传统路径和沉浸路径中挂载于不同层级，也继续由模块持有。
 
 ## 4. 新增双路径键盘
 
 1. 用 `KeyboardKeyRole` 或 `createKeyboardKeySpec()` 声明每个按键的稳定语义。
 2. 使用 `KeyboardKeySurface` 渲染 Button，通过 `@BuilderParam` 提供文字、图标或复合内容。
 3. 把 Action、触感和复杂手势留在模块中；使用 `KeyGestureWrapper` 的模块应由包装器继续持有手势。
-4. 页面型键盘优先使用 `PageKeyboardHost`；无位移动画的局部键盘优先使用 `DockedKeyboardHost`。
-5. 结构不一致时直接使用 `KeyboardRenderSwitch` 提供完整传统和沉浸 Builder。
-6. 不在模块中读取 `KEY_KEY_IMMERSIVE_MATERIAL`，也不直接导入 `createKeyboardMaterial()`。
-7. 新 API 调用必须位于直接的 `if (deviceInfo.apiAvailable('26.0.0'))` 正向分支中。
-8. 将新键盘加入 `tools/check-keyboard-architecture.ps1` 的模块清单。
-9. 运行结构检查、语义单元测试和主包 debug 构建，再分别完成 API 26 双开关状态与 API 23 真机验证。
+4. 在模块内实现完整传统容器和完整沉浸容器，并将两个 `@Builder` 直接传给 `KeyboardRenderSwitch`。
+5. 不在模块中读取 `KEY_KEY_IMMERSIVE_MATERIAL`，也不直接导入 `createKeyboardMaterial()`。
+6. 新 API 调用必须位于直接的 `if (deviceInfo.apiAvailable('26.0.0'))` 正向分支中。
+7. 将新键盘加入 `tools/check-keyboard-architecture.ps1` 的模块清单。
+8. 运行结构检查、语义单元测试和主包 debug 构建，再分别完成 API 26 双开关状态与 API 23 真机验证。
 
 ## 5. 停止抽取条件
 
@@ -63,6 +62,7 @@ KeyboardRenderSwitch
 - 需要超过三个用于表达模块差异的 boolean 参数；
 - 需要负边距、屏幕坐标或隐藏 Tab 切换补丁；
 - 公共层需要接管业务焦点、返回顺序或位移动画；
+- 公共层需要二次转交内容区、键盘区或完整容器的 `@BuilderParam`；
 - 单模块问题无法在自身文件和公共表面之间清楚定位。
 
 ## 6. 检查命令
