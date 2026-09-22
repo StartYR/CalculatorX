@@ -63,12 +63,17 @@ function getLocalActionId(btn: string | Resource): string {
   return getActionId(btn);
 }
 
-function getMatrixKeyboardMaterialRole(btn: string | Resource): KeyboardMaterialRole {
+function getMatrixKeyboardMaterialRole(btn: string | Resource, isShift: boolean): KeyboardMaterialRole {
   const action = getLocalActionId(btn);
   if (action === 'AC' || action === '⌫') return KeyboardMaterialRole.DANGER;
   if (action === '=') return KeyboardMaterialRole.EMPHASIS;
-  if (['×', '∘', '+', '−'].includes(action)) return KeyboardMaterialRole.OPERATOR;
-  return KeyboardMaterialRole.NORMAL;
+  if (action === '⇧Shift') {
+    return isShift ? KeyboardMaterialRole.SHIFT_ACTIVE : KeyboardMaterialRole.SHIFT;
+  }
+
+  const isNumber = typeof btn === 'string' && btn >= '0' && btn <= '9';
+  const isPrimary = isNumber || ['.', 'dim', '⇦', '⇨', '⇧', '⇩'].includes(action);
+  return isPrimary ? KeyboardMaterialRole.NORMAL : KeyboardMaterialRole.OPERATOR;
 }
 
 @Component
@@ -182,7 +187,7 @@ struct MatrixKeyItem {
             pressed: { .opacity(1.0).shadow({ radius: 0 }) },
             normal: { .opacity(1.0).shadow({ radius: 0 }) }
           })
-          .systemMaterial(createKeyboardMaterial(getMatrixKeyboardMaterialRole(this.btn)))
+          .systemMaterial(createKeyboardMaterial(getMatrixKeyboardMaterialRole(this.btn, this.isShift)))
         } else {
           this.LegacyButtonBuilder()
         }

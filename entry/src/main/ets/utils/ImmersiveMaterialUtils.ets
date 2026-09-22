@@ -13,13 +13,17 @@ export enum KeyboardMaterialRole {
   NORMAL,
   OPERATOR,
   DANGER,
-  EMPHASIS
+  EMPHASIS,
+  SHIFT,
+  SHIFT_ACTIVE
 }
 
 let normalKeyboardMaterial: uiMaterial.Material | undefined = undefined;
 let operatorKeyboardMaterial: uiMaterial.Material | undefined = undefined;
 let dangerKeyboardMaterial: uiMaterial.Material | undefined = undefined;
 let emphasisKeyboardMaterial: uiMaterial.Material | undefined = undefined;
+let shiftKeyboardMaterial: uiMaterial.Material | undefined = undefined;
+let activeShiftKeyboardMaterial: uiMaterial.Material | undefined = undefined;
 
 /**
  * 检查当前设备是否支持沉浸光感材质，仅用于不直接引用新 API 的样式分支。
@@ -153,6 +157,30 @@ export function createKeyboardMaterial(role: KeyboardMaterialRole): uiMaterial.M
         });
       }
       return emphasisKeyboardMaterial;
+    }
+
+    if (role === KeyboardMaterialRole.SHIFT) {
+      if (!shiftKeyboardMaterial) {
+        shiftKeyboardMaterial = new uiMaterial.ImmersiveMaterial({
+          style: uiMaterial.ImmersiveStyle.ULTRA_THIN,
+          materialColor: $r('app.color.keyboard_material_shift'),
+          interactive: true,
+          lightEffect: {}
+        });
+      }
+      return shiftKeyboardMaterial;
+    }
+
+    if (role === KeyboardMaterialRole.SHIFT_ACTIVE) {
+      if (!activeShiftKeyboardMaterial) {
+        activeShiftKeyboardMaterial = new uiMaterial.ImmersiveMaterial({
+          style: uiMaterial.ImmersiveStyle.ULTRA_THIN,
+          materialColor: $r('app.color.keyboard_material_shift_active'),
+          interactive: true,
+          lightEffect: {}
+        });
+      }
+      return activeShiftKeyboardMaterial;
     }
 
     if (!normalKeyboardMaterial) {

@@ -13,6 +13,14 @@
       "value": "#12FFFFFF"
     },
     {
+      "name": "keyboard_material_shift",
+      "value": "#E6FF9900"
+    },
+    {
+      "name": "keyboard_material_shift_active",
+      "value": "#E6B87200"
+    },
+    {
       "name": "keyboard_material_danger",
       "value": "#E6FF5D3E"
     },
