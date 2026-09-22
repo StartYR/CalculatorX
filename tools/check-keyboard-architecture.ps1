@@ -64,7 +64,7 @@ foreach ($modulePath in $keyboardModules) {
 
 foreach ($modulePath in $renderModules) {
   $moduleText = Get-Content -LiteralPath $modulePath -Raw
-  if ($moduleText -notmatch 'PageKeyboardHost|DockedKeyboardHost|KeyboardRenderSwitch') {
+  if ($moduleText -notmatch 'KeyboardRenderSwitch') {
     $errors.Add("键盘模块未使用公共渲染入口: $modulePath")
   }
 }

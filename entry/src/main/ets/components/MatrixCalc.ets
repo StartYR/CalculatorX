@@ -24,7 +24,7 @@ import {
 import { KeyboardKeyRole } from './common/keyboard/KeyboardKeyTypes';
 import { resolveKeyboardKeyRole } from './common/keyboard/KeyboardVisualPolicy';
 import { KeyboardKeySurface } from './common/keyboard/KeyboardKeySurface';
-import { PageKeyboardHost } from './common/keyboard/PageKeyboardHost';
+import { KeyboardRenderSwitch } from './common/keyboard/KeyboardRenderSwitch';
 
 const icon_M_power: Resource = $rawfile('icons/matrix/icon_M_power.svg');
 const icon_abs: Resource = $rawfile('icons/matrix/icon_abs.svg');
@@ -273,19 +273,42 @@ export struct MatrixCalc {
   }
 
   @Builder
-  private ContentAreaBuilder() {
-    FormulaScreen({ moduleType: 'matrix' })
-      .width('100%')
-      .height('100%')
+  private LegacyMatrixLayout() {
+    Column() {
+      FormulaScreen({ moduleType: 'matrix' })
+        .width('100%')
+        .height('55%')
+
+      this.LegacyMatrixKeyboardBuilder()
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('sys.color.comp_background_tertiary'))
+  }
+
+  @Builder
+  private ImmersiveMatrixLayout() {
+    Tabs({ barPosition: BarPosition.End }) {
+      TabContent() {
+        FormulaScreen({ moduleType: 'matrix' })
+          .width('100%')
+          .height('100%')
+      }
+      .tabBar(this.ImmersiveMatrixKeyboardBuilder)
+    }
+    .vertical(false)
+    .scrollable(false)
+    .animationDuration(0)
+    .barHeight('45%')
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('sys.color.comp_background_tertiary'))
   }
 
   build() {
-    PageKeyboardHost({
-      legacyContentHeight: '55%',
-      immersiveBarHeight: '45%',
-      contentArea: this.ContentAreaBuilder,
-      legacyKeyboard: this.LegacyMatrixKeyboardBuilder,
-      immersiveKeyboard: this.ImmersiveMatrixKeyboardBuilder
+    KeyboardRenderSwitch({
+      legacyContent: this.LegacyMatrixLayout,
+      immersiveContent: this.ImmersiveMatrixLayout
     })
   }
 }

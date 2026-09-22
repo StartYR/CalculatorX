@@ -13,7 +13,7 @@ import { KeyGestureWrapper } from '../../common/KeyGestureWrapper';
 import { KeyboardKeyRole } from '../../common/keyboard/KeyboardKeyTypes';
 import { resolveKeyboardKeyRole } from '../../common/keyboard/KeyboardVisualPolicy';
 import { KeyboardKeySurface } from '../../common/keyboard/KeyboardKeySurface';
-import { DockedKeyboardHost } from '../../common/keyboard/DockedKeyboardHost';
+import { KeyboardRenderSwitch } from '../../common/keyboard/KeyboardRenderSwitch';
 
 // ==================== 键盘数据源 ====================
 // 恢复错落有致的标准 4 列布局
@@ -149,11 +149,28 @@ export struct ExchangeKeyboard {
     .padding({ bottom: this.navBarHeight - 16 })
   }
 
+  @Builder
+  private ImmersiveKeyboardLayout() {
+    Tabs({ barPosition: BarPosition.End }) {
+      TabContent() {
+        Column()
+          .width('100%')
+          .height('100%')
+      }
+      .tabBar(this.ImmersiveKeyboardBuilder)
+    }
+    .vertical(false)
+    .scrollable(false)
+    .animationDuration(0)
+    .barHeight('100%')
+    .width('100%')
+    .height(260 + this.navBarHeight - 16)
+  }
+
   build() {
-    DockedKeyboardHost({
-      immersiveHeight: 260 + this.navBarHeight - 16,
-      legacyKeyboard: this.LegacyKeyboardBuilder,
-      immersiveKeyboard: this.ImmersiveKeyboardBuilder
+    KeyboardRenderSwitch({
+      legacyContent: this.LegacyKeyboardBuilder,
+      immersiveContent: this.ImmersiveKeyboardLayout
     })
   }
 }
