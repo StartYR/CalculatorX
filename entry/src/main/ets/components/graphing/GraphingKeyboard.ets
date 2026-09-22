@@ -14,10 +14,10 @@ import {
 } from '../../utils/CalculatorConfigs';
 import { KeyGestureWrapper } from '../common/KeyGestureWrapper';
 import { FunctionType } from './GraphingTypes'; // 引入函数类型进行动态感知
-import deviceInfo from '@ohos.deviceInfo';
 import { KeyboardKeyRole } from '../common/keyboard/KeyboardKeyTypes';
 import { resolveKeyboardKeyRole } from '../common/keyboard/KeyboardVisualPolicy';
 import { KeyboardKeySurface } from '../common/keyboard/KeyboardKeySurface';
+import { KeyboardRenderSwitch } from '../common/keyboard/KeyboardRenderSwitch';
 
 // ==================== 按键布局配置 ====================
 
@@ -246,7 +246,6 @@ export struct DomainKeyboard {
   @StorageProp('navBarHeight') navBarHeight: number = 0; // 用于底部避让
   @StorageProp('vibrationCurve') vibrationCurve: number = 0; // 震动反馈参数
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true; // 震动开关
-  @StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
 
   @Builder
   private DomainKeyGridBuilder(immersive: boolean) {
@@ -328,14 +327,9 @@ export struct DomainKeyboard {
   }
 
   build() {
-    if (deviceInfo.apiAvailable('26.0.0')) {
-      if (this.keyImmersiveMaterial) {
-        this.ImmersiveDomainKeyboardLayout()
-      } else {
-        this.LegacyDomainKeyboardBuilder()
-      }
-    } else {
-      this.LegacyDomainKeyboardBuilder()
-    }
+    KeyboardRenderSwitch({
+      legacyContent: this.LegacyDomainKeyboardBuilder,
+      immersiveContent: this.ImmersiveDomainKeyboardLayout
+    })
   }
 }
