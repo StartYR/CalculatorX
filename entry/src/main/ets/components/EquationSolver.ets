@@ -9,7 +9,7 @@
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { vibrator } from '@kit.SensorServiceKit';
-import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
+import { getActionId, getFontFamily, getFontSize, getFontColor } from '../utils/CalculatorConfigs';
 import { PreferenceConfigs } from '../utils/CalculatorConfigs';
 import {
   icon_sqrt,
@@ -21,6 +21,10 @@ import {
   icon_backspace
 } from '../utils/CalculatorConfigs';
 import {KeyGestureWrapper} from './common/KeyGestureWrapper'
+import { KeyboardKeyRole } from './common/keyboard/KeyboardKeyTypes';
+import { resolveKeyboardKeyRole } from './common/keyboard/KeyboardVisualPolicy';
+import { KeyboardKeySurface } from './common/keyboard/KeyboardKeySurface';
+import deviceInfo from '@ohos.deviceInfo';
 
 const icon_cases: Resource = $rawfile('icons/equation/icon_cases.svg');
 
@@ -55,13 +59,6 @@ function getLocalFontColor(btn: string | Resource): ResourceColor {
   return getFontColor(btn);
 }
 
-// 按钮颜色
-function getLocalBgColor(btn: string | Resource, isShift: boolean): ResourceColor {
-  if (btn === 'π') return getBgColor('0', false);
-  if (btn === '=') return getBgColor('+', false);
-  return getBgColor(btn, isShift);
-}
-
 // 字体大小
 function getLocalFontSize(btn: string | Resource): number {
   if (btn === 'π') return getFontSize('0');
@@ -74,16 +71,46 @@ function getLocalActionId(btn: string | Resource): string {
   return getActionId(btn);
 }
 
+function getEquationKeyboardKeyRole(btn: string | Resource): KeyboardKeyRole {
+  return resolveKeyboardKeyRole(btn, ['EXE'], ['π'], ['=']);
+}
+
 // ================= 键盘组件 =================
 @Component
 struct TopKeyItem {
   btn: string | Resource = '';
   btnIndex: number = 0;
+  immersive: boolean = false;
   @Link isShift: boolean;
   @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
 
   onKeyPress: (btn: string | Resource) => void = () => {};
   onMenuSelect: (actionCode: string) => void = () => {};
+
+  @Builder
+  private KeyContentBuilder() {
+    Stack({ alignContent: Alignment.Center }) {
+      if (typeof this.btn === 'string') {
+        Text(this.btn)
+          .fontFamily(getFontFamily(this.btn))
+          .fontSize(getLocalFontSize(this.btn))
+          .fontWeight(FontWeight.Medium)
+          .fontColor(getLocalFontColor(this.btn))
+          .textAlign(TextAlign.Center)
+          .maxLines(1)
+      } else {
+        Image(this.btn)
+          .width('100%')
+          .height('100%')
+          .constraintSize({ maxWidth: 42, maxHeight: 42 })
+          .objectFit(ImageFit.Contain)
+          .fillColor($r('sys.color.font_secondary'))
+          .draggable(false)
+      }
+    }
+    .width('100%')
+    .height('100%')
+  }
 
   build() {
     Column() {
@@ -124,58 +151,15 @@ struct TopKeyItem {
           onKeyPress: this.onKeyPress,
           onMenuSelect: this.onMenuSelect
         }) {
-
-          Button() {
-            Stack({ alignContent: Alignment.Center }) {
-              if (typeof this.btn === 'string') {
-                Text(this.btn)
-                  .fontFamily(getFontFamily(this.btn))
-                  .fontSize(getLocalFontSize(this.btn))
-                  .fontWeight(FontWeight.Medium)
-                  .fontColor(getLocalFontColor(this.btn))
-                  .textAlign(TextAlign.Center)
-                  .maxLines(1)
-              } else {
-                Image(this.btn)
-                  .width('100%')
-                  .height('100%')
-                  .constraintSize({ maxWidth: 42, maxHeight: 42 })
-                  .objectFit(ImageFit.Contain)
-                  .fillColor($r('sys.color.font_secondary'))
-                  .draggable(false)
-              }
-            }
-            .width('100%')
-            .height('100%')
+          KeyboardKeySurface({
+            immersive: this.immersive,
+            role: getEquationKeyboardKeyRole(this.btn),
+            shiftActive: this.isShift,
+            keyBorderRadius: 12,
+            horizontalPadding: 2
+          }) {
+            this.KeyContentBuilder()
           }
-          .type(ButtonType.Normal)
-          .borderRadius(12)
-          .width('100%')
-          .height('100%')
-          .padding({
-            left: 2,
-            right: 2,
-            top: 0,
-            bottom: 0
-          })
-          .backgroundColor(getLocalBgColor(this.btn, this.isShift))
-          .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-          .borderWidth({
-            top: 1,
-            left: 1,
-            bottom: 0,
-            right: 0
-          })
-          .borderColor($r('app.color.btn_highlight'))
-          .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
-          .stateStyles({
-            pressed: {
-              .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS)
-            },
-            normal: {
-              .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM)
-            }
-          })
         }
       }
       .width('100%')
@@ -189,12 +173,29 @@ struct TopKeyItem {
 @Component
 struct BottomKeyItem {
   btn: string | Resource = '';
+  immersive: boolean = false;
   @Link isShift: boolean;
   @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
 
   onKeyPress: (btn: string | Resource) => void = () => {};
   onMenuSelect: (actionCode: string) => void = () => {};
 
+  @Builder
+  private KeyContentBuilder() {
+    if (typeof this.btn === 'string') {
+      Text(this.btn)
+        .fontFamily(getFontFamily(this.btn))
+        .fontSize(getLocalFontSize(this.btn))
+        .fontWeight(FontWeight.Medium)
+        .fontColor(getLocalFontColor(this.btn))
+    } else {
+      Image(this.btn)
+        .width(48)
+        .height(40)
+        .fillColor(getFontColor(this.btn))
+        .draggable(false)
+    }
+  }
 
   build() {
     KeyGestureWrapper({
@@ -207,44 +208,14 @@ struct BottomKeyItem {
       onKeyPress: this.onKeyPress,
       onMenuSelect: this.onMenuSelect
     }) {
-      Button() {
-        if (typeof this.btn === 'string') {
-          Text(this.btn)
-            .fontFamily(getFontFamily(this.btn))
-            .fontSize(getLocalFontSize(this.btn))
-            .fontWeight(FontWeight.Medium)
-            .fontColor(getLocalFontColor(this.btn))
-        } else {
-          Image(this.btn)
-            .width(48)
-            .height(40)
-            .fillColor(getFontColor(this.btn))
-            .draggable(false)
-        }
+      KeyboardKeySurface({
+        immersive: this.immersive,
+        role: getEquationKeyboardKeyRole(this.btn),
+        keyBorderRadius: 16,
+        horizontalPadding: 4
+      }) {
+        this.KeyContentBuilder()
       }
-      .type(ButtonType.Normal)
-      .borderRadius(16)
-      .width('100%')
-      .height('100%')
-      .padding({ left: 4, right: 4 })
-      .backgroundColor(getLocalBgColor(this.btn, false))
-      .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-      .borderWidth({
-        top: 1,
-        left: 1,
-        bottom: 0,
-        right: 0
-      })
-      .borderColor($r('app.color.btn_highlight'))
-      .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
-      .stateStyles({
-        pressed: {
-          .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS)
-        },
-        normal: {
-          .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM)
-        }
-      })
     }
   }
 }
@@ -256,6 +227,7 @@ export struct EquationSolver {
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @StorageProp('activeBubbleId') activeBubbleId: string = '';
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
+  @StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
 
   @State @Watch('onShiftChange') isShift: boolean = false;
 
@@ -283,71 +255,129 @@ export struct EquationSolver {
     getContext(this).eventHub.emit('screen_handle_action', actionCode, this.isShift);
   }
 
-  build() {
+  @Builder
+  private TopKeyboardBuilder(immersive: boolean) {
+    Grid() {
+      ForEach(topButtons, (btn: string | Resource, index: number) => {
+        GridItem() {
+          TopKeyItem({
+            btn: btn,
+            btnIndex: index,
+            immersive: immersive,
+            isShift: $isShift,
+            onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
+            onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
+          })
+        }
+        .zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
+      })
+    }
+    .rowsTemplate('33fr 40fr 40fr')
+    .columnsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
+    .rowsGap(6)
+    .columnsGap(4)
+    .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+    .clip(false)
+    .width('100%')
+    .height('45%')
+  }
+
+  @Builder
+  private BottomKeyboardBuilder(immersive: boolean) {
+    Grid() {
+      ForEach(bottomButtons, (btn: string | Resource) => {
+        GridItem() {
+          BottomKeyItem({
+            btn: btn,
+            immersive: immersive,
+            isShift: $isShift,
+            onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
+            onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
+          })
+        }
+        .zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
+      })
+    }
+    .rowsTemplate('1fr 1fr 1fr 1fr')
+    .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
+    .rowsGap(8)
+    .columnsGap(6)
+    .padding({ left: 10, right: 10, top: 6, bottom: 0 })
+    .clip(false)
+    .width('100%')
+    .height('55%')
+  }
+
+  @Builder
+  private LegacyEquationKeyboardBuilder() {
     Column() {
-      // 屏幕占比调整为 45%，并打上 equation 标签
+      this.TopKeyboardBuilder(false)
+      this.BottomKeyboardBuilder(false)
+    }
+    .width('100%')
+    .height('55%')
+    .backgroundColor($r('sys.color.comp_background_primary'))
+    .borderRadius(24)
+    .shadow({ radius: 16, color: '#1A000000', offsetY: -4 })
+    .padding({ bottom: this.navBarHeight - 8 })
+  }
+
+  @Builder
+  private ImmersiveEquationKeyboardBuilder() {
+    Column() {
+      this.TopKeyboardBuilder(true)
+      this.BottomKeyboardBuilder(true)
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('sys.color.comp_background_primary'))
+    .borderRadius(24)
+    .shadow({ radius: 16, color: '#1A000000', offsetY: -4 })
+    .padding({ bottom: this.navBarHeight - 8 })
+  }
+
+  @Builder
+  private LegacyEquationLayout() {
+    Column() {
       FormulaScreen({ moduleType: 'equation' })
         .height('45%')
         .width('100%')
 
-      // 上下双键盘
-      Column() {
-        // 顶部高级键盘
-        Grid() {
-          ForEach(topButtons, (btn: string | Resource, index: number) => {
-            GridItem() {
-              TopKeyItem({
-                btn: btn,
-                btnIndex: index,
-                isShift: $isShift,
-                onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
-                onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
-              })
-            }
-            .zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
-          })
-        }
-        .rowsTemplate('33fr 40fr 40fr')
-        .columnsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
-        .rowsGap(6)
-        .columnsGap(4)
-        .padding({ left: 10, right: 10, top: 6, bottom: 6 })
-        .clip(false)
-        .width('100%')
-        .height('45%') // 上键盘占比
-
-        // 底部基础键盘
-        Grid() {
-          ForEach(bottomButtons, (btn: string | Resource) => {
-            GridItem() {
-              BottomKeyItem({
-                btn: btn,
-                isShift: $isShift,
-                onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
-                onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
-              })
-            }
-            .zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
-          })
-        }
-        .rowsTemplate('1fr 1fr 1fr 1fr')
-        .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
-        .rowsGap(8)
-        .columnsGap(6)
-        .padding({ left: 10, right: 10, top: 6, bottom: 0 })
-        .clip(false)
-        .width('100%')
-        .height('55%') // 下键盘占比
-      }
-      .width('100%')
-      .height('55%') // 键盘总高度
-      .backgroundColor($r('sys.color.comp_background_primary'))
-      .borderRadius(24)
-      .shadow({ radius: 16, color: '#1A000000', offsetY: -4 })
-      .padding({ bottom: this.navBarHeight - 8 })
+      this.LegacyEquationKeyboardBuilder()
     }
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.comp_background_tertiary'))
+  }
+
+  @Builder
+  private ImmersiveEquationLayout() {
+    Tabs({ barPosition: BarPosition.End }) {
+      TabContent() {
+        FormulaScreen({ moduleType: 'equation' })
+          .height('100%')
+          .width('100%')
+      }
+      .tabBar(this.ImmersiveEquationKeyboardBuilder)
+    }
+    .vertical(false)
+    .scrollable(false)
+    .animationDuration(0)
+    .barHeight('55%')
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('sys.color.comp_background_tertiary'))
+  }
+
+  build() {
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      if (this.keyImmersiveMaterial) {
+        this.ImmersiveEquationLayout()
+      } else {
+        this.LegacyEquationLayout()
+      }
+    } else {
+      this.LegacyEquationLayout()
+    }
   }
 }

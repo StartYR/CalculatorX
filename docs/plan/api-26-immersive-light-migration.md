@@ -1,8 +1,8 @@
 # API 26 沉浸光感迁移执行计划
 
-- 状态：代码实施完成，待 API 23/API 26 真机验证
+- 状态：第一批迁移、TopBar 与全局计算键盘专项迁移均已完成；发布前广覆盖回归待补充
 - 编写日期：2026-09-17
-- 最近更新：2026-09-18
+- 最近更新：2026-09-22
 - 适用分支：`feature/api-update`
 - 目标 API：`26.0.0`
 - 最低兼容 API：`6.1.0(23)`，保持不变
@@ -19,7 +19,7 @@
 - API 26 设备获得与系统一致的材质、光影和弹出动效；
 - API 23 设备继续使用现有视觉效果和交互，不因新 API 崩溃或丢失背景；
 - 已经通过 UI Design Kit 接入的 HDS 导航材质保持原实现；
-- 隐私声明、公式、键盘和图表等高可读性场景不因透光效果降低可用性；
+- 隐私声明、公式和图表等高可读性场景不因透光效果降低可用性，计算键盘通过独立开关控制材质；
 - 每次视觉变化都能单独验证和回退。
 
 ## 2. 实施前基线
@@ -71,16 +71,15 @@ API 26 起版本号采用语义化格式，因此目标值应写为 `"26.0.0"`�
 - 已为原生按键长按菜单配置 `THICK` 材质；
 - API 26 专属材质构造均使用直接、正向的 `deviceInfo.apiAvailable('26.0.0')` 分支保护；自定义弹窗在 API 23 保留原背景，在 API 26 使用透明表面显示系统材质；
 - 已完成 `entry@default/debug`、`entry@ohosTest/debug` 和 `entry@default/release` 构建，并在 release 后重新生成主包 debug 产物；生成配置保持最低 API 23；
-- TopBar 的 Navigation 结构改造和图形编辑全屏 Sheet 继续暂缓；HDS `systemMaterialEffect`、键盘、遮罩、自定义滑动气泡及渐变羽化等原有模糊保持不变。
+- TopBar 的 Navigation 结构改造和全局计算键盘专项迁移已完成；基础、矩阵、方程、科学、汇率、图形主键盘与图形定义域键盘均可通过统一开关切换独立沉浸路径和完整旧路径。图形编辑全屏 Sheet、遮罩、自定义滑动气泡及渐变羽化仍保持原实现。
 
-仍未完成的验证：
+仍需在发布前补充的验证：
 
-- API 23 与 API 26 真机安装、启动和交互回归；
-- 深色、浅色以及系统沉浸光感不同档位下的视觉验收；
-- 长列表、连续弹层操作的帧率、发热与功耗评估；
+- 所有迁移场景在 API 23 与 API 26 上的完整交叉回归；
+- 小窗、横屏、平板和长期连续操作下的帧率、发热与功耗评估；
 - DevEco Studio API Change Assistant 的人工检查。
 
-因此，本计划尚未达到第 9 节的全部完成标准，不能据此宣称 API 23 运行兼容或 API 26 实际视觉已经通过。
+API 26 键盘逐模块视觉与交互、基础键盘的 API 23 回退、深浅色和系统光感强度联动已经通过真机验收；未覆盖组合仍不得写成已经完成。
 
 ## 3. 官方能力边界
 
@@ -231,7 +230,7 @@ API 26 起版本号采用语义化格式，因此目标值应写为 `"26.0.0"`�
 步骤：
 
 - [ ] 删除已经被系统材质完整取代且没有低版本用途的重复模糊、阴影或背景；
-- [ ] 保留 SideBar 全屏遮罩、键盘、自定义滑动气泡、渐变羽化等不属于直接迁移目标的模糊；
+- [x] 保留 SideBar 全屏遮罩、自定义滑动气泡、渐变羽化及键盘旧路径仍需使用的模糊；
 - [ ] 对不适合材质的默认开启组件使用组件级关闭，而不是关闭整个应用的沉浸光感；
 - [ ] 扫描所有 `backgroundBlurStyle`、`backdropBlur`、`systemMaterial` 和 `systemMaterialEffect`，核对每处归属；
 - [ ] 更新对应变更说明和版本摘要；
@@ -314,6 +313,12 @@ API 26 起版本号采用语义化格式，因此目标值应写为 `"26.0.0"`�
 - 不在未授权时执行编译、构建、安装、真机测试、提交或发布。
 
 ## 11. 官方参考
+
+相关专项计划：
+
+- [TopBar 沉浸光感迁移计划](./topbar-immersive-light-navigation-migration.md)
+- [基础计算键盘沉浸光感试点计划](./basic-keyboard-immersive-light-prototype.md)
+- [全局计算键盘沉浸光感迁移计划](./global-keyboard-immersive-light-migration.md)
 
 - [沉浸光感简介](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/arkts-immersive-light-sense-overview)
 - [开启沉浸光感](https://developer.huawei.com/consumer/cn/doc/HarmonyOS-Guides/arkts-immersive-light-sense-enable)

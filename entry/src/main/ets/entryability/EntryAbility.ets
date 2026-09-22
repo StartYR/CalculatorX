@@ -39,6 +39,7 @@ export default class EntryAbility extends UIAbility {
     let combSelect = prefs.getSync(PreferenceConfigs.KEY_COMBINATION_SELECT, 1) as number;      // 组合计数排列样式 (当前为UI占位)
     let permSelect = prefs.getSync(PreferenceConfigs.KEY_PERMUTATION_SELECT, 1) as number;      // 排列计数样式 (当前为UI占位)
     let haptic = prefs.getSync(PreferenceConfigs.KEY_HAPTIC_FEEDBACK, true) as boolean;         // 触控按键全局震动开关 (true: 开启, false: 关闭)
+    let keyImmersiveMaterial = prefs.getSync(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL, false) as boolean;
     let pendingFormula = '';
     if (this.context.applicationInfo.debug) {
       pendingFormula = prefs.getSync(PreferenceConfigs.KEY_CLI_PENDING_FORMULA, '') as string;
@@ -60,6 +61,7 @@ export default class EntryAbility extends UIAbility {
     AppStorage.setOrCreate(PreferenceConfigs.KEY_COMBINATION_SELECT, combSelect);               // 注入全局组合样式
     AppStorage.setOrCreate(PreferenceConfigs.KEY_PERMUTATION_SELECT, permSelect);               // 注入全局排列样式
     AppStorage.setOrCreate(PreferenceConfigs.KEY_HAPTIC_FEEDBACK, haptic);                      // 注入全局震动总开关
+    AppStorage.setOrCreate(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL, keyImmersiveMaterial);
     AppStorage.setOrCreate(PreferenceConfigs.KEY_CLI_PENDING_FORMULA, pendingFormula);
 
     // 4. 颜色模式应用

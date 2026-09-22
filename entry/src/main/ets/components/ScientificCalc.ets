@@ -13,7 +13,7 @@
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { KeyGestureWrapper } from './common/KeyGestureWrapper';
-import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } from '../utils/CalculatorConfigs';
+import { getActionId, getFontFamily, getFontSize, getFontColor } from '../utils/CalculatorConfigs';
 import { PreferenceConfigs } from '../utils/CalculatorConfigs';
 import {
   CombinationOptions,
@@ -36,6 +36,10 @@ import {
   icon_product,
   icon_backspace
 } from '../utils/CalculatorConfigs';
+import { KeyboardKeyRole } from './common/keyboard/KeyboardKeyTypes';
+import { resolveKeyboardKeyRole } from './common/keyboard/KeyboardVisualPolicy';
+import { KeyboardKeySurface } from './common/keyboard/KeyboardKeySurface';
+import deviceInfo from '@ohos.deviceInfo';
 
 // ================= 按键布局数组 =================
 const topShiftButtons: Array<string | Resource> = [
@@ -61,17 +65,61 @@ const bottomButtons: Array<string | Resource> = [
   '.', '0', icon_exp, 'Ans', '=',
 ];
 
+function getScientificKeyboardKeyRole(btn: string | Resource): KeyboardKeyRole {
+  return resolveKeyboardKeyRole(btn, ['=']);
+}
+
 // ================= 键盘组件 =================
 @Component
 struct TopKeyItem {
   btn: string | Resource = '';
   btnIndex: number = 0;
+  immersive: boolean = false;
   @Link isShift: boolean;
   @StorageProp(PreferenceConfigs.KEY_COMBINATION_SELECT) combSelect: number = 1;
   @StorageProp(PreferenceConfigs.KEY_PERMUTATION_SELECT) permSelect: number = 1;
 
   onKeyPress: (btn: string | Resource) => void = () => {};
   onMenuSelect: (actionCode: string) => void = () => {};
+
+  @Builder
+  private KeyContentBuilder() {
+    Stack({ alignContent: Alignment.Center }) {
+      if (this.btn === 'nCr') {
+        Image(CombinationOptions[this.combSelect].icon)
+          .width('100%')
+          .height('100%')
+          .constraintSize({ maxHeight: 40 })
+          .objectFit(ImageFit.Contain)
+          .fillColor($r('sys.color.font_secondary'))
+      } else if (this.btn === 'nPr') {
+        Image(PermutationOptions[this.permSelect].icon)
+          .width('100%')
+          .height('100%')
+          .constraintSize({ maxHeight: 40 })
+          .objectFit(ImageFit.Contain)
+          .fillColor($r('sys.color.font_secondary'))
+      } else if (typeof this.btn === 'string') {
+        Text(this.btn)
+          .fontFamily(getFontFamily(this.btn))
+          .fontSize(getFontSize(this.btn) + 1)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(getFontColor(this.btn))
+          .textAlign(TextAlign.Center)
+          .maxLines(1)
+      } else {
+        Image(this.btn)
+          .width('100%')
+          .height('100%')
+          .constraintSize({ maxWidth: 40, maxHeight: 40 })
+          .objectFit(ImageFit.Contain)
+          .fillColor($r('sys.color.font_secondary'))
+          .draggable(false)
+      }
+    }
+    .width('100%')
+    .height('100%')
+  }
 
   build() {
     // 注入底层交互包装器
@@ -114,57 +162,16 @@ struct TopKeyItem {
             .height(6)
         }
 
-        Button() {
-          Stack({ alignContent: Alignment.Center }) {
-            if (this.btn === 'nCr') {
-              Image(CombinationOptions[this.combSelect].icon)
-                .width('100%')
-                .height('100%')
-                .constraintSize({ maxHeight: 40 })
-                .objectFit(ImageFit.Contain)
-                .fillColor($r('sys.color.font_secondary'))
-            } else if (this.btn === 'nPr') {
-              Image(PermutationOptions[this.permSelect].icon)
-                .width('100%')
-                .height('100%')
-                .constraintSize({ maxHeight: 40 })
-                .objectFit(ImageFit.Contain)
-                .fillColor($r('sys.color.font_secondary'))
-            } else if (typeof this.btn === 'string') {
-              Text(this.btn)
-                .fontFamily(getFontFamily(this.btn))
-                .fontSize(getFontSize(this.btn) + 1)
-                .fontWeight(FontWeight.Medium)
-                .fontColor(getFontColor(this.btn))
-                .textAlign(TextAlign.Center)
-                .maxLines(1)
-            } else {
-              Image(this.btn)
-                .width('100%')
-                .height('100%')
-                .constraintSize({ maxWidth: 40, maxHeight: 40 })
-                .objectFit(ImageFit.Contain)
-                .fillColor($r('sys.color.font_secondary'))
-                .draggable(false)
-            }
-          }
-          .width('100%')
-          .height('100%')
+        KeyboardKeySurface({
+          immersive: this.immersive,
+          role: getScientificKeyboardKeyRole(this.btn),
+          shiftActive: this.isShift,
+          keyBorderRadius: 12,
+          horizontalPadding: 2,
+          useLayoutWeight: true
+        }) {
+          this.KeyContentBuilder()
         }
-        .type(ButtonType.Normal)
-        .borderRadius(12)
-        .width('100%')
-        .layoutWeight(1)
-        .padding({ left: 2, right: 2, top: 0, bottom: 0 })
-        .backgroundColor(getBgColor(this.btn, this.isShift))
-        .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-        .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
-        .borderColor($r('app.color.btn_highlight'))
-        .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
-        .stateStyles({
-          pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
-          normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
-        })
       }
       .width('100%')
       .height('100%')
@@ -175,10 +182,43 @@ struct TopKeyItem {
 @Component
 struct BottomKeyItem {
   btn: string | Resource = '';
+  immersive: boolean = false;
   @State dummyShift: boolean = false; // 用于满足底层 Wrapper 对 @Link 的双向绑定需求
 
   onKeyPress: (btn: string | Resource) => void = () => {};
   onMenuSelect: (actionCode: string) => void = () => {};
+
+  @Builder
+  private KeyContentBuilder() {
+    Stack({ alignContent: Alignment.Center }) {
+      if (typeof this.btn === 'string') {
+        Text(this.btn)
+          .fontFamily(getFontFamily(this.btn))
+          .fontSize(getFontSize(this.btn) + 1)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(getFontColor(this.btn))
+          .textAlign(TextAlign.Center)
+          .maxLines(1)
+      } else if (this.btn === icon_exp) {
+        // 指数图标位于高度充足的基础按键区，保留原始尺寸，避免 Contain 因 SVG 留白将有效图形过度缩小
+        Image(this.btn)
+          .width(48)
+          .height(40)
+          .fillColor(getFontColor(this.btn))
+          .draggable(false)
+      } else {
+        Image(this.btn)
+          .width('100%')
+          .height('100%')
+          .constraintSize({ maxWidth: 50, maxHeight: 42 })
+          .objectFit(ImageFit.Contain)
+          .fillColor(getFontColor(this.btn))
+          .draggable(false)
+      }
+    }
+    .width('100%')
+    .height('100%')
+  }
 
   build() {
     // 注入底层交互包装器
@@ -191,51 +231,14 @@ struct BottomKeyItem {
       onKeyPress: this.onKeyPress,
       onMenuSelect: this.onMenuSelect
     }) {
-      Button() {
-        Stack({ alignContent: Alignment.Center }) {
-          if (typeof this.btn === 'string') {
-            Text(this.btn)
-              .fontFamily(getFontFamily(this.btn))
-              .fontSize(getFontSize(this.btn) + 1)
-              .fontWeight(FontWeight.Medium)
-              .fontColor(getFontColor(this.btn))
-              .textAlign(TextAlign.Center)
-              .maxLines(1)
-          } else if (this.btn === icon_exp) {
-            // 指数图标位于高度充足的基础按键区，保留原始尺寸，避免 Contain 因 SVG 留白将有效图形过度缩小
-            Image(this.btn)
-              .width(48)
-              .height(40)
-              .fillColor(getFontColor(this.btn))
-              .draggable(false)
-          } else {
-            Image(this.btn)
-              .width('100%')
-              .height('100%')
-              .constraintSize({ maxWidth: 50, maxHeight: 42 })
-              .objectFit(ImageFit.Contain)
-              .fillColor(getFontColor(this.btn))
-              .draggable(false)
-          }
-        }
-        .width('100%')
-        .height('100%')
+      KeyboardKeySurface({
+        immersive: this.immersive,
+        role: getScientificKeyboardKeyRole(this.btn),
+        keyBorderRadius: 16,
+        horizontalPadding: 4
+      }) {
+        this.KeyContentBuilder()
       }
-      .type(ButtonType.Normal)
-      .borderRadius(16)
-      .width('100%')
-      .height('100%')
-      .padding({ left: 4, right: 4 })
-      .backgroundColor(getBgColor(this.btn, false))
-      .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-      .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
-      .borderColor($r('app.color.btn_highlight'))
-      .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
-      .stateStyles({
-        pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
-        normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
-      })
-      // 同样彻底清空所有自带的手势拦截代码！
     }
   }
 }
@@ -247,6 +250,7 @@ export struct ScientificCalc {
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
   @StorageProp('activeBubbleId') activeBubbleId: string = '';
+  @StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
 
   @State @Watch('onShiftChange') isShift: boolean = false;
 
@@ -275,73 +279,130 @@ export struct ScientificCalc {
     getContext(this).eventHub.emit('screen_handle_action', actionCode, this.isShift);
   }
 
-  build() {
+  @Builder
+  private TopKeyboardBuilder(immersive: boolean) {
+    Grid() {
+      ForEach(topButtons, (btn: string | Resource, index: number) => {
+        GridItem() {
+          TopKeyItem({
+            btn: btn,
+            btnIndex: index,
+            immersive: immersive,
+            isShift: $isShift,
+            onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
+            onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
+          })
+        }
+        .zIndex(this.activeBubbleId === getActionId(btn) ? 100 : 0)
+      })
+    }
+    .rowsTemplate('8fr 10fr 10fr 10fr 10fr')
+    .columnsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
+    .rowsGap(4)
+    .columnsGap(4)
+    .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+    .clip(false)
+    .width('100%')
+    .height('57%')
+  }
+
+  @Builder
+  private BottomKeyboardBuilder(immersive: boolean) {
+    Grid() {
+      ForEach(bottomButtons, (btn: string | Resource) => {
+        GridItem() {
+          BottomKeyItem({
+            btn: btn,
+            immersive: immersive,
+            onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
+            onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
+          })
+        }
+        .zIndex(this.activeBubbleId === getActionId(btn) ? 100 : 0)
+      })
+    }
+    .rowsTemplate('1fr 1fr 1fr 1fr')
+    .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
+    .rowsGap(8)
+    .columnsGap(6)
+    .padding({ left: 10, right: 10, top: 6, bottom: 0 })
+    .clip(false)
+    .width('100%')
+    .height('43%')
+  }
+
+  @Builder
+  private LegacyScientificKeyboardBuilder() {
     Column() {
-      // 1. 挂载屏幕
+      this.TopKeyboardBuilder(false)
+      this.BottomKeyboardBuilder(false)
+    }
+    .width('100%')
+    .height('67%')
+    .backgroundColor($r('sys.color.comp_background_primary'))
+    .borderRadius(24)
+    .shadow({ radius: 16, color: '#1A000000', offsetY: -4 })
+    .padding({ bottom: this.navBarHeight - 8 })
+    .renderGroup(this.activeBubbleId === '')
+  }
+
+  @Builder
+  private ImmersiveScientificKeyboardBuilder() {
+    Column() {
+      this.TopKeyboardBuilder(true)
+      this.BottomKeyboardBuilder(true)
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('sys.color.comp_background_primary'))
+    .borderRadius(24)
+    .shadow({ radius: 16, color: '#1A000000', offsetY: -4 })
+    .padding({ bottom: this.navBarHeight - 8 })
+    .renderGroup(this.activeBubbleId === '')
+  }
+
+  @Builder
+  private LegacyScientificLayout() {
+    Column() {
       FormulaScreen({ moduleType: 'scientific' })
         .height('33%')
         .width('100%')
 
-      // 2. 挂载上下双键盘
-      Column() {
-        // 顶部高级键盘
-        Grid() {
-          ForEach(topButtons, (btn: string | Resource, index: number) => {
-            GridItem() {
-              TopKeyItem({
-                btn: btn,
-                btnIndex: index,
-                isShift: $isShift,
-                onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
-                onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
-              })
-            }
-            .zIndex(this.activeBubbleId === getActionId(btn) ? 100 : 0)
-          })
-        }
-        .rowsTemplate('8fr 10fr 10fr 10fr 10fr')
-        .columnsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
-        .rowsGap(4)
-        .columnsGap(4)
-        .padding({ left: 10, right: 10, top: 6, bottom: 6 })
-        .clip(false)
-        .width('100%')
-        .height('57%')
-
-        // 底部基础键盘
-        Grid() {
-          ForEach(bottomButtons, (btn: string | Resource) => {
-            GridItem() {
-              BottomKeyItem({
-                btn: btn,
-                onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
-                onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
-              })
-            }
-            // 应用动态提权层级机制
-            .zIndex(this.activeBubbleId === getActionId(btn) ? 100 : 0)
-          })
-        }
-        .rowsTemplate('1fr 1fr 1fr 1fr')
-        .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
-        .rowsGap(8)
-        .columnsGap(6)
-        .padding({ left: 10, right: 10, top: 6, bottom: 0 })
-        .clip(false)
-        .width('100%')
-        .height('43%')
-      }
-      .width('100%')
-      .height('67%')
-      .backgroundColor($r('sys.color.comp_background_primary'))
-      .borderRadius(24)
-      .shadow({ radius: 16, color: '#1A000000', offsetY: -4 })
-      .padding({ bottom: this.navBarHeight - 8 })
-      // 将大量静态按键合并为一个缓存渲染组，降低侧边栏缩放动画期间的重复绘制负载
-      .renderGroup(this.activeBubbleId === '')
+      this.LegacyScientificKeyboardBuilder()
     }
     .width('100%')
     .height('100%')
     .backgroundColor($r('sys.color.comp_background_tertiary'))
+  }
+
+  @Builder
+  private ImmersiveScientificLayout() {
+    Tabs({ barPosition: BarPosition.End }) {
+      TabContent() {
+        FormulaScreen({ moduleType: 'scientific' })
+          .height('100%')
+          .width('100%')
+      }
+      .tabBar(this.ImmersiveScientificKeyboardBuilder)
+    }
+    .vertical(false)
+    .scrollable(false)
+    .animationDuration(0)
+    .barHeight('67%')
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('sys.color.comp_background_tertiary'))
+  }
+
+  build() {
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      if (this.keyImmersiveMaterial) {
+        this.ImmersiveScientificLayout()
+      } else {
+        this.LegacyScientificLayout()
+      }
+    } else {
+      this.LegacyScientificLayout()
+    }
   }
 }

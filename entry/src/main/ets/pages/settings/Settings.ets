@@ -158,6 +158,7 @@ export struct Settings {
   @StorageLink('decimalPrecision') decimalPrecision: number = 6;
   @StorageLink('colorModeIndex') colorModeIndex: number = 2;
   @StorageLink('answerOutputMode') answerOutputMode: number = 0;
+  @StorageLink(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
 
   // 读取启动偏好的状态 (默认值为0: 记忆上次)
   @State startupPageMode: number = 0;
@@ -506,6 +507,36 @@ export struct Settings {
               }
               .width('100%')
               .padding({ left: 16, right: 12, top: 8, bottom: 8 })
+
+              if (deviceInfo.apiAvailable('26.0.0')) {
+                ItemDivider()
+
+                Row() {
+                  SymbolGlyph($r('sys.symbol.checkmark_lightbulb_max'))
+                    .fontSize(20)
+                    .fontColor([$r('sys.color.icon_secondary')])
+                    .margin({ right: 12 })
+                  Text('键盘沉浸光感')
+                    .fontSize(16)
+                    .fontColor($r('sys.color.font_primary'))
+                  Blank()
+                  Toggle({ type: ToggleType.Switch, isOn: this.keyImmersiveMaterial })
+                    .id(SemanticIds.SETTINGS_KEY_IMMERSIVE_MATERIAL)
+                    .accessibilityText(this.keyImmersiveMaterial ? '已开启' : '已关闭')
+                    .onChange((isOn: boolean) => {
+                      this.keyImmersiveMaterial = isOn;
+                      PreferenceManager.set(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL, isOn);
+                    })
+                }
+                .width('100%')
+                .padding({ left: 16, right: 16, top: 10, bottom: 5 })
+
+                Text('为所有计算键盘启用系统材质与触点光效。关闭后使用经典键盘。')
+                  .fontSize(12)
+                  .fontColor($r('sys.color.font_tertiary'))
+                  .width('100%')
+                  .padding({ left: 48, right: 8, top: 0, bottom: 14 })
+              }
 
               ItemDivider()
 
