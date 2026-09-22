@@ -9,7 +9,7 @@ CalculatorX 长期保留传统键盘与 API 26 沉浸光感键盘。两条路径
   ├─ KeyboardKeyRole ──► 传统背景映射
   └─ KeyboardKeyRole ──► API 26 沉浸材质映射
 
-KeyboardRenderSwitch
+各键盘模块的 build() / 键盘挂载 Builder
   ├─ API 26 及以上 + 全局开关开启 ──► 沉浸容器
   └─ API 低于 26 或全局开关关闭 ──► 完整传统容器
 ```
@@ -25,7 +25,6 @@ KeyboardRenderSwitch
 | `KeyboardKeyTypes.ets` | 定义 `KeyboardKeyRole` 与 `KeyboardKeySpec` |
 | `KeyboardVisualPolicy.ets` | 从按键内容解析语义，并把语义映射为传统背景 |
 | `KeyboardKeySurface.ets` | 维护传统和沉浸两套 Button 属性链，并直接保护 API 26 调用 |
-| `KeyboardRenderSwitch.ets` | 集中读取全局开关，并选择完整传统或沉浸组件树 |
 
 `ImmersiveMaterialUtils.ets` 负责创建并缓存材质实例。逐键 `systemMaterial(createKeyboardMaterial(...))` 只允许出现在 `KeyboardKeySurface.ets` 中。
 
@@ -38,8 +37,9 @@ KeyboardRenderSwitch
 - Shift 状态机、触感、连续删除和长按候选；
 - `KeyGestureWrapper`、气泡层级与菜单；
 - 公式区、列表、焦点、Sheet 和展开收起动画。
+- `KEY_KEY_IMMERSIVE_MATERIAL` 的响应式订阅，以及最外层 API 版本与路径选择。
 
-每个键盘模块持有完整的传统容器与沉浸容器，并将两个模块内 `@Builder` 直接交给 `KeyboardRenderSwitch`。不要把组件收到的内容区或键盘区 `@BuilderParam` 再转交给第二层公共容器：该模式可以通过 ArkTS 构建，但在真机运行时可能丢失绑定并触发 `Cannot read property bind of undefined`。
+每个键盘模块持有完整的传统容器与沉浸容器，并在自己的 `build()` 或键盘挂载 Builder 中直接选择路径。不要把包含模块状态或继续调用模块 Builder 的完整布局作为 `@BuilderParam` 传给另一个组件：该模式可以通过 ArkTS 构建，但在真机运行时会丢失 `this` 绑定并触发 `Cannot read property bind of undefined`。
 
 图形主键盘的位移动画在传统路径和沉浸路径中挂载于不同层级，也继续由模块持有。
 
@@ -48,9 +48,9 @@ KeyboardRenderSwitch
 1. 用 `KeyboardKeyRole` 或 `createKeyboardKeySpec()` 声明每个按键的稳定语义。
 2. 使用 `KeyboardKeySurface` 渲染 Button，通过 `@BuilderParam` 提供文字、图标或复合内容。
 3. 把 Action、触感和复杂手势留在模块中；使用 `KeyGestureWrapper` 的模块应由包装器继续持有手势。
-4. 在模块内实现完整传统容器和完整沉浸容器，并将两个 `@Builder` 直接传给 `KeyboardRenderSwitch`。
-5. 不在模块中读取 `KEY_KEY_IMMERSIVE_MATERIAL`，也不直接导入 `createKeyboardMaterial()`。
-6. 新 API 调用必须位于直接的 `if (deviceInfo.apiAvailable('26.0.0'))` 正向分支中。
+4. 在模块内实现完整传统容器和完整沉浸容器。
+5. 在模块渲染入口订阅 `KEY_KEY_IMMERSIVE_MATERIAL`，并通过直接的 `if (deviceInfo.apiAvailable('26.0.0'))` 正向分支选择路径。
+6. 模块不得直接导入 `createKeyboardMaterial()`。
 7. 将新键盘加入 `tools/check-keyboard-architecture.ps1` 的模块清单。
 8. 运行结构检查、语义单元测试和主包 debug 构建，再分别完成 API 26 双开关状态与 API 23 真机验证。
 
@@ -62,7 +62,7 @@ KeyboardRenderSwitch
 - 需要超过三个用于表达模块差异的 boolean 参数；
 - 需要负边距、屏幕坐标或隐藏 Tab 切换补丁；
 - 公共层需要接管业务焦点、返回顺序或位移动画；
-- 公共层需要二次转交内容区、键盘区或完整容器的 `@BuilderParam`；
+- 公共层需要接收或继续转交内容区、键盘区或完整容器的 `@BuilderParam`；
 - 单模块问题无法在自身文件和公共表面之间清楚定位。
 
 ## 6. 检查命令

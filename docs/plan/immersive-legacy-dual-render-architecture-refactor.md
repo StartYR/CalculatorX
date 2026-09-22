@@ -1,6 +1,6 @@
 # 沉浸光感与传统界面双渲染架构重构计划
 
-- 状态：公共表面与统一选择器已完成；公共容器真机失败后已拆回模块专用容器，待真机复验
+- 状态：公共表面已完成；公共容器和统一选择器真机失败后均已移除，关键崩溃路径已设备复验
 - 编写日期：2026-09-22
 - 适用分支：`feature/api-26-sensation`
 - 目标 API：`26.0.0`
@@ -11,14 +11,13 @@
 ## 实施结果
 
 - 七类键盘的 Button 表面统一由 `KeyboardKeySurface` 渲染；
-- API 26 与全局开关判断集中到 `KeyboardRenderSwitch`；
-- 七类键盘均保留模块专用传统与沉浸容器，并将完整布局直接交给统一选择器；
-- 页面型与悬浮型公共 Host 曾通过构建，但页面型 Host 在真机运行时因二次转交 `@BuilderParam` 丢失绑定而崩溃；两个公共 Host 已一并移除；
-- 七类键盘范围内的 API 26 直接分支由 16 处收敛为公共表面和统一选择器中的 2 处；
-- 七类键盘范围内的全局开关读取由 7 处收敛为统一选择器中的 1 处；
+- 七类键盘均保留模块专用传统与沉浸容器，并在模块渲染入口直接选择路径；
+- 页面型、悬浮型公共 Host 和统一渲染选择器都曾通过构建，但在真机运行时因 `@BuilderParam` 丢失绑定而崩溃，现已全部移除；
+- 七类键盘范围内的 API 26 直接分支由 16 处收敛为公共表面和七个模块渲染入口中的 8 处；
+- 全局开关保留在七个模块渲染入口中响应式读取，以换取稳定的 Builder 所有权；
 - 逐键 `systemMaterial(createKeyboardMaterial(...))` 由 9 处收敛为公共表面中的 1 处；
 - 语义单元测试、架构只读检查和最终主包 debug 构建均已通过；
-- 公共容器移除后的冷启动、模式切换、视觉、交互、焦点、动画和 API 23 回退需要重新验收。
+- 公共选择器移除后的科学计算冷启动与函数图像切换科学计算已通过设备验证；其余视觉、交互、焦点、动画和 API 23 回退需要继续回归。
 
 ## 1. 背景与目标
 
@@ -40,7 +39,7 @@ CalculatorX 已经为基础、矩阵、方程、科学、汇率、图形主键�
 沉浸路径：受支持区域容器与系统材质按钮表面
 ```
 
-完成后，新增键盘应只需要声明按键语义、布局和业务回调，不再复制 API 判断、设置读取和两套按钮属性链。
+完成后，新增键盘应声明按键语义、布局和业务回调，按固定模板保留少量模块级 API 判断与设置读取，不再复制两套按钮属性链。
 
 ## 2. 当前代码基线
 
@@ -114,7 +113,7 @@ flowchart TD
   C --> E[沉浸材质映射]
   A --> F[共享按键内容与事件]
 
-  G[API 版本与全局开关] --> H[KeyboardRenderSwitch]
+  G[模块内 API 版本与全局开关] --> H[模块渲染入口]
   H -->|传统| I[模块内 Legacy Layout]
   H -->|沉浸| J[模块内 Immersive Layout]
 
@@ -179,13 +178,13 @@ interface KeyboardKeySpec {
 
 ### 4.3 路径选择层
 
-新增轻量 `KeyboardRenderSwitch`，集中完成：
+每个模块的渲染入口负责：
 
-- `@StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL)`；
-- API 26 与开关的双重判断；
-- 在完整传统 Builder 与完整沉浸 Builder 之间选择。
+- 通过 `@StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL)` 响应开关；
+- 直接判断 API 26 与开关；
+- 在本模块的完整传统 Builder 与完整沉浸 Builder 之间选择。
 
-它通过两个 `@BuilderParam` 接收模块提供的组件树，不包含模块名判断。逐键新 API 仍由 `KeyboardKeySurface` 自己直接保护。
+曾实现的 `KeyboardRenderSwitch` 通过两个 `@BuilderParam` 接收模块组件树，构建可以成功，但 API 26 真机在执行传入 Builder 内部的 `this` 调用时仍会丢失绑定。公共选择器因此删除。逐键新 API 继续由 `KeyboardKeySurface` 自己直接保护。
 
 ### 4.4 容器层
 
@@ -199,7 +198,7 @@ interface KeyboardKeySpec {
 - `PageKeyboardHost`：共享 `Column` 与单 Tab 底部栏的切换骨架，接收内容区、键盘区和高度参数；
 - `DockedKeyboardHost`：共享与键盘等高的局部单 Tab 底部栏，接收键盘 Builder 和实际高度。
 
-两个公共容器虽能通过 ArkTS 构建，但需要把上层收到的 `@BuilderParam` 再交给下层布局或 TabBar。API 26 真机冷启动科学计算时，`PageKeyboardHost` 的内容 Builder 丢失绑定并触发 `Cannot read property bind of undefined`。阶段 9 因此触发停止条件：删除两个公共 Host，所有模块恢复持有自己的完整容器 Builder，并只把完整传统与沉浸布局直接交给 `KeyboardRenderSwitch`。
+两个公共容器虽能通过 ArkTS 构建，但需要把上层收到的 `@BuilderParam` 再交给下层布局或 TabBar。API 26 真机冷启动科学计算时，`PageKeyboardHost` 的内容 Builder 丢失绑定并触发 `Cannot read property bind of undefined`。删除 Host 后，直接把模块完整布局交给 `KeyboardRenderSwitch` 仍在真机丢失绑定。最终删除所有跨组件布局 Builder 转交，由各模块直接选择自己的完整布局。
 
 ## 5. 建议文件边界
 
@@ -209,8 +208,7 @@ interface KeyboardKeySpec {
 entry/src/main/ets/components/common/keyboard/
 ├── KeyboardKeyTypes.ets
 ├── KeyboardVisualPolicy.ets
-├── KeyboardKeySurface.ets
-└── KeyboardRenderSwitch.ets
+└── KeyboardKeySurface.ets
 ```
 
 现有 `ImmersiveMaterialUtils.ets` 继续负责创建和缓存 ArkUI 材质，不把组件布局迁入工具类。
@@ -369,9 +367,9 @@ refactor: 迁移汇率键盘双路径按键表面
 refactor: 迁移图形键盘双路径按键表面
 ```
 
-### 阶段 8：集中路径选择
+### 阶段 8：集中路径选择后触发回退
 
-所有按键表面稳定后，再引入 `KeyboardRenderSwitch`。
+所有按键表面稳定后曾引入 `KeyboardRenderSwitch`，但设备验证证明完整布局 Builder 跨组件传递不可靠。
 
 迁移顺序：
 
@@ -383,7 +381,7 @@ refactor: 迁移图形键盘双路径按键表面
 6. 图形主键盘；
 7. 图形定义域键盘。
 
-每次只迁移一个模块并单独提交。检查点：各模块删除自己的全局开关读取和最外层路径分支后，API 26 开关与 API 23 仍选择完全相同的组件树。
+各模块迁移曾分别提交。最终检查点：恢复模块自己的全局开关读取和最外层路径分支，删除 `KeyboardRenderSwitch`，保持 API 26 开关与 API 23 选择相同的组件树。
 
 建议提交格式：
 
@@ -420,7 +418,7 @@ refactor: 为基础键盘接入统一渲染选择器
 - 上层收到的 `@BuilderParam` 需要继续转交给内容区、TabBar 或另一个组件；
 - 公共 Host 使单模块问题无法独立定位。
 
-阶段结论：停止抽取。公共按键表面和统一渲染选择器继续保留；页面型与悬浮型容器由业务模块持有。
+阶段结论：停止抽取。公共按键表面继续保留；渲染选择与页面型、悬浮型容器均由业务模块持有。
 
 建议提交：
 
@@ -428,6 +426,7 @@ refactor: 为基础键盘接入统一渲染选择器
 refactor: 抽取页面型键盘双路径容器
 refactor: 抽取悬浮型键盘双路径容器
 fix: 修复键盘公共容器运行时崩溃
+fix: 移除键盘布局构建器跨组件转交
 ```
 
 ### 阶段 10：建立长期约束并全局收敛
@@ -437,7 +436,7 @@ fix: 修复键盘公共容器运行时崩溃
 - [x] 删除所有过渡适配器、旧分类函数和未使用 Builder；
 - [x] 确认 `systemMaterial(createKeyboardMaterial(...))` 只存在于公共按键表面；
 - [x] 确认键盘模块不再直接构造沉浸材质；
-- [x] 确认全局开关读取集中在渲染选择器和确有必要的设置界面；
+- [x] 确认全局开关读取只存在于模块渲染入口和设置基础设施；
 - [x] 增加针对公共语义映射的单元测试；
 - [x] 增加只读结构检查，阻止新模块绕过公共表面或在 API 保护外调用材质；
 - [x] 编写“新增双路径组件”接入清单；
@@ -519,10 +518,9 @@ docs: 记录键盘双路径架构重构结果
 2. 用 `KeyboardKeySpec` 声明内容、Action 和语义角色；
 3. 使用 `KeyboardKeySurface`，不自行复制两套 Button 属性；
 4. 在模块内实现完整传统与沉浸容器；
-5. 使用 `KeyboardRenderSwitch` 提供完整传统与沉浸 Builder；
-6. 在新 API 调用点保留直接版本保护；
-7. 完成 API 26 开关双态和 API 23 真机验证；
-8. 将模块加入结构检查与发布前验证矩阵。
+5. 在模块渲染入口读取开关并保留直接版本保护；
+6. 完成 API 26 开关双态和 API 23 真机验证；
+7. 将模块加入结构检查与发布前验证矩阵。
 
 对于非键盘界面，复用同一分层原则，但按组件家族建立独立 Surface 和 Host。Sheet、Dialog、TopBar 和普通内容区不得直接套用键盘容器。
 
@@ -546,7 +544,7 @@ docs: 记录键盘双路径架构重构结果
 - 按键的传统与沉浸视觉由同一语义定义驱动；
 - 逐键材质和两套 Button 表面只在公共表面维护；
 - 模块代码继续清楚表达自己的布局、状态和业务行为；
-- 新增键盘不需要复制 API 判断、设置读取或按钮属性链；
+- 新增键盘按固定模板实现模块级 API 判断和设置读取，不复制按钮属性链；
 - 公共组件中不存在模块名判断、屏幕坐标补丁或大量特例参数；
 - 结构检查能发现绕过公共表面、材质构造散落和默认值不一致；
 - 所有阶段均有独立 Conventional Commit，可以精确回退；
