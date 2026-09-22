@@ -111,7 +111,7 @@ SideBarMenu 点击菜单项
 
 - [StatisticsCalc.ets](../../entry/src/main/ets/components/StatisticsCalc.ets)：统计分析
 - [UnitConverter.ets](../../entry/src/main/ets/components/UnitConverter.ets)：单位转换
-- [BaseConverter.ets](../../entry/src/main/ets/components/exchange/BaseConverter.ets)：进制转换
+- [BaseConverter.ets](../../entry/src/main/ets/components/exchange/base/BaseConverter.ets)：进制转换
 
 ## 4. FormulaScreen
 

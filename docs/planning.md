@@ -26,10 +26,11 @@
 
 ## 🛠️ 极客与专业场景工具 (Geek & Pro Tools)
 
-* **💻 程序员模式 (Programmer Mode)**
+* **💻 [程序员模式 (Programmer Mode)](plan/programmer-mode-implementation.md)**
     * 多进制（BIN, OCT, DEC, HEX）实时同步转换。
     * 字长控制（8-bit 到 64-bit）及有符号/无符号整数溢出模拟。
-    * 完整位运算支持（AND, OR, XOR, NOT, 算术/逻辑移位）。
+    * 完整位运算支持（AND, OR, XOR, NOT、算术/逻辑移位、循环与带进位循环）。
+    * 展示 CF、OF、ZF、SF、原码、反码与补码，并支持 IEEE 754 binary16/32/64 位模式解析。
 * **🔬 科学常数库 (Constants Library)**
     * 内置物理与化学标准常数表（如真空光速 $c$、普朗克常数 $h$、阿伏伽德罗常数 $N_A$ 等）。
     * 支持无缝插入至当前表达式，避免手动输入导致的高精度数值截断误差。
