@@ -6,7 +6,7 @@
  * @date 2026/8/3 19:46
  */
 import { HapticUtils } from '../../utils/HapticUtils';
-import { getActionId, getFontFamily, getFontSize, getFontColor, getBgColor } from '../../utils/CalculatorConfigs';
+import { getActionId, getFontFamily, getFontSize, getFontColor } from '../../utils/CalculatorConfigs';
 import { PreferenceConfigs } from '../../utils/CalculatorConfigs';
 import {
   icon_sqrt, icon_sqrt3, icon_sqrtx, icon_power2, icon_power3,
@@ -15,9 +15,9 @@ import {
 import { KeyGestureWrapper } from '../common/KeyGestureWrapper';
 import { FunctionType } from './GraphingTypes'; // 引入函数类型进行动态感知
 import deviceInfo from '@ohos.deviceInfo';
-import { createKeyboardMaterial } from '../../utils/ImmersiveMaterialUtils';
 import { KeyboardKeyRole } from '../common/keyboard/KeyboardKeyTypes';
 import { resolveKeyboardKeyRole } from '../common/keyboard/KeyboardVisualPolicy';
+import { KeyboardKeySurface } from '../common/keyboard/KeyboardKeySurface';
 
 // ==================== 按键布局配置 ====================
 
@@ -64,12 +64,6 @@ function getLocalFontColor(btn: string | Resource): ResourceColor {
   return getFontColor(btn);
 }
 
-function getLocalBgColor(btn: string | Resource, isShift: boolean): ResourceColor {
-  if (btn === 'π' || btn === 'e') return getBgColor('0', false);
-  if (btn === '确定') return getBgColor('=', false);
-  return getBgColor(btn, isShift);
-}
-
 function getLocalFontSize(btn: string | Resource): number {
   if (btn === 'π' || btn === 'e') return getFontSize('0');
   if (btn === 't' || btn === 'θ' || btn === 'x' || btn === 'y') return getFontSize('0');
@@ -109,27 +103,6 @@ export struct TopKeyItem {
         .fillColor($r('sys.color.font_secondary'))
         .draggable(false)
     }
-  }
-
-  @Builder
-  private LegacyButtonBuilder() {
-    Button() {
-      this.KeyContentBuilder()
-    }
-    .type(ButtonType.Normal)
-    .borderRadius(12)
-    .width('100%')
-    .height('100%')
-    .padding({ left: 2, right: 2 })
-    .backgroundColor(getLocalBgColor(this.btn, this.isShift))
-    .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-    .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
-    .borderColor($r('app.color.btn_highlight'))
-    .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
-    .stateStyles({
-      pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
-      normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
-    })
   }
 
   build() {
@@ -182,31 +155,14 @@ export struct TopKeyItem {
             onKeyPress: this.onKeyPress,
             onMenuSelect: this.onMenuSelect
           }) {
-            if (deviceInfo.apiAvailable('26.0.0')) {
-              if (this.immersive) {
-                Button() {
-                  this.KeyContentBuilder()
-                }
-                .type(ButtonType.Normal)
-                .borderRadius(12)
-                .width('100%')
-                .height('100%')
-                .padding({ left: 2, right: 2 })
-                .buttonStyle(ButtonStyleMode.TEXTUAL)
-                .backgroundColor(Color.Transparent)
-                .borderWidth(0)
-                .shadow({ radius: 0 })
-                .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 1.0 })
-                .stateStyles({
-                  pressed: { .opacity(1.0).shadow({ radius: 0 }) },
-                  normal: { .opacity(1.0).shadow({ radius: 0 }) }
-                })
-                .systemMaterial(createKeyboardMaterial(getGraphingKeyboardKeyRole(this.btn), this.isShift))
-              } else {
-                this.LegacyButtonBuilder()
-              }
-            } else {
-              this.LegacyButtonBuilder()
+            KeyboardKeySurface({
+              immersive: this.immersive,
+              role: getGraphingKeyboardKeyRole(this.btn),
+              shiftActive: this.isShift,
+              keyBorderRadius: 12,
+              horizontalPadding: 2
+            }) {
+              this.KeyContentBuilder()
             }
           }
         }
@@ -226,7 +182,7 @@ export struct BottomKeyItem {
   @Link isShift: boolean;
   @StorageProp(PreferenceConfigs.KEY_HAPTIC_FEEDBACK) hapticFeedback: boolean = true;
 
-  customRadius?: number = 16;
+  customRadius: number = 16;
 
   onKeyPress: (btn: string | Resource) => void = () => {};
   onMenuSelect: (actionCode: string) => void = () => {};
@@ -248,27 +204,6 @@ export struct BottomKeyItem {
     }
   }
 
-  @Builder
-  private LegacyButtonBuilder() {
-    Button() {
-      this.KeyContentBuilder()
-    }
-    .type(ButtonType.Normal)
-    .borderRadius(this.customRadius)
-    .width('100%')
-    .height('100%')
-    .padding({ left: 4, right: 4 })
-    .backgroundColor(getLocalBgColor(this.btn, false))
-    .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-    .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
-    .borderColor($r('app.color.btn_highlight'))
-    .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
-    .stateStyles({
-      pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
-      normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
-    })
-  }
-
   build() {
     KeyGestureWrapper({
       actionId: getLocalActionId(this.btn),
@@ -279,31 +214,13 @@ export struct BottomKeyItem {
       onKeyPress: this.onKeyPress,
       onMenuSelect: this.onMenuSelect
     }) {
-      if (deviceInfo.apiAvailable('26.0.0')) {
-        if (this.immersive) {
-          Button() {
-            this.KeyContentBuilder()
-          }
-          .type(ButtonType.Normal)
-          .borderRadius(this.customRadius)
-          .width('100%')
-          .height('100%')
-          .padding({ left: 4, right: 4 })
-          .buttonStyle(ButtonStyleMode.TEXTUAL)
-          .backgroundColor(Color.Transparent)
-          .borderWidth(0)
-          .shadow({ radius: 0 })
-          .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 1.0 })
-          .stateStyles({
-            pressed: { .opacity(1.0).shadow({ radius: 0 }) },
-            normal: { .opacity(1.0).shadow({ radius: 0 }) }
-          })
-          .systemMaterial(createKeyboardMaterial(getGraphingKeyboardKeyRole(this.btn)))
-        } else {
-          this.LegacyButtonBuilder()
-        }
-      } else {
-        this.LegacyButtonBuilder()
+      KeyboardKeySurface({
+        immersive: this.immersive,
+        role: getGraphingKeyboardKeyRole(this.btn),
+        keyBorderRadius: this.customRadius,
+        horizontalPadding: 4
+      }) {
+        this.KeyContentBuilder()
       }
     }
   }
