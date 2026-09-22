@@ -36,10 +36,10 @@ import {
   icon_product,
   icon_backspace
 } from '../utils/CalculatorConfigs';
-import deviceInfo from '@ohos.deviceInfo';
 import { KeyboardKeyRole } from './common/keyboard/KeyboardKeyTypes';
 import { resolveKeyboardKeyRole } from './common/keyboard/KeyboardVisualPolicy';
 import { KeyboardKeySurface } from './common/keyboard/KeyboardKeySurface';
+import { KeyboardRenderSwitch } from './common/keyboard/KeyboardRenderSwitch';
 
 // ================= 按键布局数组 =================
 const topShiftButtons: Array<string | Resource> = [
@@ -250,7 +250,6 @@ export struct ScientificCalc {
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
   @StorageProp('activeBubbleId') activeBubbleId: string = '';
-  @StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
 
   @State @Watch('onShiftChange') isShift: boolean = false;
 
@@ -395,14 +394,9 @@ export struct ScientificCalc {
   }
 
   build() {
-    if (deviceInfo.apiAvailable('26.0.0')) {
-      if (this.keyImmersiveMaterial) {
-        this.ImmersiveScientificLayout()
-      } else {
-        this.LegacyScientificLayout()
-      }
-    } else {
-      this.LegacyScientificLayout()
-    }
+    KeyboardRenderSwitch({
+      legacyContent: this.LegacyScientificLayout,
+      immersiveContent: this.ImmersiveScientificLayout
+    })
   }
 }
