@@ -351,18 +351,19 @@ export struct GraphingEditSheet {
   }
 
   private showFunctionTypeDialog(): void {
-    this.getUIContext().showActionSheet({
+    this.getUIContext().showAlertDialog({
       title: '选择函数类型',
-      message: '',
+      message: '请选择要添加的函数类型',
       systemMaterial: createDialogMaterial(),
-      sheets: [
-        { title: '普通函数 f(x)', action: () => this.addFunction(FunctionType.NORMAL) },
-        { title: '极坐标方程 r(θ)', action: () => this.addFunction(FunctionType.POLAR) },
-        { title: '参数方程 x(t), y(t)', action: () => this.addFunction(FunctionType.PARAMETRIC) },
-        { title: '隐函数 f(x,y)', action: () => this.addFunction(FunctionType.IMPLICIT) },
-        { title: '点 (x, y)', action: () => this.addFunction(FunctionType.POINT) }
+      buttonDirection: DialogButtonDirection.VERTICAL,
+      buttons: [
+        { value: '普通函数 f(x)', action: () => this.addFunction(FunctionType.NORMAL) },
+        { value: '极坐标方程 r(θ)', action: () => this.addFunction(FunctionType.POLAR) },
+        { value: '参数方程 x(t), y(t)', action: () => this.addFunction(FunctionType.PARAMETRIC) },
+        { value: '隐函数 f(x,y)', action: () => this.addFunction(FunctionType.IMPLICIT) },
+        { value: '点 (x, y)', action: () => this.addFunction(FunctionType.POINT) },
+        { value: '取消', action: () => {} }
       ],
-      confirm: { value: '取消', action: () => {} }
     });
   }
 
