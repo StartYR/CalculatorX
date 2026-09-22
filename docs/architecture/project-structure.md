@@ -88,7 +88,8 @@ entry/src/main/                   # 📦 主 HAP 模块源码
 │   │   │
 │   │   └── exchange/                 # 🔄 转换类插件
 │   │       ├── base/                     # 💻 进制转换子系统
-│   │       │   └── BaseConverter.ets         # 进制转换插件（占位，开发中）
+│   │       │   ├── BaseConverter.ets         # 程序员页面、双效果键盘、历史与事件
+│   │       │   └── ProgrammerInspector.ets   # 位编辑、整数编码和 IEEE 字段
 │   │       └── rates/                    # 💱 汇率换算子系统
 │   │           ├── ExchangeRate.ets          # 主控制器：交叉换算、联网刷新、缓存、列表增删排序
 │   │           ├── ExchangeKeyboard.ets      # 汇率专属数字键盘：金额、AC、退格、确定与收起
@@ -97,6 +98,7 @@ entry/src/main/                   # 📦 主 HAP 模块源码
 │   │           └── ExchangeTypes.ets         # CurrencyListItem 与 API 响应类型
 │   │
 │   ├── utils/                        # 🧠 核心服务、配置与纯逻辑
+│   │   ├── base/                        # 精确整数、表达式、IEEE 754、输入会话与历史契约
 │   │   ├── EngineService.ets             # LaTeX 清洗、JS 注入、MathJSON 与 N-API 调度
 │   │   ├── InputTranslator.ets           # 70+ ActionID → 标准 LaTeX，含排列组合样式
 │   │   ├── HapticUtils.ets               # Auto/Sharp/Soft/Hard 四档触感曲线

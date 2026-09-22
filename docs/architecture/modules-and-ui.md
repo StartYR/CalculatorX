@@ -105,13 +105,18 @@ SideBarMenu 点击菜单项
 
 完整设计见 [exchange.md](exchange.md)。
 
+### BaseConverter
+
+[BaseConverter.ets](../../entry/src/main/ets/components/exchange/base/BaseConverter.ets) 提供程序员整数与 IEEE 754 页面，采用纯 ArkTS 精确核心，不进入 FormulaScreen/C++ CAS。键盘复用公共表面和 API 26 底部 TabBar，低版本回退传统布局。首版已实现，设备验收待完成；详见[程序员模式](programmer.md)。
+
 ## 3. 开发中模块
 
 以下组件目前只呈现开发中占位内容：
 
 - [StatisticsCalc.ets](../../entry/src/main/ets/components/StatisticsCalc.ets)：统计分析
 - [UnitConverter.ets](../../entry/src/main/ets/components/UnitConverter.ets)：单位转换
-- [BaseConverter.ets](../../entry/src/main/ets/components/exchange/base/BaseConverter.ets)：进制转换
+
+普通数值转换尚未提供页面。
 
 ## 4. FormulaScreen
 

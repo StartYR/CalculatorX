@@ -38,8 +38,9 @@ CalculatorX 不使用第三方状态管理库，而是按生命周期和作用�
 | `event_shift_change` | 各计算器模块 | Index/TopBar | 更新 Shift 徽章 |
 | `screen_shift_consumed` | FormulaScreen | 各计算器模块 | S⇄D 等操作后复位 Shift |
 | `event_math_insert` | Index/历史记录 | FormulaScreen | 回填输入或结果 |
-| `event_math_undo` | TopBar/Index | FormulaScreen | MathLive undo |
-| `event_math_redo` | TopBar/Index | FormulaScreen | MathLive redo |
+| `event_math_undo` | TopBar/Index | FormulaScreen / BaseConverter | 当前模块撤销 |
+| `event_math_redo` | TopBar/Index | FormulaScreen / BaseConverter | 当前模块重做 |
+| `event_programmer_restore` | Index 历史抽屉 | BaseConverter | 完整 HistoryRecord 与 input/output 回填类型 |
 | `request_graphing_data` | GraphingEditSheet | FormulaScreen | 请求 LaTeX 与 AST，携带 reqId |
 | `temp_graph_ast_ready` | FormulaScreen | GraphingCalc/Canvas | 回传 AST，更新列表并重绘 |
 | `response_graph_base64_ready` | FormulaScreen | GraphingCalc | 回传表达式预览 PNG |
@@ -89,6 +90,8 @@ CalculatorX 不使用第三方状态管理库，而是按生命周期和作用�
 - `loadAllToAppStorage()`：启动时批量发布响应式状态
 
 配置键统一声明在 [CalculatorConfigs.ets](../../entry/src/main/ets/utils/CalculatorConfigs.ets) 的 `PreferenceConfigs`。
+
+程序员模式通过 `KEY_PROGRAMMER_SETTINGS` 保存设置 JSON，页面自行读取，不注入全局 AppStorage。草稿只保留在进程内 `ProgrammerMemory`；确认结果以 `module_type=base` 写入现有历史表，配置与位模式使用 `extra_params`，无需数据库迁移。完整契约见[程序员模式](programmer.md#状态与历史)。
 
 ### 配置键与默认值
 

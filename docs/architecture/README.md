@@ -17,6 +17,7 @@
 | [compute-pipeline.md](compute-pipeline.md) | LaTeX、MathJSON、N-API、SymEngine、Giac 和格式化 |
 | [graphing.md](graphing.md) | 函数编辑、RPN 虚拟机、采样、Canvas 和手势 |
 | [exchange.md](exchange.md) | 汇率网络、缓存、交叉换算、选择器和持久化 |
+| [programmer.md](programmer.md) | 固定字长、位运算、IEEE 754、双效果键盘与历史契约 |
 | [state-and-storage.md](state-and-storage.md) | EventHub、AppStorage、Preferences、RDB 和启动流程 |
 | [troubleshooting.md](troubleshooting.md) | 按问题与功能调用链快速定位文件 |
 | [project-structure.md](project-structure.md) | 完整工程目录、源码职责和文件跳转 |

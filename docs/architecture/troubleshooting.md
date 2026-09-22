@@ -25,6 +25,8 @@
 | LaTeX 插入错误 | 模块 action → `InputTranslator.ets` → `calculator.html` |
 | 公式显示或滚动异常 | `calculator.html` 的 MathLive、字号和 pointer 逻辑 |
 | 普通计算结果错误 | `EngineService.ets` 清洗 → `engine.cpp` 路由 → `parser.cpp` |
+| 程序员结果/编码错误 | `utils/base/` → `tools/test-programmer.mjs`，详见[程序员模式](programmer.md) |
+| 程序员历史配置丢失 | `ProgrammerState.ets` → 历史 `extra_params` → `event_programmer_restore` |
 | S⇄D 格式错误 | `FormulaScreen` 的 lastValidJson/precision → `FormatUtils.cpp` |
 | 角度/弧度错误 | AppStorage `isRad` → EngineService config → `parser.cpp` |
 | 矩阵报错 | EngineService MWrap → `MatrixParser.cpp` → `giac_bridge.cpp` |
