@@ -14,19 +14,18 @@ import {
   getFontFamily,
   getFontSize,
   getFontColor,
-  getBgColor,
   PreferenceConfigs
 } from '../utils/CalculatorConfigs';
 import { icon_backspace, icon_fraction, icon_dim } from '../utils/CalculatorConfigs';
 import Logger from '../utils/Logger'
 import {
   createDialogMaterial,
-  createKeyboardMaterial,
   isImmersiveMaterialAvailable
 } from '../utils/ImmersiveMaterialUtils';
 import deviceInfo from '@ohos.deviceInfo';
 import { KeyboardKeyRole } from './common/keyboard/KeyboardKeyTypes';
 import { resolveKeyboardKeyRole } from './common/keyboard/KeyboardVisualPolicy';
+import { KeyboardKeySurface } from './common/keyboard/KeyboardKeySurface';
 
 const icon_M_power: Resource = $rawfile('icons/matrix/icon_M_power.svg');
 const icon_abs: Resource = $rawfile('icons/matrix/icon_abs.svg');
@@ -128,27 +127,6 @@ struct MatrixKeyItem {
     .height('100%')
   }
 
-  @Builder
-  private LegacyButtonBuilder() {
-    Button() {
-      this.KeyContentBuilder()
-    }
-    .type(ButtonType.Normal)
-    .borderRadius(16)
-    .width('100%')
-    .height('100%')
-    .padding({ left: 2, right: 2 })
-    .backgroundColor(getBgColor(this.btn, this.isShift))
-    .shadow(ShadowStyle.OUTER_DEFAULT_SM)
-    .borderWidth({ top: 1, left: 1, bottom: 0, right: 0 })
-    .borderColor($r('app.color.btn_highlight'))
-    .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 0.9 })
-    .stateStyles({
-      pressed: { .opacity(0.7).shadow(ShadowStyle.OUTER_DEFAULT_XS) },
-      normal: { .opacity(1.0).shadow(ShadowStyle.OUTER_DEFAULT_SM) }
-    })
-  }
-
   build() {
     // 注入底层交互包装器
     KeyGestureWrapper({
@@ -160,31 +138,14 @@ struct MatrixKeyItem {
       onKeyPress: this.onKeyPress,
       onMenuSelect: this.onMenuSelect
     }) {
-      if (deviceInfo.apiAvailable('26.0.0')) {
-        if (this.immersive) {
-          Button() {
-            this.KeyContentBuilder()
-          }
-          .type(ButtonType.Normal)
-          .borderRadius(16)
-          .width('100%')
-          .height('100%')
-          .padding({ left: 2, right: 2 })
-          .buttonStyle(ButtonStyleMode.TEXTUAL)
-          .backgroundColor(Color.Transparent)
-          .borderWidth(0)
-          .shadow({ radius: 0 })
-          .clickEffect({ level: ClickEffectLevel.LIGHT, scale: 1.0 })
-          .stateStyles({
-            pressed: { .opacity(1.0).shadow({ radius: 0 }) },
-            normal: { .opacity(1.0).shadow({ radius: 0 }) }
-          })
-          .systemMaterial(createKeyboardMaterial(getMatrixKeyboardKeyRole(this.btn), this.isShift))
-        } else {
-          this.LegacyButtonBuilder()
-        }
-      } else {
-        this.LegacyButtonBuilder()
+      KeyboardKeySurface({
+        immersive: this.immersive,
+        role: getMatrixKeyboardKeyRole(this.btn),
+        shiftActive: this.isShift,
+        keyBorderRadius: 16,
+        horizontalPadding: 2
+      }) {
+        this.KeyContentBuilder()
       }
     }
   }
