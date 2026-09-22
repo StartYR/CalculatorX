@@ -88,8 +88,10 @@ export class ProgrammerSession {
     } else if (key === '±') {
       this.expression = '- ( ' + (this.evaluated ? this.word.format(this.radix, this.signed, false) : this.expression) + ' )';
     } else if (/^[0-9A-F]$/.test(key)) {
+      if (this.evaluated) this.previousFlags = new Flags();
       this.expression = this.evaluated || this.expression === '0' ? key : this.expression + key;
     } else if (key === '(' || key === 'NOT') {
+      if (this.evaluated) this.previousFlags = new Flags();
       this.expression = (this.evaluated ? '' : this.expression) + key + ' ';
     } else if (key === ')') {
       this.expression += ' )';

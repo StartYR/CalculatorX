@@ -6,6 +6,7 @@
 import { ProgrammerSession } from './ProgrammerSession';
 import { Word, Flags } from './ProgrammerEngine';
 import { Natural } from './Natural';
+import { decodeFloat } from './Ieee754';
 
 export interface ProgrammerSettings {
   mode: string;
@@ -58,6 +59,15 @@ export function recordOf(session: ProgrammerSession): ProgrammerRecord {
   return { kind: 'programmer', version: 1, settings: settingsOf(session),
     bits: session.word.format(16), expression: session.expression, flags: session.flags, carry: session.carry,
     floatBits: session.floatBits.toString(16), floatText: session.floatText };
+}
+
+export function historyRecordOf(session: ProgrammerSession): ProgrammerRecord {
+  const record = recordOf(session);
+  // 历史只保存已确认模式的输入，另一模式以最近有效位模式恢复。
+  if (session.mode !== 'integer') record.expression = session.word.format(session.radix, session.signed, false);
+  if (session.mode !== 'float') record.floatText = session.floatRadix === 10 ?
+    decodeFloat(session.floatBits, session.floatWidth).decimal : session.floatBits.toString(session.floatRadix);
+  return record;
 }
 
 export function restoreRecord(json: string): ProgrammerSession {

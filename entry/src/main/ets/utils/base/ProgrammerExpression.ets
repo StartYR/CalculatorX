@@ -13,6 +13,7 @@ export class ProgrammerExpression {
   private signed: boolean;
   private carry: number;
   private flags: Flags;
+  private initialFlags: Flags;
 
   constructor(radix: number, width: number, signed: boolean, carry: number = 0, flags: Flags = new Flags()) {
     this.radix = radix;
@@ -20,12 +21,14 @@ export class ProgrammerExpression {
     this.signed = signed;
     this.carry = carry;
     this.flags = flags;
+    this.initialFlags = flags;
   }
 
   evaluate(text: string): OperationResult {
     if (text.length > 1024) throw new Error('表达式过长');
     this.tokens = text.toUpperCase().match(/[0-9A-Z]+|[()+\-*/]|[^\s]/g) || [];
     this.position = 0;
+    this.flags = this.initialFlags;
     const result = this.expression(0, 0);
     if (this.position !== this.tokens.length) throw new Error('请检查运算符或括号');
     return new OperationResult(result, this.flags);
@@ -68,6 +71,9 @@ export class ProgrammerExpression {
       return result;
     }
     if (token === '+' || token === '-' || token === 'NOT') {
+      if (token === '-' && this.position < this.tokens.length && /^[0-9A-F]+$/.test(this.tokens[this.position])) {
+        return Word.parse('-' + this.tokens[this.position++], this.radix, this.width);
+      }
       const operand = this.primary(depth + 1);
       if (token === '+') return operand;
       const result = operate(token === '-' ? '-' : 'NOT', token === '-' ? new Word(undefined, this.width) : operand,

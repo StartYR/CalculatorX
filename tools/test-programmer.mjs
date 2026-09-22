@@ -19,7 +19,7 @@ const { Natural } = await import('../entry/src/main/ets/utils/base/Natural.ets')
 const { ProgrammerExpression } = await import('../entry/src/main/ets/utils/base/ProgrammerExpression.ets');
 const { encodeFloat, decodeFloat, convertFloat } = await import('../entry/src/main/ets/utils/base/Ieee754.ets');
 const { ProgrammerSession } = await import('../entry/src/main/ets/utils/base/ProgrammerSession.ets');
-const { recordOf, restoreRecord, settingsOf, restoreSettings } = await import('../entry/src/main/ets/utils/base/ProgrammerState.ets');
+const { recordOf, historyRecordOf, restoreRecord, settingsOf, restoreSettings } = await import('../entry/src/main/ets/utils/base/ProgrammerState.ets');
 let checks = 0;
 function equal(actual, expected) { assert.equal(actual, expected); checks++; }
 function word(value, width = 8) { return Word.parse(String(value), 10, width); }
@@ -67,7 +67,15 @@ for (const width of [8, 16, 32, 64]) {
             ((ring >> n) | (ring << (ringWidth - n))) & ringMask;
           const expected = action === 'SHL' ? a << BigInt(count) : action === 'SHR' ? a >> BigInt(count) :
             action === 'SAR' ? signed(a) >> BigInt(count) : through ? rotated >> 1n : rotated;
-          equal(operate(action, left, word(count, width), false, carry).word.format(10), (expected & mask).toString());
+          const result = operate(action, left, word(count, width), false, carry);
+          equal(result.word.format(10), (expected & mask).toString());
+          const shift = ['SHL', 'SHR', 'SAR'].includes(action);
+          const effective = shift ? count : Number(n);
+          const expectedCarry = !effective ? -1 : !shift ? Number(through ? rotated & 1n :
+            leftward ? rotated & 1n : (rotated >> BigInt(width - 1)) & 1n) : count > width ?
+            (action === 'SAR' ? Number(a >= sign) : 0) : action === 'SHL' ?
+            Number((a >> BigInt(width - count)) & 1n) : Number((a >> BigInt(count - 1)) & 1n);
+          equal(result.flags.cf, expectedCarry);
         }
       }
     }
@@ -84,7 +92,7 @@ for (const [text, expected] of [['2 + 3 * 4', '14'], ['( 2 + 3 ) * 4', '20'], ['
   ['-7 MOD 3', '-1'], ['1 OR 2 AND 4', '1'], ['NOT 0', '-1'], ['1 RCL 1', '3']]) {
   equal(new ProgrammerExpression(10, 8, true, 1).evaluate(text).word.format(10, true), expected);
 }
-for (const text of ['1 / 0', '1 +', '(1', '1)', '1 . 2', '256', '1 SHL -1']) {
+for (const text of ['1 / 0', '1 +', '(1', '1)', '1 . 2', '256', '-129', '1 SHL -1']) {
   assert.throws(() => new ProgrammerExpression(10, 8, true).evaluate(text)); checks++;
 }
 const known = [
@@ -101,6 +109,18 @@ for (const width of [16, 32, 64]) {
   equal(decodeFloat(encodeFloat('NaN', width), width).category, 'quiet NaN');
   equal(decodeFloat(encodeFloat('Infinity', width), width).decimal, 'Infinity');
   equal(decodeFloat(encodeFloat('1e999999', width), width).category, '无穷');
+  const exponentBits = width === 16 ? 5 : width === 32 ? 8 : 11;
+  const fractionBits = width - exponentBits - 1;
+  const infinityBits = ((1n << BigInt(exponentBits)) - 1n) << BigInt(fractionBits);
+  const one = 1n << BigInt(fractionBits);
+  for (const [bits, category] of [[1n, '非正规数'], [one - 1n, '非正规数'], [one, '正规数'],
+    [infinityBits - 1n, '正规数'], [infinityBits, '无穷'], [infinityBits + 1n, 'signaling NaN'],
+    [infinityBits + (one >> 1n), 'quiet NaN']]) {
+    const raw = Natural.parse(bits.toString(16), 16);
+    const details = decodeFloat(raw, width);
+    equal(details.category, category);
+    if (!category.includes('NaN')) equal(encodeFloat(details.decimal, width).toString(16), raw.toString(16));
+  }
 }
 // 16 位全部位模式（NaN 保留位模式的解码路径独立测试）。
 for (let bits = 0; bits <= 65535; bits++) {
@@ -152,5 +172,9 @@ equal(recovered.word.format(10), '9007199254740993');
 equal(recovered.width, 64);
 equal(restoreSettings(settingsOf(session)).word.format(10), '0');
 assert.throws(() => restoreRecord('{}'));
+session.floatText = '1e-'; session.floatEvaluated = false;
+equal(restoreRecord(JSON.stringify(historyRecordOf(session))).floatText, '0');
+equal(encodingRows(word(255), false)[1].bits, '同宽不可表示');
+equal(encodingRows(word(255), true)[0].bits, '同宽不可表示');
 equal(convertFloat(encodeFloat('0.0000000894069671630859375', 64), 64, 16).toString(16), '2');
 console.log(`Programmer core and session: ${checks} assertions passed.`);

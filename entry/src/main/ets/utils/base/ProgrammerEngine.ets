@@ -141,8 +141,8 @@ export function encodingRows(word: Word, signed: boolean): EncodingRow[] {
   const signMagnitude = negative ? magnitude.add(signBit) : magnitude;
   const ones = negative ? Natural.small(1).shift(word.width).subtract(Natural.small(1)).subtract(magnitude) : magnitude;
   return [
-    { name: '无符号', bits: word.format(2), value: word.format(10) },
-    { name: '补码', bits: word.format(2), value: word.format(10, true) },
+    { name: '无符号', bits: negative ? '同宽不可表示' : word.format(2), value: word.format(10, signed) },
+    { name: '补码', bits: negative || fits ? word.format(2) : '同宽不可表示', value: word.format(10, signed) },
     { name: '原码', bits: fits ? new Word(signMagnitude, word.width).format(2) : '同宽不可表示', value: word.format(10, signed) },
     { name: '反码', bits: fits ? new Word(ones, word.width).format(2) : '同宽不可表示', value: word.format(10, signed) }
   ];
