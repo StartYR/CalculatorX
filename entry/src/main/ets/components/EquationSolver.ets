@@ -24,7 +24,7 @@ import {KeyGestureWrapper} from './common/KeyGestureWrapper'
 import { KeyboardKeyRole } from './common/keyboard/KeyboardKeyTypes';
 import { resolveKeyboardKeyRole } from './common/keyboard/KeyboardVisualPolicy';
 import { KeyboardKeySurface } from './common/keyboard/KeyboardKeySurface';
-import { KeyboardRenderSwitch } from './common/keyboard/KeyboardRenderSwitch';
+import { PageKeyboardHost } from './common/keyboard/PageKeyboardHost';
 
 const icon_cases: Resource = $rawfile('icons/equation/icon_cases.svg');
 
@@ -336,42 +336,19 @@ export struct EquationSolver {
   }
 
   @Builder
-  private LegacyEquationLayout() {
-    Column() {
-      FormulaScreen({ moduleType: 'equation' })
-        .height('45%')
-        .width('100%')
-
-      this.LegacyEquationKeyboardBuilder()
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor($r('sys.color.comp_background_tertiary'))
-  }
-
-  @Builder
-  private ImmersiveEquationLayout() {
-    Tabs({ barPosition: BarPosition.End }) {
-      TabContent() {
-        FormulaScreen({ moduleType: 'equation' })
-          .height('100%')
-          .width('100%')
-      }
-      .tabBar(this.ImmersiveEquationKeyboardBuilder)
-    }
-    .vertical(false)
-    .scrollable(false)
-    .animationDuration(0)
-    .barHeight('55%')
-    .width('100%')
-    .height('100%')
-    .backgroundColor($r('sys.color.comp_background_tertiary'))
+  private ContentAreaBuilder() {
+    FormulaScreen({ moduleType: 'equation' })
+      .width('100%')
+      .height('100%')
   }
 
   build() {
-    KeyboardRenderSwitch({
-      legacyContent: this.LegacyEquationLayout,
-      immersiveContent: this.ImmersiveEquationLayout
+    PageKeyboardHost({
+      legacyContentHeight: '45%',
+      immersiveBarHeight: '55%',
+      contentArea: this.ContentAreaBuilder,
+      legacyKeyboard: this.LegacyEquationKeyboardBuilder,
+      immersiveKeyboard: this.ImmersiveEquationKeyboardBuilder
     })
   }
 }

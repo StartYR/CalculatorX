@@ -39,7 +39,7 @@ import {
 import { KeyboardKeyRole } from './common/keyboard/KeyboardKeyTypes';
 import { resolveKeyboardKeyRole } from './common/keyboard/KeyboardVisualPolicy';
 import { KeyboardKeySurface } from './common/keyboard/KeyboardKeySurface';
-import { KeyboardRenderSwitch } from './common/keyboard/KeyboardRenderSwitch';
+import { PageKeyboardHost } from './common/keyboard/PageKeyboardHost';
 
 // ================= 按键布局数组 =================
 const topShiftButtons: Array<string | Resource> = [
@@ -361,42 +361,19 @@ export struct ScientificCalc {
   }
 
   @Builder
-  private LegacyScientificLayout() {
-    Column() {
-      FormulaScreen({ moduleType: 'scientific' })
-        .height('33%')
-        .width('100%')
-
-      this.LegacyScientificKeyboardBuilder()
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor($r('sys.color.comp_background_tertiary'))
-  }
-
-  @Builder
-  private ImmersiveScientificLayout() {
-    Tabs({ barPosition: BarPosition.End }) {
-      TabContent() {
-        FormulaScreen({ moduleType: 'scientific' })
-          .height('100%')
-          .width('100%')
-      }
-      .tabBar(this.ImmersiveScientificKeyboardBuilder)
-    }
-    .vertical(false)
-    .scrollable(false)
-    .animationDuration(0)
-    .barHeight('67%')
-    .width('100%')
-    .height('100%')
-    .backgroundColor($r('sys.color.comp_background_tertiary'))
+  private ContentAreaBuilder() {
+    FormulaScreen({ moduleType: 'scientific' })
+      .width('100%')
+      .height('100%')
   }
 
   build() {
-    KeyboardRenderSwitch({
-      legacyContent: this.LegacyScientificLayout,
-      immersiveContent: this.ImmersiveScientificLayout
+    PageKeyboardHost({
+      legacyContentHeight: '33%',
+      immersiveBarHeight: '67%',
+      contentArea: this.ContentAreaBuilder,
+      legacyKeyboard: this.LegacyScientificKeyboardBuilder,
+      immersiveKeyboard: this.ImmersiveScientificKeyboardBuilder
     })
   }
 }

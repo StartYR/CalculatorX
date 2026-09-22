@@ -13,7 +13,7 @@ import { getCalculatorKeySemanticId } from '../utils/SemanticIds';
 import { KeyboardKeyRole } from './common/keyboard/KeyboardKeyTypes';
 import { resolveKeyboardKeyRole } from './common/keyboard/KeyboardVisualPolicy';
 import { KeyboardKeySurface } from './common/keyboard/KeyboardKeySurface';
-import { KeyboardRenderSwitch } from './common/keyboard/KeyboardRenderSwitch';
+import { PageKeyboardHost } from './common/keyboard/PageKeyboardHost';
 
 // 按键布局
 const basicButtons: Array<string | Resource> = [
@@ -178,42 +178,19 @@ export struct BasicCalc {
   }
 
   @Builder
-  private LegacyBasicLayout() {
-    Column() {
-      FormulaScreen({ moduleType: 'basic' })
-        .height('45%')
-        .width('100%')
-
-      this.LegacyBasicKeyboardBuilder()
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor($r('sys.color.comp_background_tertiary'))
-  }
-
-  @Builder
-  private ImmersiveBasicLayout() {
-    Tabs({ barPosition: BarPosition.End }) {
-      TabContent() {
-        FormulaScreen({ moduleType: 'basic' })
-          .height('100%')
-          .width('100%')
-      }
-      .tabBar(this.ImmersiveBasicKeyboardBuilder)
-    }
-    .vertical(false)
-    .scrollable(false)
-    .animationDuration(0)
-    .barHeight('55%')
-    .width('100%')
-    .height('100%')
-    .backgroundColor($r('sys.color.comp_background_tertiary'))
+  private ContentAreaBuilder() {
+    FormulaScreen({ moduleType: 'basic' })
+      .width('100%')
+      .height('100%')
   }
 
   build() {
-    KeyboardRenderSwitch({
-      legacyContent: this.LegacyBasicLayout,
-      immersiveContent: this.ImmersiveBasicLayout
+    PageKeyboardHost({
+      legacyContentHeight: '45%',
+      immersiveBarHeight: '55%',
+      contentArea: this.ContentAreaBuilder,
+      legacyKeyboard: this.LegacyBasicKeyboardBuilder,
+      immersiveKeyboard: this.ImmersiveBasicKeyboardBuilder
     })
   }
 }
