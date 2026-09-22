@@ -31,10 +31,13 @@ foreach ($match in $surfaceCalls) {
   }
 }
 
-$materialImports = $allEtsFiles | Select-String -Pattern 'import\s*\{[^}]*createKeyboardMaterial'
-foreach ($match in $materialImports) {
-  if ($match.Path -notin @($surfacePath, $materialPath)) {
-    $errors.Add("业务模块直接导入键盘材质工厂: $($match.Path):$($match.LineNumber)")
+$allowedMaterialFiles = @($surfacePath, $materialPath)
+foreach ($file in $allEtsFiles) {
+  if ($file.FullName -notin $allowedMaterialFiles) {
+    $fileText = Get-Content -LiteralPath $file.FullName -Raw
+    if ($fileText -match 'createKeyboardMaterial') {
+      $errors.Add("业务模块直接引用键盘材质工厂: $($file.FullName)")
+    }
   }
 }
 
