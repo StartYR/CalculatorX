@@ -337,36 +337,42 @@ export struct DomainKeyboard {
   @StorageProp('navBarHeight') navBarHeight: number = 0; // 用于底部避让
   @StorageProp('vibrationCurve') vibrationCurve: number = 0; // 震动反馈参数
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true; // 震动开关
+  @StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
 
-  build() {
+  @Builder
+  private DomainKeyGridBuilder(immersive: boolean) {
+    Grid() {
+      ForEach(domainButtons, (btn: string | Resource) => {
+        GridItem() {
+          BottomKeyItem({
+            btn: btn,
+            immersive: immersive,
+            isShift: $isShift,
+            customRadius: 36,
+            onKeyPress: (b: string | Resource) => {
+              let action = getActionId(b);
+              HapticUtils.playVibration(action, this.hapticFeedback, this.vibrationCurve);
+              this.onKeyPress(b);
+            }
+          })
+        }
+        .columnStart(btn === '0' ? 0 : undefined)
+        .columnEnd(btn === '0' ? 1 : undefined)
+      }, (btn: string | Resource) => typeof btn === 'string' ? btn : 'icon_backspace')
+    }
+    .columnsTemplate('1fr 1fr 1fr 1fr')
+    .rowsTemplate('1fr 1fr 1fr 1fr')
+    .columnsGap(8)
+    .rowsGap(8)
+    .width('100%')
+    .height(260)
+    .padding({ left: 10, right: 10, top: 12, bottom: 8 })
+  }
+
+  @Builder
+  private LegacyDomainKeyboardBuilder() {
     Column() {
-      Grid() {
-        ForEach(domainButtons, (btn: string | Resource) => {
-          GridItem() {
-            BottomKeyItem({
-              btn: btn,
-              isShift: $isShift,
-              customRadius: 36,
-              onKeyPress: (b: string | Resource) => {
-                let action = getActionId(b);
-                HapticUtils.playVibration(action, this.hapticFeedback, this.vibrationCurve);
-
-                // 将点击事件向上传递给控制器
-                this.onKeyPress(b);
-              }
-            })
-          }
-          .columnStart(btn === '0' ? 0 : undefined)
-          .columnEnd(btn === '0' ? 1 : undefined)
-        }, (btn: string | Resource) => typeof btn === 'string' ? btn : 'icon_backspace')
-      }
-      .columnsTemplate('1fr 1fr 1fr 1fr')
-      .rowsTemplate('1fr 1fr 1fr 1fr')
-      .columnsGap(8)
-      .rowsGap(8)
-      .width('100%')
-      .height(260)
-      .padding({ left: 10, right: 10, top: 12, bottom: 8 })
+      this.DomainKeyGridBuilder(false)
     }
     .width('100%')
     .backgroundColor(Color.Transparent)
@@ -375,6 +381,52 @@ export struct DomainKeyboard {
     .borderWidth(0.7)
     .borderColor($r('sys.color.comp_divider'))
     .shadow({ radius: 16, color: '#1A000000', offsetY: -12 })
-    .padding({ bottom: this.navBarHeight - 16})
+    .padding({ bottom: this.navBarHeight - 16 })
+  }
+
+  @Builder
+  private ImmersiveDomainKeyboardBarBuilder() {
+    Column() {
+      this.DomainKeyGridBuilder(true)
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(Color.Transparent)
+    .backgroundBlurStyle(BlurStyle.Thin)
+    .borderRadius({ topLeft: 36, topRight: 36 })
+    .borderWidth(0.7)
+    .borderColor($r('sys.color.comp_divider'))
+    .shadow({ radius: 16, color: '#1A000000', offsetY: -12 })
+    .padding({ bottom: this.navBarHeight - 16 })
+  }
+
+  @Builder
+  private ImmersiveDomainKeyboardLayout() {
+    Tabs({ barPosition: BarPosition.End }) {
+      TabContent() {
+        Column()
+          .width('100%')
+          .height('100%')
+      }
+      .tabBar(this.ImmersiveDomainKeyboardBarBuilder)
+    }
+    .vertical(false)
+    .scrollable(false)
+    .animationDuration(0)
+    .barHeight('100%')
+    .width('100%')
+    .height(260 + this.navBarHeight - 16)
+  }
+
+  build() {
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      if (this.keyImmersiveMaterial) {
+        this.ImmersiveDomainKeyboardLayout()
+      } else {
+        this.LegacyDomainKeyboardBuilder()
+      }
+    } else {
+      this.LegacyDomainKeyboardBuilder()
+    }
   }
 }
