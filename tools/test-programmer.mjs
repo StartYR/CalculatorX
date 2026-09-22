@@ -28,9 +28,10 @@ function random() { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return
 for (const width of [8, 16, 32, 64]) {
   const modulus = 1n << BigInt(width), mask = modulus - 1n, sign = modulus >> 1n;
   const signed = n => n >= sign ? n - modulus : n;
+  const edges = [0n, 1n, mask, sign, sign - 1n, sign + 1n, mask - 1n];
   for (let sample = 0; sample < 180; sample++) {
-    const a = (BigInt(random()) << 32n | BigInt(random())) & mask;
-    const b = (BigInt(random()) << 32n | BigInt(random())) & mask;
+    const a = sample < 49 ? edges[Math.floor(sample / 7)] : (BigInt(random()) << 32n | BigInt(random())) & mask;
+    const b = sample < 49 ? edges[sample % 7] : (BigInt(random()) << 32n | BigInt(random())) & mask;
     const left = word(a, width), right = word(b, width);
     for (const radix of [2, 8, 10, 16]) equal(Word.parse(left.format(radix), radix, width).format(10), a.toString());
     for (const carry of [0, 1]) {
