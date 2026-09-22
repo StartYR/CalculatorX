@@ -6,7 +6,6 @@
  * @date 2026
  */
 
-import router from '@ohos.router';
 import common from '@ohos.app.ability.common'; // 用于获取上下文以启动外部应用
 import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from '../../components/common/MenuComponents';
 import {
@@ -17,73 +16,27 @@ import {
 } from '@kit.UIDesignKit';
 import Logger from '../../utils/Logger'
 import bundleManager from '@ohos.bundle.bundleManager';
+import { createDialogMaterial } from '../../utils/ImmersiveMaterialUtils';
 
 // 定义鸣谢数据结构
 interface CreditItem {
   name: string;
   desc: string;
+  url: string;
 }
 
 const creditsList: CreditItem[] = [
-  { name: 'Giac/Xcas', desc: '核心微积分与高级符号运算引擎' },
-  { name: 'SymEngine', desc: '基础计算机代数系统 (CAS)' },
-  { name: 'MathLive', desc: '前端 LaTeX 公式渲染与 MathJSON 引擎' },
-  { name: 'nlohmann/json', desc: 'C++ 高效 JSON 解析库' },
-  { name: 'Boost & GMP', desc: '高精度底层大数运算支持' }
+  {
+    name: 'Giac/Xcas',
+    desc: '核心微积分与高级符号运算引擎',
+    url: 'https://www-fourier.univ-grenoble-alpes.fr/~parisse/giac.html'
+  },
+  { name: 'SymEngine', desc: '基础计算机代数系统 (CAS)', url: 'https://github.com/symengine/symengine' },
+  { name: 'MathLive', desc: '前端 LaTeX 公式渲染与 MathJSON 引擎', url: 'https://cortexjs.io/mathlive/' },
+  { name: 'nlohmann/json', desc: 'C++ 高效 JSON 解析库', url: 'https://github.com/nlohmann/json' },
+  { name: 'Boost', desc: '高性能泛型 C++ 基础库', url: 'https://www.boost.org/' },
+  { name: 'GMP', desc: 'GNU 多精度算术库，提供极速大数支持', url: 'https://gmplib.org/' }
 ];
-
-// 定义极其优雅的半屏弹窗
-@CustomDialog
-struct CreditsDialog {
-  controller: CustomDialogController;
-
-  build() {
-    Column() {
-      Text('特别鸣谢')
-        .fontSize(20)
-        .fontWeight(FontWeight.Bold)
-        .fontColor($r('sys.color.font_primary'))
-        .margin({ top: 24, bottom: 16 })
-
-      List({ space: 16 }) {
-        ForEach(creditsList, (item: CreditItem) => {
-          ListItem() {
-            Column({ space: 4 }) {
-              Text(item.name)
-                .fontSize(16)
-                .fontWeight(FontWeight.Medium)
-                .fontColor($r('sys.color.font_primary'))
-              Text(item.desc)
-                .fontSize(14)
-                .fontColor($r('sys.color.font_tertiary'))
-            }
-            .alignItems(HorizontalAlign.Start)
-            .width('100%')
-          }
-        })
-      }
-      .width('100%')
-      .padding({ left: 24, right: 24 })
-      .layoutWeight(1) // 占满剩余空间
-      .scrollBar(BarState.Off)
-
-      // 底部关闭按钮
-      Button('关闭')
-        .type(ButtonType.Capsule)
-        .backgroundColor($r('sys.color.comp_background_tertiary'))
-        .fontColor($r('sys.color.font_primary'))
-        .width('80%')
-        .margin({ top: 16, bottom: 24 })
-        .onClick(() => {
-          this.controller.close();
-        })
-    }
-    .width('100%')
-    .height('55%') // 占据屏幕一半高度
-    .backgroundColor($r('sys.color.background_secondary'))
-    .borderRadius({ topLeft: 24, topRight: 24 }) // 顶部大圆角
-  }
-}
 
 
 @Entry
@@ -99,14 +52,6 @@ struct About {
   // 获取当前 UIAbility 的上下文，用于拉起外部应用
   private context = getContext(this) as common.UIAbilityContext;
 
-  // 初始化弹窗控制器
-  private creditsDialogController: CustomDialogController = new CustomDialogController({
-    builder: CreditsDialog(),
-    alignment: DialogAlignment.Bottom, // 从底部弹出
-    customStyle: true, // 使用自定义圆角和背景
-    offset: { dx: 0, dy: 0 }
-  });
-
   // 统一封装拉起外部浏览器的函数
   private openUrlInBrowser(url: string): void {
     this.context.startAbility({
@@ -115,6 +60,23 @@ struct About {
       uri: url
     }).catch((err: Error) => {
       Logger.error(`拉起浏览器失败: ${err.message}`);
+    });
+  }
+
+  private showCreditsDialog(): void {
+    let sheets: SheetInfo[] = creditsList.map((item: CreditItem): SheetInfo => {
+      return {
+        title: `${item.name} · ${item.desc}`,
+        action: () => this.openUrlInBrowser(item.url)
+      };
+    });
+
+    this.getUIContext().showActionSheet({
+      title: '特别鸣谢',
+      message: '我们站在巨人的肩膀上。点击项目名称可访问其主页。',
+      systemMaterial: createDialogMaterial(),
+      sheets: sheets,
+      confirm: { value: '关闭', action: () => {} }
     });
   }
 
@@ -184,10 +146,7 @@ struct About {
                 title: '特别鸣谢',
                 onClickAction: (): void => {
                   Logger.info('点击：特别鸣谢');
-                  // this.creditsDialogController.open();
-                  router.pushUrl({
-                    url: 'pages/settings/Credits',
-                  });
+                  this.showCreditsDialog();
                 }
               })
             }
