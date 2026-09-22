@@ -7,11 +7,12 @@
  */
 
 import { FormulaScreen } from '../FormulaScreen';
-import { GRAPHING_COLORS, getActionId } from '../../utils/CalculatorConfigs';
+import { GRAPHING_COLORS, getActionId, PreferenceConfigs } from '../../utils/CalculatorConfigs';
 import { GraphFunctionItem, FunctionType } from './GraphingTypes';
 import { TopKeyItem, BottomKeyItem, getDynamicTopButtons, bottomButtons, DomainKeyboard } from './GraphingKeyboard';
 import { LengthMetrics } from '@kit.ArkUI';
 import { createDialogMaterial, isImmersiveMaterialAvailable } from '../../utils/ImmersiveMaterialUtils';
+import deviceInfo from '@ohos.deviceInfo';
 
 const MAX_FUNCTIONS = 10; // 面板支持的最大函数数量上限
 
@@ -138,6 +139,7 @@ export struct GraphingEditSheet {
 
   @StorageProp('navBarHeight') navBarHeight: number = 0;
   @StorageProp('activeBubbleId') activeBubbleId: string = '';
+  @StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
   private listScroller: Scroller = new Scroller();
 
   aboutToAppear() {
@@ -511,6 +513,127 @@ export struct GraphingEditSheet {
     .justifyContent(FlexAlign.Center)
   }
 
+  @Builder
+  private GraphingKeyboardContentBuilder() {
+    // 常驻引擎通信与渲染枢纽
+    FormulaScreen({ moduleType: 'graphing' })
+      .width('100%')
+      .height(64)
+      .backgroundColor($r('sys.color.comp_background_primary'))
+
+    Grid() {
+      ForEach(getDynamicTopButtons(this.getActiveFunctionType()), (btn: string | Resource, index: number) => {
+        // 单变量模式丢弃第 17 位空占位符，由变量键横跨最后两列
+        if (!(index === 17 && this.isSingleVariableMode())) {
+          GridItem() {
+            TopKeyItem({
+              btn: btn,
+              btnIndex: index,
+              isShift: $isShift,
+              onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
+              onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
+            })
+          }
+          .columnStart((index === 16 && this.isSingleVariableMode()) ? 4 : undefined)
+          .columnEnd((index === 16 && this.isSingleVariableMode()) ? 5 : undefined)
+          .zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
+        }
+      })
+    }
+    .rowsTemplate('33fr 40fr 40fr')
+    .columnsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
+    .rowsGap(6)
+    .columnsGap(4)
+    .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+    .clip(false)
+    .width('100%')
+    .height(200)
+
+    Grid() {
+      ForEach(bottomButtons, (btn: string | Resource) => {
+        GridItem() {
+          BottomKeyItem({
+            btn: btn,
+            isShift: $isShift,
+            onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
+            onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
+          })
+        }
+        .zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
+      })
+    }
+    .rowsTemplate('1fr 1fr 1fr 1fr')
+    .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
+    .rowsGap(8)
+    .columnsGap(6)
+    .padding({ left: 10, right: 10, top: 6, bottom: 0 })
+    .clip(false)
+    .width('100%')
+    .height(250)
+  }
+
+  @Builder
+  private LegacyGraphingKeyboardBuilder() {
+    Column() {
+      this.GraphingKeyboardContentBuilder()
+    }
+    .width('100%')
+    .backgroundColor($r('sys.color.comp_background_primary'))
+    .padding({ bottom: this.navBarHeight - 8 })
+    .borderRadius({ topLeft: 24, topRight: 24 })
+    .clip(true)
+    .shadow({ radius: 16, color: '#1A000000', offsetY: -12 })
+    .translate({ y: this.isKeyboardShow ? 0 : '100%' })
+    .animation({ duration: 300, curve: Curve.FastOutSlowIn })
+  }
+
+  @Builder
+  private ImmersiveGraphingKeyboardBarBuilder() {
+    Column() {
+      this.GraphingKeyboardContentBuilder()
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('sys.color.comp_background_primary'))
+    .padding({ bottom: this.navBarHeight - 8 })
+    .borderRadius({ topLeft: 24, topRight: 24 })
+    .clip(true)
+    .shadow({ radius: 16, color: '#1A000000', offsetY: -12 })
+  }
+
+  @Builder
+  private ImmersiveGraphingKeyboardLayout() {
+    Tabs({ barPosition: BarPosition.End }) {
+      TabContent() {
+        Column()
+          .width('100%')
+          .height('100%')
+      }
+      .tabBar(this.ImmersiveGraphingKeyboardBarBuilder)
+    }
+    .vertical(false)
+    .scrollable(false)
+    .animationDuration(0)
+    .barHeight('100%')
+    .width('100%')
+    .height(514 + this.navBarHeight - 8)
+    .translate({ y: this.isKeyboardShow ? 0 : '100%' })
+    .animation({ duration: 300, curve: Curve.FastOutSlowIn })
+  }
+
+  @Builder
+  private GraphingKeyboardDockBuilder() {
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      if (this.keyImmersiveMaterial) {
+        this.ImmersiveGraphingKeyboardLayout()
+      } else {
+        this.LegacyGraphingKeyboardBuilder()
+      }
+    } else {
+      this.LegacyGraphingKeyboardBuilder()
+    }
+  }
+
   // ==================== UI 渲染骨架 ====================
   build() {
     Stack({ alignContent: Alignment.Bottom }) {
@@ -628,71 +751,8 @@ export struct GraphingEditSheet {
       .width('100%')
       .height('100%')
 
-      // ---------- 第 2 层：悬浮键盘坞 (物理位移动画驱动) ----------
-      Column() {
-        // 常驻引擎通信与渲染枢纽 (隐藏式 WebView)
-        FormulaScreen({ moduleType: 'graphing' })
-          .width('100%')
-          .height(64)
-          .backgroundColor($r('sys.color.comp_background_primary'))
-
-        Grid() {
-          ForEach(getDynamicTopButtons(this.getActiveFunctionType()), (btn: string | Resource, index: number) => {
-            // 💡 核心防线：如果是单变量模式，强行丢弃第 17 位的空占位符，防止高度坍塌
-            if (!(index === 17 && this.isSingleVariableMode())) {
-              GridItem() {
-                TopKeyItem({
-                  btn: btn, btnIndex: index, isShift: $isShift,
-                  onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
-                  onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
-                })
-              }
-              // 如果是单一未知数，横跨第 4 和第 5 列
-              .columnStart((index === 16 && this.isSingleVariableMode()) ? 4 : undefined)
-              .columnEnd((index === 16 && this.isSingleVariableMode()) ? 5 : undefined)
-              .zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
-            }
-          })
-        }
-        .rowsTemplate('33fr 40fr 40fr')
-        .columnsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
-        .rowsGap(6)
-        .columnsGap(4)
-        .padding({ left: 10, right: 10, top: 6, bottom: 6 })
-        .clip(false)
-        .width('100%')
-        .height(200)
-
-        Grid() {
-          ForEach(bottomButtons, (btn: string | Resource) => {
-            GridItem() {
-              BottomKeyItem({
-                btn: btn, isShift: $isShift,
-                onKeyPress: (b: string | Resource): void => { this.handleButtonClick(b); },
-                onMenuSelect: (c: string): void => { this.handleButtonLongPress(c); }
-              })
-            }
-            .zIndex(this.activeBubbleId === getLocalActionId(btn) ? 100 : 0)
-          })
-        }
-        .rowsTemplate('1fr 1fr 1fr 1fr')
-        .columnsTemplate('1fr 1fr 1fr 1fr 1fr')
-        .rowsGap(8)
-        .columnsGap(6)
-        .padding({ left: 10, right: 10, top: 6, bottom: 0 })
-        .clip(false)
-        .width('100%')
-        .height(250)
-      }
-      .width('100%')
-      .backgroundColor($r('sys.color.comp_background_primary'))
-      .padding({ bottom: this.navBarHeight - 8})
-      .borderRadius({ topLeft: 24, topRight: 24 })
-      .clip(true)
-      .shadow({ radius: 16, color: '#1A000000', offsetY: -12 })
-      // 根据状态控制键盘物理隐退与展出
-      .translate({ y: this.isKeyboardShow ? 0 : '100%' })
-      .animation({ duration: 300, curve: Curve.FastOutSlowIn })
+      // ---------- 第 2 层：悬浮键盘坞 ----------
+      this.GraphingKeyboardDockBuilder()
 
     }
     .width('100%')
