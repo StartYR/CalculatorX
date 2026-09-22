@@ -16,6 +16,7 @@ import {
 } from '@kit.UIDesignKit';
 import Logger from '../../utils/Logger'
 import bundleManager from '@ohos.bundle.bundleManager';
+import router from '@ohos.router';
 import { createDialogMaterial } from '../../utils/ImmersiveMaterialUtils';
 
 // 定义鸣谢数据结构
@@ -64,19 +65,25 @@ struct About {
   }
 
   private showCreditsDialog(): void {
-    let sheets: SheetInfo[] = creditsList.map((item: CreditItem): SheetInfo => {
-      return {
-        title: `${item.name} · ${item.desc}`,
-        action: () => this.openUrlInBrowser(item.url)
-      };
-    });
+    let projectNames = creditsList.map((item: CreditItem): string => item.name).join('\n');
 
-    this.getUIContext().showActionSheet({
+    this.getUIContext().showAlertDialog({
       title: '特别鸣谢',
-      message: '我们站在巨人的肩膀上。点击项目名称可访问其主页。',
+      message: `我们站在巨人的肩膀上。\n\n${projectNames}`,
       systemMaterial: createDialogMaterial(),
-      sheets: sheets,
-      confirm: { value: '关闭', action: () => {} }
+      buttonDirection: DialogButtonDirection.HORIZONTAL,
+      buttons: [
+        { value: '关闭', action: () => {} },
+        {
+          value: '查看详情',
+          primary: true,
+          action: () => {
+            router.pushUrl({ url: 'pages/settings/Credits' }).catch((err: Error) => {
+              Logger.error(`打开特别鸣谢详情失败: ${err.message}`);
+            });
+          }
+        }
+      ]
     });
   }
 
