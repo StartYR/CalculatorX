@@ -12,100 +12,12 @@ import { GraphFunctionItem, FunctionType } from './GraphingTypes';
 import { TopKeyItem, BottomKeyItem, getDynamicTopButtons, bottomButtons, DomainKeyboard } from './GraphingKeyboard';
 import { LengthMetrics } from '@kit.ArkUI';
 import deviceInfo from '@ohos.deviceInfo';
+import { createDialogMaterial } from '../../utils/ImmersiveMaterialUtils';
 
 const MAX_FUNCTIONS = 10; // 面板支持的最大函数数量上限
 
 function getLocalActionId(btn: string | Resource): string {
   return getActionId(btn);
-}
-
-// ==================== 函数类型选择弹窗 ====================
-@CustomDialog
-export struct FunctionTypeDialog {
-  controller?: CustomDialogController;
-  onTypeSelected: (type: FunctionType) => void = () => {};
-
-  build() {
-    Column({ space: 16 }) {
-      Text("选择函数类型")
-        .fontSize(20)
-        .fontWeight(FontWeight.Bold)
-        .fontColor($r('sys.color.font_primary'))
-        .margin({ top: 16, bottom: 8 })
-
-      List({ space: 12 }) {
-        ListItem() {
-          Button("普通函数 f(x)", { type: ButtonType.Normal })
-            .width('100%')
-            .height(48)
-            .backgroundColor($r('sys.color.comp_background_tertiary'))
-            .fontColor($r('sys.color.font_primary'))
-            .borderRadius(12)
-            .onClick(() => {
-              this.onTypeSelected(FunctionType.NORMAL);
-              this.controller?.close(); // 极致效率：点击即关闭并执行回调
-            })
-        }
-
-        ListItem() {
-          Button("极坐标方程 r(θ)", { type: ButtonType.Normal })
-            .width('100%')
-            .height(48)
-            .backgroundColor($r('sys.color.comp_background_tertiary'))
-            .fontColor($r('sys.color.font_primary'))
-            .borderRadius(12)
-            .onClick(() => {
-              this.onTypeSelected(FunctionType.POLAR);
-              this.controller?.close();
-            })
-        }
-
-        ListItem() {
-          Button("参数方程 x(t), y(t)", { type: ButtonType.Normal })
-            .width('100%')
-            .height(48)
-            .backgroundColor($r('sys.color.comp_background_tertiary'))
-            .fontColor($r('sys.color.font_primary'))
-            .borderRadius(12)
-            .onClick(() => {
-              this.onTypeSelected(FunctionType.PARAMETRIC);
-              this.controller?.close();
-            })
-        }
-
-        ListItem() {
-          Button("隐函数 f(x,y)", { type: ButtonType.Normal })
-            .width('100%')
-            .height(48)
-            .backgroundColor($r('sys.color.comp_background_tertiary'))
-            .fontColor($r('sys.color.font_primary'))
-            .borderRadius(12)
-            .onClick(() => {
-              this.onTypeSelected(FunctionType.IMPLICIT);
-              this.controller?.close();
-            })
-        }
-
-        ListItem() {
-          Button("点 (x, y)", { type: ButtonType.Normal })
-            .width('100%')
-            .height(48)
-            .backgroundColor($r('sys.color.comp_background_tertiary'))
-            .fontColor($r('sys.color.font_primary'))
-            .borderRadius(12)
-            .onClick(() => {
-              this.onTypeSelected(FunctionType.POINT);
-              this.controller?.close();
-            })
-        }
-      }
-      .width('100%')
-      .padding({ left: 16, right: 16, bottom: 16 })
-    }
-    .width('90%')
-    .backgroundColor($r('sys.color.background_primary'))
-    .borderRadius(24)
-  }
 }
 
 // ==================== 主编辑面板组件 ====================
@@ -413,39 +325,46 @@ export struct GraphingEditSheet {
   handleButtonClick: (btn: string | Resource) => void = () => {};
   handleButtonLongPress: (actionCode: string) => void = () => {};
 
-  // 弹窗控制器初始化
-  dialogController: CustomDialogController = new CustomDialogController({
-    builder: FunctionTypeDialog({
-      onTypeSelected: (type: FunctionType) => {
-        if (this.functionList.length >= MAX_FUNCTIONS) return;
+  private addFunction(type: FunctionType): void {
+    if (this.functionList.length >= MAX_FUNCTIONS) return;
 
-        let usedColors = this.functionList.map(item => item.color);
-        let nextColor = GRAPHING_COLORS.find(color => !usedColors.includes(color)) || GRAPHING_COLORS[0];
+    let usedColors = this.functionList.map(item => item.color);
+    let nextColor = GRAPHING_COLORS.find(color => !usedColors.includes(color)) || GRAPHING_COLORS[0];
 
-        this.functionList.push({
-          id: Date.now().toString(),
-          type: type,
-          latex: '', base64: '', latex2: '', base64_2: '',
-          tMin: -10, tMax: 10,
-          color: nextColor, isVisible: true
-        });
+    this.functionList.push({
+      id: Date.now().toString(),
+      type: type,
+      latex: '', base64: '', latex2: '', base64_2: '',
+      tMin: -10, tMax: 10,
+      color: nextColor, isVisible: true
+    });
 
-        this.activeIndex = this.functionList.length - 1;
-        this.isKeyboardShow = true;
-        this.saveFunctions();
-        getContext(this).eventHub.emit('wake_web_engines');
-        getContext(this).eventHub.emit('load_latex_to_editor', '');
+    this.activeIndex = this.functionList.length - 1;
+    this.isKeyboardShow = true;
+    this.saveFunctions();
+    getContext(this).eventHub.emit('wake_web_engines');
+    getContext(this).eventHub.emit('load_latex_to_editor', '');
 
-        // 滑动到顶端
-        setTimeout(() => {
-          this.listScroller.scrollToIndex(this.activeIndex, true, ScrollAlign.START);
-        }, 100);
-      }
-    }),
-    alignment: DialogAlignment.Center,
-    autoCancel: true,
-    customStyle: true
-  });
+    setTimeout(() => {
+      this.listScroller.scrollToIndex(this.activeIndex, true, ScrollAlign.START);
+    }, 100);
+  }
+
+  private showFunctionTypeDialog(): void {
+    this.getUIContext().showActionSheet({
+      title: '选择函数类型',
+      message: '',
+      systemMaterial: createDialogMaterial(),
+      sheets: [
+        { title: '普通函数 f(x)', action: () => this.addFunction(FunctionType.NORMAL) },
+        { title: '极坐标方程 r(θ)', action: () => this.addFunction(FunctionType.POLAR) },
+        { title: '参数方程 x(t), y(t)', action: () => this.addFunction(FunctionType.PARAMETRIC) },
+        { title: '隐函数 f(x,y)', action: () => this.addFunction(FunctionType.IMPLICIT) },
+        { title: '点 (x, y)', action: () => this.addFunction(FunctionType.POINT) }
+      ],
+      confirm: { value: '取消', action: () => {} }
+    });
+  }
 
   // --- 左滑删除专属组件 ---
   @Builder
@@ -730,7 +649,7 @@ export struct GraphingEditSheet {
                   let magicId = this.activeIndex + (this.activeSubTarget * 10000);
                   getContext(this).eventHub.emit('request_graphing_data', magicId);
                 }
-                this.dialogController.open();
+                this.showFunctionTypeDialog();
               })
           }
           .padding({ left: 48, right: 48 })
