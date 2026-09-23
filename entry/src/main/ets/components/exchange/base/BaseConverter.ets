@@ -131,6 +131,7 @@ struct ProgrammerKey {
 export struct BaseConverter {
   @StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
   @StorageProp('navBarHeight') navBarHeight: number = 0;
+  @StorageProp('statusBarHeight') statusBarHeight: number = 0;
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @State session: ProgrammerSession = new ProgrammerSession();
@@ -346,8 +347,9 @@ export struct BaseConverter {
           ProgrammerInspector({ session: this.session, panel: this.panel,
             onFlip: (index: number) => this.select(() => this.session.flip(index)) })
         }
-      }.width('100%').padding({ left: 14, right: 14, top: 8, bottom: 12 })
+      }.width('100%').padding({ left: 14, right: 14, top: 8, bottom: this.keyboardHeight() + 12 })
     }.width('100%').height('100%').scrollBar(BarState.Auto).align(Alignment.Top)
+    .padding({ top: this.statusBarHeight + 56 })
   }
 
   @Builder
@@ -371,26 +373,28 @@ export struct BaseConverter {
       .backgroundColor($r('sys.color.comp_background_primary'))
   }
   @Builder
-  private LegacyLayout() {
-    Column() {
-      Column() { this.Display() }.layoutWeight(1).width('100%')
-      Column() { this.Keyboard(false) }.height(this.keyboardHeight()).width('100%').borderRadius({ topLeft: 28, topRight: 28 })
-        .backgroundColor($r('sys.color.comp_background_primary'))
-    }.width('100%').height('100%')
+  private LegacyKeyboardLayout() {
+    Column() { this.Keyboard(false) }.height('100%').width('100%').borderRadius({ topLeft: 28, topRight: 28 })
+      .backgroundColor($r('sys.color.comp_background_primary'))
   }
   @Builder
-  private ImmersiveLayout() {
+  private ImmersiveKeyboardLayout() {
     Tabs({ barPosition: BarPosition.End }) {
-      TabContent() { this.Display() }.tabBar(this.ImmersiveKeyboard)
-    }.vertical(false).scrollable(false).animationDuration(0).barHeight(this.keyboardHeight()).width('100%').height('100%')
+      TabContent() {
+        Column().width('100%').height('100%')
+      }.tabBar(this.ImmersiveKeyboard)
+    }.vertical(false).scrollable(false).animationDuration(0).barHeight('100%').width('100%').height('100%')
   }
 
   build() {
-    Column() {
-      if (deviceInfo.apiAvailable('26.0.0')) {
-        if (this.keyImmersiveMaterial) { this.ImmersiveLayout() }
-        else { this.LegacyLayout() }
-      } else { this.LegacyLayout() }
+    Stack({ alignContent: Alignment.Bottom }) {
+      this.Display()
+      Column() {
+        if (deviceInfo.apiAvailable('26.0.0')) {
+          if (this.keyImmersiveMaterial) { this.ImmersiveKeyboardLayout() }
+          else { this.LegacyKeyboardLayout() }
+        } else { this.LegacyKeyboardLayout() }
+      }.width('100%').height(this.keyboardHeight()).zIndex(1)
     }.width('100%').height('100%').backgroundColor($r('sys.color.comp_background_tertiary'))
     .onAreaChange((_, area: Area) => { this.pageHeight = Number(area.height); }).id('base.programmer')
     .accessibilityDescription(this.semanticState())
