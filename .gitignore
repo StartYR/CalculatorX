@@ -28,6 +28,8 @@ oh_modules/
 /.hvigor
 .idea/
 /.idea
+.vscode/
+/.vscode
 *.iml
 local.properties
 /local.properties
