@@ -61,7 +61,11 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: python -m pip install --disable-pip-version-check requests
+        run: >
+          python -m pip install
+          --disable-pip-version-check
+          requests
+          requests-toolbelt
 
       - name: Sync releases
         run: python .github/scripts/sync-releases.py

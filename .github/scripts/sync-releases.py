@@ -1,4 +1,5 @@
 from __future__ import annotations
+from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 import mimetypes
 import os
@@ -311,20 +312,36 @@ def gitee_upload_asset(
         or "application/octet-stream"
     )
 
-    print(f"  Upload to Gitee: {name}")
+    print(
+        f"  Upload to Gitee: {name} "
+        f"({path.stat().st_size} bytes)"
+    )
+
+    url = (
+        f"{gitee_base()}/releases/"
+        f"{release_id}/attach_files"
+    )
 
     with path.open("rb") as file:
-        response = requests.post(
-            f"{gitee_base()}/releases/{release_id}/attach_files",
-            data={"access_token": GITEE_TOKEN},
-            files={
+        multipart = MultipartEncoder(
+            fields={
                 "file": (
                     name,
                     file,
                     content_type,
                 )
+            }
+        )
+
+        response = requests.post(
+            url,
+            headers={
+                "Authorization": f"Bearer {GITEE_TOKEN}",
+                "Content-Type": multipart.content_type,
+                "Accept": "application/json",
             },
-            timeout=(1200, 3600),
+            data=multipart,
+            timeout=(60, 3600),
         )
 
     checked(response, f"Upload Gitee asset {name}")
