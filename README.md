@@ -177,7 +177,7 @@ cd CalculatorX
 <p align="center">
   <a href="https://atomgit.com/StartYi/CalculatorX"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/image/downloads/AtomGit-dark.svg"><img src="docs/image/downloads/AtomGit.svg" alt="AtomGit" height="64"></picture></a>
   &emsp;&emsp;
-  <a href="https://atomgit.com/StartYi/CalculatorX"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/image/downloads/Gitee-dark.svg"><img src="docs/image/downloads/Gitee.svg" alt="Gitee" height="64"></picture></a>
+  <a href="https://gitee.com/StartYi/CalculatorX"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/image/downloads/Gitee-dark.svg"><img src="docs/image/downloads/Gitee.svg" alt="Gitee" height="64"></picture></a>
 </p>
 
 ## 版权与许可
