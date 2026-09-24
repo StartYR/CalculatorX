@@ -150,7 +150,7 @@ def download_github_asset(asset: dict, directory: pathlib.Path) -> pathlib.Path:
         headers=headers,
         stream=True,
         allow_redirects=True,
-        timeout=(30, 3600),
+        timeout=(60, 3600),
     ) as response:
         checked(response, f"Download GitHub asset {name}")
 
@@ -324,7 +324,7 @@ def gitee_upload_asset(
                     content_type,
                 )
             },
-            timeout=(30, 3600),
+            timeout=(1200, 3600),
         )
 
     checked(response, f"Upload Gitee asset {name}")
@@ -479,7 +479,7 @@ def gitcode_upload_asset(
             upload_url,
             headers=upload_headers,
             data=file,
-            timeout=(30, 3600),
+            timeout=(1200, 3600),
         )
 
     checked(response, f"Upload GitCode asset {name}")
