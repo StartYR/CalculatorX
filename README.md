@@ -125,9 +125,9 @@ ArkUI 原生界面
 ## 获取 CalculatorX
 
 <p align="center">
-  <a href="https://appgallery.huawei.com/app/detail?id=com.startyi.calcx"><picture><source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/AppGallery-dark.webp"><img src="https://img.startyi.com/AppGallery.webp" alt="从 AppGallery 获取" height="64"></picture></a>
+  <a href="https://appgallery.huawei.com/app/detail?id=com.startyi.calcx"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/image/badges/AppGallery-dark.svg"><img src="docs/image/badges/AppGallery.svg" alt="从 AppGallery 获取" height="64"></picture></a>
   &emsp;&emsp;
-  <a href="https://github.com/StartYR/CalculatorX/releases"><img src="https://img.startyi.com/GitHub-Releases.webp" alt="从 GitHub Releases 获取" height="64"></a>
+  <a href="https://github.com/StartYR/CalculatorX/releases"><img src="docs/image/badges/GitHub-Releases.svg" alt="从 GitHub Releases 获取" height="64"></a>
 </p>
 
 - 普通用户推荐通过 **AppGallery** 安装和更新。
@@ -135,7 +135,7 @@ ArkUI 原生界面
 - 功能用法、界面说明和常见问题请查看 [在线帮助](https://calcx.startyi.com/docs)。
 - 遇到问题可以前往 [GitHub Issues](https://github.com/StartYR/CalculatorX/issues/new) 反馈。
 
-## 开发者快速开始
+## 快速开始
 
 ### 环境要求
 
@@ -171,6 +171,14 @@ cd CalculatorX
 ## 参与贡献
 
 欢迎提交 Issue、改进文档或参与功能开发。开始编码前，请先阅读 [CONTRIBUTING.md](docs/CONTRIBUTING.md)，了解 CalculatorX 的模块隔离、状态管理和提交规范。
+
+## 镜像仓库
+
+<p align="center">
+  <a href="https://atomgit.com/StartYi/CalculatorX"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/image/badges/AtomGit-dark.svg"><img src="docs/image/badges/AtomGit.svg" alt="AtomGit" height="64"></picture></a>
+  &emsp;&emsp;
+  <a href="https://atomgit.com/StartYi/CalculatorX"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/image/badges/Gitee-dark.svg"><img src="docs/image/badges/Gitee.svg" alt="Gitee" height="64"></picture></a>
+</p>
 
 ## 版权与许可
 
