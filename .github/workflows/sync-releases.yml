@@ -1,0 +1,67 @@
+name: Sync Releases
+
+on:
+  release:
+    types:
+      - published
+      - edited
+
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "指定要同步的 Tag；留空则同步全部 Releases"
+        required: false
+        type: string
+
+      replace_assets:
+        description: "重新上传已存在的同名附件"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-releases
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync Releases to Gitee and GitCode
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      SOURCE_REPOSITORY: ${{ github.repository }}
+
+      GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+      GITEE_OWNER: StartYi
+      GITEE_REPO: CalculatorX
+
+      GITCODE_TOKEN: ${{ secrets.GITCODE_TOKEN }}
+      GITCODE_OWNER: StartYi
+      GITCODE_REPO: CalculatorX
+
+      SYNC_TAG: ${{ github.event.release.tag_name || inputs.tag || '' }}
+      REPLACE_ASSETS: ${{ inputs.replace_assets || false }}
+
+      # Gitee Release 当前单附件 100 MiB 限制。
+      # 超过这个大小时保留 Release，但跳过该附件。
+      GITEE_MAX_ASSET_BYTES: "104857600"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check requests
+
+      - name: Sync releases
+        run: python .github/scripts/sync-releases.py
