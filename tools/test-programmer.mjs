@@ -149,6 +149,36 @@ for (const width of [16, 32, 64]) {
     equal(restored.mode, 'float');
   }
 }
+// 切换有符号解释不改变位模式；十进制表达式及后续运算应使用新的解释。
+for (const [width, hex, unsigned] of [[8, 'FF', '255'], [64, 'FFFFFFFFFFFFFFFF', '18446744073709551615']]) {
+  const toggle = new ProgrammerSession();
+  toggle.changeWidth(width);
+  toggle.changeRadix(16);
+  for (const digit of hex) toggle.key(digit);
+  toggle.changeRadix(10);
+  equal(toggle.signed, true);
+  equal(toggle.expression, '-1');
+  for (let repeat = 0; repeat < 2; repeat++) {
+    toggle.changeSigned();
+    equal(toggle.signed, false);
+    equal(toggle.expression, unsigned);
+    equal(toggle.word.format(10, toggle.signed), unsigned);
+    equal(toggle.word.format(16), hex);
+    toggle.changeSigned();
+    equal(toggle.signed, true);
+    equal(toggle.expression, '-1');
+    equal(toggle.word.format(16), hex);
+  }
+  for (const isSigned of [false, true]) {
+    if (toggle.signed !== isSigned) toggle.changeSigned();
+    toggle.changeRadix(16);
+    toggle.key('AC');
+    for (const digit of hex) toggle.key(digit);
+    toggle.changeRadix(10);
+    for (const key of ['/', '2', '=']) toggle.key(key);
+    equal(toggle.word.format(10, toggle.signed), isSigned ? '0' : (BigInt(unsigned) / 2n).toString());
+  }
+}
 const session = new ProgrammerSession();
 session.changeWidth(8);
 for (const key of ['2', '5', '5', '+', '1', '=']) session.key(key);

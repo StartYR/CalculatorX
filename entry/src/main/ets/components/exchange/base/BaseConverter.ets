@@ -128,6 +128,39 @@ struct ProgrammerKey {
 }
 
 @Component
+struct ProgrammerChip {
+  @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
+  @StorageProp('vibrationCurve') vibrationCurve: number = 0;
+  @Prop label: string = '';
+  @Prop selected: boolean = false;
+  semanticId: string = '';
+  onActivate: () => void = () => {};
+
+  build() {
+    Button(this.label).fontSize(13).fontWeight(this.selected ? FontWeight.Medium : FontWeight.Normal)
+      .fontColor(this.selected ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary'))
+      .backgroundColor(this.selected ? $r('sys.color.comp_background_secondary') : Color.Transparent)
+      .height(32).padding({ left: 10, right: 10 }).id(this.semanticId)
+      .accessibilityText(this.label + (this.selected ? '，已选中' : '')).onClick(() => {
+        HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
+        this.onActivate();
+      })
+  }
+}
+
+@Component
+struct ProgrammerFlag {
+  @Prop label: string = '';
+  @Prop flagValue: number = -1;
+
+  build() {
+    Text(this.label + ' ' + (this.flagValue < 0 ? '—' : this.flagValue.toString())).fontFamily('monospace').fontSize(12)
+      .fontColor(this.flagValue === 1 ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary'))
+      .id('base.flag.' + this.label.toLowerCase())
+  }
+}
+
+@Component
 export struct BaseConverter {
   @StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
   @StorageProp('navBarHeight') navBarHeight: number = 0;
@@ -246,16 +279,13 @@ export struct BaseConverter {
     return this.session.floatBits.toString(radix).padStart(radix === 16 ? this.session.floatWidth / 4 : this.session.floatWidth, '0');
   }
 
-  @Builder
-  private Chip(label: string, selected: boolean, action: () => void, identifier: string) {
-    Button(label).fontSize(13).fontWeight(selected ? FontWeight.Medium : FontWeight.Normal)
-      .fontColor(selected ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary'))
-      .backgroundColor(selected ? $r('sys.color.comp_background_secondary') : Color.Transparent)
-      .height(32).padding({ left: 10, right: 10 }).id(identifier)
-      .accessibilityText(label + (selected ? '，已选中' : '')).onClick(() => {
-        HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
-        action();
-      })
+  private multilineBinary(radix: number): boolean {
+    return radix === 2 && (this.session.mode === 'integer' ? this.session.width : this.session.floatWidth) === 64;
+  }
+
+  private displayValue(radix: number): string {
+    const value = this.value(radix);
+    return this.multilineBinary(radix) ? value.slice(0, 32) + '\n' + value.slice(32) : value;
   }
 
   @Builder
@@ -263,11 +293,14 @@ export struct BaseConverter {
     Row({ space: 10 }) {
       Text(label).fontSize(13).fontWeight(FontWeight.Bold).width(38)
         .fontColor(this.session.currentRadix() === radix ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary'))
-      Scroll() {
-        Text(this.value(radix)).fontFamily('monospace').fontSize(radix === 10 ? 19 : 15)
-          .fontColor($r('sys.color.font_primary')).copyOption(CopyOptions.LocalDevice).maxLines(1)
-      }.scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).layoutWeight(1)
-    }.width('100%').height(38).padding({ left: 10, right: 10 }).borderRadius(10)
+      Text(this.displayValue(radix)).fontFamily('monospace').fontSize(radix === 10 ? 19 : 15)
+        .fontColor($r('sys.color.font_primary')).copyOption(CopyOptions.LocalDevice)
+        .minFontSize(8).maxFontSize(radix === 10 ? 19 : 15)
+        .maxLines(this.multilineBinary(radix) ? 2 : 1).heightAdaptivePolicy(TextHeightAdaptivePolicy.MAX_LINES_FIRST)
+        .textAlign(TextAlign.End).layoutWeight(1).height(this.multilineBinary(radix) ? 44 : 30)
+        .onClick(() => this.select(() => this.session.changeRadix(radix)))
+    }.width('100%').height(this.multilineBinary(radix) ? 56 : 38)
+    .padding({ left: 10, right: 10 }).borderRadius(10)
     .backgroundColor(this.session.currentRadix() === radix ? $r('sys.color.comp_background_secondary') : Color.Transparent)
     .id('base.radix.' + radix.toString())
     .accessibilityText(label + ' ' + this.value(radix) + (this.session.currentRadix() === radix ? '，当前输入进制' : '，点击切换'))
@@ -275,26 +308,23 @@ export struct BaseConverter {
   }
 
   @Builder
-  private Flag(label: string, value: number) {
-    Text(label + ' ' + (value < 0 ? '—' : value.toString())).fontFamily('monospace').fontSize(12)
-      .fontColor(value === 1 ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary'))
-      .id('base.flag.' + label.toLowerCase())
-  }
-
-  @Builder
   private Display() {
     Scroll() {
       Column({ space: 7 }) {
         Row() {
-          this.Chip('整数', this.session.mode === 'integer', () => {
-            this.apply(() => { this.session.mode = 'integer'; this.session.error = ''; });
-          }, 'base.mode.integer')
-          this.Chip('IEEE 754', this.session.mode === 'float', () => {
-            this.apply(() => { this.session.mode = 'float'; this.session.error = ''; });
-          }, 'base.mode.float')
+          ProgrammerChip({ label: '整数', selected: this.session.mode === 'integer',
+            onActivate: () => {
+              this.apply(() => { this.session.mode = 'integer'; this.session.error = ''; });
+            }, semanticId: 'base.mode.integer' })
+          ProgrammerChip({ label: 'IEEE 754', selected: this.session.mode === 'float',
+            onActivate: () => {
+              this.apply(() => { this.session.mode = 'float'; this.session.error = ''; });
+            }, semanticId: 'base.mode.float' })
           Blank()
-          this.Chip('粘贴', false, () => { this.paste(); }, 'base.paste')
-          this.Chip('?', this.panel === 'help', () => { this.panel = this.panel === 'help' ? '' : 'help'; }, 'base.help')
+          ProgrammerChip({ label: '粘贴', selected: false,
+            onActivate: () => { this.paste(); }, semanticId: 'base.paste' })
+          ProgrammerChip({ label: '?', selected: this.panel === 'help',
+            onActivate: () => { this.panel = this.panel === 'help' ? '' : 'help'; }, semanticId: 'base.help' })
         }.width('100%')
         Scroll() {
           Text(this.session.mode === 'integer' ? this.session.expression : this.session.floatText)
@@ -316,29 +346,32 @@ export struct BaseConverter {
             Select([{ value: '8 bit · BYTE' }, { value: '16 bit · WORD' }, { value: '32 bit · DWORD' }, { value: '64 bit · QWORD' }])
               .selected([8, 16, 32, 64].indexOf(this.session.width)).value(this.session.width + ' bit').font({ size: 14 }).height(34)
               .id('base.width').onSelect((index: number) => this.select(() => this.session.changeWidth([8, 16, 32, 64][index])))
-            this.Chip(this.session.signed ? '有符号' : '无符号', this.session.signed,
-              () => this.apply(() => this.session.changeSigned()), 'base.signed')
+            ProgrammerChip({ label: this.session.signed ? '有符号' : '无符号', selected: this.session.signed,
+              onActivate: () => this.apply(() => this.session.changeSigned()), semanticId: 'base.signed' })
             Blank()
-            this.Chip('位', this.panel === 'bits', () => { this.panel = this.panel === 'bits' ? '' : 'bits'; }, 'base.bits')
-            this.Chip('编码', this.panel === 'encoding', () => { this.panel = this.panel === 'encoding' ? '' : 'encoding'; }, 'base.encoding')
+            ProgrammerChip({ label: '位', selected: this.panel === 'bits',
+              onActivate: () => { this.panel = this.panel === 'bits' ? '' : 'bits'; }, semanticId: 'base.bits' })
+            ProgrammerChip({ label: '编码', selected: this.panel === 'encoding',
+              onActivate: () => { this.panel = this.panel === 'encoding' ? '' : 'encoding'; }, semanticId: 'base.encoding' })
           }.width('100%')
           Row({ space: 12 }) {
-            this.Flag('CF', this.session.flags.cf)
-            this.Flag('OF', this.session.flags.of)
-            this.Flag('ZF', this.session.flags.zf)
-            this.Flag('SF', this.session.flags.sf)
+            ProgrammerFlag({ label: 'CF', flagValue: this.session.flags.cf })
+            ProgrammerFlag({ label: 'OF', flagValue: this.session.flags.of })
+            ProgrammerFlag({ label: 'ZF', flagValue: this.session.flags.zf })
+            ProgrammerFlag({ label: 'SF', flagValue: this.session.flags.sf })
             Blank()
-            this.Chip('C-in ' + this.session.carry, this.session.carry === 1,
-              () => this.apply(() => { this.session.carry = 1 - this.session.carry; }), 'base.carry')
+            ProgrammerChip({ label: 'C-in ' + this.session.carry, selected: this.session.carry === 1,
+              onActivate: () => this.apply(() => { this.session.carry = 1 - this.session.carry; }), semanticId: 'base.carry' })
           }.width('100%')
         } else {
           Row() {
             ForEach([16, 32, 64], (width: number) => {
-              this.Chip('binary' + width, this.session.floatWidth === width,
-                () => this.apply(() => this.session.changeFloatWidth(width)), 'base.float.width.' + width)
+              ProgrammerChip({ label: 'binary' + width, selected: this.session.floatWidth === width,
+                onActivate: () => this.apply(() => this.session.changeFloatWidth(width)), semanticId: 'base.float.width.' + width })
             })
             Blank()
-            this.Chip('字段', this.panel === 'bits', () => { this.panel = this.panel === 'bits' ? '' : 'bits'; }, 'base.bits')
+            ProgrammerChip({ label: '字段', selected: this.panel === 'bits',
+              onActivate: () => { this.panel = this.panel === 'bits' ? '' : 'bits'; }, semanticId: 'base.bits' })
           }.width('100%')
           Text(decodeFloat(this.session.floatBits, this.session.floatWidth).category + ' · 按 = 确认输入')
             .fontSize(12).fontColor($r('sys.color.font_secondary')).width('100%')
@@ -349,6 +382,7 @@ export struct BaseConverter {
         }
       }.width('100%').padding({ left: 14, right: 14, top: 8, bottom: this.keyboardHeight() + 12 })
     }.width('100%').height('100%').scrollBar(BarState.Auto).align(Alignment.Top)
+    .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     .padding({ top: this.statusBarHeight + 56 })
   }
 
