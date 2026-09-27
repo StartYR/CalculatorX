@@ -20,22 +20,41 @@ import { PreferenceManager } from '../../../utils/PreferenceManager';
 import { HistoryRepository, HistoryRecord } from '../../../database/HistoryRepository';
 import { ProgrammerMemory, ProgrammerSettings, settingsOf, recordOf, historyRecordOf, restoreSettings, restoreRecord } from '../../../utils/base/ProgrammerState';
 
+// const INTEGER_KEYS: string[] = [
+//   'A', 'B', 'C', 'AND', 'SHL',
+//   'D', 'E', 'F', 'MOD', 'SHR',
+//   'AC', '(', ')', '⌫', '/',
+//   '7', '8', '9', '±', '*',
+//   '4', '5', '6', '0', '-',
+//   '1', '2', '3', '=', '+'
+// ];
+
 const INTEGER_KEYS: string[] = [
-  'A', 'B', 'C', 'AND', 'SHL',
-  'D', 'E', 'F', 'MOD', 'SHR',
-  'AC', '(', ')', '⌫', '/',
-  '7', '8', '9', '±', '*',
-  '4', '5', '6', '0', '-',
-  '1', '2', '3', '=', '+'
+  'D', 'E', 'F', 'AND', 'SHL',
+  'A', 'B', 'C', 'MOD', 'SHR',
+  '7', '8', '9', '⌫', 'AC',
+  '4', '5', '6', '*', '/',
+  '1', '2', '3', '+', '-',
+  '±', '0', '(', ')', '='
 ];
+
 const FLOAT_KEYS: string[] = [
-  'A', 'B', 'C', 'D', 'E',
-  'F', 'NaN', '∞', 'AC', '⌫',
+  'D', 'E', 'F', 'NaN', '∞',
+  'A', 'B', 'C', '⌫', 'AC',
   '7', '8', '9', 'e', '-',
   '4', '5', '6', '.', '+',
   '1', '2', '3', '±', '=',
   '0'
 ];
+
+// const FLOAT_KEYS: string[] = [
+//   'A', 'B', 'C', 'D', 'E',
+//   'F', 'NaN', '∞', 'AC', '⌫',
+//   '7', '8', '9', 'e', '-',
+//   '4', '5', '6', '.', '+',
+//   '1', '2', '3', '±', '=',
+//   '0'
+// ];
 
 function keyRole(key: string): KeyboardKeyRole {
   if (key === 'AC' || key === '⌫') return KeyboardKeyRole.DANGER;
