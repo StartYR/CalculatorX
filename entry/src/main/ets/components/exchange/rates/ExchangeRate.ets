@@ -112,7 +112,8 @@ export struct ExchangeRate {
     }
 
     this.activeId = AppStorage.get<string>(PreferenceConfigs.KEY_EXCHANGE_ACTIVE_ID) || this.currencyList[0].id;
-    this.baseAmount = AppStorage.get<string>(PreferenceConfigs.KEY_EXCHANGE_BASE_AMOUNT) || '100';
+    let savedAmount = AppStorage.get<string>(PreferenceConfigs.KEY_EXCHANGE_BASE_AMOUNT) || '100';
+    this.baseAmount = (!savedAmount || isNaN(parseFloat(savedAmount))) ? '100' : savedAmount;
 
     // 2. 加载网络动态汇率字典
     let ratesStr = AppStorage.get<string>(PreferenceConfigs.KEY_EXCHANGE_RATES) || '{}';
@@ -326,27 +327,27 @@ export struct ExchangeRate {
    * 实时计算目标货币的折算金额
    * @param targetCode - 目标货币代码 (如 "CNY")
    * @param isEditing - 该项是否为当前正在被编辑的基准项
-   * @returns {string} 格式化后的金额字符串
+   * @returns {string} 格式化后的金额字符串；汇率未知或无法计算时返回 '--'
    */
   getConvertedAmount(targetCode: string, isEditing: boolean): string {
     if (isEditing) return this.baseAmount;
+
+    let activeItem = this.currencyList.find(item => item.id === this.activeId);
+    if (!activeItem) return '--';
+
+    let rateFrom = activeItem.code === 'USD' ? 1 : this.rateMap[activeItem.code];
+    let rateTo = targetCode === 'USD' ? 1 : this.rateMap[targetCode];
+
+    // 任一汇率不存在或非正数时无法换算，返回占位符
+    if (!rateFrom || rateFrom <= 0 || !rateTo || rateTo <= 0) {
+      return '--';
+    }
+
     if (!this.baseAmount || this.baseAmount === 'Error' || this.baseAmount === '0') return '0';
 
     try {
       let inputVal = parseFloat(this.baseAmount);
       if (isNaN(inputVal)) return '0';
-
-      let activeItem = this.currencyList.find(item => item.id === this.activeId);
-      if (!activeItem) return '0';
-
-      let rateFrom = this.rateMap[activeItem.code];
-      let rateTo = this.rateMap[targetCode];
-
-      if (activeItem.code === 'USD') rateFrom = 1;
-      if (targetCode === 'USD') rateTo = 1;
-
-      if (!rateFrom || rateFrom === 0) rateFrom = 1;
-      if (!rateTo) rateTo = 1;
 
       let amountInUSD = inputVal / rateFrom;
       let result = amountInUSD * rateTo;
@@ -371,7 +372,10 @@ export struct ExchangeRate {
   setActiveCurrency(id: string, code: string) {
     // 只有点击“不是当前激活项”的卡片时，才重新换算和写盘
     if (this.activeId !== id) {
-      this.baseAmount = this.getConvertedAmount(code, false);
+      let converted = this.getConvertedAmount(code, false);
+      if (converted !== '--' && converted !== 'Error' && !isNaN(parseFloat(converted))) {
+        this.baseAmount = converted;
+      }
       this.activeId = id;
       this.saveData();
     }
