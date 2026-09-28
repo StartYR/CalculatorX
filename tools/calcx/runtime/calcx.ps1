@@ -26,6 +26,7 @@ param(
 Set-StrictMode -Version 3.0
 $ErrorActionPreference = 'Stop'
 
+# 入口只解析命令并转交独立脚本；子进程退出码作为 CLI 的最终结果原样传递。
 $commandRoot = Join-Path $PSScriptRoot 'commands'
 $calculationScript = Join-Path $commandRoot 'Invoke-CalcXCalculation.ps1'
 $batchScript = Join-Path $commandRoot 'Invoke-CalcXBatch.ps1'
@@ -81,6 +82,7 @@ function Invoke-CalculationCommand {
         $forwardArguments.HdcPath = $HdcPath
     }
 
+    # 仅传递用户实际指定的设备选项，让公共设备选择逻辑处理单设备和多设备环境。
     & $calculationScript @forwardArguments
     return $LASTEXITCODE
 }
@@ -161,6 +163,7 @@ function Invoke-FormulaCommand {
 }
 
 try {
+    # 自测只检查纯协议编码，不启动应用或连接设备。
     if ($SelfTest) {
         & $calculationScript -SelfTest
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -193,6 +196,7 @@ try {
     }
 
     if ($Command -eq 'screen') {
+        # 查询与查找使用同一 UI 树入口，find 必须给唯一语义 ID。
         if ($CommandArguments.Count -lt 1 -or $CommandArguments[0] -notin @('get', 'controls', 'find')) {
             [Console]::Error.WriteLine('Usage: .\calcx screen get|controls|find <semantic-id>')
             exit 2
@@ -213,6 +217,7 @@ try {
     }
 
     if ($Command -eq 'ui') {
+        # 点击权限由 UI 子脚本的语义白名单再次限制，入口只校验命令形状。
         if ($CommandArguments.Count -eq 1 -and $CommandArguments[0] -eq 'back') {
             exit (Invoke-UiCommand -UiCommand 'back')
         }
@@ -254,6 +259,7 @@ try {
     }
 
     if ($Command -eq 'scenario') {
+        # 场景执行是独立脚本；继续失败策略与进程退出码仍由场景脚本决定。
         if ($CommandArguments.Count -ne 2 -or $CommandArguments[0] -ne 'run') {
             [Console]::Error.WriteLine('Usage: .\calcx scenario run <json-file> [-ContinueOnFailure]')
             exit 2
@@ -269,6 +275,7 @@ try {
         exit $LASTEXITCODE
     }
 
+    # 单个位置参数保留为旧版 LaTeX 快捷入口；带额外参数时不能猜测其含义。
     if ($CommandArguments.Count -gt 0) {
         [Console]::Error.WriteLine("Unknown command: $Command")
         exit 2

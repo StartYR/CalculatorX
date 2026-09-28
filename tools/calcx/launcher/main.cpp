@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 StartYi. All rights reserved.
+ * @file main.cpp
+ * @description Windows calcx 启动器，将参数和退出码转交 PowerShell CLI
+ * @author StartYi
+ * @date 2026/09/20 14:36
+ */
 #include <windows.h>
 
 #include <cstdio>
@@ -28,6 +35,7 @@ bool IsFile(const std::wstring& path) {
 }
 
 std::wstring FindOnPath(const wchar_t* fileName) {
+  // 先查询长度再申请缓冲区，避免 PATH 中较长路径被固定数组截断。
   const DWORD required = SearchPathW(nullptr, fileName, nullptr, 0, nullptr, nullptr);
   if (required == 0) {
     return L"";
@@ -53,6 +61,7 @@ std::wstring QuoteArgument(const std::wstring& argument) {
   std::wstring quoted = L"\"";
   size_t backslashCount = 0;
   for (const wchar_t character : argument) {
+    // 引号前的反斜杠必须翻倍；结尾反斜杠在结束引号前也必须翻倍。
     if (character == L'\\') {
       ++backslashCount;
       continue;
@@ -73,6 +82,7 @@ std::wstring QuoteArgument(const std::wstring& argument) {
 }
 
 void WriteError(const std::wstring& message) {
+  // 控制台诊断固定输出 UTF-8，供调用脚本跨本地代码页读取。
   const int size = WideCharToMultiByte(
       CP_UTF8, 0, message.c_str(), static_cast<int>(message.size()), nullptr, 0, nullptr, nullptr);
   if (size <= 0) {
@@ -95,6 +105,7 @@ int wmain(int argc, wchar_t* argv[]) {
   }
 
   const std::wstring executableDirectory = GetParentDirectory(executablePath);
+  // 启动器从自身位置定位仓库运行脚本，不依赖调用者当前目录。
   const std::wstring scriptPath =
       executableDirectory + L"\\tools\\calcx\\runtime\\calcx.ps1";
   if (!IsFile(scriptPath)) {
@@ -127,6 +138,7 @@ int wmain(int argc, wchar_t* argv[]) {
   STARTUPINFOW startupInfo{};
   startupInfo.cb = sizeof(startupInfo);
   PROCESS_INFORMATION processInfo{};
+  // 继承标准输入输出并等待子进程，保持 JSON 输出和退出码与 PowerShell CLI 一致。
   const BOOL started = CreateProcessW(
       pwshPath.c_str(), mutableCommandLine.data(), nullptr, nullptr, TRUE, 0, nullptr, nullptr,
       &startupInfo, &processInfo);

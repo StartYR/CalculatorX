@@ -20,11 +20,13 @@ $keyboardModules = @(
   'components\graphing\GraphingKeyboard.ets'
 ) | ForEach-Object { Join-Path $sourceRoot $_ }
 
+# 普通键盘和图像编辑键盘均应直接订阅开关与 API 保护，但材质构造归公共表面所有。
 $renderModules = $keyboardModules + (Join-Path $sourceRoot 'components\graphing\GraphingEditSheet.ets')
 
 $errors = [System.Collections.Generic.List[string]]::new()
 
 $allEtsFiles = Get-ChildItem -LiteralPath $sourceRoot -Recurse -File -Filter '*.ets'
+# 检查调用位置与引用范围，避免仅靠某个组件的运行路径漏掉兼容性回归。
 $surfaceCalls = $allEtsFiles | Select-String -SimpleMatch '.systemMaterial(createKeyboardMaterial('
 foreach ($match in $surfaceCalls) {
   if ($match.Path -ne $surfacePath) {
@@ -62,6 +64,7 @@ foreach ($modulePath in $keyboardModules) {
   }
 }
 
+# 正向 API 26 分支须留在每个渲染入口，低版本才能完整走传统键盘路径。
 foreach ($modulePath in $renderModules) {
   $moduleText = Get-Content -LiteralPath $modulePath -Raw
   if ($moduleText -notmatch '@StorageProp\(PreferenceConfigs\.KEY_KEY_IMMERSIVE_MATERIAL\)') {
@@ -77,6 +80,7 @@ if ($surfaceText -notmatch "if \(deviceInfo\.apiAvailable\('26\.0\.0'\)\)") {
   $errors.Add("公共按键表面缺少直接 API 26 正向保护: $surfacePath")
 }
 
+# 整页 Builder 经中转组件传递会破坏沉浸材质的受支持区域。
 if (Test-Path -LiteralPath $removedSwitchPath) {
   $errors.Add("不应恢复通过 @BuilderParam 转交完整布局的渲染选择器: $removedSwitchPath")
 }

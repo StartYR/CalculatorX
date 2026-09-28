@@ -29,6 +29,7 @@ $TestModuleName = 'entry_test'
 $TestRunner = '/ets/testrunner/OpenHarmonyTestRunner'
 $ResultPrefix = 'CALCX_TEST_RESULT:'
 
+# 请求字段与设备端 CalculationCli.test.ets 的版本 1 协议一致，requestId 用于排除旧测试输出。
 function New-CalculationRequest {
     param(
         [Parameter(Mandatory)][string]$InputLatex,
@@ -47,6 +48,7 @@ function New-CalculationRequest {
 }
 
 function Test-ProtocolRoundTrip {
+    # 引号、Unicode 和换行共同覆盖 JSON 与 URL-safe Base64 传输边界。
     $samples = @(
         '\frac{1}{2}+\frac{1}{3}',
         '"quoted" + 空格 + π',
@@ -110,6 +112,7 @@ try {
     }
 
     $request = New-CalculationRequest -InputLatex $Latex -InputMode $Mode -InputAngle $Angle -InputPrecision $Precision
+    # aa test 的参数只承载 URL-safe Base64 文本，避免 LaTeX 经 shell 解释后变形。
     $requestJson = $request | ConvertTo-Json -Compress
     $requestPayload = ConvertTo-CalcXBase64Url $requestJson
     $arguments = @(
@@ -131,6 +134,7 @@ try {
     $combinedOutput = $testResult.StdOut + "`n" + $testResult.StdErr
     $matches = [regex]::Matches($combinedOutput, [regex]::Escape($ResultPrefix) + '([A-Za-z0-9_-]+)')
     $response = $null
+    # 同一测试日志可能含多个标记，只接受协议版本和当前请求 ID 均匹配的响应。
     foreach ($match in $matches) {
         try {
             $candidate = ConvertFrom-CalcXBase64Url $match.Groups[1].Value | ConvertFrom-Json
@@ -153,6 +157,7 @@ try {
     if (-not $response.ok) {
         exit 20
     }
+    # 已得到计算结果仍需检查测试运行器退出码，两者代表不同失败层级。
     if ($testResult.ExitCode -ne 0) {
         Write-CalcXDiagnostic "The calculation succeeded, but aa test exited with code $($testResult.ExitCode)."
         exit 13

@@ -29,6 +29,7 @@ function Get-CurrentAppLayout {
     return Get-CalcXAppLayout -Document $document
 }
 
+# 返回稳定的页面语义状态；应用不在 UI 树时用空字段而非推断上一次页面。
 function Get-ScreenSummary {
     param([object]$AppLayout)
 
@@ -43,6 +44,7 @@ function Get-ScreenSummary {
         }
     }
     $ids = @($AppLayout.Controls | ForEach-Object { $_.id } | Where-Object { $_ })
+    # 优先读取可见模块控件，旧页面再从主壳描述恢复模块标识。
     $moduleControl = @($AppLayout.Controls | Where-Object { $_.id -match '^module\.([a-z-]+)\.page$' } | Select-Object -First 1)
     $module = if ($moduleControl.Count -gt 0) {
         [regex]::Match($moduleControl[0].id, '^module\.([a-z-]+)\.page$').Groups[1].Value
@@ -66,6 +68,7 @@ function Get-ScreenSummary {
     }
 }
 
+# 调试语义信息由控件描述提供；缺失或无效 JSON 只降级为 unavailable 状态。
 function Get-SemanticState {
     param([object]$AppLayout)
 
@@ -109,6 +112,7 @@ function Get-SemanticState {
     }
 }
 
+# CLI 点击只允许稳定的语义 ID；禁止将任意 UI 树节点变成可执行操作。
 function Assert-SemanticTargetAllowed {
     param([Parameter(Mandatory)][string]$SemanticId)
     $allowed = $SemanticId -match '^(?:nav\.|module\.|calc\.key\.|settings\.|overlay\.sidebar\.dismiss$)'
@@ -145,6 +149,7 @@ try {
             Write-CalcXDiagnostic "Unable to start CalculatorX (exit $($result.ExitCode)): $($result.StdErr.Trim())"
             exit 13
         }
+        # aa start 返回时界面可能尚未进入前台，等待 UI 树出现再报告成功。
         $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
         do {
             $appLayout = Get-CurrentAppLayout
@@ -264,6 +269,7 @@ try {
         exit 0
     }
 
+    # 坐标只从唯一、可见、已启用的语义目标推导，避免点中同名或遮挡控件。
     $matches = @($appLayout.Controls | Where-Object { $_.id -ceq $Target })
     if ($matches.Count -ne 1) {
         Write-CalcXDiagnostic "Expected one visible semantic target '$Target', found $($matches.Count)."
@@ -291,6 +297,7 @@ try {
         Write-CalcXDiagnostic "Semantic target '$Target' is not reported as clickable."
         exit 16
     }
+    # 物理点击前后重新读取页面摘要，调用方可判断导航或模式是否真的变化。
     $center = Get-CalcXBoundsCenter -Bounds $control.bounds
     $before = Get-ScreenSummary $appLayout
     $result = Invoke-CalcXProcessWithTimeout -FilePath $resolvedHdc `

@@ -29,6 +29,7 @@ const INTEGER_KEYS: string[] = [
   '±', '0', '(', ')', '='
 ];
 
+// 数组始终按五列六行排列，布局索引与按键位置共享这一约束。
 // 同一行相邻的同名格子合并为一个横向按键。
 const FLOAT_KEYS: string[] = [
   'D', 'E', 'F', 'NaN', '∞',
@@ -67,6 +68,7 @@ struct ProgrammerKey {
   private repeated: boolean = false;
 
   private stopRepeat(): void {
+    // 长按退格的两个计时器随按键释放或组件消失一并取消，避免后台继续删字。
     clearTimeout(this.delayTimer);
     clearInterval(this.repeatTimer);
   }
@@ -83,6 +85,7 @@ struct ProgrammerKey {
 
   @Builder
   private Surface() {
+    // 两种键盘共用按键语义与业务回调，沉浸开关只改变公共表面的渲染路径。
     KeyboardKeySurface({
       immersive: this.immersive, role: keyRole(this.keyText), keyBorderRadius: 16,
       semanticId: this.keyText === 'e' ? 'base.key.exponent' :
@@ -176,6 +179,7 @@ export struct BaseConverter {
   private redoStack: ProgrammerSession[] = [];
   private undoHandler: () => void = () => this.undo();
   private redoHandler: () => void = () => this.redo();
+  // 恢复输出时直接回填已存位模式；浮点转 HEX 可保留 NaN payload。
   private historyHandler: (record: HistoryRecord, insertType: string) => void = (record, insertType) => {
     this.apply(() => {
       this.session = restoreRecord(record.extraParams || '');
@@ -190,6 +194,7 @@ export struct BaseConverter {
   };
 
   aboutToAppear(): void {
+    // 进程内会话优先于跨启动偏好；事件订阅只在组件挂载期间有效。
     try {
       this.session = ProgrammerMemory.session ? ProgrammerMemory.session.copy() :
         restoreSettings(JSON.parse(PreferenceManager.get(PreferenceConfigs.KEY_PROGRAMMER_SETTINGS, JSON.stringify(settingsOf(this.session))) as string) as ProgrammerSettings);
@@ -207,6 +212,7 @@ export struct BaseConverter {
   }
 
   private persistSettings(): void {
+    // 只持久化可恢复的配置，草稿、预览和运算结果留在进程内会话。
     const settings = JSON.stringify(settingsOf(this.session));
     if (settings !== PreferenceManager.get(PreferenceConfigs.KEY_PROGRAMMER_SETTINGS, '')) {
       PreferenceManager.set(PreferenceConfigs.KEY_PROGRAMMER_SETTINGS, settings);
@@ -214,6 +220,7 @@ export struct BaseConverter {
   }
 
   private saveHistory(): void {
+    // 历史只由确认操作触发，extraParams 保留完整位模式和当时的解释上下文。
     const integer = this.session.mode === 'integer';
     HistoryRepository.insertRecord({ moduleType: 'base',
       inputContent: integer ? this.session.expression : this.session.floatText,
@@ -223,12 +230,14 @@ export struct BaseConverter {
   }
 
   private semanticState(): string {
+    // 结构化状态仅用于 debug 语义 CLI，release 不公开草稿与内部位模式。
     if (!getContext(this).applicationInfo.debug) return '';
     return JSON.stringify({ data: recordOf(this.session), error: this.session.error,
       integerConfirmed: this.session.evaluated, floatConfirmed: this.session.floatEvaluated });
   }
 
   private apply(action: () => void): void {
+    // 每次操作前保存快照；替换整个 session 以触发 ArkUI 状态刷新，失败也保留诊断。
     const before = this.session.copy();
     try { action(); }
     catch (error) { this.session.error = (error as Error).message; }
@@ -240,6 +249,7 @@ export struct BaseConverter {
   }
 
   private press(key: string): void {
+    // 预览按键不会写历史；只有无错误的 = 才记录已确认结果。
     HapticUtils.playVibration(key, this.hapticFeedback, this.vibrationCurve);
     this.apply(() => this.session.key(key));
     if (key === '=' && this.session.error.length === 0) this.saveHistory();
@@ -260,6 +270,7 @@ export struct BaseConverter {
   }
 
   private async paste(): Promise<void> {
+    // 整数粘贴直接确认，浮点粘贴先进入草稿预览；两者共用输入长度上限保护。
     try {
       const data = await pasteboard.getSystemPasteboard().getData();
       const text = data.getPrimaryText().trim();
@@ -286,6 +297,7 @@ export struct BaseConverter {
   }
 
   private multilineBinary(radix: number): boolean {
+    // 64 位二进制分成两行各 32 位，保证低位在窄屏也可见。
     return radix === 2 && (this.session.mode === 'integer' ? this.session.width : this.session.floatWidth) === 64;
   }
 
@@ -398,6 +410,7 @@ export struct BaseConverter {
   }
 
   private keyboardKeySpan(index: number): number {
+    // GridItem 跨列时跳过被合并格；合并不允许越过原五列行边界。
     const keys = this.session.mode === 'integer' ? INTEGER_KEYS : FLOAT_KEYS;
     const column = index % 5;
     if (column > 0 && keys[index - 1] === keys[index]) return 0;
@@ -435,6 +448,7 @@ export struct BaseConverter {
   }
   @Builder
   private ImmersiveKeyboardLayout() {
+    // API 26 材质需位于受支持的底部 TabBar 区域，传统路径仍由独立容器承载。
     Tabs({ barPosition: BarPosition.End }) {
       TabContent() {
         Column().width('100%').height('100%')
