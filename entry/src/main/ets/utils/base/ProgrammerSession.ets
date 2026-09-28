@@ -8,7 +8,8 @@
 import { Natural } from './Natural';
 import { Word, Flags } from './ProgrammerEngine';
 import { ProgrammerExpression } from './ProgrammerExpression';
-import { encodeFloat, decodeFloat, convertFloat } from './Ieee754';
+import { decodeFloat, convertFloat, negateFloat } from './Ieee754';
+import { FloatExpression } from './FloatExpression';
 
 /** 独立保存两种模式的输入；草稿与最近有效位模式允许不同，配置变更前必须确认草稿。 */
 export class ProgrammerSession {
@@ -55,7 +56,10 @@ export class ProgrammerSession {
   // A–F 仅在 HEX 可用；浮点十进制语法不能混入原始位模式。
   inputEnabled(key: string): boolean {
     if (/^[0-9A-F]$/.test(key)) return parseInt(key, 16) < this.currentRadix();
-    if (this.mode === 'float' && ['.', 'e', '±', '+', '-', 'NaN', '∞'].includes(key)) return this.floatRadix === 10;
+    if (this.mode === 'float') {
+      return ['AC', '⌫', '='].includes(key) ||
+        (this.floatRadix === 10 && ['.', 'e', '±', '+', '-', '*', '/', '(', ')', 'NaN', '∞'].includes(key));
+    }
     return true;
   }
 
@@ -63,8 +67,7 @@ export class ProgrammerSession {
   confirm(): void {
     if (this.mode === 'integer' ? this.evaluated : this.floatEvaluated) { this.error = ''; return; }
     if (this.mode === 'float') {
-      const value = this.floatRadix === 10 ? encodeFloat(this.floatText, this.floatWidth) :
-        Natural.parse(this.floatText, this.floatRadix);
+      const value = this.evaluateFloat();
       if (value.bits.length > this.floatWidth) throw new Error('位模式超出当前浮点格式');
       this.floatBits = value;
       this.floatEvaluated = true;
@@ -115,18 +118,58 @@ export class ProgrammerSession {
     } catch (_) {}
   }
 
-  // 浮点输入保留原文，确认时才编码，避免逐键舍入改写正在输入的有效数字。
+  /** 原始位串不执行算术；十进制表达式的字面量和每步运算均按当前格式舍入。 */
+  private evaluateFloat(): Natural {
+    const value = this.floatRadix === 10 ? new FloatExpression(this.floatWidth).evaluate(this.floatText) :
+      Natural.parse(this.floatText, this.floatRadix);
+    if (value.bits.length > this.floatWidth) throw new Error('位模式超出当前浮点格式');
+    return value;
+  }
+
+  // 浮点输入保留原文；已确认结果接续运算时以其简短十进制往返，不重新执行旧表达式。
   private floatKey(key: string): void {
     if (key === 'AC') {
       this.floatText = '0'; this.floatBits = new Natural(); this.floatEvaluated = true;
       return;
     }
-    if (key === '⌫') this.floatText = this.floatText.slice(0, -1) || '0';
-    else if (key === '±') this.floatText = this.floatText.startsWith('-') ? this.floatText.slice(1) : '-' + this.floatText;
-    else if (key === 'NaN' || key === '∞') this.floatText = key === '∞' ? 'Infinity' : key;
-    else this.floatText = (this.floatEvaluated || this.floatText === '0' ? '' : this.floatText) + key;
+    if (key === '±' && this.floatEvaluated) {
+      // 直接改符号保留 signaling NaN 和 payload，不从显示文本重编码。
+      this.floatBits = negateFloat(this.floatBits, this.floatWidth);
+      this.floatText = decodeFloat(this.floatBits, this.floatWidth).decimal;
+      return;
+    }
+    if (key === '⌫') this.floatText = this.floatText.trimEnd().slice(0, -1).trimEnd() || '0';
+    else if (key === '±') this.toggleFloatSign();
+    else if (['+', '-', '*', '/'].includes(key)) {
+      if (this.floatEvaluated) this.floatText = decodeFloat(this.floatBits, this.floatWidth).decimal;
+      // e 后的正负号属于指数，其余运算符使用空格分隔，避免 1 e-2 一类歧义。
+      if (/[eE][+-]?$/.test(this.floatText) && (key === '+' || key === '-')) {
+        this.floatText = this.floatText.replace(/[+-]$/, '') + key;
+      } else this.floatText += ' ' + key + ' ';
+    } else {
+      const text = key === '∞' ? 'Infinity' : key;
+      if (this.floatEvaluated) this.floatText = '';
+      if (this.floatText === '0' && key !== '.' && key !== 'e') this.floatText = '';
+      this.floatText += text;
+    }
     this.floatEvaluated = false;
     if (this.floatText.length > 768) throw new Error('输入过长，请退格或清空');
+  }
+
+  /** ± 修改末尾操作数；未完成的科学记数法优先切换指数符号。 */
+  private toggleFloatSign(): void {
+    if (/[eE][+-]?$/.test(this.floatText)) {
+      this.floatText = this.floatText.endsWith('-') ? this.floatText.slice(0, -1) :
+        this.floatText.replace(/\+$/, '') + '-';
+      return;
+    }
+    const match = this.floatText.match(/(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$|(?:Infinity|Inf|NaN)$/i);
+    if (!match) { this.floatText += '-'; return; }
+    const start = this.floatText.length - match[0].length;
+    const prefix = this.floatText.slice(0, start);
+    const beforeSign = prefix.slice(0, -1).trimEnd();
+    const unary = /[+-]$/.test(prefix) && (beforeSign.length === 0 || /[+\-*/(]$/.test(beforeSign));
+    this.floatText = (unary ? prefix.slice(0, -1) + (prefix.endsWith('-') ? '' : '-') : prefix + '-') + match[0];
   }
 
   // 切进制前完成确认；格式化只改变编辑表示，不改变底层位模式。

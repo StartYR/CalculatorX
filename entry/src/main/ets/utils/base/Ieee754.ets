@@ -109,6 +109,75 @@ function encodeRatio(numerator: Natural, denominator: Natural, sign: number, for
   return compose(format, sign, exponent + format.bias, significand.low(format.fractionBits));
 }
 
+/** 只翻转符号位，保留负零和 NaN 的 quiet 位、payload。 */
+export function negateFloat(bits: Natural, width: number): Natural {
+  new FloatFormat(width);
+  if (bits.bits.length > width) throw new Error('位模式超出浮点格式宽度');
+  return bits.low(width - 1).add(Natural.small(1 - bits.bit(width - 1)).shift(width - 1));
+}
+
+// 有限数拆成整数有效数字 × 2^power；乘除时先运算短有效数字，最后应用二进制指数。
+function significandOf(bits: Natural, details: FloatDetails, format: FloatFormat): Natural {
+  const fraction = bits.low(format.fractionBits);
+  return details.exponent === 0 ? fraction : fraction.add(Natural.small(1).shift(format.fractionBits));
+}
+
+function encodeScaledRatio(numerator: Natural, denominator: Natural, power: number,
+  sign: number, format: FloatFormat): Natural {
+  return encodeRatio(power >= 0 ? numerator.shift(power) : numerator,
+    power >= 0 ? denominator : denominator.shift(-power), sign, format);
+}
+
+/**
+ * 操作数已经是目标格式位串；精确计算中间值后只按该格式舍入一次，不借助宿主 number。
+ * 固定 roundTiesToEven；无效运算和 NaN 操作数统一产生正的规范 quiet NaN，不模拟异常标志。
+ * 原始位串查看和一元变号不经过此函数，因此不会被规范化。
+ * @throws 运算符、位宽或操作数位串无效时抛错；浮点除零遵循无穷/NaN 规则。
+ */
+export function operateFloat(action: string, left: Natural, right: Natural, width: number): Natural {
+  if (!['+', '-', '*', '/'].includes(action)) throw new Error('不支持的浮点运算');
+  const format = new FloatFormat(width);
+  const a = decodeFloat(left, width);
+  const b = decodeFloat(right, width);
+  const maximum = Math.pow(2, format.exponentBits) - 1;
+  const nan = compose(format, 0, maximum, Natural.small(1).shift(format.fractionBits - 1));
+  if (a.category.includes('NaN') || b.category.includes('NaN')) return nan;
+  const aInfinite = a.category === '无穷';
+  const bInfinite = b.category === '无穷';
+  const aValue = significandOf(left, a, format);
+  const bValue = significandOf(right, b, format);
+  const aPower = a.actualExponent - format.fractionBits;
+  const bPower = b.actualExponent - format.fractionBits;
+
+  if (action === '+' || action === '-') {
+    const bSign = action === '-' ? 1 - b.sign : b.sign;
+    if (aInfinite || bInfinite) {
+      if (aInfinite && bInfinite && a.sign !== bSign) return nan;
+      return compose(format, aInfinite ? a.sign : bSign, maximum, new Natural());
+    }
+    // 对齐到较小指数后进行整数加减，连最远端的低位也参与最终舍入。
+    const power = Math.min(aPower, bPower);
+    const x = aValue.shift(aPower - power);
+    const y = bValue.shift(bPower - power);
+    const comparison = x.compare(y);
+    const magnitude = a.sign === bSign ? x.add(y) : comparison >= 0 ? x.subtract(y) : y.subtract(x);
+    // ties-to-even 下精确抵消得到 +0；两个同符号零相加保持该符号。
+    const sign = a.sign === bSign ? a.sign : comparison > 0 ? a.sign : comparison < 0 ? bSign : 0;
+    return encodeScaledRatio(magnitude, Natural.small(1), power, sign, format);
+  }
+
+  const sign = (a.sign + b.sign) % 2;
+  if (action === '*') {
+    if ((aInfinite && bValue.isZero()) || (bInfinite && aValue.isZero())) return nan;
+    if (aInfinite || bInfinite) return compose(format, sign, maximum, new Natural());
+    return encodeScaledRatio(aValue.multiply(bValue), Natural.small(1), aPower + bPower, sign, format);
+  }
+  if ((aInfinite && bInfinite) || (aValue.isZero() && bValue.isZero())) return nan;
+  if (aInfinite || bValue.isZero()) return compose(format, sign, maximum, new Natural());
+  if (bInfinite) return compose(format, sign, 0, new Natural());
+  return encodeScaledRatio(aValue, bValue, aPower - bPower, sign, format);
+}
+
 /** 同宽复制保留所有位；跨格式转换直接舍入精确值，NaN 规范为同符号 quiet NaN。 */
 export function convertFloat(bits: Natural, fromWidth: number, toWidth: number): Natural {
   if (fromWidth === toWidth) return new Natural(bits.bits);

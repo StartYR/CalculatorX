@@ -8,6 +8,7 @@
 import { describe, it, expect } from '@ohos/hypium';
 import { Word } from '../main/ets/utils/base/ProgrammerEngine';
 import { ProgrammerExpression } from '../main/ets/utils/base/ProgrammerExpression';
+import { FloatExpression } from '../main/ets/utils/base/FloatExpression';
 import { encodeFloat, convertFloat } from '../main/ets/utils/base/Ieee754';
 import { ProgrammerSession } from '../main/ets/utils/base/ProgrammerSession';
 
@@ -36,6 +37,20 @@ export default function programmerTest() {
       session.changeRadix(16);
       expect(session.word.format(10)).assertEqual('3');
       expect(session.expression).assertEqual('3');
+    });
+    it('roundsEachFloatOperationAtSelectedWidth', 0, () => {
+      // binary16 中 2048 + 1 位于中点，偶数舍入得到 2048，随后相减为零。
+      expect(new FloatExpression(16).evaluate('2048 + 1 - 2048').toString(16)).assertEqual('0');
+      expect(new FloatExpression(32).evaluate('2 + 3 * 4').toString(16)).assertEqual('41600000');
+      expect(new FloatExpression(64).evaluate('1 / -0').toString(16)).assertEqual('FFF0000000000000');
+    });
+    it('continuesFloatCalculationFromConfirmedResult', 0, () => {
+      const session = new ProgrammerSession();
+      session.mode = 'float';
+      for (const key of ['2', '+', '3', '=', '*', '4', '=']) session.key(key);
+      expect(session.floatBits.toString(16)).assertEqual('41A00000');
+      session.changeRadix(16);
+      expect(session.inputEnabled('*')).assertFalse();
     });
   });
 }

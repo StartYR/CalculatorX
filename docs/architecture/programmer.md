@@ -13,7 +13,8 @@
 | `utils/base/Natural.ets` | 低位在前的 bit 数组和精确非负整数算术 |
 | `utils/base/ProgrammerEngine.ets` | 固定字长 Word、标志位、算术和编码 |
 | `utils/base/ProgrammerExpression.ets` | ASCII token、括号与优先级求值 |
-| `utils/base/Ieee754.ets` | 精确十进制舍入、字段解析和格式转换 |
+| `utils/base/Ieee754.ets` | 精确十进制舍入、浮点四则运算、字段解析和格式转换 |
+| `utils/base/FloatExpression.ets` | 浮点十进制表达式、优先级与逐节点舍入 |
 | `utils/base/ProgrammerSession.ets` | 独立模式草稿、确认与配置切换 |
 | `utils/base/ProgrammerState.ets` | 设置、进程内会话与版本化历史 |
 
@@ -48,9 +49,13 @@
 
 ## IEEE 754
 
-支持 binary16 / binary32 / binary64，输入可选十进制、HEX 或 BIN 原始位串。浮点专属键盘支持指数、正负号、Infinity 和 NaN；按 `=` 确认，不执行浮点四则运算。
+支持 binary16 / binary32 / binary64，输入可选十进制、HEX 或 BIN 原始位串。浮点专属键盘支持指数、正负号、Infinity、NaN 和加减乘除；按 `=` 确认。十进制模式支持四则表达式，粘贴也支持括号；HEX/BIN 只接收原始位串，禁用算术键。
 
 十进制先解析为精确有理数，再以 roundTiesToEven 直接舍入。格式转换根据有效数字和二进制指数完成，不经过简短十进制显示。同格式切换保留 payload；跨格式 NaN 生成同符号的规范 quiet NaN。
+
+字面量先按当前格式编码，每个二元节点按 roundTiesToEven 独立舍入；乘除优先于加减，同级左结合。有限数的中间值由精确整数和二进制指数构造，不经过宿主 binary64 算术。溢出产生同符号无穷，下溢支持非正规数与带符号零；非零除零得到带符号无穷，`0/0`、`∞/∞`、`0×∞` 和异号无穷相加得到规范 quiet NaN。参与四则运算的 NaN 同样规范化，不模拟浮点异常标志。
+
+新数字替换已确认结果，二元运算接续结果，重复 `=` 不重复计算。`e` 后的正负号属于指数；`±` 改变末尾操作数，未完成指数时切换指数符号。已确认值的 `±` 直接翻转符号位，保留 NaN payload。切换进制、格式或位编辑仍先确认草稿。
 
 字段面板显示符号、存储指数、偏置、实际指数、尾数、有效数字形式和精确的“整数 × 2 的幂”解释。分类包括正负零、正规/非正规数、无穷、quiet/signaling NaN。位编辑切换至 HEX 以保留 payload。不同字段采用不同颜色，64 位数据可滚动、复制和编辑。
 

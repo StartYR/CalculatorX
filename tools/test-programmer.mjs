@@ -18,7 +18,8 @@ registerHooks({
 const { Word, Flags, operate, encodingRows, decodeEncoding } = await import('../entry/src/main/ets/utils/base/ProgrammerEngine.ets');
 const { Natural } = await import('../entry/src/main/ets/utils/base/Natural.ets');
 const { ProgrammerExpression } = await import('../entry/src/main/ets/utils/base/ProgrammerExpression.ets');
-const { encodeFloat, decodeFloat, convertFloat } = await import('../entry/src/main/ets/utils/base/Ieee754.ets');
+const { encodeFloat, decodeFloat, convertFloat, operateFloat, negateFloat } = await import('../entry/src/main/ets/utils/base/Ieee754.ets');
+const { FloatExpression } = await import('../entry/src/main/ets/utils/base/FloatExpression.ets');
 const { ProgrammerSession } = await import('../entry/src/main/ets/utils/base/ProgrammerSession.ets');
 const { recordOf, historyRecordOf, restoreRecord, settingsOf, restoreSettings } = await import('../entry/src/main/ets/utils/base/ProgrammerState.ets');
 let checks = 0;
@@ -211,4 +212,71 @@ equal(restoreRecord(JSON.stringify(historyRecordOf(session))).floatText, '0');
 equal(encodingRows(word(255), false)[1].bits, '同宽不可表示');
 equal(encodingRows(word(255), true)[0].bits, '同宽不可表示');
 equal(convertFloat(encodeFloat('0.0000000894069671630859375', 64), 64, 16).toString(16), '2');
+// 目标格式的每一步都舍入；溢出、非正规数和零符号不能用近似数值比较代替位串。
+for (const width of [16, 32, 64]) {
+  const expression = new FloatExpression(width);
+  for (const [input, expected] of [
+    ['2 + 3 * 4', '14'], ['(2 + 3) * 4', '20'], ['8 / 4 / 2', '1'],
+    ['1e-2 + 2E+1', '20.01'], ['1 - -2', '3'], ['-0 + -0', '-0'],
+    ['-0 - -0', '0'], ['-0 * 3', '-0'], ['0 / -3', '-0'],
+    ['1 / -0', '-Infinity'], ['-1 / -0', 'Infinity'], ['1 / -Infinity', '-0'],
+    ['Infinity - Infinity', 'NaN'], ['0 / 0', 'NaN'], ['0 * Infinity', 'NaN'],
+    ['Infinity / Infinity', 'NaN'], ['NaN + 1', 'NaN']
+  ]) equal(expression.evaluate(input).toString(16), encodeFloat(expected, width).toString(16));
+  for (const input of ['', '1e', '1e-', '1 +', '1 2', '1..2', '2(3)', '1 AND 2', '1e -2', '(1', '1)']) {
+    assert.throws(() => expression.evaluate(input)); checks++;
+  }
+  assert.throws(() => expression.evaluate('('.repeat(70) + '1' + ')'.repeat(70))); checks++;
+  const minimum = Natural.small(1);
+  equal(operateFloat('/', minimum, encodeFloat('2', width), width).toString(16), '0');
+  equal(operateFloat('/', Natural.small(3), encodeFloat('2', width), width).toString(16), '2');
+  equal(operateFloat('*', negateFloat(minimum, width), encodeFloat('0.5', width), width).toString(16),
+    encodeFloat('-0', width).toString(16));
+  const f = new ProgrammerSession(); f.mode = 'float'; f.floatWidth = width;
+  for (const key of ['2', '+', '3', '*', '4', '=']) f.key(key);
+  equal(decodeFloat(f.floatBits, width).decimal, '14');
+  for (const key of ['/', '2', '=']) f.key(key);
+  equal(decodeFloat(f.floatBits, width).decimal, '7');
+  f.key('='); equal(decodeFloat(f.floatBits, width).decimal, '7');
+  f.key('1'); f.key('='); equal(decodeFloat(f.floatBits, width).decimal, '1');
+  for (const key of ['AC', '1', 'e', '-', '2', '=']) f.key(key);
+  equal(f.floatBits.toString(16), encodeFloat('0.01', width).toString(16));
+  for (const key of ['AC', '2', '+', '3', '±', '=']) f.key(key);
+  equal(decodeFloat(f.floatBits, width).decimal, '-1');
+  for (const key of ['AC', '1', '/', '∞', '=']) f.key(key);
+  equal(decodeFloat(f.floatBits, width).decimal, '0');
+  f.changeRadix(16);
+  for (const key of ['+', '-', '*', '/', 'e', '.', 'NaN', 'AND', 'SHL']) equal(f.inputEnabled(key), false);
+  const before = f.floatText; f.key('*'); equal(f.floatText, before);
+}
+equal(new FloatExpression(16).evaluate('2048 + 1 - 2048').toString(16), '0');
+equal(new FloatExpression(16).evaluate('65504 * 2').toString(16), '7C00');
+equal(new FloatExpression(32).evaluate('16777216 + 1 - 16777216').toString(16), '0');
+equal(new FloatExpression(64).evaluate('9007199254740992 + 1 - 9007199254740992').toString(16), '0');
+
+// DataView 独立产生宿主 IEEE 运算的参照位串；NaN 仅核对分类，payload 策略由固定向量检查。
+for (const width of [16, 32, 64]) {
+  const read = bits => {
+    if (width === 16) { view.setUint16(0, Number(bits)); return view.getFloat16(0); }
+    if (width === 32) { view.setUint32(0, Number(bits)); return view.getFloat32(0); }
+    view.setBigUint64(0, bits); return view.getFloat64(0);
+  };
+  const write = number => {
+    if (width === 16) { view.setFloat16(0, number); return BigInt(view.getUint16(0)); }
+    if (width === 32) { view.setFloat32(0, number); return BigInt(view.getUint32(0)); }
+    view.setFloat64(0, number); return view.getBigUint64(0);
+  };
+  const mask = (1n << BigInt(width)) - 1n;
+  for (let i = 0; i < 180; i++) {
+    const a = (BigInt(random()) << 32n | BigInt(random())) & mask;
+    const b = (BigInt(random()) << 32n | BigInt(random())) & mask;
+    const x = read(a), y = read(b);
+    for (const action of ['+', '-', '*', '/']) {
+      const expected = action === '+' ? x + y : action === '-' ? x - y : action === '*' ? x * y : x / y;
+      const actual = operateFloat(action, Natural.parse(a.toString(16), 16), Natural.parse(b.toString(16), 16), width);
+      if (Number.isNaN(expected)) equal(decodeFloat(actual, width).category, 'quiet NaN');
+      else equal(actual.toString(16), write(expected).toString(16).toUpperCase());
+    }
+  }
+}
 console.log(`Programmer core and session: ${checks} assertions passed.`);
