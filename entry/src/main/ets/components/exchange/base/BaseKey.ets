@@ -20,6 +20,14 @@ function keyRole(key: string): KeyboardKeyRole {
   return KeyboardKeyRole.OPERATOR;
 }
 
+// 字体分级独立于按键表面的角色，避免调整文字时连带改变背景与光感材质。
+function keyFontColor(key: string): ResourceColor {
+  if (key === 'AC' || key === '⌫' || key === '=') return Color.White;
+  if (/^[1-9A-F]$/.test(key)) return $r('sys.color.font_primary');
+  if (['+', '-', '*', '/', 'MOD', 'AND', 'SHL', 'SHR'].includes(key)) return $r('sys.color.font_emphasize');
+  return $r('sys.color.font_secondary');
+}
+
 function alternatives(key: string): string[] {
   if (key === 'AND') return ['OR', 'XOR', 'NOT'];
   if (key === 'SHL') return ['ROL', 'RCL'];
@@ -89,14 +97,13 @@ export struct BaseKey {
             .width(48).height(48)
             .constraintSize({ maxWidth: '100%', maxHeight: '100%' })
             .objectFit(ImageFit.Contain)
-            .fillColor($r('sys.color.font_on_primary'))
+            .fillColor(keyFontColor(this.keyText))
             .draggable(false)
         } else {
           Text(this.keyText === '*' ? '×' : this.keyText === '/' ? '÷' : this.keyText === '-' ? '−' : this.keyText)
             .fontSize(this.keyText.length > 2 ? 16 : 23)
             .fontWeight(FontWeight.Medium)
-            .fontColor(keyRole(this.keyText) === KeyboardKeyRole.DANGER || this.keyText === '=' ?
-              $r('sys.color.font_on_primary') : $r('sys.color.font_primary'))
+            .fontColor(keyFontColor(this.keyText))
         }
         if (this.integerMode && alternatives(this.keyText).length > 0) {
           Stack({ alignContent: Alignment.Bottom }) {

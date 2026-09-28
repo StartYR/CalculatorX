@@ -459,7 +459,7 @@ export struct BaseConverter {
             onFlip: (index: number) => this.select(() => this.session.flip(index)) })
         }
       }.width('100%').padding({ left: 14, right: 14, top: 8, bottom: this.keyboardHeight() + 12 })
-    }.width('100%').height('100%').scrollBar(BarState.Auto).align(Alignment.Top)
+    }.width('100%').height('100%').scrollBar(BarState.Off).align(Alignment.Top)
     .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     .padding({ top: this.statusBarHeight + 56 })
   }
