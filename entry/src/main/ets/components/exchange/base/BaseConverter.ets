@@ -265,9 +265,11 @@ export struct BaseConverter {
       const text = data.getPrimaryText().trim();
       this.apply(() => {
         if (text.length > (this.session.mode === 'integer' ? 1024 : 768)) throw new Error('剪贴板输入过长');
-        if (this.session.mode === 'integer') { this.session.expression = text; this.session.evaluated = false; }
-        else { this.session.floatText = text; this.session.floatEvaluated = false; }
-        this.session.confirm();
+        if (this.session.mode === 'integer') {
+          this.session.expression = text;
+          this.session.evaluated = false;
+          this.session.confirm();
+        } else this.session.replaceFloatInput(text);
       });
     } catch (_) { this.session.error = '无法读取剪贴板'; this.session = this.session.copy(); }
   }
@@ -277,8 +279,10 @@ export struct BaseConverter {
   }
   private value(radix: number): string {
     if (this.session.mode === 'integer') return this.session.word.format(radix, this.session.signed);
-    if (radix === 10) return decodeFloat(this.session.floatBits, this.session.floatWidth).decimal;
-    return this.session.floatBits.toString(radix).padStart(radix === 16 ? this.session.floatWidth / 4 : this.session.floatWidth, '0');
+    // 数值行和字段面板共用预览来源；保存历史仍使用独立的已确认结果。
+    const bits = this.session.displayedFloatBits();
+    if (radix === 10) return decodeFloat(bits, this.session.floatWidth).decimal;
+    return bits.toString(radix).padStart(radix === 16 ? this.session.floatWidth / 4 : this.session.floatWidth, '0');
   }
 
   private multilineBinary(radix: number): boolean {
@@ -338,6 +342,11 @@ export struct BaseConverter {
         } else if (this.session.mode === 'integer' && !this.session.evaluated) {
           Text('输入预览 · 按 = 确认；不完整输入保留最近有效值')
             .fontSize(12).fontColor($r('sys.color.font_secondary')).width('100%')
+        } else if (this.session.mode === 'float' && !this.session.floatEvaluated) {
+          Text(this.session.floatPreviewValid ? $r('app.string.programmer_float_preview_ready') :
+            $r('app.string.programmer_float_preview_pending'))
+            .fontSize(12).width('100%').id('base.float.preview')
+            .fontColor(this.session.floatPreviewValid ? $r('sys.color.font_secondary') : $r('sys.color.warning'))
         }
         this.RadixRow('HEX', 16)
         this.RadixRow('DEC', 10)
@@ -375,7 +384,7 @@ export struct BaseConverter {
             ProgrammerChip({ label: '字段', selected: this.panel === 'bits',
               onActivate: () => { this.panel = this.panel === 'bits' ? '' : 'bits'; }, semanticId: 'base.bits' })
           }.width('100%')
-          Text(decodeFloat(this.session.floatBits, this.session.floatWidth).category + ' · 按 = 确认输入')
+          Text(decodeFloat(this.session.displayedFloatBits(), this.session.floatWidth).category + ' · 按 = 确认输入')
             .fontSize(12).fontColor($r('sys.color.font_secondary')).width('100%')
         }
         if (this.panel.length > 0) {

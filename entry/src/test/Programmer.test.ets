@@ -52,5 +52,17 @@ export default function programmerTest() {
       session.changeRadix(16);
       expect(session.inputEnabled('*')).assertFalse();
     });
+    it('keepsConfirmedFloatWhilePreviewingIncompleteInput', 0, () => {
+      const session = new ProgrammerSession();
+      session.mode = 'float';
+      session.key('2'); session.key('=');
+      session.replaceFloatInput('3');
+      expect(session.displayedFloatBits().toString(16)).assertEqual('40400000');
+      expect(session.floatBits.toString(16)).assertEqual('40000000');
+      session.key('e'); session.key('-');
+      expect(session.floatPreviewValid).assertFalse();
+      expect(session.displayedFloatBits().toString(16)).assertEqual('40400000');
+      expect(session.floatBits.toString(16)).assertEqual('40000000');
+    });
   });
 }

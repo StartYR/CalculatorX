@@ -29,6 +29,9 @@ export class ProgrammerSession {
   floatText: string = '0';
   floatBits: Natural = new Natural();
   floatEvaluated: boolean = true;
+  // 预览仅用于显示，不写入历史或覆盖 floatBits；无效草稿保留最近一次有效预览。
+  private floatPreviewBits: Natural | undefined = undefined;
+  floatPreviewValid: boolean = true;
 
   // 撤销快照复制会话字段；Word/Natural/Flags 由运算整体替换，不在原对象上改位。
   copy(): ProgrammerSession {
@@ -49,6 +52,8 @@ export class ProgrammerSession {
     next.floatText = this.floatText;
     next.floatBits = this.floatBits;
     next.floatEvaluated = this.floatEvaluated;
+    next.floatPreviewBits = this.floatPreviewBits;
+    next.floatPreviewValid = this.floatPreviewValid;
     return next;
   }
 
@@ -71,6 +76,8 @@ export class ProgrammerSession {
       if (value.bits.length > this.floatWidth) throw new Error('位模式超出当前浮点格式');
       this.floatBits = value;
       this.floatEvaluated = true;
+      this.floatPreviewBits = undefined;
+      this.floatPreviewValid = true;
     } else {
       const result = new ProgrammerExpression(this.radix, this.width, this.signed, this.carry, this.previousFlags)
         .evaluate(this.expression);
@@ -126,18 +133,51 @@ export class ProgrammerSession {
     return value;
   }
 
+  /** 显示统一读取此值；确认结果、序列化与历史仍读取 floatBits。 */
+  displayedFloatBits(): Natural {
+    return this.floatEvaluated ? this.floatBits : this.floatPreviewBits || this.floatBits;
+  }
+
+  /** 粘贴与键盘共用预览入口；解析失败只改变有效性标志，确认时才抛出诊断。 */
+  refreshFloatPreview(): void {
+    if (this.floatEvaluated) {
+      this.floatPreviewBits = undefined;
+      this.floatPreviewValid = true;
+      return;
+    }
+    try {
+      this.floatPreviewBits = this.evaluateFloat();
+      this.floatPreviewValid = true;
+    } catch (_) {
+      this.floatPreviewValid = false;
+    }
+  }
+
+  /** 替换草稿不会隐式确认，错误粘贴也允许继续编辑，并保持此前显示与已确认位串。 */
+  replaceFloatInput(text: string): void {
+    if (text.length > 768) throw new Error('输入过长，请退格或清空');
+    if (this.floatEvaluated) this.floatPreviewBits = this.floatBits;
+    this.floatText = text;
+    this.floatEvaluated = false;
+    this.error = '';
+    this.refreshFloatPreview();
+  }
+
   // 浮点输入保留原文；已确认结果接续运算时以其简短十进制往返，不重新执行旧表达式。
   private floatKey(key: string): void {
     if (key === 'AC') {
       this.floatText = '0'; this.floatBits = new Natural(); this.floatEvaluated = true;
+      this.refreshFloatPreview();
       return;
     }
     if (key === '±' && this.floatEvaluated) {
       // 直接改符号保留 signaling NaN 和 payload，不从显示文本重编码。
       this.floatBits = negateFloat(this.floatBits, this.floatWidth);
       this.floatText = decodeFloat(this.floatBits, this.floatWidth).decimal;
+      this.refreshFloatPreview();
       return;
     }
+    if (this.floatEvaluated) this.floatPreviewBits = this.floatBits;
     if (key === '⌫') this.floatText = this.floatText.trimEnd().slice(0, -1).trimEnd() || '0';
     else if (key === '±') this.toggleFloatSign();
     else if (['+', '-', '*', '/'].includes(key)) {
@@ -153,6 +193,7 @@ export class ProgrammerSession {
       this.floatText += text;
     }
     this.floatEvaluated = false;
+    this.refreshFloatPreview();
     if (this.floatText.length > 768) throw new Error('输入过长，请退格或清空');
   }
 

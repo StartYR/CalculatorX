@@ -279,4 +279,78 @@ for (const width of [16, 32, 64]) {
     }
   }
 }
+// 草稿、预览、确认结果各自独立；预览快照供撤销/重做复用，历史仅记录确认位串。
+for (const width of [16, 32, 64]) {
+  const f = new ProgrammerSession(); f.mode = 'float'; f.floatWidth = width;
+  f.key('2');
+  equal(f.floatBits.toString(16), '0');
+  equal(f.displayedFloatBits().toString(16), encodeFloat('2', width).toString(16));
+  equal(f.floatEvaluated, false); equal(f.floatPreviewValid, true);
+  f.key('+');
+  equal(f.floatPreviewValid, false);
+  equal(decodeFloat(f.displayedFloatBits(), width).decimal, '2');
+  const pending = f.copy();
+  f.key('3');
+  equal(decodeFloat(f.displayedFloatBits(), width).decimal, '5');
+  equal(decodeFloat(pending.displayedFloatBits(), width).decimal, '2');
+  equal(pending.floatPreviewValid, false);
+  equal(recordOf(f).floatBits, '0');
+  f.key('=');
+  equal(decodeFloat(f.floatBits, width).decimal, '5');
+  const history = historyRecordOf(f);
+  equal(decodeFloat(restoreRecord(JSON.stringify(history)).displayedFloatBits(), width).decimal, '5');
+  f.replaceFloatInput('1e');
+  equal(f.floatPreviewValid, false);
+  equal(decodeFloat(f.displayedFloatBits(), width).decimal, '5');
+  const beforeWidth = f.floatWidth;
+  assert.throws(() => f.changeFloatWidth(width === 16 ? 32 : 16)); checks++;
+  equal(f.floatWidth, beforeWidth);
+  assert.throws(() => f.changeRadix(16)); checks++;
+  equal(f.floatRadix, 10);
+  assert.throws(() => f.flip(0)); checks++;
+  f.key('-'); equal(f.floatPreviewValid, false);
+  f.key('2'); equal(f.floatPreviewValid, true);
+  equal(f.displayedFloatBits().toString(16), encodeFloat('0.01', width).toString(16));
+  equal(f.floatBits.toString(16), encodeFloat('5', width).toString(16));
+  f.key('⌫'); equal(f.floatPreviewValid, false);
+  equal(f.displayedFloatBits().toString(16), encodeFloat('0.01', width).toString(16));
+  f.mode = 'integer';
+  equal(historyRecordOf(f).floatText, '5');
+  f.mode = 'float';
+  f.replaceFloatInput('1 / 0');
+  equal(decodeFloat(f.displayedFloatBits(), width).category, '无穷');
+  f.replaceFloatInput('0 / 0');
+  equal(decodeFloat(f.displayedFloatBits(), width).category, 'quiet NaN');
+  f.key('AC');
+  equal(f.floatBits.toString(16), '0'); equal(f.displayedFloatBits().toString(16), '0');
+  equal(f.floatEvaluated, true); equal(f.floatPreviewValid, true);
+  f.changeRadix(16);
+  const exponentBits = width === 16 ? 5 : width === 32 ? 8 : 11;
+  const fractionBits = width - exponentBits - 1;
+  const nanBits = ((1n << BigInt(exponentBits)) - 1n) << BigInt(fractionBits) | 0x15n;
+  f.replaceFloatInput(nanBits.toString(16));
+  equal(decodeFloat(f.displayedFloatBits(), width).category, 'signaling NaN');
+  equal(f.floatBits.toString(16), '0');
+  f.key('='); f.changeRadix(10);
+  f.replaceFloatInput('1 +');
+  equal(f.floatBits.toString(16), nanBits.toString(16).toUpperCase());
+  equal(f.displayedFloatBits().toString(16), nanBits.toString(16).toUpperCase());
+  f.replaceFloatInput('3');
+  equal(decodeFloat(f.displayedFloatBits(), width).decimal, '3');
+  equal(f.floatBits.toString(16), nanBits.toString(16).toUpperCase());
+  const restored = restoreRecord(JSON.stringify(history));
+  restored.replaceFloatInput('4');
+  equal(decodeFloat(restored.displayedFloatBits(), width).decimal, '4');
+  f.key('AC'); f.changeRadix(2);
+  f.replaceFloatInput('1');
+  equal(f.displayedFloatBits().toString(16), '1');
+  f.replaceFloatInput('1'.repeat(width + 1));
+  equal(f.floatPreviewValid, false); equal(f.displayedFloatBits().toString(16), '1');
+  assert.throws(() => f.confirm()); checks++;
+  equal(f.floatBits.toString(16), '0');
+  f.replaceFloatInput('1'); f.flip(width - 1);
+  equal(f.floatBits.bit(width - 1), 1);
+  equal(f.displayedFloatBits().bit(width - 1), 1);
+  equal(f.floatRadix, 16); equal(f.floatEvaluated, true);
+}
 console.log(`Programmer core and session: ${checks} assertions passed.`);

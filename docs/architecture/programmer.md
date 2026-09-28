@@ -57,6 +57,8 @@
 
 新数字替换已确认结果，二元运算接续结果，重复 `=` 不重复计算。`e` 后的正负号属于指数；`±` 改变末尾操作数，未完成指数时切换指数符号。已确认值的 `±` 直接翻转符号位，保留 NaN payload。切换进制、格式或位编辑仍先确认草稿。
 
+十进制表达式或 HEX/BIN 草稿有效时，DEC/HEX/BIN、分类、位与字段面板同步预览；`1e`、`1e-`、末尾运算符和超宽位串保留最近有效预览，并提示继续输入或修正。`floatText` 保存草稿，`floatPreviewBits` 保存最近有效预览，`floatBits` 只保存已确认结果；显示统一通过 `displayedFloatBits()` 读取。预览不写历史，不覆盖确认的 NaN payload。浮点粘贴同样先预览，按 `=` 才确认；原始位编辑与已确认值变号仍直接更新位串。
+
 字段面板显示符号、存储指数、偏置、实际指数、尾数、有效数字形式和精确的“整数 × 2 的幂”解释。分类包括正负零、正规/非正规数、无穷、quiet/signaling NaN。位编辑切换至 HEX 以保留 payload。不同字段采用不同颜色，64 位数据可滚动、复制和编辑。
 
 ## 界面与兼容
@@ -68,8 +70,8 @@
 ## 状态与历史
 
 - `KEY_PROGRAMMER_SETTINGS`（`programmer.settings.v1`）保存模式、整数进制/字长/符号、浮点格式/进制；不落盘草稿、错误和 C-in。
-- `ProgrammerMemory` 在进程内保留模块往返会话。撤销/重做最多 50 个快照，离开组件后撤销栈清空。
-- 确认成功写 RDB，`module_type=base`。`extra_params` 使用 `kind=programmer, version=1`，包含配置、位模式、输入、整数标志和 C-in；非活动模式只保存最近有效值。
+- `ProgrammerMemory` 在进程内保留模块往返会话。撤销/重做最多 50 个快照，包含浮点草稿、预览有效性与最近预览值；离开组件后撤销栈清空。
+- 确认成功写 RDB，`module_type=base`。`extra_params` 使用 `kind=programmer, version=1`，包含配置、位模式、输入、整数标志和 C-in；非活动整数模式保存最近有效值，非活动浮点模式保存最近确认结果，预览不进入版本化历史。
 - 相同表达式在不同上下文中不会被去重；表结构不变，无迁移。全局“转换”分类包括 `conversion,base`。
 - 顶栏历史通过 `event_programmer_restore` 传递完整记录。点输入恢复表达式及配置，点输出恢复结果，浮点以 HEX 回填以保留 payload。全局历史页仍使用复制行为。
 
@@ -86,3 +88,7 @@ pwsh -NoProfile -File tools/check-keyboard-architecture.ps1
 debug 下 `base.programmer` 的 accessibilityDescription 提供 `{ data, error, integerConfirmed, floatConfirmed }`。CLI `screen get` 返回 `programmer` 字段，其他模块返回 null；release 不暴露机器 JSON。设备场景为 `tools/calcx/tests/scenarios/programmer-ui-smoke.json`，尚未在设备执行。
 
 计算问题检查核心/会话测试；显示不同步检查 `ProgrammerSession`；历史恢复检查 `extra_params`；光感检查 API、偏好、TabBar 区域与公共表面。API 26 双开关、API 23 回退、深浅色、小窗口、长按和历史操作仍需设备验收。
+
+### 2026-09-28 增量验证
+
+IEEE 四则运算与预览已通过宿主核心测试 259,706 项断言、模块 CodeLinter、CLI 静态检查、键盘架构检查和 `entry:default@CompileArkTS`（含资源编译）。新增 ArkTS 单元用例尚未在 Hypium 运行。编译有异常传播提示及既有 API 弃用/权限警告；未做 HAP 打包或设备验收。
