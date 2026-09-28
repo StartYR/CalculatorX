@@ -40,14 +40,13 @@ const FLOAT_KEYS: string[] = [
   '.', '0', '0', '±', '='
 ];
 
-// 数值换算只提供数字、小数点和输入控制；相邻的 0 共用一个四列宽按键。
+// 数值换算实时预览，键盘只提供数字、小数点和输入控制。
 const NUMERIC_KEYS: string[] = [
   'A', 'B', 'C', 'D',
   'E', 'F', '⌫', 'AC',
   '7', '8', '9', '±',
   '4', '5', '6', '.',
-  '1', '2', '3', '=',
-  '0', '0', '0', '0'
+  '1', '2', '3', '0'
 ];
 
 // 标签文字和选中态通过响应式属性更新，不能使用按值传参的 Builder 固定初始状态。
@@ -363,12 +362,11 @@ export struct BaseConverter {
         }.width('100%').id('base.expression')
         if (this.session.error.length > 0) {
           Text(this.session.error).fontSize(12).fontColor($r('sys.color.warning')).width('100%').id('base.error')
-        } else if (this.session.mode === 'numeric' && !this.session.numeric.evaluated) {
-          Text(this.session.numeric.previewValid ? $r('app.string.programmer_float_preview_ready') :
-            $r('app.string.programmer_float_preview_pending'))
+        } else if (this.session.mode === 'numeric' && !this.session.numeric.previewValid) {
+          Text($r('app.string.base_numeric_preview_pending'))
             .width('100%')
             .fontSize(12)
-            .fontColor(this.session.numeric.previewValid ? $r('sys.color.font_secondary') : $r('sys.color.warning'))
+            .fontColor($r('sys.color.warning'))
             .id('base.numeric.preview')
         } else if (this.session.mode === 'integer' && !this.session.evaluated) {
           Text('输入预览 · 按 = 确认；不完整输入保留最近有效值')
@@ -475,7 +473,7 @@ export struct BaseConverter {
             .columnStart(index % this.keyboardColumns()).columnEnd(index % this.keyboardColumns() + this.keyboardKeySpan(index) - 1)
         }
       }, (key: string, index: number) => this.session.mode + '.' + index.toString() + '.' + key)
-    }.columnsTemplate(this.session.mode === 'numeric' ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr 1fr 1fr').rowsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
+    }.columnsTemplate(this.session.mode === 'numeric' ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr 1fr 1fr').rowsTemplate(this.session.mode === 'numeric' ? '1fr 1fr 1fr 1fr 1fr' : '1fr 1fr 1fr 1fr 1fr 1fr')
     .rowsGap(8).columnsGap(8).width('100%').height('100%')
     .padding({ left: 12, right: 12, top: 12, bottom: 8 + Math.max(0, this.navBarHeight - 8) })
   }

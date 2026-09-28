@@ -404,7 +404,7 @@ pwsh -NoProfile -File tools/test-programmer-cli.ps1
 
 ### 数值模式接口（2026-09-29）
 
-数值新增场景 `tools/calcx/tests/scenarios/numeric-ui-smoke.json` 覆盖十进制 `0.1`、确认、循环小数进制往返和“编辑原值”。场景仅通过静态检查，尚未执行设备操作；可使用当前源码入口运行，避免依赖旧启动器中的脚本副本：
+数值新增场景 `tools/calcx/tests/scenarios/numeric-ui-smoke.json` 覆盖十进制 `0.1`、实时预览、循环小数进制往返和“编辑原值”。场景仅通过静态检查，尚未执行设备操作；可使用当前源码入口运行，避免依赖旧启动器中的脚本副本：
 
 ```powershell
 pwsh -NoProfile -File tools/calcx/runtime/calcx.ps1 scenario run tools/calcx/tests/scenarios/numeric-ui-smoke.json

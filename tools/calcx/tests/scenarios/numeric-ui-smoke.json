@@ -41,12 +41,8 @@
       "target": "base.key.1"
     },
     {
-      "command": "ui.click",
-      "target": "base.key.equals"
-    },
-    {
       "command": "wait",
-      "path": "programmer.numericConfirmed",
+      "path": "programmer.numericPreviewValid",
       "equals": true,
       "timeoutSeconds": 10
     },
