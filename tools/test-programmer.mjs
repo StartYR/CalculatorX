@@ -355,4 +355,20 @@ for (const width of [16, 32, 64]) {
   equal(f.displayedFloatBits().bit(width - 1), 1);
   equal(f.floatRadix, 16); equal(f.floatEvaluated, true);
 }
+// 输入框不补固定字长的高位零，切换进制及位编辑仍保持原始浮点位模式。
+for (const width of [16, 32, 64]) {
+  const f = new BaseConversionSession();
+  f.mode = 'float'; f.floatWidth = width;
+  f.changeRadix(16); equal(f.floatText, '0');
+  f.replaceFloatInput('1'); f.confirm();
+  f.changeRadix(16); equal(f.floatText, '1');
+  f.changeRadix(2); equal(f.floatText, '1');
+  equal(f.floatBits.toString(16), '1');
+  f.flip(1); equal(f.floatText, '3');
+  f.flip(0); equal(f.floatText, '2');
+  equal(f.floatBits.toString(16), '2');
+  f.changeFloatWidth(width); equal(f.floatText, '2');
+  const restored = restoreRecord(JSON.stringify(historyRecordOf(f)));
+  equal(restored.floatText, '2'); equal(restored.floatBits.toString(16), '2');
+}
 console.log(`Programmer core and session: ${checks} assertions passed.`);

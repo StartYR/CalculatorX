@@ -31,6 +31,18 @@ export default function programmerTest() {
       expect(encodeFloat('1.000488281250000000000001', 16).toString(16)).assertEqual('3C01');
       expect(convertFloat(encodeFloat('1.00048828125', 64), 64, 16).toString(16)).assertEqual('3C00');
     });
+    it('keepsFloatInputUnpadded', 0, () => {
+      const session = new BaseConversionSession();
+      session.mode = 'float';
+      session.changeRadix(16);
+      expect(session.floatText).assertEqual('0');
+      session.replaceFloatInput('1'); session.confirm();
+      session.changeRadix(2);
+      expect(session.floatText).assertEqual('1');
+      session.flip(1);
+      expect(session.floatText).assertEqual('3');
+      expect(session.floatBits.toString(16)).assertEqual('3');
+    });
     it('keepsBitsWhenChangingRadix', 0, () => {
       const session = new BaseConversionSession();
       session.mode = 'integer';

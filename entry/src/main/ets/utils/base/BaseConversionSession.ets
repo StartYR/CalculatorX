@@ -228,8 +228,9 @@ export class BaseConversionSession {
     this.confirm();
     if (this.mode === 'float') {
       this.floatRadix = radix;
+      // 固定位宽补零只用于结果行，编辑文本保持最短原始位串。
       this.floatText = radix === 10 ? decodeFloat(this.floatBits, this.floatWidth).decimal :
-        this.floatBits.toString(radix).padStart(radix === 16 ? this.floatWidth / 4 : this.floatWidth, '0');
+        this.floatBits.toString(radix);
     } else {
       this.radix = radix;
       this.expression = this.word.format(radix, this.signed, false);
@@ -276,7 +277,7 @@ export class BaseConversionSession {
       this.floatBits = new Word(this.floatBits, this.floatWidth).flip(index).value;
       // 位编辑切换到原始 HEX，避免重新编码 NaN 时丢失 payload。
       this.floatRadix = 16;
-      this.floatText = this.floatBits.toString(16).padStart(this.floatWidth / 4, '0');
+      this.floatText = this.floatBits.toString(16);
       this.floatEvaluated = true;
     }
   }
