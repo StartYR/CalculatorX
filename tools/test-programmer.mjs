@@ -3,6 +3,7 @@ import { registerHooks, stripTypeScriptTypes } from 'node:module';
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 
+// 宿主机只擦除纯核心类型，不模拟 ArkUI；框架类型错误仍需 ArkTS 工具验证。
 registerHooks({
   resolve(specifier, context, next) {
     if (context.parentURL?.endsWith('.ets') && specifier.startsWith('./')) specifier += '.ets';
@@ -23,6 +24,7 @@ const { recordOf, historyRecordOf, restoreRecord, settingsOf, restoreSettings } 
 let checks = 0;
 function equal(actual, expected) { assert.equal(actual, expected); checks++; }
 function word(value, width = 8) { return Word.parse(String(value), 10, width); }
+// 固定种子保证边界组合与随机样本可复现，测试参照使用独立的 BigInt 运算。
 let seed = 0x173025;
 function random() { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed; }
 for (const width of [8, 16, 32, 64]) {
@@ -129,6 +131,7 @@ for (let bits = 0; bits <= 65535; bits++) {
   if (!decoded.category.includes('NaN')) equal(encodeFloat(decoded.decimal, 16).toString(16), raw.toString(16));
   if (!decoded.category.includes('NaN')) equal(convertFloat(convertFloat(raw, 16, 64), 64, 16).toString(16), raw.toString(16));
 }
+// DataView 按宿主 IEEE 格式产生参照位串，检查编码器的目标格式舍入。
 const buffer = new ArrayBuffer(8), view = new DataView(buffer);
 for (const width of [32, 64]) for (let i = 0; i < 300; i++) {
   const input = (random() / 1000) + 'e' + ((random() % (width === 32 ? 80 : 620)) - (width === 32 ? 45 : 320));

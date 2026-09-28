@@ -2,6 +2,8 @@
  * Copyright (c) 2026 StartYi. All rights reserved.
  * @file ProgrammerInspector.ets
  * @description 位编辑、整数编码与浮点字段观察
+ * @author StartYi
+ * @date 2026/09/23 01:00
  */
 import { ProgrammerSession } from '../../../utils/base/ProgrammerSession';
 import { encodingRows, decodeEncoding, EncodingRow } from '../../../utils/base/ProgrammerEngine';
@@ -14,6 +16,7 @@ export struct ProgrammerInspector {
   @Prop panel: string = 'bits';
   onFlip: (index: number) => void = () => {};
 
+  // 视觉顺序从高位到低位；点击仍传真实位索引，与 Natural 的低位在前存储区分。
   private indices(): number[] {
     const result: number[] = [];
     const width = this.session.mode === 'integer' ? this.session.width : this.session.floatWidth;
@@ -23,6 +26,7 @@ export struct ProgrammerInspector {
   private bit(index: number): number {
     return this.session.mode === 'integer' ? this.session.word.value.bit(index) : this.session.floatBits.bit(index);
   }
+  // 字段边界由当前浮点格式推导，避免 binary16/32/64 切换后沿用旧分段。
   private fieldColor(index: number): ResourceColor {
     if (this.session.mode === 'integer') return $r('sys.color.font_emphasize');
     const format = new FloatFormat(this.session.floatWidth);
@@ -30,6 +34,7 @@ export struct ProgrammerInspector {
       index >= format.fractionBits ? $r('sys.color.font_emphasize') : $r('sys.color.font_primary');
   }
 
+  // 范围通过精确整数构造，64 位极值不能先进入 number。
   private ranges(): string {
     const sign = Natural.small(1).shift(this.session.width - 1);
     const maximum = sign.subtract(Natural.small(1)).toString();
@@ -61,6 +66,7 @@ export struct ProgrammerInspector {
     .height(this.indices().length / 8 * 48).width('100%')
   }
 
+  // 数学值重新编码和原始位串重新解释是两种含义，分别展示以免混淆符号。
   @Builder
   private Encodings() {
     Text('按当前数学值生成编码').fontSize(14).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_primary'))

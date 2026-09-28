@@ -2,12 +2,15 @@
  * Copyright (c) 2026 StartYi. All rights reserved.
  * @file ProgrammerState.ets
  * @description 程序员偏好和历史扩展槽的版本化数据契约
+ * @author StartYi
+ * @date 2026/09/23 01:00
  */
 import { ProgrammerSession } from './ProgrammerSession';
 import { Word, Flags } from './ProgrammerEngine';
 import { Natural } from './Natural';
 import { decodeFloat } from './Ieee754';
 
+/** 跨启动偏好仅保存配置，不包含计算草稿、结果或进位输入。 */
 export interface ProgrammerSettings {
   mode: string;
   radix: number;
@@ -17,6 +20,7 @@ export interface ProgrammerSettings {
   floatRadix: number;
 }
 
+/** 历史 extra_params 的版本 1 契约；整数与浮点位模式均用 HEX 文本避免 JSON 数值丢精度。 */
 export interface ProgrammerRecord {
   kind: string;
   version: number;
@@ -29,6 +33,7 @@ export interface ProgrammerRecord {
   floatText: string;
 }
 
+/** 仅在进程内保留页面往返状态；应用重启后由偏好重建空会话。 */
 export class ProgrammerMemory {
   static session: ProgrammerSession | undefined = undefined;
 }
@@ -38,6 +43,7 @@ export function settingsOf(session: ProgrammerSession): ProgrammerSettings {
     floatWidth: session.floatWidth, floatRadix: session.floatRadix };
 }
 
+// 反序列化后仍需校验枚举与类型，避免持久化损坏进入位宽和进制运算。
 export function restoreSettings(settings: ProgrammerSettings): ProgrammerSession {
   if (!settings || !['integer', 'float'].includes(settings.mode) || ![2, 8, 10, 16].includes(settings.radix) ||
     ![8, 16, 32, 64].includes(settings.width) || typeof settings.signed !== 'boolean' ||
@@ -55,6 +61,7 @@ export function restoreSettings(settings: ProgrammerSettings): ProgrammerSession
   return session;
 }
 
+/** 可用于调试状态，保留当前草稿；写历史应使用 historyRecordOf 清理非活动模式草稿。 */
 export function recordOf(session: ProgrammerSession): ProgrammerRecord {
   return { kind: 'programmer', version: 1, settings: settingsOf(session),
     bits: session.word.format(16), expression: session.expression, flags: session.flags, carry: session.carry,
@@ -70,6 +77,7 @@ export function historyRecordOf(session: ProgrammerSession): ProgrammerRecord {
   return record;
 }
 
+// 历史位模式为结果权威来源，不重新计算表达式，以保留精确值、标志和 NaN payload。
 export function restoreRecord(json: string): ProgrammerSession {
   const record = JSON.parse(json) as ProgrammerRecord;
   if (!record || record.kind !== 'programmer' || record.version !== 1 ||

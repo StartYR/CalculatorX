@@ -2,12 +2,15 @@
  * Copyright (c) 2026 StartYi. All rights reserved.
  * @file ProgrammerSession.ets
  * @description 程序员输入会话；整数与浮点状态相互独立
+ * @author StartYi
+ * @date 2026/09/23 01:00
  */
 import { Natural } from './Natural';
 import { Word, Flags } from './ProgrammerEngine';
 import { ProgrammerExpression } from './ProgrammerExpression';
 import { encodeFloat, decodeFloat, convertFloat } from './Ieee754';
 
+/** 独立保存两种模式的输入；草稿与最近有效位模式允许不同，配置变更前必须确认草稿。 */
 export class ProgrammerSession {
   mode: string = 'integer';
   radix: number = 10;
@@ -26,6 +29,7 @@ export class ProgrammerSession {
   floatBits: Natural = new Natural();
   floatEvaluated: boolean = true;
 
+  // 撤销快照复制会话字段；Word/Natural/Flags 由运算整体替换，不在原对象上改位。
   copy(): ProgrammerSession {
     const next = new ProgrammerSession();
     next.mode = this.mode;
@@ -48,12 +52,14 @@ export class ProgrammerSession {
   }
 
   currentRadix(): number { return this.mode === 'integer' ? this.radix : this.floatRadix; }
+  // A–F 仅在 HEX 可用；浮点十进制语法不能混入原始位模式。
   inputEnabled(key: string): boolean {
     if (/^[0-9A-F]$/.test(key)) return parseInt(key, 16) < this.currentRadix();
     if (this.mode === 'float' && ['.', 'e', '±', '+', '-', 'NaN', '∞'].includes(key)) return this.floatRadix === 10;
     return true;
   }
 
+  // 解析成功后才替换值并置确认标志；失败保留草稿和此前有效值供继续编辑。
   confirm(): void {
     if (this.mode === 'integer' ? this.evaluated : this.floatEvaluated) { this.error = ''; return; }
     if (this.mode === 'float') {
@@ -109,6 +115,7 @@ export class ProgrammerSession {
     } catch (_) {}
   }
 
+  // 浮点输入保留原文，确认时才编码，避免逐键舍入改写正在输入的有效数字。
   private floatKey(key: string): void {
     if (key === 'AC') {
       this.floatText = '0'; this.floatBits = new Natural(); this.floatEvaluated = true;
@@ -122,6 +129,7 @@ export class ProgrammerSession {
     if (this.floatText.length > 768) throw new Error('输入过长，请退格或清空');
   }
 
+  // 切进制前完成确认；格式化只改变编辑表示，不改变底层位模式。
   changeRadix(radix: number): void {
     this.confirm();
     if (this.mode === 'float') {
@@ -134,6 +142,7 @@ export class ProgrammerSession {
     }
   }
 
+  // 按旧符号解释扩展或截断，并通过前后数学值比较提示有损缩窄。
   changeWidth(width: number): void {
     this.confirm();
     const before = this.word.format(10, this.signed);
@@ -145,12 +154,14 @@ export class ProgrammerSession {
     if (before !== this.word.format(10, this.signed)) this.error = '已保留低 ' + width + ' 位，高位截断改变了数值';
   }
 
+  // 只切换解释方式，不重写位模式；十进制草稿随符号解释同步更新。
   changeSigned(): void {
     this.confirm();
     this.signed = !this.signed;
     this.expression = this.word.format(this.radix, this.signed, false);
   }
 
+  // 从原始位模式直接转换，避免经过简短十进制文本再次舍入。
   changeFloatWidth(width: number): void {
     this.confirm();
     const bits = convertFloat(this.floatBits, this.floatWidth, width);

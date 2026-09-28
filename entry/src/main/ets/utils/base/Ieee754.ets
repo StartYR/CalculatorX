@@ -2,9 +2,12 @@
  * Copyright (c) 2026 StartYi. All rights reserved.
  * @file Ieee754.ets
  * @description IEEE 754 二进制格式及精确十进制有理数舍入
+ * @author StartYi
+ * @date 2026/09/22 20:51
  */
 import { Natural } from './Natural';
 
+/** 三种二进制格式共用字段布局；fractionBits 不包含正规数隐含的前导 1。 */
 export class FloatFormat {
   width: number;
   exponentBits: number;
@@ -19,6 +22,7 @@ export class FloatFormat {
   }
 }
 
+/** exponent 是存储字段，actualExponent 已去偏置；decimal 仅作简短展示，exact 保留精确解释。 */
 export class FloatDetails {
   sign: number = 0;
   exponent: number = 0;
@@ -30,11 +34,16 @@ export class FloatDetails {
   payload: string = '';
 }
 
+// 字段已由调用方约束宽度，直接拼接符号、指数与尾数，避免宿主浮点规范化 NaN。
 function compose(format: FloatFormat, sign: number, exponent: number, fraction: Natural): Natural {
   return Natural.small(sign).shift(format.width - 1)
     .add(Natural.small(exponent).shift(format.fractionBits)).add(fraction);
 }
 
+/**
+ * 将精确有理数乘以 2^shift 后舍入到整数。
+ * 用余数的两倍比较中点；恰好一半时仅在商为奇数时进位，得到 ties-to-even。
+ */
 function roundEven(numerator: Natural, denominator: Natural, shift: number): Natural {
   const division = (shift >= 0 ? numerator.shift(shift) : numerator)
     .divide(shift >= 0 ? denominator : denominator.shift(-shift));
@@ -43,6 +52,11 @@ function roundEven(numerator: Natural, denominator: Natural, shift: number): Nat
     division.quotient.add(Natural.small(1)) : division.quotient;
 }
 
+/**
+ * 十进制字符直接构造有理数并按目标格式舍入，不先经 binary64 中转。
+ * 保留负零；NaN 文本生成规范 quiet NaN，任意 payload 应从原始位模式输入。
+ * @throws 输入不完整、语法无效或超出文本长度限制时抛错。
+ */
 export function encodeFloat(text: string, width: number): Natural {
   const format = new FloatFormat(width);
   const input = text.trim().toLowerCase();
@@ -70,9 +84,11 @@ export function encodeFloat(text: string, width: number): Natural {
   return encodeRatio(numerator, denominator, sign, format);
 }
 
+// 先求 floor(log2(numerator / denominator))，再按正规/非正规精度执行一次最终舍入。
 function encodeRatio(numerator: Natural, denominator: Natural, sign: number, format: FloatFormat): Natural {
   const maximumExponent = Math.pow(2, format.exponentBits) - 1;
   if (numerator.isZero()) return compose(format, sign, 0, new Natural());
+  // 位长差最多高估指数 1，用整数比较修正，不依赖浮点对数。
   let exponent = numerator.bits.length - denominator.bits.length;
   if ((exponent >= 0 ? numerator.compare(denominator.shift(exponent)) : numerator.shift(-exponent).compare(denominator)) < 0) {
     exponent--;
@@ -84,6 +100,7 @@ function encodeRatio(numerator: Natural, denominator: Natural, sign: number, for
     return compose(format, sign, fraction.bit(format.fractionBits), fraction.low(format.fractionBits));
   }
   let significand = roundEven(numerator, denominator, format.fractionBits - exponent);
+  // 有效数字舍入进位可能增加指数，最终溢出按 ties-to-even 产生同符号无穷。
   if (significand.bits.length > format.fractionBits + 1) {
     exponent++;
     significand = significand.shift(-1);
@@ -92,6 +109,7 @@ function encodeRatio(numerator: Natural, denominator: Natural, sign: number, for
   return compose(format, sign, exponent + format.bias, significand.low(format.fractionBits));
 }
 
+/** 同宽复制保留所有位；跨格式转换直接舍入精确值，NaN 规范为同符号 quiet NaN。 */
 export function convertFloat(bits: Natural, fromWidth: number, toWidth: number): Natural {
   if (fromWidth === toWidth) return new Natural(bits.bits);
   const source = new FloatFormat(fromWidth);
@@ -108,6 +126,7 @@ export function convertFloat(bits: Natural, fromWidth: number, toWidth: number):
     power >= 0 ? Natural.small(1) : Natural.small(1).shift(-power), details.sign, target);
 }
 
+// 先判定特殊指数；全零指数采用最小正规指数，但不补隐含的前导 1。
 export function decodeFloat(bits: Natural, width: number): FloatDetails {
   const format = new FloatFormat(width);
   if (bits.bits.length > width) throw new Error('位模式超出浮点格式宽度');
