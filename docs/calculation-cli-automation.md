@@ -391,9 +391,9 @@ CLI 控制能力依赖单独安装的 `entry-ohosTest-signed.hap`。发布时只
 
 ### 程序员首版接口（2026-09-23）
 
-`screen get` 新增 `programmer`，从 debug UI 的 `base.programmer` 读取，未挂载模块时为 null。结构为 `{ data, error, integerConfirmed, floatConfirmed }`；`data.settings` 含模式、进制、字长和符号解释，`data.bits` 为整数 HEX，另含表达式、标志、C-in、`floatBits` 和浮点输入。release 不暴露该 JSON。
+`screen get` 新增 `programmer`，从 debug UI 的 `base.programmer` 读取，未挂载模块时为 null。结构为 `{ data, error, integerConfirmed, floatConfirmed, numericConfirmed, numericInput, numericPreviewValid }`；`data.settings` 含模式、进制、字长和符号解释，`data.bits` 为整数 HEX，另含表达式、标志、C-in、`floatBits` 和浮点输入。release 不暴露该 JSON。
 
-稳定操作包括 `base.mode.integer/float`、`base.radix.2/8/10/16`、`base.float.width.16/32/64`、`base.signed`、`base.carry` 与 `base.key.*`。按键沿用科学键盘的可读后缀（如 `plus`、`equals`、`clear`），浮点指数键为 `base.key.exponent`。剪贴板及逐 bit 点击未加入 CLI 白名单。
+稳定操作包括 `base.mode.integer/float/numeric`、`base.radix.2/8/10/16`、`base.float.width.16/32/64`、`base.signed`、`base.carry` 与 `base.key.*`。按键沿用科学键盘的可读后缀（如 `plus`、`equals`、`clear`），浮点指数键为 `base.key.exponent`。数值模式的 `base.numeric.source` 返回精确输入来源；`data.numericSourceText/numericSourceRadix` 保存原值，`data.settings.numericRadix/numericPlaces` 保存显示配置。剪贴板、精度选择器及逐 bit 点击未加入 CLI 白名单。
 
 ```powershell
 pwsh -NoProfile -File tools/test-programmer-cli.ps1
@@ -401,6 +401,16 @@ pwsh -NoProfile -File tools/test-programmer-cli.ps1
 ```
 
 第一个命令只验证主机侧解析、白名单与场景结构，已经通过；第二个需要应用处于首页及兼容设备，当前尚未执行。它覆盖进入模块、整数 `1 + 2`、切换进制、binary32 的 `1` 位模式，不代替长按或光感视觉验收。核心完整回归使用 `node tools/test-programmer.mjs`，不走 CAS 计算协议。
+
+### 数值模式接口（2026-09-29）
+
+数值新增场景 `tools/calcx/tests/scenarios/numeric-ui-smoke.json` 覆盖十进制 `0.1`、确认、循环小数进制往返和“编辑原值”。场景仅通过静态检查，尚未执行设备操作；可使用当前源码入口运行，避免依赖旧启动器中的脚本副本：
+
+```powershell
+pwsh -NoProfile -File tools/calcx/runtime/calcx.ps1 scenario run tools/calcx/tests/scenarios/numeric-ui-smoke.json
+```
+
+数值核心的独立回归使用 `node tools/test-numeric.mjs`，不经过设备或 CAS。
 
 ### 既有设备基线
 

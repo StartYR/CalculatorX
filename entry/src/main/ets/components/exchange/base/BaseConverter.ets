@@ -15,6 +15,7 @@ import { BaseConversionSession } from '../../../utils/base/BaseConversionSession
 import { decodeFloat } from '../../../utils/base/Ieee754';
 import { BaseInspector } from './BaseInspector';
 import { BaseKey } from './BaseKey';
+import { NUMERIC_PLACES } from '../../../utils/base/NumericValue';
 import { PreferenceManager } from '../../../utils/PreferenceManager';
 import { HistoryRepository, HistoryRecord } from '../../../database/HistoryRepository';
 import { BaseConversionMemory, BaseConversionSettings, settingsOf, recordOf, historyRecordOf, restoreSettings, restoreRecord } from '../../../utils/base/BaseConversionState';
@@ -39,22 +40,36 @@ const FLOAT_KEYS: string[] = [
   '.', '0', '0', '±', '='
 ];
 
+// 数值换算只提供数字、小数点和输入控制；相邻的 0 共用一个四列宽按键。
+const NUMERIC_KEYS: string[] = [
+  'A', 'B', 'C', 'D',
+  'E', 'F', '⌫', 'AC',
+  '7', '8', '9', '±',
+  '4', '5', '6', '.',
+  '1', '2', '3', '=',
+  '0', '0', '0', '0'
+];
+
 // 标签文字和选中态通过响应式属性更新，不能使用按值传参的 Builder 固定初始状态。
 @Component
 struct BaseChip {
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
-  @Prop label: string = '';
+  @Prop label: ResourceStr = '';
   @Prop selected: boolean = false;
   semanticId: string = '';
   onActivate: () => void = () => {};
 
+  private labelText(): string {
+    return typeof this.label === 'string' ? this.label : getContext(this).resourceManager.getStringSync(this.label.id);
+  }
+
   build() {
-    Button(this.label).fontSize(13).fontWeight(this.selected ? FontWeight.Medium : FontWeight.Normal)
+    Button(this.labelText()).fontSize(13).fontWeight(this.selected ? FontWeight.Medium : FontWeight.Normal)
       .fontColor(this.selected ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary'))
       .backgroundColor(this.selected ? $r('sys.color.comp_background_secondary') : Color.Transparent)
       .height(32).padding({ left: 10, right: 10 }).id(this.semanticId)
-      .accessibilityText(this.label + (this.selected ? '，已选中' : '')).onClick(() => {
+      .accessibilityText(this.labelText() + (this.selected ? '，已选中' : '')).onClick(() => {
         HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
         this.onActivate();
       })
@@ -93,6 +108,7 @@ export struct BaseConverter {
       this.session = restoreRecord(record.extraParams || '');
       if (insertType === 'output') {
         if (this.session.mode === 'integer') this.session.expression = this.session.word.format(this.session.radix, this.session.signed, false);
+        else if (this.session.mode === 'numeric') this.session.numeric.changeRadix(this.session.numeric.radix);
         else {
           this.session.floatRadix = 16;
           this.session.floatText = this.session.floatBits.toString(16);
@@ -129,6 +145,14 @@ export struct BaseConverter {
 
   private saveHistory(): void {
     // 历史只由确认操作触发，extraParams 保留完整位模式和当时的解释上下文。
+    if (this.session.mode === 'numeric') {
+      const numeric = this.session.numeric;
+      HistoryRepository.insertRecord({ moduleType: 'base',
+        inputContent: numeric.sourceText + ' (' + numeric.sourceRadix + ')',
+        outputContent: numeric.displayText(numeric.radix) + ' (' + numeric.radix + ')',
+        extraParams: JSON.stringify(historyRecordOf(this.session)), timestamp: Date.now() });
+      return;
+    }
     const integer = this.session.mode === 'integer';
     HistoryRepository.insertRecord({ moduleType: 'base',
       inputContent: integer ? this.session.expression : this.session.floatText,
@@ -141,7 +165,9 @@ export struct BaseConverter {
     // 结构化状态仅用于 debug 语义 CLI，release 不公开草稿与内部位模式。
     if (!getContext(this).applicationInfo.debug) return '';
     return JSON.stringify({ data: recordOf(this.session), error: this.session.error,
-      integerConfirmed: this.session.evaluated, floatConfirmed: this.session.floatEvaluated });
+      integerConfirmed: this.session.evaluated, floatConfirmed: this.session.floatEvaluated,
+      numericConfirmed: this.session.numeric.evaluated, numericInput: this.session.numeric.text,
+      numericPreviewValid: this.session.numeric.previewValid });
   }
 
   private apply(action: () => void): void {
@@ -178,7 +204,7 @@ export struct BaseConverter {
   }
 
   private async paste(): Promise<void> {
-    // 整数粘贴直接确认，浮点粘贴先进入草稿预览；两者共用输入长度上限保护。
+    // 整数粘贴直接确认，浮点与数值粘贴先预览；各自会话校验对应输入上限。
     try {
       const data = await pasteboard.getSystemPasteboard().getData();
       const text = data.getPrimaryText().trim();
@@ -188,7 +214,8 @@ export struct BaseConverter {
           this.session.expression = text;
           this.session.evaluated = false;
           this.session.confirm();
-        } else this.session.replaceFloatInput(text);
+        } else if (this.session.mode === 'numeric') this.session.numeric.replaceInput(text);
+        else this.session.replaceFloatInput(text);
       });
     } catch (_) { this.session.error = '无法读取剪贴板'; this.session = this.session.copy(); }
   }
@@ -197,6 +224,7 @@ export struct BaseConverter {
     return Math.min(390, Math.max(270, this.pageHeight * 0.52)) + Math.max(0, this.navBarHeight - 8);
   }
   private value(radix: number): string {
+    if (this.session.mode === 'numeric') return this.session.numeric.displayText(radix);
     if (this.session.mode === 'integer') return this.session.word.format(radix, this.session.signed);
     // 数值行和字段面板共用预览来源；保存历史仍使用独立的已确认结果。
     const bits = this.session.displayedFloatBits();
@@ -206,7 +234,7 @@ export struct BaseConverter {
 
   private multilineBinary(radix: number): boolean {
     // 64 位二进制分成两行各 32 位，保证低位在窄屏也可见。
-    return radix === 2 && (this.session.mode === 'integer' ? this.session.width : this.session.floatWidth) === 64;
+    return this.session.mode !== 'numeric' && radix === 2 && (this.session.mode === 'integer' ? this.session.width : this.session.floatWidth) === 64;
   }
 
   private displayValue(radix: number): string {
@@ -233,6 +261,64 @@ export struct BaseConverter {
     .onClick(() => this.select(() => this.session.changeRadix(radix)))
   }
 
+  /** 长数值按可用宽度换行，整数部分不能因显示精度或固定行高而丢失。 */
+  @Builder
+  private NumericRadixRow(label: string, radix: number) {
+    Row({ space: 10 }) {
+      Text(label)
+        .width(38)
+        .fontSize(13)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(this.session.currentRadix() === radix ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary'))
+      Text(this.value(radix))
+        .layoutWeight(1)
+        .textAlign(TextAlign.End)
+        .wordBreak(WordBreak.BREAK_ALL)
+        .fontFamily('monospace')
+        .fontSize(15)
+        .fontColor($r('sys.color.font_primary'))
+        .copyOption(CopyOptions.LocalDevice)
+        .onClick(() => this.select(() => this.session.changeRadix(radix)))
+    }
+    .width('100%')
+    .constraintSize({ minHeight: 42 })
+    .padding(10)
+    .borderRadius(10)
+    .backgroundColor(this.session.currentRadix() === radix ? $r('sys.color.comp_background_secondary') : Color.Transparent)
+    .id('base.radix.' + radix)
+    .accessibilityText(label + ' ' + this.value(radix))
+    .onClick(() => this.select(() => this.session.changeRadix(radix)))
+  }
+
+  @Builder
+  private NumericControls() {
+    Text($r('app.string.base_numeric_description'))
+      .width('100%')
+      .fontSize(12)
+      .fontColor($r('sys.color.font_secondary'))
+    Row({ space: 8 }) {
+      Text($r('app.string.base_numeric_places'))
+        .fontSize(13)
+        .fontColor($r('sys.color.font_secondary'))
+      Select([{ value: '16' }, { value: '32' }, { value: '64' }, { value: '128' }])
+        .selected(NUMERIC_PLACES.indexOf(this.session.numeric.places))
+        .value(this.session.numeric.places.toString())
+        .font({ size: 14 })
+        .height(32)
+        .id('base.numeric.precision')
+        .onSelect((index: number) => this.select(() => this.session.numeric.changePlaces(NUMERIC_PLACES[index])))
+      Blank()
+      if (this.session.numeric.radix !== this.session.numeric.sourceRadix) {
+        BaseChip({ label: $r('app.string.base_numeric_edit_source'), selected: false,
+          onActivate: () => this.apply(() => { this.session.numeric.editSource(); this.session.error = ''; }), semanticId: 'base.numeric.source' })
+      }
+    }.width('100%')
+    Text($r('app.string.base_numeric_approximation'))
+      .width('100%')
+      .fontSize(12)
+      .fontColor($r('sys.color.font_secondary'))
+  }
+
   @Builder
   private Display() {
     Scroll() {
@@ -246,19 +332,44 @@ export struct BaseConverter {
             onActivate: () => {
               this.apply(() => { this.session.mode = 'float'; this.session.error = ''; });
             }, semanticId: 'base.mode.float' })
+          BaseChip({ label: $r('app.string.base_numeric_tab'), selected: this.session.mode === 'numeric',
+            onActivate: () => {
+              this.apply(() => { this.session.mode = 'numeric'; this.session.error = ''; });
+            }, semanticId: 'base.mode.numeric' })
           Blank()
           BaseChip({ label: '粘贴', selected: false,
             onActivate: () => { this.paste(); }, semanticId: 'base.paste' })
           BaseChip({ label: '?', selected: this.panel === 'help',
             onActivate: () => { this.panel = this.panel === 'help' ? '' : 'help'; }, semanticId: 'base.help' })
         }.width('100%')
-        Scroll() {
-          Text(this.session.mode === 'integer' ? this.session.expression : this.session.floatText)
-            .fontSize(25).fontFamily('monospace').fontColor($r('sys.color.font_primary'))
-            .copyOption(CopyOptions.LocalDevice).maxLines(1).padding({ left: 8, right: 8 })
-        }.scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).height(40).width('100%').id('base.expression')
+        Column() {
+          if (this.session.mode === 'numeric') {
+            Text(this.session.numeric.evaluated && this.session.numeric.radix !== this.session.numeric.sourceRadix ?
+              this.session.numeric.displayText(this.session.numeric.radix) : this.session.numeric.text)
+              .width('100%')
+              .textAlign(TextAlign.End)
+              .wordBreak(WordBreak.BREAK_ALL)
+              .fontSize(23)
+              .fontFamily('monospace')
+              .fontColor($r('sys.color.font_primary'))
+              .copyOption(CopyOptions.LocalDevice)
+          } else {
+            Scroll() {
+              Text(this.session.mode === 'integer' ? this.session.expression : this.session.floatText)
+                .fontSize(25).fontFamily('monospace').fontColor($r('sys.color.font_primary'))
+                .copyOption(CopyOptions.LocalDevice).maxLines(1).padding({ left: 8, right: 8 })
+            }.scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).height(40).width('100%')
+          }
+        }.width('100%').id('base.expression')
         if (this.session.error.length > 0) {
           Text(this.session.error).fontSize(12).fontColor($r('sys.color.warning')).width('100%').id('base.error')
+        } else if (this.session.mode === 'numeric' && !this.session.numeric.evaluated) {
+          Text(this.session.numeric.previewValid ? $r('app.string.programmer_float_preview_ready') :
+            $r('app.string.programmer_float_preview_pending'))
+            .width('100%')
+            .fontSize(12)
+            .fontColor(this.session.numeric.previewValid ? $r('sys.color.font_secondary') : $r('sys.color.warning'))
+            .id('base.numeric.preview')
         } else if (this.session.mode === 'integer' && !this.session.evaluated) {
           Text('输入预览 · 按 = 确认；不完整输入保留最近有效值')
             .fontSize(12).fontColor($r('sys.color.font_secondary')).width('100%')
@@ -268,10 +379,18 @@ export struct BaseConverter {
             .fontSize(12).width('100%').id('base.float.preview')
             .fontColor(this.session.floatPreviewValid ? $r('sys.color.font_secondary') : $r('sys.color.warning'))
         }
-        this.RadixRow('HEX', 16)
-        this.RadixRow('DEC', 10)
-        if (this.session.mode === 'integer') { this.RadixRow('OCT', 8) }
-        this.RadixRow('BIN', 2)
+        if (this.session.mode === 'numeric') {
+          this.NumericRadixRow('HEX', 16)
+          this.NumericRadixRow('DEC', 10)
+          this.NumericRadixRow('OCT', 8)
+          this.NumericRadixRow('BIN', 2)
+          this.NumericControls()
+        } else {
+          this.RadixRow('HEX', 16)
+          this.RadixRow('DEC', 10)
+          if (this.session.mode === 'integer') { this.RadixRow('OCT', 8) }
+          this.RadixRow('BIN', 2)
+        }
         if (this.session.mode === 'integer') {
           Row({ space: 6 }) {
             Select([{ value: '8 bit · BYTE' }, { value: '16 bit · WORD' }, { value: '32 bit · DWORD' }, { value: '64 bit · QWORD' }])
@@ -294,7 +413,7 @@ export struct BaseConverter {
             BaseChip({ label: 'C-in ' + this.session.carry, selected: this.session.carry === 1,
               onActivate: () => this.apply(() => { this.session.carry = 1 - this.session.carry; }), semanticId: 'base.carry' })
           }.width('100%')
-        } else {
+        } else if (this.session.mode === 'float') {
           Row() {
             ForEach([16, 32, 64], (width: number) => {
               BaseChip({ label: 'binary' + width, selected: this.session.floatWidth === width,
@@ -307,7 +426,16 @@ export struct BaseConverter {
           Text(decodeFloat(this.session.displayedFloatBits(), this.session.floatWidth).category + ' · 按 = 确认输入')
             .fontSize(12).fontColor($r('sys.color.font_secondary')).width('100%')
         }
-        if (this.panel.length > 0) {
+        if (this.session.mode === 'numeric' && this.panel === 'help') {
+          Text($r('app.string.base_numeric_help'))
+            .width('100%')
+            .padding(14)
+            .fontSize(14)
+            .lineHeight(23)
+            .fontColor($r('sys.color.font_secondary'))
+            .backgroundColor($r('sys.color.comp_background_primary'))
+            .borderRadius(16)
+        } else if (this.session.mode !== 'numeric' && this.panel.length > 0) {
           BaseInspector({ session: this.session, panel: this.panel,
             onFlip: (index: number) => this.select(() => this.session.flip(index)) })
         }
@@ -317,29 +445,37 @@ export struct BaseConverter {
     .padding({ top: this.statusBarHeight + 56 })
   }
 
+  private keyboardColumns(): number { return this.session.mode === 'numeric' ? 4 : 5; }
+
+  private keyboardKeys(): string[] {
+    if (this.session.mode === 'numeric') return NUMERIC_KEYS;
+    return this.session.mode === 'integer' ? INTEGER_KEYS : FLOAT_KEYS;
+  }
+
   private keyboardKeySpan(index: number): number {
-    // GridItem 跨列时跳过被合并格；合并不允许越过原五列行边界。
-    const keys = this.session.mode === 'integer' ? INTEGER_KEYS : FLOAT_KEYS;
-    const column = index % 5;
+    // GridItem 跨列时跳过被合并格；合并不能越过当前键盘的行边界。
+    const keys = this.keyboardKeys();
+    const columns = this.keyboardColumns();
+    const column = index % columns;
     if (column > 0 && keys[index - 1] === keys[index]) return 0;
     let span = 1;
-    while (column + span < 5 && index + span < keys.length && keys[index + span] === keys[index]) span++;
+    while (column + span < columns && index + span < keys.length && keys[index + span] === keys[index]) span++;
     return span;
   }
 
   @Builder
   private Keyboard(immersive: boolean) {
     Grid() {
-      ForEach(this.session.mode === 'integer' ? INTEGER_KEYS : FLOAT_KEYS, (key: string, index: number) => {
+      ForEach(this.keyboardKeys(), (key: string, index: number) => {
         if (this.keyboardKeySpan(index) > 0) {
           GridItem() {
             BaseKey({ keyText: key, immersive: immersive, available: this.session.inputEnabled(key),
               integerMode: this.session.mode === 'integer', onPress: (action: string) => this.press(action) })
-          }.rowStart(Math.floor(index / 5)).rowEnd(Math.floor(index / 5))
-            .columnStart(index % 5).columnEnd(index % 5 + this.keyboardKeySpan(index) - 1)
+          }.rowStart(Math.floor(index / this.keyboardColumns())).rowEnd(Math.floor(index / this.keyboardColumns()))
+            .columnStart(index % this.keyboardColumns()).columnEnd(index % this.keyboardColumns() + this.keyboardKeySpan(index) - 1)
         }
       }, (key: string, index: number) => this.session.mode + '.' + index.toString() + '.' + key)
-    }.columnsTemplate('1fr 1fr 1fr 1fr 1fr').rowsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
+    }.columnsTemplate(this.session.mode === 'numeric' ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr 1fr 1fr').rowsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
     .rowsGap(8).columnsGap(8).width('100%').height('100%')
     .padding({ left: 12, right: 12, top: 12, bottom: 8 + Math.max(0, this.navBarHeight - 8) })
   }

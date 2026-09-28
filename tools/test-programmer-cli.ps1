@@ -23,18 +23,20 @@ if ($state.Programmer.data.bits -ne 'FFFFFFFFFFFFFFFF' -or $state.Programmer.dat
 }
 $empty = Get-SemanticState ([pscustomobject]@{ Controls = @() })
 if ($null -ne $empty.Programmer) { throw 'Absent programmer mode must report null.' }
-foreach ($id in @('base.key.1', 'base.key.equals', 'base.key.exponent', 'base.mode.float', 'base.radix.16', 'base.float.width.64')) {
+foreach ($id in @('base.key.1', 'base.key.equals', 'base.key.exponent', 'base.mode.float', 'base.radix.16', 'base.float.width.64', 'base.mode.numeric', 'base.numeric.source')) {
   Assert-SemanticTargetAllowed $id
 }
 # 剪贴板和逐位修改等目标不在自动化点击白名单，拒绝范围外或无效字长。
-foreach ($id in @('base.paste', 'base.bit.63', 'base.programmer', 'base.float.width.128')) {
+foreach ($id in @('base.paste', 'base.bit.63', 'base.programmer', 'base.float.width.128', 'base.mode.unknown', 'base.numeric.precision')) {
   $rejected = $false
   try { Assert-SemanticTargetAllowed $id } catch { $rejected = $true }
   if (-not $rejected) { throw "Unexpected clickable target: $id" }
 }
 # 只静态检查场景内点击目标的权限；通过此检查不代表执行过真机交互。
-$scenario = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'calcx/tests/scenarios/programmer-ui-smoke.json') -Raw | ConvertFrom-Json
-foreach ($step in $scenario.steps) {
-  if ($step.command -eq 'ui.click') { Assert-SemanticTargetAllowed $step.target }
+foreach ($scenarioName in @('programmer-ui-smoke', 'numeric-ui-smoke')) {
+  $scenario = Get-Content -LiteralPath (Join-Path $PSScriptRoot "calcx/tests/scenarios/$scenarioName.json") -Raw | ConvertFrom-Json
+  foreach ($step in $scenario.steps) {
+    if ($step.command -eq 'ui.click') { Assert-SemanticTargetAllowed $step.target }
+  }
 }
 Write-Host 'Programmer CLI state, whitelist and scenario checks passed (no device actions).'

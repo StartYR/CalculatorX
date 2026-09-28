@@ -23,6 +23,30 @@
     {
       "name": "programmer_float_help",
       "value": "IEEE 754：十进制支持加减乘除，乘除优先；每一步按当前格式 roundTiesToEven 舍入。HEX/BIN 输入原始位串。e 输入十进制指数，± 改变末尾操作数或未完成指数的符号。完整输入实时预览，按 = 确认并写入历史。无效运算和参与四则运算的 NaN 生成规范 quiet NaN；原始位编辑保留 payload。"
+    },
+    {
+      "name": "base_numeric_tab",
+      "value": "数值"
+    },
+    {
+      "name": "base_numeric_description",
+      "value": "正负数与小数的进制换算 · 不受固定字长限制"
+    },
+    {
+      "name": "base_numeric_places",
+      "value": "最多小数位"
+    },
+    {
+      "name": "base_numeric_edit_source",
+      "value": "编辑原值"
+    },
+    {
+      "name": "base_numeric_approximation",
+      "value": "≈ 表示小数已截断；切换进制和显示位数仍使用精确原值。"
+    },
+    {
+      "name": "base_numeric_help",
+      "value": "点击 HEX / DEC / OCT / BIN 选择输入进制，直接输入数字或粘贴正负数、小数。最多输入 256 个字符，不接受前缀、指数、分数或算术表达式。长数值自动换行，长按可复制。按 = 确认并写入历史；新数字替换已确认值，± 改变数学符号。显示最多保留 16 / 32 / 64 / 128 位小数，超出部分向零截断并标注 ≈ 和省略号。内部保留精确值，反复切换进制不会累积误差。当前进制为近似显示时，点“编辑原值”返回原输入进制后再退格，或直接输入新数值。三个标签各自保留输入。"
     }
   ]
 }
