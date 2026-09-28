@@ -20,15 +20,6 @@ import { PreferenceManager } from '../../../utils/PreferenceManager';
 import { HistoryRepository, HistoryRecord } from '../../../database/HistoryRepository';
 import { ProgrammerMemory, ProgrammerSettings, settingsOf, recordOf, historyRecordOf, restoreSettings, restoreRecord } from '../../../utils/base/ProgrammerState';
 
-// const INTEGER_KEYS: string[] = [
-//   'A', 'B', 'C', 'AND', 'SHL',
-//   'D', 'E', 'F', 'MOD', 'SHR',
-//   'AC', '(', ')', '⌫', '/',
-//   '7', '8', '9', '±', '*',
-//   '4', '5', '6', '0', '-',
-//   '1', '2', '3', '=', '+'
-// ];
-
 const INTEGER_KEYS: string[] = [
   'D', 'E', 'F', 'AND', 'SHL',
   'A', 'B', 'C', 'MOD', 'SHR',
@@ -38,23 +29,15 @@ const INTEGER_KEYS: string[] = [
   '±', '0', '(', ')', '='
 ];
 
+// 同一行相邻的同名格子合并为一个横向按键。
 const FLOAT_KEYS: string[] = [
   'D', 'E', 'F', 'NaN', '∞',
-  'A', 'B', 'C', '⌫', 'AC',
-  '7', '8', '9', 'e', '-',
-  '4', '5', '6', '.', '+',
-  '1', '2', '3', '±', '=',
-  '0'
+  'A', 'B', 'C', 'e', 'e',
+  '7', '8', '9', '⌫', 'AC',
+  '4', '5', '6', '*', '/',
+  '1', '2', '3', '+', '-',
+  '.', '0', '0', '±', '='
 ];
-
-// const FLOAT_KEYS: string[] = [
-//   'A', 'B', 'C', 'D', 'E',
-//   'F', 'NaN', '∞', 'AC', '⌫',
-//   '7', '8', '9', 'e', '-',
-//   '4', '5', '6', '.', '+',
-//   '1', '2', '3', '±', '=',
-//   '0'
-// ];
 
 function keyRole(key: string): KeyboardKeyRole {
   if (key === 'AC' || key === '⌫') return KeyboardKeyRole.DANGER;
@@ -405,16 +388,27 @@ export struct BaseConverter {
     .padding({ top: this.statusBarHeight + 56 })
   }
 
+  private keyboardKeySpan(index: number): number {
+    const keys = this.session.mode === 'integer' ? INTEGER_KEYS : FLOAT_KEYS;
+    const column = index % 5;
+    if (column > 0 && keys[index - 1] === keys[index]) return 0;
+    let span = 1;
+    while (column + span < 5 && index + span < keys.length && keys[index + span] === keys[index]) span++;
+    return span;
+  }
+
   @Builder
   private Keyboard(immersive: boolean) {
     Grid() {
-      ForEach(this.session.mode === 'integer' ? INTEGER_KEYS : FLOAT_KEYS, (key: string) => {
-        GridItem() {
-          ProgrammerKey({ keyText: key, immersive: immersive, available: this.session.inputEnabled(key),
-            integerMode: this.session.mode === 'integer', onPress: (action: string) => this.press(action) })
-        }.columnStart(this.session.mode === 'float' && key === '0' ? 0 : undefined)
-        .columnEnd(this.session.mode === 'float' && key === '0' ? 4 : undefined)
-      }, (key: string) => this.session.mode + '.' + key)
+      ForEach(this.session.mode === 'integer' ? INTEGER_KEYS : FLOAT_KEYS, (key: string, index: number) => {
+        if (this.keyboardKeySpan(index) > 0) {
+          GridItem() {
+            ProgrammerKey({ keyText: key, immersive: immersive, available: this.session.inputEnabled(key),
+              integerMode: this.session.mode === 'integer', onPress: (action: string) => this.press(action) })
+          }.rowStart(Math.floor(index / 5)).rowEnd(Math.floor(index / 5))
+            .columnStart(index % 5).columnEnd(index % 5 + this.keyboardKeySpan(index) - 1)
+        }
+      }, (key: string, index: number) => this.session.mode + '.' + index.toString() + '.' + key)
     }.columnsTemplate('1fr 1fr 1fr 1fr 1fr').rowsTemplate('1fr 1fr 1fr 1fr 1fr 1fr')
     .rowsGap(8).columnsGap(8).width('100%').height('100%')
     .padding({ left: 12, right: 12, top: 12, bottom: 8 + Math.max(0, this.navBarHeight - 8) })
