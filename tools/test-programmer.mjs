@@ -156,6 +156,7 @@ for (const width of [16, 32, 64]) {
 // 切换有符号解释不改变位模式；十进制表达式及后续运算应使用新的解释。
 for (const [width, hex, unsigned] of [[8, 'FF', '255'], [64, 'FFFFFFFFFFFFFFFF', '18446744073709551615']]) {
   const toggle = new BaseConversionSession();
+  toggle.mode = 'integer';
   toggle.changeWidth(width);
   toggle.changeRadix(16);
   for (const digit of hex) toggle.key(digit);
@@ -184,6 +185,7 @@ for (const [width, hex, unsigned] of [[8, 'FF', '255'], [64, 'FFFFFFFFFFFFFFFF',
   }
 }
 const session = new BaseConversionSession();
+session.mode = 'integer';
 session.changeWidth(8);
 for (const key of ['2', '5', '5', '+', '1', '=']) session.key(key);
 equal(session.word.format(10), '0'); equal(session.flags.cf, 1);

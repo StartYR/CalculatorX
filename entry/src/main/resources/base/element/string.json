@@ -25,6 +25,10 @@
       "value": "IEEE 754：十进制支持加减乘除，乘除优先；每一步按当前格式 roundTiesToEven 舍入。HEX/BIN 输入原始位串。e 输入十进制指数，± 改变末尾操作数或未完成指数的符号。完整输入实时预览，按 = 确认并写入历史。无效运算和参与四则运算的 NaN 生成规范 quiet NaN；原始位编辑保留 payload。"
     },
     {
+      "name": "base_copy_value",
+      "value": "复制完整数值"
+    },
+    {
       "name": "base_numeric_preview_pending",
       "value": "输入待完成或修正 · 保留最近有效结果"
     },

@@ -116,7 +116,7 @@ function Get-SemanticState {
 function Assert-SemanticTargetAllowed {
     param([Parameter(Mandatory)][string]$SemanticId)
     $allowed = $SemanticId -match '^(?:nav\.|module\.|calc\.key\.|settings\.|overlay\.sidebar\.dismiss$)'
-    $allowed = $allowed -or $SemanticId -match '^base\.(?:key\.[a-z0-9-]+|mode\.(?:integer|float|numeric)|radix\.(?:2|8|10|16)|float\.width\.(?:16|32|64)|numeric\.source|signed|carry|bits|encoding|help)$'
+    $allowed = $allowed -or $SemanticId -match '^base\.(?:key\.[a-z0-9-]+|mode\.(?:numeric|integer|float)|radix\.(?:2|8|10|16)|float\.width|numeric\.source|signed|carry|bits|encoding|help)$'
     if (-not $allowed) {
         throw "Target is outside the semantic click whitelist: $SemanticId"
     }

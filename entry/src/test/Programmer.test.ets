@@ -33,6 +33,7 @@ export default function programmerTest() {
     });
     it('keepsBitsWhenChangingRadix', 0, () => {
       const session = new BaseConversionSession();
+      session.mode = 'integer';
       session.key('1'); session.key('+'); session.key('2'); session.key('=');
       session.changeRadix(16);
       expect(session.word.format(10)).assertEqual('3');

@@ -19,9 +19,22 @@ const { NumericValue, NUMERIC_INPUT_LIMIT } = await import('../entry/src/main/et
 const { NumericSession } = await import('../entry/src/main/ets/utils/base/NumericSession.ets');
 const { BaseConversionSession } = await import('../entry/src/main/ets/utils/base/BaseConversionSession.ets');
 const { recordOf, historyRecordOf, restoreRecord, settingsOf, restoreSettings } = await import('../entry/src/main/ets/utils/base/BaseConversionState.ets');
+const { binaryRows } = await import('../entry/src/main/ets/utils/base/BinaryDisplay.ets');
 let checks = 0;
 function equal(actual, expected) { assert.deepEqual(actual, expected); checks++; }
 function rejects(action) { assert.throws(action); checks++; }
+// 校验分行保留所有字符，符号和小数点不挤占 32 个二进制数字的位置。
+for (const size of [0, 1, 8, 16, 31, 32, 33, 64, 65, 128, 1024]) {
+  for (const decorated of [false, true]) {
+    const digits = '10'.repeat(Math.ceil(size / 2)).slice(0, size);
+    const text = decorated ? '≈ -' + digits.slice(0, 5) + '.' + digits.slice(5) + '…' : digits;
+    const rows = binaryRows(text);
+    equal(rows.join(''), text);
+    equal(rows.length, Math.max(1, Math.ceil(size / 32)));
+    rows.forEach((row, index) => equal((row.match(/[01]/g) || []).length,
+      index < rows.length - 1 ? 32 : size - 32 * index));
+  }
+}
 // BigInt 长除作为独立参照，生产 ArkTS 核心只使用 Natural。
 function reference(numerator, denominator, radix, places) {
   const negative = numerator < 0n;
@@ -68,7 +81,7 @@ for (const from of [2, 8, 10, 16]) for (let sample = 0; sample < 90; sample++) {
   }
 }
 const session = new BaseConversionSession();
-session.mode = 'numeric';
+equal(session.mode, 'numeric');
 for (const key of ['0', '.', '1']) session.key(key);
 equal(session.numeric.display(10).text, '0.1');
 session.changeRadix(2);

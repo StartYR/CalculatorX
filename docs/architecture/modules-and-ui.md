@@ -107,7 +107,7 @@ SideBarMenu 点击菜单项
 
 ### BaseConverter
 
-[BaseConverter.ets](../../entry/src/main/ets/components/exchange/base/BaseConverter.ets) 提供整数、IEEE 754 与普通数值三个标签页，采用纯 ArkTS 精确核心，不进入 FormulaScreen/C++ CAS。键盘复用公共表面和 API 26 底部 TabBar，低版本回退传统布局。首版已实现，设备验收待完成；详见[进制转换](base-conversion.md)。
+[BaseConverter.ets](../../entry/src/main/ets/components/exchange/base/BaseConverter.ets) 提供数值、整数与 IEEE 754 三个标签页，默认新会话为数值模式，采用纯 ArkTS 精确核心，不进入 FormulaScreen/C++ CAS。键盘复用公共表面和 API 26 底部 TabBar，低版本回退传统布局。首版已实现，设备验收待完成；详见[进制转换](base-conversion.md)。
 
 ## 3. 开发中模块
 

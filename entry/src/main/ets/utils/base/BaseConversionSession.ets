@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2026 StartYi. All rights reserved.
  * @file BaseConversionSession.ets
- * @description 进制转换输入会话；整数、浮点与数值状态相互独立
+ * @description 进制转换输入会话；数值、整数与浮点状态相互独立
  * @author StartYi
  * @date 2026/09/23 01:00
  */
@@ -14,7 +14,7 @@ import { NumericSession } from './NumericSession';
 
 /** 独立保存三种模式的输入；草稿与最近有效位模式允许不同，配置变更前必须确认草稿。 */
 export class BaseConversionSession {
-  mode: string = 'integer';
+  mode: string = 'numeric';
   numeric: NumericSession = new NumericSession();
   radix: number = 10;
   width: number = 16;

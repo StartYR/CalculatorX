@@ -14,13 +14,13 @@ import { NUMERIC_RADICES, NUMERIC_PLACES } from './NumericValue';
 /** 跨启动偏好仅保存配置，不包含计算草稿、结果或进位输入。 */
 export interface BaseConversionSettings {
   mode: string;
+  numericRadix?: number;
+  numericPlaces?: number;
   radix: number;
   width: number;
   signed: boolean;
   floatWidth: number;
   floatRadix: number;
-  numericRadix?: number;
-  numericPlaces?: number;
 }
 
 /**
@@ -54,7 +54,7 @@ export function settingsOf(session: BaseConversionSession): BaseConversionSettin
 
 // 反序列化后仍需校验枚举与类型，避免持久化损坏进入位宽和进制运算。
 export function restoreSettings(settings: BaseConversionSettings): BaseConversionSession {
-  if (!settings || !['integer', 'float', 'numeric'].includes(settings.mode) || ![2, 8, 10, 16].includes(settings.radix) ||
+  if (!settings || !['numeric', 'integer', 'float'].includes(settings.mode) || ![2, 8, 10, 16].includes(settings.radix) ||
     ![8, 16, 32, 64].includes(settings.width) || typeof settings.signed !== 'boolean' ||
     ![16, 32, 64].includes(settings.floatWidth) || ![2, 10, 16].includes(settings.floatRadix)) {
     throw new Error('程序员配置无效');

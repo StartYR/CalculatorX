@@ -15,10 +15,20 @@ import { BaseConversionSession } from '../../../utils/base/BaseConversionSession
 import { decodeFloat } from '../../../utils/base/Ieee754';
 import { BaseInspector } from './BaseInspector';
 import { BaseKey } from './BaseKey';
+import { binaryRows } from '../../../utils/base/BinaryDisplay';
 import { NUMERIC_PLACES } from '../../../utils/base/NumericValue';
 import { PreferenceManager } from '../../../utils/PreferenceManager';
 import { HistoryRepository, HistoryRecord } from '../../../database/HistoryRepository';
 import { BaseConversionMemory, BaseConversionSettings, settingsOf, recordOf, historyRecordOf, restoreSettings, restoreRecord } from '../../../utils/base/BaseConversionState';
+
+// 数值换算实时预览，键盘只提供数字、小数点和输入控制。
+const NUMERIC_KEYS: string[] = [
+  'E', 'F', '⌫', 'AC',
+  '7', '8', '9', 'D',
+  '4', '5', '6', 'C',
+  '1', '2', '3', 'B',
+  '±', '0', '.', 'A',
+];
 
 const INTEGER_KEYS: string[] = [
   'D', 'E', 'F', 'AND', 'SHL',
@@ -38,15 +48,6 @@ const FLOAT_KEYS: string[] = [
   '4', '5', '6', '*', '/',
   '1', '2', '3', '+', '-',
   '.', '0', '0', '±', '='
-];
-
-// 数值换算实时预览，键盘只提供数字、小数点和输入控制。
-const NUMERIC_KEYS: string[] = [
-  'E', 'F', '⌫', 'AC',
-  '7', '8', '9', 'D',
-  '4', '5', '6', 'C',
-  '1', '2', '3', 'B',
-  '±', '0', '.', 'A',
 ];
 
 // 标签文字和选中态通过响应式属性更新，不能使用按值传参的 Builder 固定初始状态。
@@ -223,7 +224,11 @@ export struct BaseConverter {
     return Math.min(390, Math.max(270, this.pageHeight * 0.52)) + Math.max(0, this.navBarHeight - 8);
   }
   private value(radix: number): string {
-    if (this.session.mode === 'numeric') return this.session.numeric.displayText(radix);
+    if (this.session.mode === 'numeric') {
+      // 当前输入直接放在进制行，保留尚未完成的负号、小数点和无效草稿。
+      const numeric = this.session.numeric;
+      return radix === numeric.radix && !numeric.evaluated ? numeric.text : numeric.displayText(radix);
+    }
     if (this.session.mode === 'integer') return this.session.word.format(radix, this.session.signed);
     // 数值行和字段面板共用预览来源；保存历史仍使用独立的已确认结果。
     const bits = this.session.displayedFloatBits();
@@ -231,14 +236,41 @@ export struct BaseConverter {
     return bits.toString(radix).padStart(radix === 16 ? this.session.floatWidth / 4 : this.session.floatWidth, '0');
   }
 
-  private multilineBinary(radix: number): boolean {
-    // 64 位二进制分成两行各 32 位，保证低位在窄屏也可见。
-    return this.session.mode !== 'numeric' && radix === 2 && (this.session.mode === 'integer' ? this.session.width : this.session.floatWidth) === 64;
+  private async copyBinary(): Promise<void> {
+    try {
+      // 分行仅用于排版，复制仍提供连续完整文本，避免换行混入后续输入。
+      await pasteboard.getSystemPasteboard().setData(pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, this.value(2)));
+    } catch (_) { this.session.error = '无法复制数值'; this.session = this.session.copy(); }
   }
 
-  private displayValue(radix: number): string {
-    const value = this.value(radix);
-    return this.multilineBinary(radix) ? value.slice(0, 32) + '\n' + value.slice(32) : value;
+  @Builder
+  private BinaryCopyMenu() {
+    Menu() {
+      MenuItem({ content: $r('app.string.base_copy_value') }).onClick(() => { this.copyBinary(); })
+    }
+  }
+
+  @Builder
+  private BinaryRadixRow() {
+    Row({ space: 10 }) {
+      Text('BIN').fontSize(13).fontWeight(FontWeight.Bold).width(38)
+        .fontColor(this.session.currentRadix() === 2 ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary'))
+      Column() {
+        // 每组是独立单行；窄屏缩小字形而不重新换行，32 位边界不依赖屏幕型号。
+        ForEach(binaryRows(this.value(2)), (row: string) => {
+          Text(row).width('100%').height(22).maxLines(1)
+            .fontFamily('monospace').fontSize(15).minFontSize(1).maxFontSize(15)
+            .heightAdaptivePolicy(TextHeightAdaptivePolicy.MIN_FONT_SIZE_FIRST)
+            .textAlign(TextAlign.End).fontColor($r('sys.color.font_primary'))
+        }, (row: string, index: number) => index.toString() + ':' + row)
+      }.layoutWeight(1)
+        .bindContextMenu(this.BinaryCopyMenu, ResponseType.LongPress)
+        .onClick(() => this.select(() => this.session.changeRadix(2)))
+    }.width('100%').constraintSize({ minHeight: 38 }).padding({ left: 10, right: 10, top: 7, bottom: 7 })
+    .borderRadius(10)
+    .backgroundColor(this.session.currentRadix() === 2 ? $r('sys.color.comp_background_secondary') : Color.Transparent)
+    .id('base.radix.2').accessibilityText('BIN ' + this.value(2))
+    .onClick(() => this.select(() => this.session.changeRadix(2)))
   }
 
   @Builder
@@ -246,13 +278,13 @@ export struct BaseConverter {
     Row({ space: 10 }) {
       Text(label).fontSize(13).fontWeight(FontWeight.Bold).width(38)
         .fontColor(this.session.currentRadix() === radix ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary'))
-      Text(this.displayValue(radix)).fontFamily('monospace').fontSize(radix === 10 ? 19 : 15)
+      Text(this.value(radix)).fontFamily('monospace').fontSize(radix === 10 ? 19 : 15)
         .fontColor($r('sys.color.font_primary')).copyOption(CopyOptions.LocalDevice)
         .minFontSize(8).maxFontSize(radix === 10 ? 19 : 15)
-        .maxLines(this.multilineBinary(radix) ? 2 : 1).heightAdaptivePolicy(TextHeightAdaptivePolicy.MAX_LINES_FIRST)
-        .textAlign(TextAlign.End).layoutWeight(1).height(this.multilineBinary(radix) ? 44 : 30)
+        .maxLines(1).heightAdaptivePolicy(TextHeightAdaptivePolicy.MAX_LINES_FIRST)
+        .textAlign(TextAlign.End).layoutWeight(1).height(30)
         .onClick(() => this.select(() => this.session.changeRadix(radix)))
-    }.width('100%').height(this.multilineBinary(radix) ? 56 : 38)
+    }.width('100%').height(38)
     .padding({ left: 10, right: 10 }).borderRadius(10)
     .backgroundColor(this.session.currentRadix() === radix ? $r('sys.color.comp_background_secondary') : Color.Transparent)
     .id('base.radix.' + radix.toString())
@@ -323,6 +355,10 @@ export struct BaseConverter {
     Scroll() {
       Column({ space: 7 }) {
         Row() {
+          BaseChip({ label: $r('app.string.base_numeric_tab'), selected: this.session.mode === 'numeric',
+            onActivate: () => {
+              this.apply(() => { this.session.mode = 'numeric'; this.session.error = ''; });
+            }, semanticId: 'base.mode.numeric' })
           BaseChip({ label: '整数', selected: this.session.mode === 'integer',
             onActivate: () => {
               this.apply(() => { this.session.mode = 'integer'; this.session.error = ''; });
@@ -331,35 +367,19 @@ export struct BaseConverter {
             onActivate: () => {
               this.apply(() => { this.session.mode = 'float'; this.session.error = ''; });
             }, semanticId: 'base.mode.float' })
-          BaseChip({ label: $r('app.string.base_numeric_tab'), selected: this.session.mode === 'numeric',
-            onActivate: () => {
-              this.apply(() => { this.session.mode = 'numeric'; this.session.error = ''; });
-            }, semanticId: 'base.mode.numeric' })
           Blank()
           BaseChip({ label: '粘贴', selected: false,
             onActivate: () => { this.paste(); }, semanticId: 'base.paste' })
           BaseChip({ label: '?', selected: this.panel === 'help',
             onActivate: () => { this.panel = this.panel === 'help' ? '' : 'help'; }, semanticId: 'base.help' })
         }.width('100%')
-        Column() {
-          if (this.session.mode === 'numeric') {
-            Text(this.session.numeric.evaluated && this.session.numeric.radix !== this.session.numeric.sourceRadix ?
-              this.session.numeric.displayText(this.session.numeric.radix) : this.session.numeric.text)
-              .width('100%')
-              .textAlign(TextAlign.End)
-              .wordBreak(WordBreak.BREAK_ALL)
-              .fontSize(23)
-              .fontFamily('monospace')
-              .fontColor($r('sys.color.font_primary'))
-              .copyOption(CopyOptions.LocalDevice)
-          } else {
-            Scroll() {
-              Text(this.session.mode === 'integer' ? this.session.expression : this.session.floatText)
-                .fontSize(25).fontFamily('monospace').fontColor($r('sys.color.font_primary'))
-                .copyOption(CopyOptions.LocalDevice).maxLines(1).padding({ left: 8, right: 8 })
-            }.scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).height(40).width('100%')
-          }
-        }.width('100%').id('base.expression')
+        if (this.session.mode !== 'numeric') {
+          Scroll() {
+            Text(this.session.mode === 'integer' ? this.session.expression : this.session.floatText)
+              .fontSize(25).fontFamily('monospace').fontColor($r('sys.color.font_primary'))
+              .copyOption(CopyOptions.LocalDevice).maxLines(1).padding({ left: 8, right: 8 })
+          }.scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).height(40).width('100%').id('base.expression')
+        }
         if (this.session.error.length > 0) {
           Text(this.session.error).fontSize(12).fontColor($r('sys.color.warning')).width('100%').id('base.error')
         } else if (this.session.mode === 'numeric' && !this.session.numeric.previewValid) {
@@ -381,13 +401,13 @@ export struct BaseConverter {
           this.NumericRadixRow('HEX', 16)
           this.NumericRadixRow('DEC', 10)
           this.NumericRadixRow('OCT', 8)
-          this.NumericRadixRow('BIN', 2)
+          this.BinaryRadixRow()
           this.NumericControls()
         } else {
           this.RadixRow('HEX', 16)
           this.RadixRow('DEC', 10)
           if (this.session.mode === 'integer') { this.RadixRow('OCT', 8) }
-          this.RadixRow('BIN', 2)
+          this.BinaryRadixRow()
         }
         if (this.session.mode === 'integer') {
           Row({ space: 6 }) {
@@ -413,10 +433,11 @@ export struct BaseConverter {
           }.width('100%')
         } else if (this.session.mode === 'float') {
           Row() {
-            ForEach([16, 32, 64], (width: number) => {
-              BaseChip({ label: 'binary' + width, selected: this.session.floatWidth === width,
-                onActivate: () => this.apply(() => this.session.changeFloatWidth(width)), semanticId: 'base.float.width.' + width })
-            })
+            Select([{ value: 'binary16' }, { value: 'binary32' }, { value: 'binary64' }])
+              .selected([16, 32, 64].indexOf(this.session.floatWidth))
+              .value('binary' + this.session.floatWidth).font({ size: 14 }).height(34)
+              .id('base.float.width')
+              .onSelect((index: number) => this.select(() => this.session.changeFloatWidth([16, 32, 64][index])))
             Blank()
             BaseChip({ label: '字段', selected: this.panel === 'bits',
               onActivate: () => { this.panel = this.panel === 'bits' ? '' : 'bits'; }, semanticId: 'base.bits' })
