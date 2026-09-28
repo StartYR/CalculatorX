@@ -1,7 +1,7 @@
 /**
  * Copyright (c) 2026 StartYi. All rights reserved.
  * @file BaseConversionSession.ets
- * @description 进制转换输入会话；整数与浮点状态相互独立
+ * @description 进制转换输入会话；整数、浮点与数值状态相互独立
  * @author StartYi
  * @date 2026/09/23 01:00
  */
@@ -10,10 +10,12 @@ import { Word, Flags } from './IntegerEngine';
 import { IntegerExpression } from './IntegerExpression';
 import { decodeFloat, convertFloat, negateFloat } from './Ieee754';
 import { FloatExpression } from './FloatExpression';
+import { NumericSession } from './NumericSession';
 
-/** 独立保存两种模式的输入；草稿与最近有效位模式允许不同，配置变更前必须确认草稿。 */
+/** 独立保存三种模式的输入；草稿与最近有效位模式允许不同，配置变更前必须确认草稿。 */
 export class BaseConversionSession {
   mode: string = 'integer';
+  numeric: NumericSession = new NumericSession();
   radix: number = 10;
   width: number = 16;
   signed: boolean = true;
@@ -37,6 +39,7 @@ export class BaseConversionSession {
   copy(): BaseConversionSession {
     const next = new BaseConversionSession();
     next.mode = this.mode;
+    next.numeric = this.numeric.copy();
     next.radix = this.radix;
     next.width = this.width;
     next.signed = this.signed;
@@ -57,9 +60,13 @@ export class BaseConversionSession {
     return next;
   }
 
-  currentRadix(): number { return this.mode === 'integer' ? this.radix : this.floatRadix; }
+  currentRadix(): number {
+    if (this.mode === 'numeric') return this.numeric.radix;
+    return this.mode === 'integer' ? this.radix : this.floatRadix;
+  }
   // A–F 仅在 HEX 可用；浮点十进制语法不能混入原始位模式。
   inputEnabled(key: string): boolean {
+    if (this.mode === 'numeric') return this.numeric.inputEnabled(key);
     if (/^[0-9A-F]$/.test(key)) return parseInt(key, 16) < this.currentRadix();
     if (this.mode === 'float') {
       return ['AC', '⌫', '='].includes(key) ||
@@ -70,6 +77,7 @@ export class BaseConversionSession {
 
   // 解析成功后才替换值并置确认标志；失败保留草稿和此前有效值供继续编辑。
   confirm(): void {
+    if (this.mode === 'numeric') { this.numeric.confirm(); this.error = ''; return; }
     if (this.mode === 'integer' ? this.evaluated : this.floatEvaluated) { this.error = ''; return; }
     if (this.mode === 'float') {
       const value = this.evaluateFloat();
@@ -93,6 +101,7 @@ export class BaseConversionSession {
     if (!this.inputEnabled(key)) return;
     this.error = '';
     if (key === '=') { this.confirm(); return; }
+    if (this.mode === 'numeric') { this.numeric.key(key); return; }
     if (this.mode === 'float') { this.floatKey(key); return; }
     if (key === 'AC') {
       this.expression = '0'; this.word = new Word(undefined, this.width);
@@ -215,6 +224,7 @@ export class BaseConversionSession {
 
   // 切进制前完成确认；格式化只改变编辑表示，不改变底层位模式。
   changeRadix(radix: number): void {
+    if (this.mode === 'numeric') { this.numeric.changeRadix(radix); this.error = ''; return; }
     this.confirm();
     if (this.mode === 'float') {
       this.floatRadix = radix;
