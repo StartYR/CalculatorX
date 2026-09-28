@@ -226,15 +226,16 @@
 entry/src/main/ets/
 ├── components/exchange/base/
 │   ├── BaseConverter.ets             # 页面、双效果键盘、历史与事件
-│   └── ProgrammerInspector.ets       # 位编辑、编码、浮点字段与帮助
+│   ├── BaseKey.ets                   # 单键表面、长按菜单与连续退格
+│   └── BaseInspector.ets             # 位编辑、编码、浮点字段与帮助
 └── utils/base/
     ├── Natural.ets                   # 精确非负 bit 数组算术
-    ├── ProgrammerEngine.ets          # Word、标志与整数编码
-    ├── ProgrammerExpression.ets      # 词法与优先级求值
+    ├── IntegerEngine.ets             # Word、标志与整数编码
+    ├── IntegerExpression.ets         # 词法与优先级求值
     ├── Ieee754.ets                   # 精确舍入、四则运算和格式转换
     ├── FloatExpression.ets           # 浮点表达式与逐节点舍入
-    ├── ProgrammerSession.ets         # 两种输入会话与配置切换
-    └── ProgrammerState.ets           # 设置、进程内会话、历史契约
+    ├── BaseConversionSession.ets     # 两种输入会话与配置切换
+    └── BaseConversionState.ets       # 设置、进程内会话、历史契约
 ```
 
 约束：
@@ -250,7 +251,7 @@ entry/src/main/ets/
 
 ### 2026-09-23 首版执行记录
 
-下方勾选代表实现或对应代码检查完成，不代表真机检查点通过。阶段 0–14 已形成首版，设备验收与阶段 15 尚未完成；[实际实现及边界](../architecture/programmer.md)为当前代码说明。
+下方勾选代表实现或对应代码检查完成，不代表真机检查点通过。阶段 0–14 已形成首版，设备验收与阶段 15 尚未完成；[实际实现及边界](../architecture/base-conversion.md)为当前代码说明。
 
 - `Natural` + `Word` 使用精确 bit 数组，避免完整 64 位整数进入 `number`；选择理由见架构专题。
 - 整数采用五列六行键盘、四进制列表和可折叠检查面板；截图原文件在实施时不可访问，依据本计划记录的布局实现。
@@ -337,7 +338,7 @@ entry/src/main/ets/
 ### 阶段 5：搭建程序员整数页面骨架
 
 - [x] 将 `BaseConverter.ets` 改为页面与键盘装配入口；
-- [x] 创建独立 ProgrammerSession 状态协调类；
+- [x] 创建独立 BaseConversionSession 状态协调类；
 - [x] 创建表达式/结果区和四进制同步列表；
 - [x] 创建字长、符号和位视图控制栏；
 - [x] 创建标志位栏；

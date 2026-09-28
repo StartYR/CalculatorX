@@ -1,18 +1,18 @@
 /**
  * Copyright (c) 2026 StartYi. All rights reserved.
- * @file ProgrammerInspector.ets
+ * @file BaseInspector.ets
  * @description 位编辑、整数编码与浮点字段观察
  * @author StartYi
  * @date 2026/09/23 01:00
  */
-import { ProgrammerSession } from '../../../utils/base/ProgrammerSession';
-import { encodingRows, decodeEncoding, EncodingRow } from '../../../utils/base/ProgrammerEngine';
+import { BaseConversionSession } from '../../../utils/base/BaseConversionSession';
+import { encodingRows, decodeEncoding, EncodingRow } from '../../../utils/base/IntegerEngine';
 import { FloatFormat, decodeFloat } from '../../../utils/base/Ieee754';
 import { Natural } from '../../../utils/base/Natural';
 
 @Component
-export struct ProgrammerInspector {
-  @Prop session: ProgrammerSession = new ProgrammerSession();
+export struct BaseInspector {
+  @Prop session: BaseConversionSession = new BaseConversionSession();
   @Prop panel: string = 'bits';
   onFlip: (index: number) => void = () => {};
 

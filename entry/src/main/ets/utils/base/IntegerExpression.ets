@@ -1,14 +1,14 @@
 /**
  * Copyright (c) 2026 StartYi. All rights reserved.
- * @file ProgrammerExpression.ets
+ * @file IntegerExpression.ets
  * @description 固定字长表达式解析与优先级求值
  * @author StartYi
  * @date 2026/09/22 20:51
  */
-import { Word, Flags, OperationResult, operate } from './ProgrammerEngine';
+import { Word, Flags, OperationResult, operate } from './IntegerEngine';
 
 /** 优先级爬升解析器；每个运算节点立即按固定字长求值，避免整式末尾才截断。 */
-export class ProgrammerExpression {
+export class IntegerExpression {
   private tokens: string[] = [];
   private position: number = 0;
   private radix: number;

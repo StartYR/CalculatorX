@@ -1,6 +1,6 @@
 /**
  * Copyright (c) 2026 StartYi. All rights reserved.
- * @file ProgrammerEngine.ets
+ * @file IntegerEngine.ets
  * @description 固定字长算术、位操作、编码与标志位
  * @author StartYi
  * @date 2026/09/22 21:00

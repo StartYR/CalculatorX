@@ -1,17 +1,17 @@
 /**
  * Copyright (c) 2026 StartYi. All rights reserved.
- * @file ProgrammerState.ets
- * @description 程序员偏好和历史扩展槽的版本化数据契约
+ * @file BaseConversionState.ets
+ * @description 进制转换偏好和历史扩展槽的版本化数据契约
  * @author StartYi
  * @date 2026/09/23 01:00
  */
-import { ProgrammerSession } from './ProgrammerSession';
-import { Word, Flags } from './ProgrammerEngine';
+import { BaseConversionSession } from './BaseConversionSession';
+import { Word, Flags } from './IntegerEngine';
 import { Natural } from './Natural';
 import { decodeFloat } from './Ieee754';
 
 /** 跨启动偏好仅保存配置，不包含计算草稿、结果或进位输入。 */
-export interface ProgrammerSettings {
+export interface BaseConversionSettings {
   mode: string;
   radix: number;
   width: number;
@@ -20,11 +20,14 @@ export interface ProgrammerSettings {
   floatRadix: number;
 }
 
-/** 历史 extra_params 的版本 1 契约；整数与浮点位模式均用 HEX 文本避免 JSON 数值丢精度。 */
-export interface ProgrammerRecord {
+/**
+ * 历史 extra_params 的版本 1 契约；整数与浮点位模式均用 HEX 文本避免 JSON 数值丢精度。
+ * kind=programmer 与 version=1 是已存历史的兼容标识，不随内部类型名称变化。
+ */
+export interface BaseConversionRecord {
   kind: string;
   version: number;
-  settings: ProgrammerSettings;
+  settings: BaseConversionSettings;
   bits: string;
   expression: string;
   flags: Flags;
@@ -34,23 +37,23 @@ export interface ProgrammerRecord {
 }
 
 /** 仅在进程内保留页面往返状态；应用重启后由偏好重建空会话。 */
-export class ProgrammerMemory {
-  static session: ProgrammerSession | undefined = undefined;
+export class BaseConversionMemory {
+  static session: BaseConversionSession | undefined = undefined;
 }
 
-export function settingsOf(session: ProgrammerSession): ProgrammerSettings {
+export function settingsOf(session: BaseConversionSession): BaseConversionSettings {
   return { mode: session.mode, radix: session.radix, width: session.width, signed: session.signed,
     floatWidth: session.floatWidth, floatRadix: session.floatRadix };
 }
 
 // 反序列化后仍需校验枚举与类型，避免持久化损坏进入位宽和进制运算。
-export function restoreSettings(settings: ProgrammerSettings): ProgrammerSession {
+export function restoreSettings(settings: BaseConversionSettings): BaseConversionSession {
   if (!settings || !['integer', 'float'].includes(settings.mode) || ![2, 8, 10, 16].includes(settings.radix) ||
     ![8, 16, 32, 64].includes(settings.width) || typeof settings.signed !== 'boolean' ||
     ![16, 32, 64].includes(settings.floatWidth) || ![2, 10, 16].includes(settings.floatRadix)) {
     throw new Error('程序员配置无效');
   }
-  const session = new ProgrammerSession();
+  const session = new BaseConversionSession();
   session.mode = settings.mode;
   session.width = settings.width;
   session.radix = settings.radix;
@@ -62,13 +65,13 @@ export function restoreSettings(settings: ProgrammerSettings): ProgrammerSession
 }
 
 /** 可用于调试状态，保留当前草稿；写历史应使用 historyRecordOf 清理非活动模式草稿。 */
-export function recordOf(session: ProgrammerSession): ProgrammerRecord {
+export function recordOf(session: BaseConversionSession): BaseConversionRecord {
   return { kind: 'programmer', version: 1, settings: settingsOf(session),
     bits: session.word.format(16), expression: session.expression, flags: session.flags, carry: session.carry,
     floatBits: session.floatBits.toString(16), floatText: session.floatText };
 }
 
-export function historyRecordOf(session: ProgrammerSession): ProgrammerRecord {
+export function historyRecordOf(session: BaseConversionSession): BaseConversionRecord {
   const record = recordOf(session);
   // 历史只保存已确认模式的输入，另一模式以最近有效位模式恢复。
   if (session.mode !== 'integer') record.expression = session.word.format(session.radix, session.signed, false);
@@ -78,8 +81,8 @@ export function historyRecordOf(session: ProgrammerSession): ProgrammerRecord {
 }
 
 // 历史位模式为结果权威来源，不重新计算表达式，以保留精确值、标志和 NaN payload。
-export function restoreRecord(json: string): ProgrammerSession {
-  const record = JSON.parse(json) as ProgrammerRecord;
+export function restoreRecord(json: string): BaseConversionSession {
+  const record = JSON.parse(json) as BaseConversionRecord;
   if (!record || record.kind !== 'programmer' || record.version !== 1 ||
     typeof record.expression !== 'string' || record.expression.length > 1024 ||
     typeof record.floatText !== 'string' || record.floatText.length > 768 ||

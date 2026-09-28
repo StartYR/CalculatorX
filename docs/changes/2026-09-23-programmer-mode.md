@@ -5,7 +5,7 @@
 - 分支：`codex/programmer-mode`
 - 基线：`main` 的 `e9bc1eb`
 - 日期：2026-09-23
-- 关联：[实施计划](../plan/programmer-mode-implementation.md) · [架构与操作说明](../architecture/programmer.md)
+- 关联：[实施计划](../plan/programmer-mode-implementation.md) · [架构与操作说明](../architecture/base-conversion.md)
 
 ## 变更摘要
 
@@ -66,3 +66,13 @@ API 26 的传统/沉浸双开关、API 23 回退、深浅色、64 位长值、�
 - 未执行 HAP 打包、Hypium 设备测试、API 23 回退或 API 26 光感的真机交互验收。
 
 发布说明素材：程序员模式新增 IEEE 754 四则运算和输入实时预览，可在 binary16/32/64 下观察逐步舍入后的数值、位模式和浮点字段。
+
+## 2026-09-28 模块命名与单键组件整理
+
+- 会话与状态文件使用 `BaseConversionSession`、`BaseConversionState`；相关设置、历史和进程内快照类型同步采用 `BaseConversion` 前缀。
+- 固定字长核心与表达式更名为 `IntegerEngine`、`IntegerExpression`；检查面板更名为 `BaseInspector`。
+- 单键组件从 `BaseConverter` 提取为同目录的 `BaseKey`，包括按键角色、长按菜单与连续退格；页面内标签与标志组件分别命名为 `BaseChip`、`IntegerFlag`。
+- 键盘布局、API 26 分支、传统/沉浸容器继续由页面持有。`base.*` 语义 ID、`event_programmer_restore`、偏好键和历史 `kind=programmer, version=1` 均保持原值。
+- 架构说明迁至 [进制转换](../architecture/base-conversion.md)，源码引用、测试导入和文档目录同步更新。“数值”标签仍待开发，本次没有增加功能或改变计算与输入规则。
+
+验证：重构前后 `node tools/test-programmer.mjs` 均通过 259,706 项断言；9 个源码/测试单元在应用预期改名、导入调整和组件提取后，去除注释与空白的代码对比一致，字符串保持原值。模块 CodeLinter、键盘架构检查、CLI 静态检查和 `git diff --check` 通过；`entry@default/debug assembleHap` 构建成功，仍有废弃 API 与异常传播等告警。本轮未运行 Hypium 或真机交互验收。

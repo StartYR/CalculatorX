@@ -1,24 +1,23 @@
 /**
  * Copyright (c) 2026 StartYi. All rights reserved.
- * * @file BaseConverter.ets
- * @description 程序员模式页面与双路径键盘
- * * @author StartYi
+ * @file BaseConverter.ets
+ * @description 进制转换页面、输入会话与双路径键盘装配
+ * @author StartYi
  * @date 2026/7/24 22:53
  */
 
 import deviceInfo from '@ohos.deviceInfo';
 import pasteboard from '@ohos.pasteboard';
+
 import { PreferenceConfigs } from '../../../utils/CalculatorConfigs';
-import { getCalculatorKeySemanticId } from '../../../utils/SemanticIds';
 import { HapticUtils } from '../../../utils/HapticUtils';
-import { KeyboardKeySurface } from '../../common/keyboard/KeyboardKeySurface';
-import { KeyboardKeyRole } from '../../common/keyboard/KeyboardKeyTypes';
-import { ProgrammerSession } from '../../../utils/base/ProgrammerSession';
+import { BaseConversionSession } from '../../../utils/base/BaseConversionSession';
 import { decodeFloat } from '../../../utils/base/Ieee754';
-import { ProgrammerInspector } from './ProgrammerInspector';
+import { BaseInspector } from './BaseInspector';
+import { BaseKey } from './BaseKey';
 import { PreferenceManager } from '../../../utils/PreferenceManager';
 import { HistoryRepository, HistoryRecord } from '../../../database/HistoryRepository';
-import { ProgrammerMemory, ProgrammerSettings, settingsOf, recordOf, historyRecordOf, restoreSettings, restoreRecord } from '../../../utils/base/ProgrammerState';
+import { BaseConversionMemory, BaseConversionSettings, settingsOf, recordOf, historyRecordOf, restoreSettings, restoreRecord } from '../../../utils/base/BaseConversionState';
 
 const INTEGER_KEYS: string[] = [
   'D', 'E', 'F', 'AND', 'SHL',
@@ -40,100 +39,9 @@ const FLOAT_KEYS: string[] = [
   '.', '0', '0', '±', '='
 ];
 
-function keyRole(key: string): KeyboardKeyRole {
-  if (key === 'AC' || key === '⌫') return KeyboardKeyRole.DANGER;
-  if (key === '=') return KeyboardKeyRole.EMPHASIS;
-  if (/^[0-9A-F]$/.test(key) || key === '.') return KeyboardKeyRole.CORE;
-  return KeyboardKeyRole.OPERATOR;
-}
-
-function alternatives(key: string): string[] {
-  if (key === 'AND') return ['OR', 'XOR', 'NOT'];
-  if (key === 'SHL') return ['ROL', 'RCL'];
-  if (key === 'SHR') return ['SAR', 'ROR', 'RCR'];
-  if (key === '+') return ['ADC'];
-  if (key === '-') return ['SBB'];
-  return [];
-}
-
+// 标签文字和选中态通过响应式属性更新，不能使用按值传参的 Builder 固定初始状态。
 @Component
-struct ProgrammerKey {
-  @Prop keyText: string = '';
-  @Prop immersive: boolean = false;
-  @Prop available: boolean = true;
-  @Prop integerMode: boolean = true;
-  onPress: (key: string) => void = () => {};
-  private repeatTimer: number = -1;
-  private delayTimer: number = -1;
-  private repeated: boolean = false;
-
-  private stopRepeat(): void {
-    // 长按退格的两个计时器随按键释放或组件消失一并取消，避免后台继续删字。
-    clearTimeout(this.delayTimer);
-    clearInterval(this.repeatTimer);
-  }
-  aboutToDisappear(): void { this.stopRepeat(); }
-
-  @Builder
-  private MenuBuilder() {
-    Menu() {
-      ForEach(alternatives(this.keyText), (key: string) => {
-        MenuItem({ content: key }).onClick(() => this.onPress(key))
-      })
-    }
-  }
-
-  @Builder
-  private Surface() {
-    // 两种键盘共用按键语义与业务回调，沉浸开关只改变公共表面的渲染路径。
-    KeyboardKeySurface({
-      immersive: this.immersive, role: keyRole(this.keyText), keyBorderRadius: 16,
-      semanticId: this.keyText === 'e' ? 'base.key.exponent' :
-        getCalculatorKeySemanticId(this.keyText === '-' ? '−' : this.keyText === '*' ? '×' : this.keyText === '/' ? '÷' : this.keyText)
-          .replace('calc.key.', 'base.key.'),
-      keyAccessibilityText: this.keyText + (this.available ? '' : '，当前进制不可用') +
-        (this.integerMode && alternatives(this.keyText).length ? '，长按更多操作' : ''),
-      onKeyClick: () => { if (this.available && !this.repeated) this.onPress(this.keyText); },
-      onKeyTouch: (event: TouchEvent) => {
-        if (event.type === TouchType.Down) {
-          this.repeated = false;
-          if (this.keyText === '⌫') {
-            this.stopRepeat();
-            this.delayTimer = setTimeout(() => {
-              this.repeated = true;
-              this.onPress('⌫');
-              this.repeatTimer = setInterval(() => this.onPress('⌫'), 70);
-            }, 450);
-          }
-        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) this.stopRepeat();
-      }
-    }) {
-      Column({ space: 1 }) {
-        Text(this.keyText === '*' ? '×' : this.keyText === '/' ? '÷' : this.keyText === '-' ? '−' : this.keyText)
-          .fontSize(this.keyText.length > 2 ? 16 : 23).fontWeight(FontWeight.Medium)
-          .fontColor(keyRole(this.keyText) === KeyboardKeyRole.DANGER || this.keyText === '=' ?
-            $r('sys.color.font_on_primary') : $r('sys.color.font_primary'))
-        if (this.integerMode && alternatives(this.keyText).length > 0) {
-          Text('···').fontSize(10).fontColor($r('sys.color.font_secondary'))
-        }
-      }
-    }
-  }
-
-  build() {
-    if (this.integerMode && alternatives(this.keyText).length > 0) {
-      Stack() { this.Surface() }.width('100%').height('100%')
-        .enabled(this.available).opacity(this.available ? 1 : 0.3)
-        .bindContextMenu(this.MenuBuilder, ResponseType.LongPress)
-    } else {
-      Stack() { this.Surface() }.width('100%').height('100%')
-        .enabled(this.available).opacity(this.available ? 1 : 0.3)
-    }
-  }
-}
-
-@Component
-struct ProgrammerChip {
+struct BaseChip {
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @Prop label: string = '';
@@ -154,7 +62,7 @@ struct ProgrammerChip {
 }
 
 @Component
-struct ProgrammerFlag {
+struct IntegerFlag {
   @Prop label: string = '';
   @Prop flagValue: number = -1;
 
@@ -172,11 +80,11 @@ export struct BaseConverter {
   @StorageProp('statusBarHeight') statusBarHeight: number = 0;
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
-  @State session: ProgrammerSession = new ProgrammerSession();
+  @State session: BaseConversionSession = new BaseConversionSession();
   @State panel: string = '';
   @State pageHeight: number = 700;
-  private undoStack: ProgrammerSession[] = [];
-  private redoStack: ProgrammerSession[] = [];
+  private undoStack: BaseConversionSession[] = [];
+  private redoStack: BaseConversionSession[] = [];
   private undoHandler: () => void = () => this.undo();
   private redoHandler: () => void = () => this.redo();
   // 恢复输出时直接回填已存位模式；浮点转 HEX 可保留 NaN payload。
@@ -196,16 +104,16 @@ export struct BaseConverter {
   aboutToAppear(): void {
     // 进程内会话优先于跨启动偏好；事件订阅只在组件挂载期间有效。
     try {
-      this.session = ProgrammerMemory.session ? ProgrammerMemory.session.copy() :
-        restoreSettings(JSON.parse(PreferenceManager.get(PreferenceConfigs.KEY_PROGRAMMER_SETTINGS, JSON.stringify(settingsOf(this.session))) as string) as ProgrammerSettings);
-    } catch (_) { this.session = new ProgrammerSession(); }
+      this.session = BaseConversionMemory.session ? BaseConversionMemory.session.copy() :
+        restoreSettings(JSON.parse(PreferenceManager.get(PreferenceConfigs.KEY_PROGRAMMER_SETTINGS, JSON.stringify(settingsOf(this.session))) as string) as BaseConversionSettings);
+    } catch (_) { this.session = new BaseConversionSession(); }
     getContext(this).eventHub.on('event_math_undo', this.undoHandler);
     getContext(this).eventHub.on('event_math_redo', this.redoHandler);
     getContext(this).eventHub.on('event_programmer_restore', this.historyHandler);
   }
 
   aboutToDisappear(): void {
-    ProgrammerMemory.session = this.session.copy();
+    BaseConversionMemory.session = this.session.copy();
     getContext(this).eventHub.off('event_math_undo', this.undoHandler);
     getContext(this).eventHub.off('event_math_redo', this.redoHandler);
     getContext(this).eventHub.off('event_programmer_restore', this.historyHandler);
@@ -330,18 +238,18 @@ export struct BaseConverter {
     Scroll() {
       Column({ space: 7 }) {
         Row() {
-          ProgrammerChip({ label: '整数', selected: this.session.mode === 'integer',
+          BaseChip({ label: '整数', selected: this.session.mode === 'integer',
             onActivate: () => {
               this.apply(() => { this.session.mode = 'integer'; this.session.error = ''; });
             }, semanticId: 'base.mode.integer' })
-          ProgrammerChip({ label: 'IEEE 754', selected: this.session.mode === 'float',
+          BaseChip({ label: 'IEEE 754', selected: this.session.mode === 'float',
             onActivate: () => {
               this.apply(() => { this.session.mode = 'float'; this.session.error = ''; });
             }, semanticId: 'base.mode.float' })
           Blank()
-          ProgrammerChip({ label: '粘贴', selected: false,
+          BaseChip({ label: '粘贴', selected: false,
             onActivate: () => { this.paste(); }, semanticId: 'base.paste' })
-          ProgrammerChip({ label: '?', selected: this.panel === 'help',
+          BaseChip({ label: '?', selected: this.panel === 'help',
             onActivate: () => { this.panel = this.panel === 'help' ? '' : 'help'; }, semanticId: 'base.help' })
         }.width('100%')
         Scroll() {
@@ -369,38 +277,38 @@ export struct BaseConverter {
             Select([{ value: '8 bit · BYTE' }, { value: '16 bit · WORD' }, { value: '32 bit · DWORD' }, { value: '64 bit · QWORD' }])
               .selected([8, 16, 32, 64].indexOf(this.session.width)).value(this.session.width + ' bit').font({ size: 14 }).height(34)
               .id('base.width').onSelect((index: number) => this.select(() => this.session.changeWidth([8, 16, 32, 64][index])))
-            ProgrammerChip({ label: this.session.signed ? '有符号' : '无符号', selected: this.session.signed,
+            BaseChip({ label: this.session.signed ? '有符号' : '无符号', selected: this.session.signed,
               onActivate: () => this.apply(() => this.session.changeSigned()), semanticId: 'base.signed' })
             Blank()
-            ProgrammerChip({ label: '位', selected: this.panel === 'bits',
+            BaseChip({ label: '位', selected: this.panel === 'bits',
               onActivate: () => { this.panel = this.panel === 'bits' ? '' : 'bits'; }, semanticId: 'base.bits' })
-            ProgrammerChip({ label: '编码', selected: this.panel === 'encoding',
+            BaseChip({ label: '编码', selected: this.panel === 'encoding',
               onActivate: () => { this.panel = this.panel === 'encoding' ? '' : 'encoding'; }, semanticId: 'base.encoding' })
           }.width('100%')
           Row({ space: 12 }) {
-            ProgrammerFlag({ label: 'CF', flagValue: this.session.flags.cf })
-            ProgrammerFlag({ label: 'OF', flagValue: this.session.flags.of })
-            ProgrammerFlag({ label: 'ZF', flagValue: this.session.flags.zf })
-            ProgrammerFlag({ label: 'SF', flagValue: this.session.flags.sf })
+            IntegerFlag({ label: 'CF', flagValue: this.session.flags.cf })
+            IntegerFlag({ label: 'OF', flagValue: this.session.flags.of })
+            IntegerFlag({ label: 'ZF', flagValue: this.session.flags.zf })
+            IntegerFlag({ label: 'SF', flagValue: this.session.flags.sf })
             Blank()
-            ProgrammerChip({ label: 'C-in ' + this.session.carry, selected: this.session.carry === 1,
+            BaseChip({ label: 'C-in ' + this.session.carry, selected: this.session.carry === 1,
               onActivate: () => this.apply(() => { this.session.carry = 1 - this.session.carry; }), semanticId: 'base.carry' })
           }.width('100%')
         } else {
           Row() {
             ForEach([16, 32, 64], (width: number) => {
-              ProgrammerChip({ label: 'binary' + width, selected: this.session.floatWidth === width,
+              BaseChip({ label: 'binary' + width, selected: this.session.floatWidth === width,
                 onActivate: () => this.apply(() => this.session.changeFloatWidth(width)), semanticId: 'base.float.width.' + width })
             })
             Blank()
-            ProgrammerChip({ label: '字段', selected: this.panel === 'bits',
+            BaseChip({ label: '字段', selected: this.panel === 'bits',
               onActivate: () => { this.panel = this.panel === 'bits' ? '' : 'bits'; }, semanticId: 'base.bits' })
           }.width('100%')
           Text(decodeFloat(this.session.displayedFloatBits(), this.session.floatWidth).category + ' · 按 = 确认输入')
             .fontSize(12).fontColor($r('sys.color.font_secondary')).width('100%')
         }
         if (this.panel.length > 0) {
-          ProgrammerInspector({ session: this.session, panel: this.panel,
+          BaseInspector({ session: this.session, panel: this.panel,
             onFlip: (index: number) => this.select(() => this.session.flip(index)) })
         }
       }.width('100%').padding({ left: 14, right: 14, top: 8, bottom: this.keyboardHeight() + 12 })
@@ -425,7 +333,7 @@ export struct BaseConverter {
       ForEach(this.session.mode === 'integer' ? INTEGER_KEYS : FLOAT_KEYS, (key: string, index: number) => {
         if (this.keyboardKeySpan(index) > 0) {
           GridItem() {
-            ProgrammerKey({ keyText: key, immersive: immersive, available: this.session.inputEnabled(key),
+            BaseKey({ keyText: key, immersive: immersive, available: this.session.inputEnabled(key),
               integerMode: this.session.mode === 'integer', onPress: (action: string) => this.press(action) })
           }.rowStart(Math.floor(index / 5)).rowEnd(Math.floor(index / 5))
             .columnStart(index % 5).columnEnd(index % 5 + this.keyboardKeySpan(index) - 1)

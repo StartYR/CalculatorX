@@ -15,13 +15,13 @@ registerHooks({
     return next(url, context);
   }
 });
-const { Word, Flags, operate, encodingRows, decodeEncoding } = await import('../entry/src/main/ets/utils/base/ProgrammerEngine.ets');
+const { Word, Flags, operate, encodingRows, decodeEncoding } = await import('../entry/src/main/ets/utils/base/IntegerEngine.ets');
 const { Natural } = await import('../entry/src/main/ets/utils/base/Natural.ets');
-const { ProgrammerExpression } = await import('../entry/src/main/ets/utils/base/ProgrammerExpression.ets');
+const { IntegerExpression } = await import('../entry/src/main/ets/utils/base/IntegerExpression.ets');
 const { encodeFloat, decodeFloat, convertFloat, operateFloat, negateFloat } = await import('../entry/src/main/ets/utils/base/Ieee754.ets');
 const { FloatExpression } = await import('../entry/src/main/ets/utils/base/FloatExpression.ets');
-const { ProgrammerSession } = await import('../entry/src/main/ets/utils/base/ProgrammerSession.ets');
-const { recordOf, historyRecordOf, restoreRecord, settingsOf, restoreSettings } = await import('../entry/src/main/ets/utils/base/ProgrammerState.ets');
+const { BaseConversionSession } = await import('../entry/src/main/ets/utils/base/BaseConversionSession.ets');
+const { recordOf, historyRecordOf, restoreRecord, settingsOf, restoreSettings } = await import('../entry/src/main/ets/utils/base/BaseConversionState.ets');
 let checks = 0;
 function equal(actual, expected) { assert.equal(actual, expected); checks++; }
 function word(value, width = 8) { return Word.parse(String(value), 10, width); }
@@ -94,10 +94,10 @@ equal(decodeEncoding(word(128), '原码'), '-0');
 equal(decodeEncoding(word(255), '反码'), '-0');
 for (const [text, expected] of [['2 + 3 * 4', '14'], ['( 2 + 3 ) * 4', '20'], ['-7 / 3', '-2'],
   ['-7 MOD 3', '-1'], ['1 OR 2 AND 4', '1'], ['NOT 0', '-1'], ['1 RCL 1', '3']]) {
-  equal(new ProgrammerExpression(10, 8, true, 1).evaluate(text).word.format(10, true), expected);
+  equal(new IntegerExpression(10, 8, true, 1).evaluate(text).word.format(10, true), expected);
 }
 for (const text of ['1 / 0', '1 +', '(1', '1)', '1 . 2', '256', '-129', '1 SHL -1']) {
-  assert.throws(() => new ProgrammerExpression(10, 8, true).evaluate(text)); checks++;
+  assert.throws(() => new IntegerExpression(10, 8, true).evaluate(text)); checks++;
 }
 const known = [
   [16, '0', '0000'], [16, '-0', '8000'], [16, '1', '3C00'], [16, '-2.5', 'C100'],
@@ -142,7 +142,7 @@ for (const width of [32, 64]) for (let i = 0; i < 300; i++) {
 }
 for (const width of [16, 32, 64]) {
   for (const input of ['-0', '0', '-2.5', 'Infinity', 'NaN']) {
-    const session = new ProgrammerSession();
+    const session = new BaseConversionSession();
     session.mode = 'float'; session.floatWidth = width; session.floatText = input; session.floatEvaluated = false;
     session.confirm(); session.changeRadix(16);
     const bits = session.floatBits.toString(16);
@@ -155,7 +155,7 @@ for (const width of [16, 32, 64]) {
 }
 // 切换有符号解释不改变位模式；十进制表达式及后续运算应使用新的解释。
 for (const [width, hex, unsigned] of [[8, 'FF', '255'], [64, 'FFFFFFFFFFFFFFFF', '18446744073709551615']]) {
-  const toggle = new ProgrammerSession();
+  const toggle = new BaseConversionSession();
   toggle.changeWidth(width);
   toggle.changeRadix(16);
   for (const digit of hex) toggle.key(digit);
@@ -183,7 +183,7 @@ for (const [width, hex, unsigned] of [[8, 'FF', '255'], [64, 'FFFFFFFFFFFFFFFF',
     equal(toggle.word.format(10, toggle.signed), isSigned ? '0' : (BigInt(unsigned) / 2n).toString());
   }
 }
-const session = new ProgrammerSession();
+const session = new BaseConversionSession();
 session.changeWidth(8);
 for (const key of ['2', '5', '5', '+', '1', '=']) session.key(key);
 equal(session.word.format(10), '0'); equal(session.flags.cf, 1);
@@ -232,7 +232,7 @@ for (const width of [16, 32, 64]) {
   equal(operateFloat('/', Natural.small(3), encodeFloat('2', width), width).toString(16), '2');
   equal(operateFloat('*', negateFloat(minimum, width), encodeFloat('0.5', width), width).toString(16),
     encodeFloat('-0', width).toString(16));
-  const f = new ProgrammerSession(); f.mode = 'float'; f.floatWidth = width;
+  const f = new BaseConversionSession(); f.mode = 'float'; f.floatWidth = width;
   for (const key of ['2', '+', '3', '*', '4', '=']) f.key(key);
   equal(decodeFloat(f.floatBits, width).decimal, '14');
   for (const key of ['/', '2', '=']) f.key(key);
@@ -281,7 +281,7 @@ for (const width of [16, 32, 64]) {
 }
 // 草稿、预览、确认结果各自独立；预览快照供撤销/重做复用，历史仅记录确认位串。
 for (const width of [16, 32, 64]) {
-  const f = new ProgrammerSession(); f.mode = 'float'; f.floatWidth = width;
+  const f = new BaseConversionSession(); f.mode = 'float'; f.floatWidth = width;
   f.key('2');
   equal(f.floatBits.toString(16), '0');
   equal(f.displayedFloatBits().toString(16), encodeFloat('2', width).toString(16));

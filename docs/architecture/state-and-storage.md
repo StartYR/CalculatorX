@@ -91,7 +91,7 @@ CalculatorX 不使用第三方状态管理库，而是按生命周期和作用�
 
 配置键统一声明在 [CalculatorConfigs.ets](../../entry/src/main/ets/utils/CalculatorConfigs.ets) 的 `PreferenceConfigs`。
 
-程序员模式通过 `KEY_PROGRAMMER_SETTINGS` 保存设置 JSON，页面自行读取，不注入全局 AppStorage。草稿只保留在进程内 `ProgrammerMemory`；确认结果以 `module_type=base` 写入现有历史表，配置与位模式使用 `extra_params`，无需数据库迁移。完整契约见[程序员模式](programmer.md#状态与历史)。
+程序员模式通过 `KEY_PROGRAMMER_SETTINGS` 保存设置 JSON，页面自行读取，不注入全局 AppStorage。草稿只保留在进程内 `BaseConversionMemory`；确认结果以 `module_type=base` 写入现有历史表，配置与位模式使用 `extra_params`，无需数据库迁移。完整契约见[程序员模式](base-conversion.md#状态与历史)。
 
 ### 配置键与默认值
 

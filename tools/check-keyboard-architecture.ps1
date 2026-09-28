@@ -59,7 +59,18 @@ foreach ($match in $preferenceReferences) {
 
 foreach ($modulePath in $keyboardModules) {
   $moduleText = Get-Content -LiteralPath $modulePath -Raw
-  if ($moduleText -notmatch 'KeyboardKeySurface') {
+  # 进制模块通过独立单键组件使用公共表面；渲染入口仍在 BaseConverter 中检查。
+  if ($modulePath -eq (Join-Path $sourceRoot 'components\exchange\base\BaseConverter.ets')) {
+    $keyPath = Join-Path $sourceRoot 'components\exchange\base\BaseKey.ets'
+    if ($moduleText -notmatch "import \{ BaseKey \} from './BaseKey'" -or $moduleText -notmatch 'BaseKey\(\{') {
+      $errors.Add("进制键盘未连接单键组件: $modulePath")
+    }
+    if (-not (Test-Path -LiteralPath $keyPath)) {
+      $errors.Add("进制单键组件不存在: $keyPath")
+    } elseif ((Get-Content -LiteralPath $keyPath -Raw) -notmatch 'KeyboardKeySurface\(\{') {
+      $errors.Add("进制单键未使用公共按键表面: $keyPath")
+    }
+  } elseif ($moduleText -notmatch 'KeyboardKeySurface') {
     $errors.Add("键盘模块未使用公共按键表面: $modulePath")
   }
 }

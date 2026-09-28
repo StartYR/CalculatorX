@@ -6,11 +6,11 @@
  * @date 2026/09/23 01:00
  */
 import { describe, it, expect } from '@ohos/hypium';
-import { Word } from '../main/ets/utils/base/ProgrammerEngine';
-import { ProgrammerExpression } from '../main/ets/utils/base/ProgrammerExpression';
+import { Word } from '../main/ets/utils/base/IntegerEngine';
+import { IntegerExpression } from '../main/ets/utils/base/IntegerExpression';
 import { FloatExpression } from '../main/ets/utils/base/FloatExpression';
 import { encodeFloat, convertFloat } from '../main/ets/utils/base/Ieee754';
-import { ProgrammerSession } from '../main/ets/utils/base/ProgrammerSession';
+import { BaseConversionSession } from '../main/ets/utils/base/BaseConversionSession';
 
 export default function programmerTest() {
   describe('Programmer', () => {
@@ -19,7 +19,7 @@ export default function programmerTest() {
       expect(Word.parse('9007199254740993', 10, 64).format(10)).assertEqual('9007199254740993');
     });
     it('evaluatesPrecedenceAndCarry', 0, () => {
-      const parser = new ProgrammerExpression(10, 8, false);
+      const parser = new IntegerExpression(10, 8, false);
       expect(parser.evaluate('2 + 3 * 4').word.format(10)).assertEqual('14');
       const result = parser.evaluate('255 + 1');
       expect(result.word.format(10)).assertEqual('0');
@@ -32,7 +32,7 @@ export default function programmerTest() {
       expect(convertFloat(encodeFloat('1.00048828125', 64), 64, 16).toString(16)).assertEqual('3C00');
     });
     it('keepsBitsWhenChangingRadix', 0, () => {
-      const session = new ProgrammerSession();
+      const session = new BaseConversionSession();
       session.key('1'); session.key('+'); session.key('2'); session.key('=');
       session.changeRadix(16);
       expect(session.word.format(10)).assertEqual('3');
@@ -45,7 +45,7 @@ export default function programmerTest() {
       expect(new FloatExpression(64).evaluate('1 / -0').toString(16)).assertEqual('FFF0000000000000');
     });
     it('continuesFloatCalculationFromConfirmedResult', 0, () => {
-      const session = new ProgrammerSession();
+      const session = new BaseConversionSession();
       session.mode = 'float';
       for (const key of ['2', '+', '3', '=', '*', '4', '=']) session.key(key);
       expect(session.floatBits.toString(16)).assertEqual('41A00000');
@@ -53,7 +53,7 @@ export default function programmerTest() {
       expect(session.inputEnabled('*')).assertFalse();
     });
     it('keepsConfirmedFloatWhilePreviewingIncompleteInput', 0, () => {
-      const session = new ProgrammerSession();
+      const session = new BaseConversionSession();
       session.mode = 'float';
       session.key('2'); session.key('=');
       session.replaceFloatInput('3');

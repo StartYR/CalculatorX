@@ -1,22 +1,25 @@
-# 程序员模式
+# 进制转换
 
 [返回架构文档](../architecture.md) · [实施计划](../plan/programmer-mode-implementation.md)
 
-程序员模式首版包含固定字长整数和 IEEE 754 表示。普通数值转换尚未实现。核心回归、ArkTS 单元测试和 debug 构建已通过，设备交互与视觉验收仍待完成。
+进制转换模块目前提供固定字长整数和 IEEE 754 两个标签。普通“数值”标签尚未实现。核心回归、ArkTS 单元测试和 debug 构建已通过，设备交互与视觉验收仍待完成。
 
 ## 模块结构
 
 | 文件 | 职责 |
 | --- | --- |
-| `components/exchange/base/BaseConverter.ets` | 页面、五列键盘、菜单、历史与双渲染容器 |
-| `components/exchange/base/ProgrammerInspector.ets` | 位编辑、编码对照、浮点字段与帮助 |
+| `components/exchange/base/BaseConverter.ets` | 页面、五列键盘布局、历史与双渲染容器 |
+| `components/exchange/base/BaseKey.ets` | 单键公共表面、长按菜单与连续退格 |
+| `components/exchange/base/BaseInspector.ets` | 位编辑、编码对照、浮点字段与帮助 |
 | `utils/base/Natural.ets` | 低位在前的 bit 数组和精确非负整数算术 |
-| `utils/base/ProgrammerEngine.ets` | 固定字长 Word、标志位、算术和编码 |
-| `utils/base/ProgrammerExpression.ets` | ASCII token、括号与优先级求值 |
+| `utils/base/IntegerEngine.ets` | 固定字长 Word、标志位、算术和编码 |
+| `utils/base/IntegerExpression.ets` | ASCII token、括号与优先级求值 |
 | `utils/base/Ieee754.ets` | 精确十进制舍入、浮点四则运算、字段解析和格式转换 |
 | `utils/base/FloatExpression.ets` | 浮点十进制表达式、优先级与逐节点舍入 |
-| `utils/base/ProgrammerSession.ets` | 独立模式草稿、确认与配置切换 |
-| `utils/base/ProgrammerState.ets` | 设置、进程内会话与版本化历史 |
+| `utils/base/BaseConversionSession.ets` | 独立模式草稿、确认与配置切换 |
+| `utils/base/BaseConversionState.ets` | 设置、进程内会话与版本化历史 |
+
+模块共用会话与状态使用 `BaseConversion` 前缀，固定字长运算与表达式使用 `Integer` 前缀。`BaseKey` 只持有单键交互；键盘布局、沉浸开关与 API 保护仍由 `BaseConverter` 管理。
 
 核心不依赖 ArkUI、WebView、CAS 或 N-API。字长最多 64 位，bit 数组便于直接表达进位、移出位和符号扩展；双 32 位需要额外处理 JS 有符号位运算，十进制字符串则不便逐位编辑。完整 64 位整数不存入 `number`；只有 bit、索引和不超过 53 位的浮点有效数字临时转换使用 `number`。
 
@@ -70,7 +73,7 @@
 ## 状态与历史
 
 - `KEY_PROGRAMMER_SETTINGS`（`programmer.settings.v1`）保存模式、整数进制/字长/符号、浮点格式/进制；不落盘草稿、错误和 C-in。
-- `ProgrammerMemory` 在进程内保留模块往返会话。撤销/重做最多 50 个快照，包含浮点草稿、预览有效性与最近预览值；离开组件后撤销栈清空。
+- `BaseConversionMemory` 在进程内保留模块往返会话。撤销/重做最多 50 个快照，包含浮点草稿、预览有效性与最近预览值；离开组件后撤销栈清空。
 - 确认成功写 RDB，`module_type=base`。`extra_params` 使用 `kind=programmer, version=1`，包含配置、位模式、输入、整数标志和 C-in；非活动整数模式保存最近有效值，非活动浮点模式保存最近确认结果，预览不进入版本化历史。
 - 相同表达式在不同上下文中不会被去重；表结构不变，无迁移。全局“转换”分类包括 `conversion,base`。
 - 顶栏历史通过 `event_programmer_restore` 传递完整记录。点输入恢复表达式及配置，点输出恢复结果，浮点以 HEX 回填以保留 payload。全局历史页仍使用复制行为。
@@ -87,7 +90,7 @@ pwsh -NoProfile -File tools/check-keyboard-architecture.ps1
 
 debug 下 `base.programmer` 的 accessibilityDescription 提供 `{ data, error, integerConfirmed, floatConfirmed }`。CLI `screen get` 返回 `programmer` 字段，其他模块返回 null；release 不暴露机器 JSON。设备场景为 `tools/calcx/tests/scenarios/programmer-ui-smoke.json`，尚未在设备执行。
 
-计算问题检查核心/会话测试；显示不同步检查 `ProgrammerSession`；历史恢复检查 `extra_params`；光感检查 API、偏好、TabBar 区域与公共表面。API 26 双开关、API 23 回退、深浅色、小窗口、长按和历史操作仍需设备验收。
+计算问题检查核心/会话测试；显示不同步检查 `BaseConversionSession`；历史恢复检查 `extra_params`；光感检查 API、偏好、TabBar 区域与公共表面。API 26 双开关、API 23 回退、深浅色、小窗口、长按和历史操作仍需设备验收。
 
 ### 2026-09-28 增量验证
 

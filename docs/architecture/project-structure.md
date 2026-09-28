@@ -89,7 +89,8 @@ entry/src/main/                   # 📦 主 HAP 模块源码
 │   │   └── exchange/                 # 🔄 转换类插件
 │   │       ├── base/                     # 💻 进制转换子系统
 │   │       │   ├── BaseConverter.ets         # 程序员页面、双效果键盘、历史与事件
-│   │       │   └── ProgrammerInspector.ets   # 位编辑、整数编码和 IEEE 字段
+│   │       │   ├── BaseKey.ets               # 单键表面、长按菜单与连续退格
+│   │       │   └── BaseInspector.ets         # 位编辑、整数编码和 IEEE 字段
 │   │       └── rates/                    # 💱 汇率换算子系统
 │   │           ├── ExchangeRate.ets          # 主控制器：交叉换算、联网刷新、缓存、列表增删排序
 │   │           ├── ExchangeKeyboard.ets      # 汇率专属数字键盘：金额、AC、退格、确定与收起

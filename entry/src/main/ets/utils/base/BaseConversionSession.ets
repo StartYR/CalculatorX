@@ -1,18 +1,18 @@
 /**
  * Copyright (c) 2026 StartYi. All rights reserved.
- * @file ProgrammerSession.ets
- * @description 程序员输入会话；整数与浮点状态相互独立
+ * @file BaseConversionSession.ets
+ * @description 进制转换输入会话；整数与浮点状态相互独立
  * @author StartYi
  * @date 2026/09/23 01:00
  */
 import { Natural } from './Natural';
-import { Word, Flags } from './ProgrammerEngine';
-import { ProgrammerExpression } from './ProgrammerExpression';
+import { Word, Flags } from './IntegerEngine';
+import { IntegerExpression } from './IntegerExpression';
 import { decodeFloat, convertFloat, negateFloat } from './Ieee754';
 import { FloatExpression } from './FloatExpression';
 
 /** 独立保存两种模式的输入；草稿与最近有效位模式允许不同，配置变更前必须确认草稿。 */
-export class ProgrammerSession {
+export class BaseConversionSession {
   mode: string = 'integer';
   radix: number = 10;
   width: number = 16;
@@ -34,8 +34,8 @@ export class ProgrammerSession {
   floatPreviewValid: boolean = true;
 
   // 撤销快照复制会话字段；Word/Natural/Flags 由运算整体替换，不在原对象上改位。
-  copy(): ProgrammerSession {
-    const next = new ProgrammerSession();
+  copy(): BaseConversionSession {
+    const next = new BaseConversionSession();
     next.mode = this.mode;
     next.radix = this.radix;
     next.width = this.width;
@@ -79,7 +79,7 @@ export class ProgrammerSession {
       this.floatPreviewBits = undefined;
       this.floatPreviewValid = true;
     } else {
-      const result = new ProgrammerExpression(this.radix, this.width, this.signed, this.carry, this.previousFlags)
+      const result = new IntegerExpression(this.radix, this.width, this.signed, this.carry, this.previousFlags)
         .evaluate(this.expression);
       this.word = result.word;
       this.flags = result.flags;
@@ -120,7 +120,7 @@ export class ProgrammerSession {
     if (this.expression.length > 1024) throw new Error('表达式过长，请退格或清空');
     // 不完整草稿保留上一个有效结果，确认时才显示语法诊断。
     try {
-      const result = new ProgrammerExpression(this.radix, this.width, this.signed, this.carry).evaluate(this.expression);
+      const result = new IntegerExpression(this.radix, this.width, this.signed, this.carry).evaluate(this.expression);
       this.word = result.word;
     } catch (_) {}
   }

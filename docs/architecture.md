@@ -32,7 +32,7 @@
 - [计算管线](architecture/compute-pipeline.md)
 - [函数图像架构](architecture/graphing.md)
 - [汇率架构](architecture/exchange.md)
-- [程序员模式](architecture/programmer.md)
+- [进制转换](architecture/base-conversion.md)
 - [状态与持久化](architecture/state-and-storage.md)
 - [故障定位指南](architecture/troubleshooting.md)
 - [完整项目结构](architecture/project-structure.md)
