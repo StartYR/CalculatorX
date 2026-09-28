@@ -5,9 +5,13 @@
  * @author StartYi
  * @date 2026/09/28 20:23
  */
+import { icon_backspace } from '../../../utils/CalculatorConfigs';
 import { getCalculatorKeySemanticId } from '../../../utils/SemanticIds';
 import { KeyboardKeySurface } from '../../common/keyboard/KeyboardKeySurface';
 import { KeyboardKeyRole } from '../../common/keyboard/KeyboardKeyTypes';
+
+// 长按提示独立贴近底边，不参与主文字的居中布局。
+const LONG_PRESS_HINT_BOTTOM: number = 2;
 
 function keyRole(key: string): KeyboardKeyRole {
   if (key === 'AC' || key === '⌫') return KeyboardKeyRole.DANGER;
@@ -79,18 +83,30 @@ export struct BaseKey {
         } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) this.stopRepeat();
       }
     }) {
-      Column({ space: 1 }) {
-        Text(this.keyText === '*' ? '×' : this.keyText === '/' ? '÷' : this.keyText === '-' ? '−' : this.keyText)
-          .fontSize(this.keyText.length > 2 ? 16 : 23)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(keyRole(this.keyText) === KeyboardKeyRole.DANGER || this.keyText === '=' ?
-            $r('sys.color.font_on_primary') : $r('sys.color.font_primary'))
-        if (this.integerMode && alternatives(this.keyText).length > 0) {
-          Text('···')
-            .fontSize(10)
-            .fontColor($r('sys.color.font_secondary'))
+      Stack({ alignContent: Alignment.Center }) {
+        if (this.keyText === '⌫') {
+          Image(icon_backspace)
+            .width(48).height(48)
+            .constraintSize({ maxWidth: '100%', maxHeight: '100%' })
+            .objectFit(ImageFit.Contain)
+            .fillColor($r('sys.color.font_on_primary'))
+            .draggable(false)
+        } else {
+          Text(this.keyText === '*' ? '×' : this.keyText === '/' ? '÷' : this.keyText === '-' ? '−' : this.keyText)
+            .fontSize(this.keyText.length > 2 ? 16 : 23)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(keyRole(this.keyText) === KeyboardKeyRole.DANGER || this.keyText === '=' ?
+              $r('sys.color.font_on_primary') : $r('sys.color.font_primary'))
         }
-      }
+        if (this.integerMode && alternatives(this.keyText).length > 0) {
+          Stack({ alignContent: Alignment.Bottom }) {
+            Text('···')
+              .fontSize(10)
+              .fontColor($r('sys.color.font_secondary'))
+              .margin({ bottom: LONG_PRESS_HINT_BOTTOM })
+          }.width('100%').height('100%').hitTestBehavior(HitTestMode.None)
+        }
+      }.width('100%').height('100%')
     }
   }
 
