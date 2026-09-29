@@ -32,6 +32,7 @@ const BASE_CONTENT_TOP_GAP: number = 12;     // 初始内容与顶栏底部的�
 const BASE_PAGE_TOP_OFFSET: number = 56;
 const BASE_TOOLBAR_SHADOW_GUTTER: number = 24;
 const BASE_KEYBOARD_SLIDE_DURATION: number = 280;
+const BASE_COPY_LONG_PRESS_DURATION: number = 350;
 // 唤起按钮的可见尺寸；外层另加阴影留白。
 const BASE_KEYBOARD_RESTORE_WIDTH: number = 72;
 const BASE_KEYBOARD_RESTORE_HEIGHT: number = 50;
@@ -430,8 +431,14 @@ export struct BaseConverter {
     } catch (_) { this.session.error = '无法复制数值'; this.session = this.session.copy(); }
   }
 
-  // 直接引用无参 Builder 才会生成菜单包装；目标进制在菜单打开前确定。
+  // 无参 Builder 保证菜单包装；独立长按手势控制时长，目标进制与菜单显隐分开。
   private copyMenuRadix: number = 10;
+  @State copyMenuVisibleRadix: number = 0;
+
+  private showCopyMenu(radix: number): void {
+    this.copyMenuRadix = radix;
+    this.copyMenuVisibleRadix = radix;
+  }
 
   @Builder
   private RadixCopyMenu() {
@@ -454,9 +461,12 @@ export struct BaseConverter {
             .textAlign(TextAlign.End).fontColor($r('sys.color.font_primary'))
         }, (row: string, index: number) => index.toString() + ':' + row)
       }.layoutWeight(1)
-      .bindContextMenu(this.RadixCopyMenu, ResponseType.LongPress, {
-        aboutToAppear: () => { this.copyMenuRadix = 2; }
+      .bindContextMenu(this.copyMenuVisibleRadix === 2, this.RadixCopyMenu, {
+        onAppear: () => { HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve); },
+        onDisappear: () => { this.copyMenuVisibleRadix = 0; }
       })
+      .gesture(LongPressGesture({ repeat: false, duration: BASE_COPY_LONG_PRESS_DURATION })
+        .onAction(() => this.showCopyMenu(2)))
       .onClick(() => this.select(() => this.session.changeRadix(2)))
     }.width('100%').constraintSize({ minHeight: 38 }).padding({ left: 10, right: 10, top: 7, bottom: 7 })
     .borderRadius(10)
@@ -472,9 +482,12 @@ export struct BaseConverter {
         .fontColor(this.session.currentRadix() === radix ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary'))
       Text(this.value(radix)).fontFamily('monospace').fontSize(radix === 10 ? 19 : 15)
         .fontColor($r('sys.color.font_primary'))
-        .bindContextMenu(this.RadixCopyMenu, ResponseType.LongPress, {
-          aboutToAppear: () => { this.copyMenuRadix = radix; }
+        .bindContextMenu(this.copyMenuVisibleRadix === radix, this.RadixCopyMenu, {
+          onAppear: () => { HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve); },
+          onDisappear: () => { this.copyMenuVisibleRadix = 0; }
         })
+        .gesture(LongPressGesture({ repeat: false, duration: BASE_COPY_LONG_PRESS_DURATION })
+          .onAction(() => this.showCopyMenu(radix)))
         .minFontSize(8).maxFontSize(radix === 10 ? 19 : 15)
         .maxLines(1).heightAdaptivePolicy(TextHeightAdaptivePolicy.MAX_LINES_FIRST)
         .textAlign(TextAlign.End).layoutWeight(1).height(30)
@@ -503,9 +516,12 @@ export struct BaseConverter {
         .fontFamily('monospace')
         .fontSize(15)
         .fontColor($r('sys.color.font_primary'))
-        .bindContextMenu(this.RadixCopyMenu, ResponseType.LongPress, {
-          aboutToAppear: () => { this.copyMenuRadix = radix; }
+        .bindContextMenu(this.copyMenuVisibleRadix === radix, this.RadixCopyMenu, {
+          onAppear: () => { HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve); },
+          onDisappear: () => { this.copyMenuVisibleRadix = 0; }
         })
+        .gesture(LongPressGesture({ repeat: false, duration: BASE_COPY_LONG_PRESS_DURATION })
+          .onAction(() => this.showCopyMenu(radix)))
         .onClick(() => this.select(() => this.session.changeRadix(radix)))
     }
     .width('100%')

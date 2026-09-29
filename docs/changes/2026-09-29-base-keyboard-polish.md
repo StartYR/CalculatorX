@@ -37,6 +37,12 @@
 - `BaseConverter.ets` 的 `BASE_KEYBOARD_RESTORE_WIDTH`（144 vp）、`BASE_KEYBOARD_RESTORE_HEIGHT`（48 vp）分别控制可见宽高，`restoreButtonBottom()` 的 `Math.max(this.navBarHeight, 12) + 12` 控制底距。宽度同步用于阴影容器，高度同步用于滚动内容安全区。
 - 菜单绑定最终采用无参 `@Builder` 直接引用，通过 `aboutToAppear` 记录目标进制。此前带参数的 `.bind(this, radix)` 虽能编译，但产物缺少 `{ builder: ... }` 包装，导致运行时不弹菜单。修复后 CodeLinter、差异检查及 debug 构建通过，覆盖安装成功；真机验证整数 4 行、数值 4 行、IEEE 3 行共 11 个长按菜单均可见。未点击复制项，未覆盖设备剪贴板，复制写入结果仍未验证。
 
+## 长按时长与触感
+
+数值复制菜单由独立 `LongPressGesture` 控制，`BaseConverter.ets` 的 `BASE_COPY_LONG_PRESS_DURATION` 为 350 毫秒，`repeat: false` 防止按住时重复触发。无参 Builder 绑定保持不变，目标进制在手势触发时记录；菜单关闭后复位显隐状态。菜单 `onAppear` 调用公共触感工具，遵循应用的振动开关与曲线配置。
+
+CodeLinter、差异检查及 debug 构建通过，已覆盖安装。真机抽查整数 HEX、数值 DEC、IEEE BIN 三条渲染路径，短按不弹菜单、长按可弹出、关闭后可再次弹出。未操作复制项；实际振感与触发时长的主观体验待人工确认。
+
 ## 发布说明素材
 
 优化进制键盘文字居中、退格图标和字体层级，隐藏滚动条，并修复 IEEE 输入框自动补高位零的问题。
