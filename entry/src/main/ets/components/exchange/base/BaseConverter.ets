@@ -124,8 +124,12 @@ export struct BaseConverter {
   @StorageProp('statusBarHeight') statusBarHeight: number = 0;
   @StorageProp('hapticFeedback') hapticFeedback: boolean = true;
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
-  @State session: BaseConversionSession = new BaseConversionSession();
-  @State panel: string = '';
+  @State @Watch('syncKeyboardAnimation') session: BaseConversionSession = new BaseConversionSession();
+  @State @Watch('syncKeyboardAnimation') panel: string = '';
+  @State keyboardSlide: number = 0;
+  @State restoreButtonMounted: boolean = false;
+  private keyboardHiddenTarget: boolean = false;
+  private keyboardAnimationRevision: number = 0;
   @State pageHeight: number = 700;
   private undoStack: BaseConversionSession[] = [];
   private redoStack: BaseConversionSession[] = [];
@@ -158,6 +162,7 @@ export struct BaseConverter {
   }
 
   aboutToDisappear(): void {
+    this.keyboardAnimationRevision++;
     BaseConversionMemory.session = this.session.copy();
     getContext(this).eventHub.off('event_math_undo', this.undoHandler);
     getContext(this).eventHub.off('event_math_redo', this.redoHandler);
@@ -280,6 +285,23 @@ export struct BaseConverter {
   private keyboardHidden(): boolean {
     // 数值模式始终显示键盘；帮助弹窗不改变升降状态，位/编码切换时保持收起。
     return this.session.mode !== 'numeric' && (this.panel === 'bits' || this.panel === 'encoding');
+  }
+
+  private syncKeyboardAnimation(): void {
+    const hidden = this.keyboardHidden();
+    if (hidden === this.keyboardHiddenTarget) return;
+    this.keyboardHiddenTarget = hidden;
+    const revision = ++this.keyboardAnimationRevision;
+    // 下滑前挂载按钮，上滑完成才卸载；旧动画回调不能覆盖后一次切换。
+    if (hidden) this.restoreButtonMounted = true;
+    this.getUIContext().animateTo({
+      duration: BASE_KEYBOARD_SLIDE_DURATION, curve: Curve.EaseInOut,
+      onFinish: () => {
+        if (revision === this.keyboardAnimationRevision && !this.keyboardHidden()) {
+          this.restoreButtonMounted = false;
+        }
+      }
+    }, () => { this.keyboardSlide = hidden ? 1 : 0; });
   }
 
   private restoreButtonBottom(): number {
@@ -668,25 +690,26 @@ export struct BaseConverter {
           if (this.keyImmersiveMaterial) { this.ImmersiveKeyboardLayout() }
           else { this.LegacyKeyboardLayout() }
         } else { this.LegacyKeyboardLayout() }
-      }.width('100%').height(this.keyboardHeight()).zIndex(1)
+      }.width('100%').height(this.keyboardHeight()).zIndex(2)
       // 键盘保持挂载以完成进出动画；收起后立即退出命中和无障碍遍历。
       .enabled(!this.keyboardHidden())
       .hitTestBehavior(this.keyboardHidden() ? HitTestMode.None : HitTestMode.Default)
       .accessibilityLevel(this.keyboardHidden() ? 'no-hide-descendants' : 'auto')
-      .translate({ y: this.keyboardHidden() ? this.keyboardHeight() + BASE_TOOLBAR_SHADOW_GUTTER : 0 })
-      .animation({ duration: BASE_KEYBOARD_SLIDE_DURATION, curve: Curve.EaseInOut })
-      if (this.keyboardHidden()) {
+      .translate({ y: this.keyboardSlide * (this.keyboardHeight() + BASE_TOOLBAR_SHADOW_GUTTER) })
+      if (this.restoreButtonMounted) {
         Column() { this.FloatingKeyboardRestore() }
         .width(144 + BASE_TOOLBAR_SHADOW_GUTTER * 2)
         .height(BASE_KEYBOARD_RESTORE_HEIGHT + BASE_TOOLBAR_SHADOW_GUTTER * 2)
         .margin({ bottom: this.restoreButtonBottom() - BASE_TOOLBAR_SHADOW_GUTTER })
         .clip(false).hitTestBehavior(HitTestMode.Transparent).zIndex(1)
+        .enabled(this.keyboardHidden())
+        .accessibilityLevel(this.keyboardHidden() ? 'auto' : 'no-hide-descendants')
       }
       // 阴影留白不改变可见顶栏位置，透明区域允许触摸传递给下方滚动页。
       Column() { this.FloatingToolbar() }
       .width('100%').height(BASE_TOOLBAR_HEIGHT + BASE_TOOLBAR_SHADOW_GUTTER * 2)
       .clip(false).hitTestBehavior(HitTestMode.Transparent)
-      .position({ x: 0, y: this.statusBarHeight + BASE_TOOLBAR_TOP_OFFSET - BASE_TOOLBAR_SHADOW_GUTTER }).zIndex(2)
+      .position({ x: 0, y: this.statusBarHeight + BASE_TOOLBAR_TOP_OFFSET - BASE_TOOLBAR_SHADOW_GUTTER }).zIndex(3)
     }.width('100%').height('100%').backgroundColor($r('sys.color.comp_background_tertiary'))
     .onAreaChange((_, area: Area) => { this.pageHeight = Number(area.height); }).id('base.programmer')
     .accessibilityDescription(this.semanticState())
