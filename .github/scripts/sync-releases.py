@@ -547,13 +547,7 @@ def sync_release(
                 f"{GITEE_MAX_ASSET_BYTES}-byte Release asset limit."
             )
 
-        gitee_needed = (
-            not gitee_too_large
-            and (
-                REPLACE_ASSETS
-                or name not in current_gitee_assets
-            )
-        )
+        gitee_needed = False
 
         gitcode_needed = (
             REPLACE_ASSETS
