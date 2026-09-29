@@ -23,9 +23,9 @@ import { HistoryRepository, HistoryRecord } from '../../../database/HistoryRepos
 import { BaseConversionMemory, BaseConversionSettings, settingsOf, recordOf, historyRecordOf, restoreSettings, restoreRecord } from '../../../utils/base/BaseConversionState';
 
 // 布局调节量均为 vp；顶栏位置从系统状态栏底部开始计算。
-const BASE_TOOLBAR_TOP_OFFSET: number = 60;
-const BASE_TOOLBAR_HEIGHT: number = 44;
-const BASE_CONTENT_TOP_GAP: number = 12;
+const BASE_TOOLBAR_TOP_OFFSET: number = 48   // 顶栏距状态栏底部的距离
+const BASE_TOOLBAR_HEIGHT: number = 38;      // 顶栏可见高度
+const BASE_CONTENT_TOP_GAP: number = 12;     // 初始内容与顶栏底部的间距
 // 页面视口避开应用标题栏；材质留白仅容纳阴影，不计入顶栏可见高度。
 const BASE_PAGE_TOP_OFFSET: number = 56;
 const BASE_TOOLBAR_SHADOW_GUTTER: number = 24;
