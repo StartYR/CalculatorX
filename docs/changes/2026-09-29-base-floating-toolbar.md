@@ -41,6 +41,14 @@ CodeLinter、键盘架构检查和差异空白检查通过。帮助弹窗调整�
 
 模块 CodeLinter、权限流程宿主检查、差异空白检查及 debug `assembleHap` 构建通过。构建仍有 API 弃用和异常传播等警告；未进行真机授权、深浅主题和低版本验收，也未验证商用签名权限资格。
 
+## 安装前的签名权限检查
+
+2026-09-30 真机安装返回 `9568289`，明确指向 `ohos.permission.READ_PASTEBOARD`。核对当前调试与发布 Profile，以及构建出的 signed HAP，三者的 `acls.allowed-acls` 均为空；因此构建、签名成功并不意味着安装器允许授予声明的受限权限。
+
+修复需要为 `com.startyi.calcx` 获取包含 `ohos.permission.READ_PASTEBOARD` 的有效签名 Profile，并在 DevEco Studio 的 Project Structure → Signing Configs 中配置给当前 `default` 签名项。调试 Profile 还需包含目标设备，证书需与签名密钥匹配；发布 Profile 需另行办理。重新签名后应核对 HAP 内 Profile 的 ACL，再覆盖安装验证。不可直接编辑已签名的 `.p7b` 来添加权限，也不应通过卸载应用处理此错误。
+
+当前尚未取得带该权限的新 Profile，安装问题未修复；普通按钮、权限声明和运行时授权流程保留。
+
 ## 发布说明素材
 
 进制转换新增悬浮模式栏和独立快捷按钮，滚动时仍可切换模式、粘贴及打开帮助。
