@@ -349,10 +349,6 @@ export struct BaseConverter {
 
   @Builder
   private NumericControls() {
-    Text($r('app.string.base_numeric_description'))
-      .width('100%')
-      .fontSize(12)
-      .fontColor($r('sys.color.font_secondary'))
     Row({ space: 8 }) {
       Text($r('app.string.base_numeric_places'))
         .fontSize(13)
@@ -455,14 +451,10 @@ export struct BaseConverter {
             .fontSize(12)
             .fontColor($r('sys.color.warning'))
             .id('base.numeric.preview')
-        } else if (this.session.mode === 'integer' && !this.session.evaluated) {
-          Text('输入预览 · 按 = 确认；不完整输入保留最近有效值')
-            .fontSize(12).fontColor($r('sys.color.font_secondary')).width('100%')
-        } else if (this.session.mode === 'float' && !this.session.floatEvaluated) {
-          Text(this.session.floatPreviewValid ? $r('app.string.programmer_float_preview_ready') :
-            $r('app.string.programmer_float_preview_pending'))
+        } else if (this.session.mode === 'float' && !this.session.floatEvaluated && !this.session.floatPreviewValid) {
+          Text($r('app.string.programmer_float_preview_pending'))
             .fontSize(12).width('100%').id('base.float.preview')
-            .fontColor(this.session.floatPreviewValid ? $r('sys.color.font_secondary') : $r('sys.color.warning'))
+            .fontColor($r('sys.color.warning'))
         }
         if (this.session.mode === 'numeric') {
           this.NumericRadixRow('HEX', 16)
@@ -509,7 +501,7 @@ export struct BaseConverter {
             BaseChip({ label: '字段', selected: this.panel === 'bits',
               onActivate: () => { this.panel = this.panel === 'bits' ? '' : 'bits'; }, semanticId: 'base.bits' })
           }.width('100%')
-          Text(decodeFloat(this.session.displayedFloatBits(), this.session.floatWidth).category + ' · 按 = 确认输入')
+          Text(decodeFloat(this.session.displayedFloatBits(), this.session.floatWidth).category)
             .fontSize(12).fontColor($r('sys.color.font_secondary')).width('100%')
         }
         if (this.session.mode === 'numeric' && this.panel === 'help') {
