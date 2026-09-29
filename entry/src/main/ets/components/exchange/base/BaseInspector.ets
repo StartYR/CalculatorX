@@ -7,7 +7,7 @@
  */
 import { BaseConversionSession } from '../../../utils/base/BaseConversionSession';
 import { encodingRows, decodeEncoding, EncodingRow } from '../../../utils/base/IntegerEngine';
-import { FloatFormat, decodeFloat } from '../../../utils/base/Ieee754';
+import { FloatFormat, decodeFloat } from '../../../utils/base/IEEE754';
 import { Natural } from '../../../utils/base/Natural';
 
 @Component

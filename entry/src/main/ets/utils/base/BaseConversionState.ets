@@ -8,7 +8,7 @@
 import { BaseConversionSession } from './BaseConversionSession';
 import { Word, Flags } from './IntegerEngine';
 import { Natural } from './Natural';
-import { decodeFloat } from './Ieee754';
+import { decodeFloat } from './IEEE754';
 import { NUMERIC_RADICES, NUMERIC_PLACES } from './NumericValue';
 
 /** 跨启动偏好仅保存配置，不包含计算草稿、结果或进位输入。 */

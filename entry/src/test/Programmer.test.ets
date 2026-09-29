@@ -9,7 +9,7 @@ import { describe, it, expect } from '@ohos/hypium';
 import { Word } from '../main/ets/utils/base/IntegerEngine';
 import { IntegerExpression } from '../main/ets/utils/base/IntegerExpression';
 import { FloatExpression } from '../main/ets/utils/base/FloatExpression';
-import { encodeFloat, convertFloat } from '../main/ets/utils/base/Ieee754';
+import { encodeFloat, convertFloat } from '../main/ets/utils/base/IEEE754';
 import { BaseConversionSession } from '../main/ets/utils/base/BaseConversionSession';
 
 export default function programmerTest() {

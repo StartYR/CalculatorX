@@ -12,7 +12,7 @@ import pasteboard from '@ohos.pasteboard';
 import { PreferenceConfigs } from '../../../utils/CalculatorConfigs';
 import { HapticUtils } from '../../../utils/HapticUtils';
 import { BaseConversionSession } from '../../../utils/base/BaseConversionSession';
-import { decodeFloat } from '../../../utils/base/Ieee754';
+import { decodeFloat } from '../../../utils/base/IEEE754';
 import { BaseInspector } from './BaseInspector';
 import { BaseKey } from './BaseKey';
 import { binaryRows } from '../../../utils/base/BinaryDisplay';

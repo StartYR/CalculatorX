@@ -6,7 +6,7 @@
  * @date 2026/09/28 15:10
  */
 import { Natural } from './Natural';
-import { encodeFloat, negateFloat, operateFloat } from './Ieee754';
+import { encodeFloat, negateFloat, operateFloat } from './IEEE754';
 
 /** 每个字面量与二元节点分别舍入；括号和一元符号优先，乘除高于加减，同级左结合。 */
 export class FloatExpression {

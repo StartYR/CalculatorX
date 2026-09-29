@@ -8,7 +8,7 @@
 import { Natural } from './Natural';
 import { Word, Flags } from './IntegerEngine';
 import { IntegerExpression } from './IntegerExpression';
-import { decodeFloat, convertFloat, negateFloat } from './Ieee754';
+import { decodeFloat, convertFloat, negateFloat } from './IEEE754';
 import { FloatExpression } from './FloatExpression';
 import { NumericSession } from './NumericSession';
 
