@@ -421,17 +421,17 @@ export struct BaseConverter {
     return bits.toString(radix).padStart(radix === 16 ? this.session.floatWidth / 4 : this.session.floatWidth, '0');
   }
 
-  private async copyBinary(): Promise<void> {
+  private async copyRadix(radix: number): Promise<void> {
     try {
       // 分行仅用于排版，复制仍提供连续完整文本，避免换行混入后续输入。
-      await pasteboard.getSystemPasteboard().setData(pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, this.value(2)));
+      await pasteboard.getSystemPasteboard().setData(pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, this.value(radix)));
     } catch (_) { this.session.error = '无法复制数值'; this.session = this.session.copy(); }
   }
 
   @Builder
-  private BinaryCopyMenu() {
+  private RadixCopyMenu(radix: number) {
     Menu() {
-      MenuItem({ content: $r('app.string.base_copy_value') }).onClick(() => { this.copyBinary(); })
+      MenuItem({ content: $r('app.string.base_copy_value') }).onClick(() => { this.copyRadix(radix); })
     }
   }
 
@@ -449,7 +449,7 @@ export struct BaseConverter {
             .textAlign(TextAlign.End).fontColor($r('sys.color.font_primary'))
         }, (row: string, index: number) => index.toString() + ':' + row)
       }.layoutWeight(1)
-      .bindContextMenu(this.BinaryCopyMenu, ResponseType.LongPress)
+      .bindContextMenu(() => { this.RadixCopyMenu(2); }, ResponseType.LongPress)
       .onClick(() => this.select(() => this.session.changeRadix(2)))
     }.width('100%').constraintSize({ minHeight: 38 }).padding({ left: 10, right: 10, top: 7, bottom: 7 })
     .borderRadius(10)
@@ -464,7 +464,8 @@ export struct BaseConverter {
       Text(label).fontSize(13).fontWeight(FontWeight.Bold).width(38)
         .fontColor(this.session.currentRadix() === radix ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary'))
       Text(this.value(radix)).fontFamily('monospace').fontSize(radix === 10 ? 19 : 15)
-        .fontColor($r('sys.color.font_primary')).copyOption(CopyOptions.LocalDevice)
+        .fontColor($r('sys.color.font_primary'))
+        .bindContextMenu(() => { this.RadixCopyMenu(radix); }, ResponseType.LongPress)
         .minFontSize(8).maxFontSize(radix === 10 ? 19 : 15)
         .maxLines(1).heightAdaptivePolicy(TextHeightAdaptivePolicy.MAX_LINES_FIRST)
         .textAlign(TextAlign.End).layoutWeight(1).height(30)
@@ -493,7 +494,7 @@ export struct BaseConverter {
         .fontFamily('monospace')
         .fontSize(15)
         .fontColor($r('sys.color.font_primary'))
-        .copyOption(CopyOptions.LocalDevice)
+        .bindContextMenu(() => { this.RadixCopyMenu(radix); }, ResponseType.LongPress)
         .onClick(() => this.select(() => this.session.changeRadix(radix)))
     }
     .width('100%')
