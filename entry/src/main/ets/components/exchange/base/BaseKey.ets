@@ -101,7 +101,8 @@ export struct BaseKey {
             .draggable(false)
         } else {
           Text(this.keyText === '*' ? '×' : this.keyText === '/' ? '÷' : this.keyText === '-' ? '−' : this.keyText)
-            .fontSize(this.keyText.length > 2 ? 16 : 23)
+            .fontSize(['+', '-', '*', '/', '±', '='].includes(this.keyText)
+              ? 26 : (this.keyText.length > 2 ? 16 : 23))
             .fontWeight(FontWeight.Medium)
             .fontColor(keyFontColor(this.keyText))
         }
