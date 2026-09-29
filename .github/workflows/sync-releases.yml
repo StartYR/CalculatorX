@@ -13,12 +13,6 @@ on:
         required: false
         type: string
 
-      replace_assets:
-        description: "重新上传已存在的同名附件"
-        required: false
-        default: false
-        type: boolean
-
 permissions:
   contents: read
 
@@ -28,9 +22,9 @@ concurrency:
 
 jobs:
   sync:
-    name: Sync Releases to Gitee and GitCode
+    name: Sync Release Metadata
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 15
 
     env:
       GITHUB_TOKEN: ${{ github.token }}
@@ -45,11 +39,6 @@ jobs:
       GITCODE_REPO: CalculatorX
 
       SYNC_TAG: ${{ github.event.release.tag_name || inputs.tag || '' }}
-      REPLACE_ASSETS: ${{ inputs.replace_assets || false }}
-
-      # Gitee Release 当前单附件 100 MiB 限制。
-      # 超过这个大小时保留 Release，但跳过该附件。
-      GITEE_MAX_ASSET_BYTES: "104857600"
 
     steps:
       - name: Checkout repository
@@ -65,7 +54,6 @@ jobs:
           python -m pip install
           --disable-pip-version-check
           requests
-          requests-toolbelt
 
-      - name: Sync releases
+      - name: Sync release metadata
         run: python .github/scripts/sync-releases.py
