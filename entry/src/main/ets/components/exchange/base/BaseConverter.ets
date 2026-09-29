@@ -724,7 +724,7 @@ export struct BaseConverter {
       }, (key: string, index: number) => this.session.mode + '.' + index.toString() + '.' + key)
     }.columnsTemplate(this.session.mode === 'numeric' ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr 1fr 1fr').rowsTemplate(this.session.mode === 'numeric' ? '1fr 1fr 1fr 1fr 1fr' : '1fr 1fr 1fr 1fr 1fr 1fr')
     .rowsGap(8).columnsGap(8).width('100%').height('100%')
-    .padding({ left: 12, right: 12, top: 12, bottom: 8 + Math.max(0, this.navBarHeight - 8) })
+    .padding({ left: 12, right: 12, top: 12, bottom: Math.max(0, this.navBarHeight - 8) })
   }
 
   @Builder
