@@ -30,6 +30,8 @@ const BASE_CONTENT_TOP_GAP: number = 12;     // 初始内容与顶栏底部的�
 // 页面视口避开应用标题栏；材质留白仅容纳阴影，不计入顶栏可见高度。
 const BASE_PAGE_TOP_OFFSET: number = 56;
 const BASE_TOOLBAR_SHADOW_GUTTER: number = 24;
+const BASE_KEYBOARD_SLIDE_DURATION: number = 280;
+const BASE_KEYBOARD_RESTORE_HEIGHT: number = 48;
 
 // 数值换算实时预览，键盘只提供数字、小数点和输入控制。
 const NUMERIC_KEYS: string[] = [
@@ -194,7 +196,7 @@ export struct BaseConverter {
     return JSON.stringify({ data: recordOf(this.session), error: this.session.error,
       integerConfirmed: this.session.evaluated, floatConfirmed: this.session.floatEvaluated,
       numericConfirmed: this.session.numeric.evaluated, numericInput: this.session.numeric.text,
-      numericPreviewValid: this.session.numeric.previewValid });
+      numericPreviewValid: this.session.numeric.previewValid, panel: this.panel, keyboardHidden: this.keyboardHidden() });
   }
 
   private apply(action: () => void): void {
@@ -267,6 +269,26 @@ export struct BaseConverter {
     // 浮点与数值仍停留在有效预览，只有整数粘贴直接确认。
     this.apply(() => { this.session = next; });
     this.showPasteToast('已粘贴');
+  }
+
+  private changeMode(mode: string): void {
+    if (this.session.mode === mode) return;
+    // 面板只属于当前页面；切换模式收起面板，输入会话仍各自保留。
+    this.apply(() => { this.session.mode = mode; this.session.error = ''; this.panel = ''; });
+  }
+
+  private keyboardHidden(): boolean {
+    // 数值模式始终显示键盘；帮助页不参与升降，位/编码切换时保持收起。
+    return this.session.mode !== 'numeric' && (this.panel === 'bits' || this.panel === 'encoding');
+  }
+
+  private restoreButtonBottom(): number {
+    return Math.max(this.navBarHeight, 12) + 12;
+  }
+
+  private contentBottomInset(): number {
+    return this.keyboardHidden() ? this.restoreButtonBottom() + BASE_KEYBOARD_RESTORE_HEIGHT + 12 :
+      this.keyboardHeight() + 12;
   }
 
   private keyboardHeight(): number {
@@ -401,15 +423,15 @@ export struct BaseConverter {
       Row() {
         BaseChip({ label: $r('app.string.base_numeric_tab'), selected: this.session.mode === 'numeric', stretch: true,
           onActivate: () => {
-            this.apply(() => { this.session.mode = 'numeric'; this.session.error = ''; });
+            this.changeMode('numeric');
           }, semanticId: 'base.mode.numeric' }).layoutWeight(1)
         BaseChip({ label: '整数', selected: this.session.mode === 'integer', stretch: true,
           onActivate: () => {
-            this.apply(() => { this.session.mode = 'integer'; this.session.error = ''; });
+            this.changeMode('integer');
           }, semanticId: 'base.mode.integer' }).layoutWeight(1)
         BaseChip({ label: 'IEEE 754', selected: this.session.mode === 'float', stretch: true,
           onActivate: () => {
-            this.apply(() => { this.session.mode = 'float'; this.session.error = ''; });
+            this.changeMode('float');
           }, semanticId: 'base.mode.float' }).layoutWeight(1.35)
       }.layoutWeight(1).height(BASE_TOOLBAR_HEIGHT).padding(4).borderRadius(BASE_TOOLBAR_HEIGHT / 2)
       .attributeModifier(baseToolbarVisualModifier)
@@ -541,7 +563,8 @@ export struct BaseConverter {
             onFlip: (index: number) => this.select(() => this.session.flip(index)) })
         }
       }.width('100%').padding({ left: 14, right: 14, top: BASE_TOOLBAR_TOP_OFFSET + BASE_TOOLBAR_HEIGHT + BASE_CONTENT_TOP_GAP - BASE_PAGE_TOP_OFFSET,
-        bottom: this.keyboardHeight() + 12 })
+        bottom: this.contentBottomInset() })
+      .animation({ duration: BASE_KEYBOARD_SLIDE_DURATION, curve: Curve.EaseInOut })
     }.width('100%').height('100%').scrollBar(BarState.Off).align(Alignment.Top)
     .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     .padding({ top: this.statusBarHeight + BASE_PAGE_TOP_OFFSET })
@@ -611,6 +634,12 @@ export struct BaseConverter {
           else { this.LegacyKeyboardLayout() }
         } else { this.LegacyKeyboardLayout() }
       }.width('100%').height(this.keyboardHeight()).zIndex(1)
+      // 键盘保持挂载以完成进出动画；收起后立即退出命中和无障碍遍历。
+      .enabled(!this.keyboardHidden())
+      .hitTestBehavior(this.keyboardHidden() ? HitTestMode.None : HitTestMode.Default)
+      .accessibilityLevel(this.keyboardHidden() ? 'no-hide-descendants' : 'auto')
+      .translate({ y: this.keyboardHidden() ? this.keyboardHeight() + BASE_TOOLBAR_SHADOW_GUTTER : 0 })
+      .animation({ duration: BASE_KEYBOARD_SLIDE_DURATION, curve: Curve.EaseInOut })
       // 阴影留白不改变可见顶栏位置，透明区域允许触摸传递给下方滚动页。
       Column() { this.FloatingToolbar() }
         .width('100%').height(BASE_TOOLBAR_HEIGHT + BASE_TOOLBAR_SHADOW_GUTTER * 2)
