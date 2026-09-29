@@ -115,15 +115,7 @@ export struct BaseInspector {
 
   build() {
     Column() {
-      if (this.panel === 'help') {
-        if (this.session.mode === 'float') {
-          Text($r('app.string.programmer_float_help'))
-            .fontSize(14).lineHeight(23).fontColor($r('sys.color.font_secondary')).margin({ bottom: 12 })
-        }
-        Text('操作说明').fontSize(18).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_primary'))
-        Text('长按 AND：OR / XOR / NOT\n长按 SHL / SHR：算术移位、循环和带进位循环\n长按 + / −：ADC / SBB\n长按退格：连续删除\n四进制行切换输入进制，长按数值可复制\n切换配置先确认表达式；无效草稿会保留并提示\nCF：进位或借位；OF：有符号溢出\nZF：全零；SF：最高位；—：不适用\nC-in 独立控制 ADC / SBB / RCL / RCR 的输入进位\n移位计数为 0 保持标志；旋转计数按字长（带进位时字长 + 1）取模\n乘除只更新 ZF / SF，结果按字长截断\n括号 > 一元 > 乘除 > 加减 > 移位 > AND > XOR > OR\n这些是 CalculatorX 的固定规则，不模拟特定 CPU。')
-          .fontSize(14).lineHeight(23).fontColor($r('sys.color.font_secondary')).margin({ top: 8 })
-      } else if (this.session.mode === 'float') { this.FloatFields() }
+      if (this.session.mode === 'float') { this.FloatFields() }
       else if (this.panel === 'encoding') { this.Encodings() }
       else { this.Bits() }
     }.width('100%').alignItems(HorizontalAlign.Start).padding(14)

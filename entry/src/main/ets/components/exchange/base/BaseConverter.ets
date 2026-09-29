@@ -278,7 +278,7 @@ export struct BaseConverter {
   }
 
   private keyboardHidden(): boolean {
-    // 数值模式始终显示键盘；帮助页不参与升降，位/编码切换时保持收起。
+    // 数值模式始终显示键盘；帮助弹窗不改变升降状态，位/编码切换时保持收起。
     return this.session.mode !== 'numeric' && (this.panel === 'bits' || this.panel === 'encoding');
   }
 
@@ -417,6 +417,17 @@ export struct BaseConverter {
       .fontColor($r('sys.color.font_secondary'))
   }
 
+  private showHelp(): void {
+    // 帮助使用独立弹窗，不更改检查面板和键盘的当前状态。
+    const message: Resource = this.session.mode === 'numeric' ? $r('app.string.base_numeric_help') :
+      this.session.mode === 'integer' ? $r('app.string.base_integer_help') : $r('app.string.programmer_float_help');
+    const mode = this.session.mode === 'numeric' ? '数值' : this.session.mode === 'integer' ? '整数' : 'IEEE 754';
+    this.getUIContext().showAlertDialog({
+      title: mode + '帮助', message: message,
+      confirm: { value: '关闭', action: () => {} }
+    });
+  }
+
   @Builder
   private Toolbar() {
     Row({ space: 8 }) {
@@ -448,12 +459,12 @@ export struct BaseConverter {
         Button() {
           SymbolGlyph($r('sys.symbol.questionmark_circle'))
             .fontSize(22)
-            .fontColor([this.panel === 'help' ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary')])
+            .fontColor([$r('sys.color.font_secondary')])
         }.width('100%').height('100%').padding(0).backgroundColor(Color.Transparent)
-        .id('base.help').accessibilityText(this.panel === 'help' ? '关闭帮助' : '帮助')
+        .id('base.help').accessibilityText('帮助')
         .onClick(() => {
           HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
-          this.panel = this.panel === 'help' ? '' : 'help';
+          this.showHelp();
         })
       }.width(BASE_TOOLBAR_HEIGHT).height(BASE_TOOLBAR_HEIGHT).borderRadius(BASE_TOOLBAR_HEIGHT / 2).attributeModifier(baseToolbarVisualModifier)
     }.width('100%').height(BASE_TOOLBAR_HEIGHT + BASE_TOOLBAR_SHADOW_GUTTER * 2)
@@ -582,16 +593,7 @@ export struct BaseConverter {
           Text(decodeFloat(this.session.displayedFloatBits(), this.session.floatWidth).category)
             .fontSize(12).fontColor($r('sys.color.font_secondary')).width('100%')
         }
-        if (this.session.mode === 'numeric' && this.panel === 'help') {
-          Text($r('app.string.base_numeric_help'))
-            .width('100%')
-            .padding(14)
-            .fontSize(14)
-            .lineHeight(23)
-            .fontColor($r('sys.color.font_secondary'))
-            .backgroundColor($r('sys.color.comp_background_primary'))
-            .borderRadius(16)
-        } else if (this.session.mode !== 'numeric' && this.panel.length > 0) {
+        if (this.session.mode !== 'numeric' && this.panel.length > 0) {
           BaseInspector({ session: this.session, panel: this.panel,
             onFlip: (index: number) => this.select(() => this.session.flip(index)) })
         }
