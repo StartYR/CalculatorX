@@ -9,6 +9,7 @@
 import deviceInfo from '@ohos.deviceInfo';
 import pasteboard from '@ohos.pasteboard';
 
+import { createTopBarMaterial } from '../../../utils/ImmersiveMaterialUtils';
 import { PreferenceConfigs } from '../../../utils/CalculatorConfigs';
 import { HapticUtils } from '../../../utils/HapticUtils';
 import { BaseConversionSession } from '../../../utils/base/BaseConversionSession';
@@ -21,9 +22,9 @@ import { PreferenceManager } from '../../../utils/PreferenceManager';
 import { HistoryRepository, HistoryRecord } from '../../../database/HistoryRepository';
 import { BaseConversionMemory, BaseConversionSettings, settingsOf, recordOf, historyRecordOf, restoreSettings, restoreRecord } from '../../../utils/base/BaseConversionState';
 
-// 数值换算实时预览，键盘只提供数字、小数点和输入控制。
 const BASE_TOOLBAR_HEIGHT: number = 52;
 
+// 数值换算实时预览，键盘只提供数字、小数点和输入控制。
 const NUMERIC_KEYS: string[] = [
   'E', 'F', '⌫', 'AC',
   '7', '8', '9', 'D',
@@ -52,6 +53,21 @@ const FLOAT_KEYS: string[] = [
   '.', '0', '0', '±', '='
 ];
 
+class BaseToolbarVisualModifier implements AttributeModifier<RowAttribute> {
+  applyNormalAttribute(instance: RowAttribute): void {
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      instance.backgroundColor(Color.Transparent);
+      instance.systemMaterial(createTopBarMaterial());
+    } else {
+      instance.backgroundColor($r('sys.color.comp_background_secondary'));
+      instance.border({ width: 0.5, color: $r('sys.color.comp_divider') });
+      instance.shadow(ShadowStyle.OUTER_DEFAULT_SM);
+    }
+  }
+}
+
+const baseToolbarVisualModifier: BaseToolbarVisualModifier = new BaseToolbarVisualModifier();
+
 // 标签文字和选中态通过响应式属性更新，不能使用按值传参的 Builder 固定初始状态。
 @Component
 struct BaseChip {
@@ -59,6 +75,7 @@ struct BaseChip {
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @Prop label: ResourceStr = '';
   @Prop selected: boolean = false;
+  @Prop stretch: boolean = false;
   semanticId: string = '';
   onActivate: () => void = () => {};
 
@@ -70,7 +87,8 @@ struct BaseChip {
     Button(this.labelText()).fontSize(13).fontWeight(this.selected ? FontWeight.Medium : FontWeight.Normal)
       .fontColor(this.selected ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary'))
       .backgroundColor(this.selected ? $r('sys.color.comp_background_secondary') : Color.Transparent)
-      .height(32).padding({ left: 10, right: 10 }).id(this.semanticId)
+      .width(this.stretch ? '100%' : undefined).height(this.stretch ? 36 : 32)
+      .padding({ left: this.stretch ? 4 : 10, right: this.stretch ? 4 : 10 }).id(this.semanticId)
       .accessibilityText(this.labelText() + (this.selected ? '，已选中' : '')).onClick(() => {
         HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
         this.onActivate();
@@ -354,33 +372,56 @@ export struct BaseConverter {
 
   @Builder
   private Toolbar() {
-    Row() {
-      BaseChip({ label: $r('app.string.base_numeric_tab'), selected: this.session.mode === 'numeric',
-        onActivate: () => {
-          this.apply(() => { this.session.mode = 'numeric'; this.session.error = ''; });
-        }, semanticId: 'base.mode.numeric' })
-      BaseChip({ label: '整数', selected: this.session.mode === 'integer',
-        onActivate: () => {
-          this.apply(() => { this.session.mode = 'integer'; this.session.error = ''; });
-        }, semanticId: 'base.mode.integer' })
-      BaseChip({ label: 'IEEE 754', selected: this.session.mode === 'float',
-        onActivate: () => {
-          this.apply(() => { this.session.mode = 'float'; this.session.error = ''; });
-        }, semanticId: 'base.mode.float' })
-      Blank()
-      BaseChip({ label: '粘贴', selected: false,
-        onActivate: () => { this.paste(); }, semanticId: 'base.paste' })
-      Button() {
-        SymbolGlyph($r('sys.symbol.questionmark_circle'))
-          .fontSize(22)
-          .fontColor([this.panel === 'help' ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary')])
-      }.width(40).height(36).backgroundColor(Color.Transparent)
-      .id('base.help').accessibilityText('帮助')
-      .onClick(() => {
-        HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
-        this.panel = this.panel === 'help' ? '' : 'help';
-      })
-    }.width('100%')
+    Row({ space: 8 }) {
+      Row() {
+        BaseChip({ label: $r('app.string.base_numeric_tab'), selected: this.session.mode === 'numeric', stretch: true,
+          onActivate: () => {
+            this.apply(() => { this.session.mode = 'numeric'; this.session.error = ''; });
+          }, semanticId: 'base.mode.numeric' }).layoutWeight(1)
+        BaseChip({ label: '整数', selected: this.session.mode === 'integer', stretch: true,
+          onActivate: () => {
+            this.apply(() => { this.session.mode = 'integer'; this.session.error = ''; });
+          }, semanticId: 'base.mode.integer' }).layoutWeight(1)
+        BaseChip({ label: 'IEEE 754', selected: this.session.mode === 'float', stretch: true,
+          onActivate: () => {
+            this.apply(() => { this.session.mode = 'float'; this.session.error = ''; });
+          }, semanticId: 'base.mode.float' }).layoutWeight(1.35)
+      }.layoutWeight(1).height(44).padding(4).borderRadius(22)
+      .attributeModifier(baseToolbarVisualModifier)
+      Row() {
+        Button('粘贴').width('100%').height('100%').padding(0).fontSize(13)
+          .fontColor($r('sys.color.font_primary')).backgroundColor(Color.Transparent)
+          .id('base.paste').accessibilityText('粘贴')
+          .onClick(() => {
+            HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
+            this.paste();
+          })
+      }.width(52).height(44).borderRadius(22).attributeModifier(baseToolbarVisualModifier)
+      Row() {
+        Button() {
+          SymbolGlyph($r('sys.symbol.questionmark_circle'))
+            .fontSize(22)
+            .fontColor([this.panel === 'help' ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary')])
+        }.width('100%').height('100%').padding(0).backgroundColor(Color.Transparent)
+        .id('base.help').accessibilityText(this.panel === 'help' ? '关闭帮助' : '帮助')
+        .onClick(() => {
+          HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
+          this.panel = this.panel === 'help' ? '' : 'help';
+        })
+      }.width(44).height(44).borderRadius(22).attributeModifier(baseToolbarVisualModifier)
+    }.width('100%').height(44)
+  }
+
+  @Builder
+  private FloatingToolbar() {
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      // 局部横向底部 TabBar 提供材质生效区域；容器本身仍定位在页面顶部。
+      Tabs({ barPosition: BarPosition.End }) {
+        TabContent() { Column().width('100%').height('100%') }.tabBar(this.Toolbar)
+      }.vertical(false).scrollable(false).animationDuration(0).barHeight(44).width('100%').height(44)
+    } else {
+      this.Toolbar()
+    }
   }
 
   @Builder
@@ -543,7 +584,7 @@ export struct BaseConverter {
         } else { this.LegacyKeyboardLayout() }
       }.width('100%').height(this.keyboardHeight()).zIndex(1)
       // 顶栏独立于滚动内容；仅自身高度参与命中，不遮挡页面其余交互。
-      Column() { this.Toolbar() }
+      Column() { this.FloatingToolbar() }
         .width('100%').height(BASE_TOOLBAR_HEIGHT).padding({ left: 14, right: 14, top: 4, bottom: 4 })
         .position({ x: 0, y: this.statusBarHeight + 56 }).zIndex(2)
     }.width('100%').height('100%').backgroundColor($r('sys.color.comp_background_tertiary'))
