@@ -33,8 +33,8 @@ const BASE_PAGE_TOP_OFFSET: number = 56;
 const BASE_TOOLBAR_SHADOW_GUTTER: number = 24;
 const BASE_KEYBOARD_SLIDE_DURATION: number = 280;
 // 唤起按钮的可见尺寸；外层另加阴影留白。
-const BASE_KEYBOARD_RESTORE_WIDTH: number = 144;
-const BASE_KEYBOARD_RESTORE_HEIGHT: number = 48;
+const BASE_KEYBOARD_RESTORE_WIDTH: number = 72;
+const BASE_KEYBOARD_RESTORE_HEIGHT: number = 50;
 
 // 数值换算实时预览，键盘只提供数字、小数点和输入控制。
 const NUMERIC_KEYS: string[] = [
@@ -399,7 +399,7 @@ export struct BaseConverter {
   }
 
   private restoreButtonBottom(): number {
-    return Math.max(this.navBarHeight, 12) + 12;
+    return Math.max(this.navBarHeight, 12) + 0;
   }
 
   private contentBottomInset(): number {
