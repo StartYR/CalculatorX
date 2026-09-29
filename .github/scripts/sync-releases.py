@@ -520,49 +520,140 @@ def sync_release(
 
     gitee_release_id = gitee_release["id"]
 
-        # Temporary 1 KiB upload diagnostic.
-    test_name = "release-upload-test-1kb.bin"
-    test_path = temp_directory / test_name
-    test_path.write_bytes(b"X" * 1024)
+    # Temporary stepped upload diagnostic.
+    test_sizes_mib = [1, 5, 10, 20, 40]
+
+    run_id = os.environ.get("GITHUB_RUN_ID", "local")
+
+    gitee_active = True
+    gitcode_active = True
+
+    results: dict[str, list[tuple[int, str]]] = {
+        "Gitee": [],
+        "GitCode": [],
+    }
 
     print("")
-    print("=== 1 KiB upload diagnostic ===")
+    print("=== Stepped upload diagnostic ===")
+    print("Test sizes: 1, 5, 10, 20, 40 MiB")
 
-    errors = []
+    for size_mib in test_sizes_mib:
+        size_bytes = size_mib * 1024 * 1024
 
-    try:
-        print("Testing Gitee...")
-        gitee_upload_asset(
-            gitee_release_id,
-            test_name,
-            test_path,
+        test_name = (
+            f"release-upload-test-"
+            f"{size_mib}mib-{run_id}.bin"
         )
-        print("Gitee 1 KiB upload: OK")
-    except Exception as exc:
-        print(f"Gitee 1 KiB upload: FAILED: {exc}")
-        errors.append(f"Gitee: {exc}")
+        test_path = temp_directory / test_name
 
-    try:
-        print("Testing GitCode...")
-        gitcode_upload_asset(
-            tag,
-            test_name,
-            test_path,
-        )
-        print("GitCode 1 KiB upload: OK")
-    except Exception as exc:
-        print(f"GitCode 1 KiB upload: FAILED: {exc}")
-        errors.append(f"GitCode: {exc}")
+        # Create a sparse file. Its logical size is correct, but it consumes
+        # almost no local disk space.
+        with test_path.open("wb") as file:
+            file.seek(size_bytes - 1)
+            file.write(b"\0")
 
-    test_path.unlink(missing_ok=True)
-
-    if errors:
-        raise RuntimeError(
-            "1 KiB upload diagnostic failed:\n"
-            + "\n".join(errors)
+        print("")
+        print(
+            f"=== Testing {size_mib} MiB "
+            f"({size_bytes} bytes) ==="
         )
 
-    print("Both 1 KiB uploads succeeded.")
+        if gitee_active:
+            try:
+                print(f"Testing Gitee with {size_mib} MiB...")
+
+                gitee_upload_asset(
+                    gitee_release_id,
+                    test_name,
+                    test_path,
+                )
+
+                print(
+                    f"Gitee {size_mib} MiB upload: OK"
+                )
+
+                results["Gitee"].append(
+                    (size_mib, "OK")
+                )
+
+            except Exception as exc:
+                print(
+                    f"Gitee {size_mib} MiB upload: FAILED: {exc}"
+                )
+
+                results["Gitee"].append(
+                    (size_mib, f"FAILED: {exc}")
+                )
+
+                # Larger files are unlikely to succeed after a smaller
+                # one has already failed, so stop testing Gitee.
+                gitee_active = False
+
+        else:
+            print(
+                f"Gitee {size_mib} MiB upload: SKIPPED "
+                "(smaller size already failed)"
+            )
+
+        if gitcode_active:
+            try:
+                print(f"Testing GitCode with {size_mib} MiB...")
+
+                gitcode_upload_asset(
+                    tag,
+                    test_name,
+                    test_path,
+                )
+
+                print(
+                    f"GitCode {size_mib} MiB upload: OK"
+                )
+
+                results["GitCode"].append(
+                    (size_mib, "OK")
+                )
+
+            except Exception as exc:
+                print(
+                    f"GitCode {size_mib} MiB upload: FAILED: {exc}"
+                )
+
+                results["GitCode"].append(
+                    (size_mib, f"FAILED: {exc}")
+                )
+
+                gitcode_active = False
+
+        else:
+            print(
+                f"GitCode {size_mib} MiB upload: SKIPPED "
+                "(smaller size already failed)"
+            )
+
+        test_path.unlink(missing_ok=True)
+
+        if not gitee_active and not gitcode_active:
+            print("")
+            print(
+                "Both platforms have failed; "
+                "stopping larger-size tests."
+            )
+            break
+
+    print("")
+    print("=== Diagnostic summary ===")
+
+    for platform, platform_results in results.items():
+        print(f"{platform}:")
+
+        for size_mib, result in platform_results:
+            print(f"  {size_mib:>2} MiB: {result}")
+
+    print("")
+    print(
+        "Diagnostic finished. "
+        "Real Release assets were not uploaded."
+    )
 
     # Stop here: do not upload real Release assets during this test.
     return
