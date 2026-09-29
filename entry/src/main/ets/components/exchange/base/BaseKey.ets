@@ -23,7 +23,7 @@ function keyRole(key: string): KeyboardKeyRole {
 // 字体分级独立于按键表面的角色，避免调整文字时连带改变背景与光感材质。
 function keyFontColor(key: string): ResourceColor {
   if (key === 'AC' || key === '⌫' || key === '=') return Color.White;
-  if (/^[1-9A-F]$/.test(key)) return $r('sys.color.font_primary');
+  if (/^[0-9A-F]$/.test(key)) return $r('sys.color.font_primary');
   if (['+', '-', '*', '/', 'MOD', 'AND', 'SHL', 'SHR'].includes(key)) return $r('sys.color.font_emphasize');
   return $r('sys.color.font_secondary');
 }
