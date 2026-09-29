@@ -525,10 +525,16 @@ export struct BaseConverter {
       }.layoutWeight(1).height(BASE_TOOLBAR_HEIGHT).padding(4).borderRadius(BASE_TOOLBAR_HEIGHT / 2)
       .attributeModifier(baseToolbarVisualModifier)
       Row() {
-        Button('粘贴').width('100%').height('100%').padding(0).fontSize(13)
-          .fontColor($r('sys.color.font_primary')).backgroundColor(Color.Transparent)
+        // 安全控件点击授予临时读取权限；背景不能透明，否则会被系统强制改色。
+        PasteButton({ text: PasteDescription.PASTE, buttonType: ButtonType.Capsule })
+          .width('100%').height('100%').padding(0).fontSize(13)
+          .fontColor($r('sys.color.font_primary')).backgroundColor($r('sys.color.comp_background_secondary'))
           .id('base.paste').accessibilityText('粘贴')
-          .onClick(() => {
+          .onClick((_: ClickEvent, result: PasteButtonOnClickResult) => {
+            if (result !== PasteButtonOnClickResult.SUCCESS) {
+              this.showPasteToast('粘贴失败：未获得剪贴板读取授权');
+              return;
+            }
             HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
             this.paste();
           })
