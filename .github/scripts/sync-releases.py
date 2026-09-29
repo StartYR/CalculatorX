@@ -151,7 +151,7 @@ def download_github_asset(asset: dict, directory: pathlib.Path) -> pathlib.Path:
         headers=headers,
         stream=True,
         allow_redirects=True,
-        timeout=(60, 3600),
+        timeout=(60, 120),
     ) as response:
         checked(response, f"Download GitHub asset {name}")
 
@@ -341,7 +341,7 @@ def gitee_upload_asset(
                 "Accept": "application/json",
             },
             data=multipart,
-            timeout=(60, 3600),
+            timeout=(60, 120),
         )
 
     checked(response, f"Upload Gitee asset {name}")
@@ -496,7 +496,7 @@ def gitcode_upload_asset(
             upload_url,
             headers=upload_headers,
             data=file,
-            timeout=(1200, 3600),
+            timeout=(120, 120),
         )
 
     checked(response, f"Upload GitCode asset {name}")
@@ -519,6 +519,53 @@ def sync_release(
     gitcode_release = gitcode_upsert_release(release)
 
     gitee_release_id = gitee_release["id"]
+
+        # Temporary 1 KiB upload diagnostic.
+    test_name = "release-upload-test-1kb.bin"
+    test_path = temp_directory / test_name
+    test_path.write_bytes(b"X" * 1024)
+
+    print("")
+    print("=== 1 KiB upload diagnostic ===")
+
+    errors = []
+
+    try:
+        print("Testing Gitee...")
+        gitee_upload_asset(
+            gitee_release_id,
+            test_name,
+            test_path,
+        )
+        print("Gitee 1 KiB upload: OK")
+    except Exception as exc:
+        print(f"Gitee 1 KiB upload: FAILED: {exc}")
+        errors.append(f"Gitee: {exc}")
+
+    try:
+        print("Testing GitCode...")
+        gitcode_upload_asset(
+            tag,
+            test_name,
+            test_path,
+        )
+        print("GitCode 1 KiB upload: OK")
+    except Exception as exc:
+        print(f"GitCode 1 KiB upload: FAILED: {exc}")
+        errors.append(f"GitCode: {exc}")
+
+    test_path.unlink(missing_ok=True)
+
+    if errors:
+        raise RuntimeError(
+            "1 KiB upload diagnostic failed:\n"
+            + "\n".join(errors)
+        )
+
+    print("Both 1 KiB uploads succeeded.")
+
+    # Stop here: do not upload real Release assets during this test.
+    return
 
     current_gitee_assets = {
         asset.get("name"): asset
@@ -547,7 +594,13 @@ def sync_release(
                 f"{GITEE_MAX_ASSET_BYTES}-byte Release asset limit."
             )
 
-        gitee_needed = False
+        gitee_needed = (
+            not gitee_too_large
+            and (
+                REPLACE_ASSETS
+                or name not in current_gitee_assets
+            )
+        )
 
         gitcode_needed = (
             REPLACE_ASSETS
