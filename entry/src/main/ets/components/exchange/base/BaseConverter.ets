@@ -32,6 +32,8 @@ const BASE_CONTENT_TOP_GAP: number = 12;     // 初始内容与顶栏底部的�
 const BASE_PAGE_TOP_OFFSET: number = 56;
 const BASE_TOOLBAR_SHADOW_GUTTER: number = 24;
 const BASE_KEYBOARD_SLIDE_DURATION: number = 280;
+// 唤起按钮的可见尺寸；外层另加阴影留白。
+const BASE_KEYBOARD_RESTORE_WIDTH: number = 144;
 const BASE_KEYBOARD_RESTORE_HEIGHT: number = 48;
 
 // 数值换算实时预览，键盘只提供数字、小数点和输入控制。
@@ -609,13 +611,13 @@ export struct BaseConverter {
       Row() {
         Button() {
           Column() {
-            Text('△').fontSize(12).lineHeight(14).fontColor($r('sys.color.font_emphasize'))
-            Text('⌨').fontSize(24).lineHeight(26).fontColor($r('sys.color.font_emphasize'))
+            Text('△').fontFamily('Cambria Math').fontSize(12).lineHeight(14).fontColor($r('sys.color.font_emphasize'))
+            Text('⌨').fontFamily('Cambria Math').fontSize(24).lineHeight(26).fontColor($r('sys.color.font_emphasize'))
           }.width('100%').height('100%').justifyContent(FlexAlign.Center)
         }.width('100%').height('100%').padding(0).backgroundColor(Color.Transparent)
           .id('base.keyboard.show').accessibilityText('显示键盘并关闭展开面板')
           .onClick(() => this.restoreKeyboard())
-      }.width(144).height(BASE_KEYBOARD_RESTORE_HEIGHT).borderRadius(BASE_KEYBOARD_RESTORE_HEIGHT / 2)
+      }.width(BASE_KEYBOARD_RESTORE_WIDTH).height(BASE_KEYBOARD_RESTORE_HEIGHT).borderRadius(BASE_KEYBOARD_RESTORE_HEIGHT / 2)
       .attributeModifier(baseToolbarVisualModifier)
     }.width('100%').height('100%').justifyContent(FlexAlign.Center)
     .padding(BASE_TOOLBAR_SHADOW_GUTTER).clip(false).hitTestBehavior(HitTestMode.Transparent)
@@ -789,7 +791,7 @@ export struct BaseConverter {
       .translate({ y: this.keyboardSlide * (this.keyboardHeight() + BASE_TOOLBAR_SHADOW_GUTTER) })
       if (this.restoreButtonMounted) {
         Column() { this.FloatingKeyboardRestore() }
-        .width(144 + BASE_TOOLBAR_SHADOW_GUTTER * 2)
+        .width(BASE_KEYBOARD_RESTORE_WIDTH + BASE_TOOLBAR_SHADOW_GUTTER * 2)
         .height(BASE_KEYBOARD_RESTORE_HEIGHT + BASE_TOOLBAR_SHADOW_GUTTER * 2)
         .margin({ bottom: this.restoreButtonBottom() - BASE_TOOLBAR_SHADOW_GUTTER })
         .clip(false).hitTestBehavior(HitTestMode.Transparent).zIndex(1)

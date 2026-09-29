@@ -101,6 +101,7 @@ export struct BaseKey {
             .draggable(false)
         } else {
           Text(this.keyText === '*' ? '×' : this.keyText === '/' ? '÷' : this.keyText === '-' ? '−' : this.keyText)
+            .fontFamily(/^[0-9A-F]$/.test(this.keyText) ? 'monospace' : 'HarmonyOS Sans')
             .fontSize(['+', '-', '*', '/', '±', '='].includes(this.keyText)
               ? 26 : (this.keyText.length > 2 ? 16 : 23))
             .fontWeight(FontWeight.Medium)
