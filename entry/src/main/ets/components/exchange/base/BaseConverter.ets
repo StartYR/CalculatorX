@@ -99,9 +99,9 @@ struct BaseChip {
       .width(this.stretch ? '100%' : undefined).height(this.stretch ? BASE_TOOLBAR_HEIGHT - 8 : 32)
       .padding({ left: this.stretch ? 4 : 10, right: this.stretch ? 4 : 10 }).id(this.semanticId)
       .accessibilityText(this.labelText() + (this.selected ? '，已选中' : '')).onClick(() => {
-        HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
-        this.onActivate();
-      })
+      HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
+      this.onActivate();
+    })
   }
 }
 
@@ -292,7 +292,7 @@ export struct BaseConverter {
   }
 
   private keyboardHeight(): number {
-    return Math.min(390, Math.max(270, this.pageHeight * 0.52)) + Math.max(0, this.navBarHeight - 8);
+    return Math.min(390, Math.max(200, this.pageHeight * 0.42)) + Math.max(0, this.navBarHeight - 8);
   }
   private value(radix: number): string {
     if (this.session.mode === 'numeric') {
@@ -335,8 +335,8 @@ export struct BaseConverter {
             .textAlign(TextAlign.End).fontColor($r('sys.color.font_primary'))
         }, (row: string, index: number) => index.toString() + ':' + row)
       }.layoutWeight(1)
-        .bindContextMenu(this.BinaryCopyMenu, ResponseType.LongPress)
-        .onClick(() => this.select(() => this.session.changeRadix(2)))
+      .bindContextMenu(this.BinaryCopyMenu, ResponseType.LongPress)
+      .onClick(() => this.select(() => this.session.changeRadix(2)))
     }.width('100%').constraintSize({ minHeight: 38 }).padding({ left: 10, right: 10, top: 7, bottom: 7 })
     .borderRadius(10)
     .backgroundColor(this.session.currentRadix() === 2 ? $r('sys.color.comp_background_secondary') : Color.Transparent)
@@ -632,7 +632,7 @@ export struct BaseConverter {
             BaseKey({ keyText: key, immersive: immersive, available: this.session.inputEnabled(key),
               integerMode: this.session.mode === 'integer', onPress: (action: string) => this.press(action) })
           }.rowStart(Math.floor(index / this.keyboardColumns())).rowEnd(Math.floor(index / this.keyboardColumns()))
-            .columnStart(index % this.keyboardColumns()).columnEnd(index % this.keyboardColumns() + this.keyboardKeySpan(index) - 1)
+          .columnStart(index % this.keyboardColumns()).columnEnd(index % this.keyboardColumns() + this.keyboardKeySpan(index) - 1)
         }
       }, (key: string, index: number) => this.session.mode + '.' + index.toString() + '.' + key)
     }.columnsTemplate(this.session.mode === 'numeric' ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr 1fr 1fr').rowsTemplate(this.session.mode === 'numeric' ? '1fr 1fr 1fr 1fr 1fr' : '1fr 1fr 1fr 1fr 1fr 1fr')
@@ -643,12 +643,12 @@ export struct BaseConverter {
   @Builder
   private ImmersiveKeyboard() {
     Column() { this.Keyboard(true) }.width('100%').height('100%').borderRadius({ topLeft: 28, topRight: 28 })
-      .backgroundColor($r('sys.color.comp_background_primary'))
+    .backgroundColor($r('sys.color.comp_background_primary'))
   }
   @Builder
   private LegacyKeyboardLayout() {
     Column() { this.Keyboard(false) }.height('100%').width('100%').borderRadius({ topLeft: 28, topRight: 28 })
-      .backgroundColor($r('sys.color.comp_background_primary'))
+    .backgroundColor($r('sys.color.comp_background_primary'))
   }
   @Builder
   private ImmersiveKeyboardLayout() {
@@ -677,16 +677,16 @@ export struct BaseConverter {
       .animation({ duration: BASE_KEYBOARD_SLIDE_DURATION, curve: Curve.EaseInOut })
       if (this.keyboardHidden()) {
         Column() { this.FloatingKeyboardRestore() }
-          .width(144 + BASE_TOOLBAR_SHADOW_GUTTER * 2)
-          .height(BASE_KEYBOARD_RESTORE_HEIGHT + BASE_TOOLBAR_SHADOW_GUTTER * 2)
-          .margin({ bottom: this.restoreButtonBottom() - BASE_TOOLBAR_SHADOW_GUTTER })
-          .clip(false).hitTestBehavior(HitTestMode.Transparent).zIndex(1)
+        .width(144 + BASE_TOOLBAR_SHADOW_GUTTER * 2)
+        .height(BASE_KEYBOARD_RESTORE_HEIGHT + BASE_TOOLBAR_SHADOW_GUTTER * 2)
+        .margin({ bottom: this.restoreButtonBottom() - BASE_TOOLBAR_SHADOW_GUTTER })
+        .clip(false).hitTestBehavior(HitTestMode.Transparent).zIndex(1)
       }
       // 阴影留白不改变可见顶栏位置，透明区域允许触摸传递给下方滚动页。
       Column() { this.FloatingToolbar() }
-        .width('100%').height(BASE_TOOLBAR_HEIGHT + BASE_TOOLBAR_SHADOW_GUTTER * 2)
-        .clip(false).hitTestBehavior(HitTestMode.Transparent)
-        .position({ x: 0, y: this.statusBarHeight + BASE_TOOLBAR_TOP_OFFSET - BASE_TOOLBAR_SHADOW_GUTTER }).zIndex(2)
+      .width('100%').height(BASE_TOOLBAR_HEIGHT + BASE_TOOLBAR_SHADOW_GUTTER * 2)
+      .clip(false).hitTestBehavior(HitTestMode.Transparent)
+      .position({ x: 0, y: this.statusBarHeight + BASE_TOOLBAR_TOP_OFFSET - BASE_TOOLBAR_SHADOW_GUTTER }).zIndex(2)
     }.width('100%').height('100%').backgroundColor($r('sys.color.comp_background_tertiary'))
     .onAreaChange((_, area: Area) => { this.pageHeight = Number(area.height); }).id('base.programmer')
     .accessibilityDescription(this.semanticState())
