@@ -519,9 +519,12 @@ export struct BaseConverter {
   private KeyboardRestoreButton() {
     Row() {
       Row() {
-        Button('显示键盘')
-          .width('100%').height('100%').padding(0)
-          .fontSize(15).fontColor($r('sys.color.font_emphasize')).backgroundColor(Color.Transparent)
+        Button() {
+          Column() {
+            Text('△').fontSize(12).lineHeight(14).fontColor($r('sys.color.font_emphasize'))
+            Text('⌨').fontSize(24).lineHeight(26).fontColor($r('sys.color.font_emphasize'))
+          }.width('100%').height('100%').justifyContent(FlexAlign.Center)
+        }.width('100%').height('100%').padding(0).backgroundColor(Color.Transparent)
           .id('base.keyboard.show').accessibilityText('显示键盘并关闭展开面板')
           .onClick(() => this.restoreKeyboard())
       }.width(144).height(BASE_KEYBOARD_RESTORE_HEIGHT).borderRadius(BASE_KEYBOARD_RESTORE_HEIGHT / 2)
