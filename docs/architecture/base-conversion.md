@@ -79,7 +79,7 @@
 
 ## 界面与兼容
 
-模式、粘贴与帮助组成独立的悬浮顶栏，显示区预留顶部空间并可滚动，键盘固定在底部；整数与 IEEE 为五列六行，数值键盘为四列五行。位视图、编码、帮助默认折叠。三个标签分别维护草稿与配置；数值页隐藏表达式栏、字长、符号解释、标志位与位编辑控件。IEEE 格式使用 binary16 / binary32 / binary64 下拉菜单。三个标签的滚动条隐藏，保留滚动与回弹。IEEE 顶部编辑文本不自动补高位零，HEX/BIN 结果行仍按位宽补零。
+模式、粘贴与帮助组成独立的悬浮顶栏，显示区预留顶部空间并可滚动，键盘显示时固定在底部；整数与 IEEE 为五列六行，数值键盘为四列五行。位视图、编码、帮助默认折叠。三个标签分别维护草稿与配置；数值页隐藏表达式栏、字长、符号解释、标志位与位编辑控件。IEEE 格式使用 binary16 / binary32 / binary64 下拉菜单。三个标签的滚动条隐藏，保留滚动与回弹。IEEE 顶部编辑文本不自动补高位零，HEX/BIN 结果行仍按位宽补零。
 
 三个标签的 BIN 均按每 32 个二进制数字显式分行，每组独立单行并按可用宽度缩放字形，不依赖自然换行。符号、小数点与近似标记不计入位数；末行不足 32 位时不补零。长按二进制内容可复制不含排版换行的完整文本。
 
@@ -90,6 +90,8 @@
 顶栏采用胶囊式模式选项与两个独立操作按钮，帮助使用系统 questionmark_circle 图标。API 26 通过局部横向底部 TabBar 建立材质区域，复用 TopBar 光感；低版本回退普通背景。详见[悬浮顶栏说明与验证边界](../changes/2026-09-29-base-floating-toolbar.md)。
 
 粘贴成功与失败使用和全局历史复制相同的 Toast 参数（2000 ms、bottom 80），不新增页面提示行。先在会话副本校验，空文本、读取失败、超长或格式错误时保留当前输入与撤销记录；有效粘贴清除旧错误，整数直接确认，数值与 IEEE 保持预览。
+
+整数的位/编码面板、IEEE 字段面板展开时键盘下滑收起，再次点击当前面板或底部“显示键盘”按钮后上滑恢复。数值模式始终显示键盘；模式切换收起原面板。隐藏键盘禁用触摸和无障碍遍历，滚动内容底部预留悬浮按钮与导航安全区。详见[升降交互与验证](../changes/2026-09-29-base-adaptive-keyboard.md)。
 
 ## 状态与历史
 
@@ -110,7 +112,7 @@ pwsh -NoProfile -File tools/check-keyboard-architecture.ps1
 
 宿主机测试需要 Node.js 24，以内置类型擦除执行纯 `.ets` 核心，使用 BigInt / DataView 独立参照。不能代替 ArkTS 编译。ArkTS 用例在 `entry/src/test/Programmer.test.ets` 和 `Numeric.test.ets`，均已注册现有套件。
 
-debug 下 `base.programmer` 的 accessibilityDescription 提供 `{ data, error, integerConfirmed, floatConfirmed, numericConfirmed, numericInput, numericPreviewValid }`。CLI `screen get` 返回 `programmer` 字段，其他模块返回 null；release 不暴露机器 JSON。设备场景为 `tools/calcx/tests/scenarios/` 下的 `programmer-ui-smoke.json` 与 `numeric-ui-smoke.json`，尚未在设备执行。
+debug 下 `base.programmer` 的 accessibilityDescription 提供 `{ data, error, integerConfirmed, floatConfirmed, numericConfirmed, numericInput, numericPreviewValid, panel, keyboardHidden }`。CLI `screen get` 返回 `programmer` 字段，其他模块返回 null；release 不暴露机器 JSON。设备场景为 `tools/calcx/tests/scenarios/` 下的 `programmer-ui-smoke.json` 与 `numeric-ui-smoke.json`，尚未在设备执行。
 
 计算问题检查核心/会话测试；显示不同步检查 `BaseConversionSession`；历史恢复检查 `extra_params`；光感检查 API、偏好、TabBar 区域与公共表面。API 26 双开关、API 23 回退、深浅色、小窗口、长按和历史操作仍需设备验收。
 

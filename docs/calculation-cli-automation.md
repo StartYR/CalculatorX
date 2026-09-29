@@ -391,7 +391,7 @@ CLI 控制能力依赖单独安装的 `entry-ohosTest-signed.hap`。发布时只
 
 ### 程序员首版接口（2026-09-23）
 
-`screen get` 新增 `programmer`，从 debug UI 的 `base.programmer` 读取，未挂载模块时为 null。结构为 `{ data, error, integerConfirmed, floatConfirmed, numericConfirmed, numericInput, numericPreviewValid }`；`data.settings` 含模式、进制、字长和符号解释，`data.bits` 为整数 HEX，另含表达式、标志、C-in、`floatBits` 和浮点输入。release 不暴露该 JSON。
+`screen get` 新增 `programmer`，从 debug UI 的 `base.programmer` 读取，未挂载模块时为 null。结构为 `{ data, error, integerConfirmed, floatConfirmed, numericConfirmed, numericInput, numericPreviewValid, panel, keyboardHidden }`；`data.settings` 含模式、进制、字长和符号解释，`data.bits` 为整数 HEX，另含表达式、标志、C-in、`floatBits` 和浮点输入。release 不暴露该 JSON。
 
 稳定操作包括 `base.mode.numeric/integer/float`、`base.radix.2/8/10/16`、`base.float.width`（打开原生下拉菜单）、`base.signed`、`base.carry` 与 `base.key.*`。按键沿用科学键盘的可读后缀（如 `plus`、`equals`、`clear`），浮点指数键为 `base.key.exponent`。数值模式的 `base.numeric.source` 返回精确输入来源；`data.numericSourceText/numericSourceRadix` 保存原值，`data.settings.numericRadix/numericPlaces` 保存显示配置。原 `base.float.width.16/32/64` 平铺按钮已移除；下拉选项尚无独立 CLI 语义目标。程序员 smoke 场景以各格式共有的零位模式验证浮点输入。剪贴板、精度选择器及逐 bit 点击未加入 CLI 白名单。
 
@@ -409,6 +409,8 @@ pwsh -NoProfile -File tools/test-programmer-cli.ps1
 ```powershell
 pwsh -NoProfile -File tools/calcx/runtime/calcx.ps1 scenario run tools/calcx/tests/scenarios/numeric-ui-smoke.json
 ```
+
+键盘升降场景为 `tools/calcx/tests/scenarios/base-keyboard-panel-smoke.json`，通过 `programmer.panel` 和 `programmer.keyboardHidden` 检查状态，使用 `base.keyboard.show` 唤起键盘。该场景仅通过静态检查，动画与设备交互尚未验收；运行时使用源码入口，启动器未重建。
 
 数值核心的独立回归使用 `node tools/test-numeric.mjs`，不经过设备或 CAS。
 
