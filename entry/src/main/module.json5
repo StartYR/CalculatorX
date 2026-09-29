@@ -10,6 +10,14 @@
     ],
     "requestPermissions": [
       {
+        "name": "ohos.permission.READ_PASTEBOARD",
+        "reason": "$string:permission_read_pasteboard_reason",
+        "usedScene": {
+          "abilities": ["EntryAbility"],
+          "when": "inuse"
+        }
+      },
+      {
         "name": "ohos.permission.INTERNET", // 获取联网权限
       },
       {

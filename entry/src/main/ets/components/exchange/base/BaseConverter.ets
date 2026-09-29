@@ -8,6 +8,7 @@
 
 import deviceInfo from '@ohos.deviceInfo';
 import pasteboard from '@ohos.pasteboard';
+import { abilityAccessCtrl, common } from '@kit.AbilityKit';
 import { promptAction } from '@kit.ArkUI';
 
 import { createTopBarMaterial, createDialogMaterial } from '../../../utils/ImmersiveMaterialUtils';
@@ -302,6 +303,36 @@ export struct BaseConverter {
     promptAction.showToast({ message: message, duration: 2000, bottom: 80 });
   }
 
+  private pastePending: boolean = false;
+
+  private async requestPaste(): Promise<void> {
+    if (this.pastePending) return;
+    this.pastePending = true;
+    const sourceSession = this.session;
+    try {
+      // 只在点击后检查文本类型，空剪贴板不触发权限申请，也不提前读取内容。
+      const board = pasteboard.getSystemPasteboard();
+      if (!board.hasDataType(pasteboard.MIMETYPE_TEXT_PLAIN)) {
+        this.showPasteToast('剪贴板没有可粘贴的文本');
+        return;
+      }
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const result = await abilityAccessCtrl.createAtManager().requestPermissionsFromUser(
+        context, ['ohos.permission.READ_PASTEBOARD']);
+      if (result.authResults.length !== 1 || result.authResults[0] !== abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED) {
+        this.showPasteToast('未获得剪贴板权限，可在系统设置中允许；也可继续手动输入');
+        return;
+      }
+      // 授权等待期间输入会话可能被切换或编辑，不把结果写入另一份输入。
+      if (this.session !== sourceSession) return;
+      await this.paste();
+    } catch (_) {
+      this.showPasteToast('无法申请剪贴板权限，请检查应用授权配置');
+    } finally {
+      this.pastePending = false;
+    }
+  }
+
   private async paste(): Promise<void> {
     let text: string;
     try {
@@ -525,18 +556,12 @@ export struct BaseConverter {
       }.layoutWeight(1).height(BASE_TOOLBAR_HEIGHT).padding(4).borderRadius(BASE_TOOLBAR_HEIGHT / 2)
       .attributeModifier(baseToolbarVisualModifier)
       Row() {
-        // 安全控件会强制提高低透明度背景的 alpha，必须使用不透明页面底色，避免叠加色变成纯黑或纯白。
-        PasteButton({ text: PasteDescription.PASTE, buttonType: ButtonType.Capsule })
-          .width('100%').height('100%').padding(0).fontSize(13)
-          .fontColor($r('sys.color.font_primary')).backgroundColor($r('sys.color.background_primary'))
-          .id('base.paste')
-          .onClick((_: ClickEvent, result: PasteButtonOnClickResult) => {
-            if (result !== PasteButtonOnClickResult.SUCCESS) {
-              this.showPasteToast('粘贴失败：未获得剪贴板读取授权');
-              return;
-            }
+        Button('粘贴').width('100%').height('100%').padding(0).fontSize(13)
+          .fontColor($r('sys.color.font_primary')).backgroundColor(Color.Transparent)
+          .id('base.paste').accessibilityText('粘贴')
+          .onClick(() => {
             HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
-            this.paste();
+            this.requestPaste();
           })
       }.width(52).height(BASE_TOOLBAR_HEIGHT).borderRadius(BASE_TOOLBAR_HEIGHT / 2).attributeModifier(baseToolbarVisualModifier)
       Row() {

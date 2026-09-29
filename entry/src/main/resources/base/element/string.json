@@ -1,6 +1,10 @@
 {
   "string": [
     {
+      "name": "permission_read_pasteboard_reason",
+      "value": "用于在您点击粘贴时读取剪贴板文本，填入进制转换输入框"
+    },
+    {
       "name": "module_desc",
       "value": "module description"
     },
