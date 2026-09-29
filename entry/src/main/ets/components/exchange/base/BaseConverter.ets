@@ -430,11 +430,13 @@ export struct BaseConverter {
     } catch (_) { this.session.error = '无法复制数值'; this.session = this.session.copy(); }
   }
 
-  // 菜单通过 bind 传递进制，不能在普通箭头函数中调用 UI Builder。
+  // 直接引用无参 Builder 才会生成菜单包装；目标进制在菜单打开前确定。
+  private copyMenuRadix: number = 10;
+
   @Builder
-  private RadixCopyMenu(radix: number) {
+  private RadixCopyMenu() {
     Menu() {
-      MenuItem({ content: $r('app.string.base_copy_value') }).onClick(() => { this.copyRadix(radix); })
+      MenuItem({ content: $r('app.string.base_copy_value') }).onClick(() => { this.copyRadix(this.copyMenuRadix); })
     }
   }
 
@@ -452,7 +454,9 @@ export struct BaseConverter {
             .textAlign(TextAlign.End).fontColor($r('sys.color.font_primary'))
         }, (row: string, index: number) => index.toString() + ':' + row)
       }.layoutWeight(1)
-      .bindContextMenu(this.RadixCopyMenu.bind(this, 2), ResponseType.LongPress)
+      .bindContextMenu(this.RadixCopyMenu, ResponseType.LongPress, {
+        aboutToAppear: () => { this.copyMenuRadix = 2; }
+      })
       .onClick(() => this.select(() => this.session.changeRadix(2)))
     }.width('100%').constraintSize({ minHeight: 38 }).padding({ left: 10, right: 10, top: 7, bottom: 7 })
     .borderRadius(10)
@@ -468,7 +472,9 @@ export struct BaseConverter {
         .fontColor(this.session.currentRadix() === radix ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary'))
       Text(this.value(radix)).fontFamily('monospace').fontSize(radix === 10 ? 19 : 15)
         .fontColor($r('sys.color.font_primary'))
-        .bindContextMenu(this.RadixCopyMenu.bind(this, radix), ResponseType.LongPress)
+        .bindContextMenu(this.RadixCopyMenu, ResponseType.LongPress, {
+          aboutToAppear: () => { this.copyMenuRadix = radix; }
+        })
         .minFontSize(8).maxFontSize(radix === 10 ? 19 : 15)
         .maxLines(1).heightAdaptivePolicy(TextHeightAdaptivePolicy.MAX_LINES_FIRST)
         .textAlign(TextAlign.End).layoutWeight(1).height(30)
@@ -497,7 +503,9 @@ export struct BaseConverter {
         .fontFamily('monospace')
         .fontSize(15)
         .fontColor($r('sys.color.font_primary'))
-        .bindContextMenu(this.RadixCopyMenu.bind(this, radix), ResponseType.LongPress)
+        .bindContextMenu(this.RadixCopyMenu, ResponseType.LongPress, {
+          aboutToAppear: () => { this.copyMenuRadix = radix; }
+        })
         .onClick(() => this.select(() => this.session.changeRadix(radix)))
     }
     .width('100%')
