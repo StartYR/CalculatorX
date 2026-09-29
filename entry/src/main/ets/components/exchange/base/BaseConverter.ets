@@ -10,7 +10,7 @@ import deviceInfo from '@ohos.deviceInfo';
 import pasteboard from '@ohos.pasteboard';
 import { promptAction } from '@kit.ArkUI';
 
-import { createTopBarMaterial } from '../../../utils/ImmersiveMaterialUtils';
+import { createTopBarMaterial, createDialogMaterial } from '../../../utils/ImmersiveMaterialUtils';
 import { PreferenceConfigs } from '../../../utils/CalculatorConfigs';
 import { HapticUtils } from '../../../utils/HapticUtils';
 import { BaseConversionSession } from '../../../utils/base/BaseConversionSession';
@@ -117,6 +117,59 @@ struct IntegerFlag {
   }
 }
 
+@CustomDialog
+struct BaseHelpDialog {
+  controller?: CustomDialogController;
+  @Link mode: string;
+
+  private title(): string {
+    return (this.mode === 'numeric' ? '数值' : this.mode === 'integer' ? '整数' : 'IEEE 754') + '帮助';
+  }
+
+  private message(): Resource {
+    return this.mode === 'numeric' ? $r('app.string.base_numeric_help') :
+      this.mode === 'integer' ? $r('app.string.base_integer_help') : $r('app.string.programmer_float_help');
+  }
+
+  build() {
+    Column({ space: 14 }) {
+      Text(this.title())
+        .fontSize(20)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('sys.color.font_primary'))
+        .width('100%')
+
+      Scroll() {
+        Text(this.message())
+          .fontSize(14)
+          .lineHeight(22)
+          .fontColor($r('sys.color.font_secondary'))
+          .width('100%')
+      }
+      .width('100%')
+      .constraintSize({ maxHeight: 360 })
+      .scrollBar(BarState.Off)
+      .edgeEffect(EdgeEffect.Spring)
+
+      Row() {
+        Button('关闭')
+          .type(ButtonType.Capsule)
+          .backgroundColor($r('sys.color.comp_background_tertiary'))
+          .fontColor($r('sys.color.font_primary'))
+          .width('100%')
+          .height(40)
+          .onClick(() => {
+            this.controller?.close();
+          })
+      }
+      .width('100%')
+      .margin({ top: 8 })
+    }
+    .padding(20)
+    .width('100%')
+  }
+}
+
 @Component
 export struct BaseConverter {
   @StorageProp(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
@@ -128,6 +181,14 @@ export struct BaseConverter {
   @State @Watch('syncKeyboardAnimation') panel: string = '';
   @State keyboardSlide: number = 0;
   @State restoreButtonMounted: boolean = false;
+  @State private helpMode: string = 'numeric';
+  private helpDialogController: CustomDialogController = new CustomDialogController({
+    builder: BaseHelpDialog({ mode: $helpMode }),
+    alignment: DialogAlignment.Center,
+    autoCancel: true,
+    cornerRadius: 28,
+    systemMaterial: createDialogMaterial()
+  });
   private keyboardHiddenTarget: boolean = false;
   private keyboardAnimationRevision: number = 0;
   @State pageHeight: number = 700;
@@ -441,13 +502,8 @@ export struct BaseConverter {
 
   private showHelp(): void {
     // 帮助使用独立弹窗，不更改检查面板和键盘的当前状态。
-    const message: Resource = this.session.mode === 'numeric' ? $r('app.string.base_numeric_help') :
-      this.session.mode === 'integer' ? $r('app.string.base_integer_help') : $r('app.string.programmer_float_help');
-    const mode = this.session.mode === 'numeric' ? '数值' : this.session.mode === 'integer' ? '整数' : 'IEEE 754';
-    this.getUIContext().showAlertDialog({
-      title: mode + '帮助', message: message,
-      confirm: { value: '关闭', action: () => {} }
-    });
+    this.helpMode = this.session.mode;
+    this.helpDialogController.open();
   }
 
   @Builder
