@@ -529,7 +529,7 @@ export struct BaseConverter {
         PasteButton({ text: PasteDescription.PASTE, buttonType: ButtonType.Capsule })
           .width('100%').height('100%').padding(0).fontSize(13)
           .fontColor($r('sys.color.font_primary')).backgroundColor($r('sys.color.comp_background_secondary'))
-          .id('base.paste').accessibilityText('粘贴')
+          .id('base.paste')
           .onClick((_: ClickEvent, result: PasteButtonOnClickResult) => {
             if (result !== PasteButtonOnClickResult.SUCCESS) {
               this.showPasteToast('粘贴失败：未获得剪贴板读取授权');
