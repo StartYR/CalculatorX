@@ -8,6 +8,7 @@
 
 import deviceInfo from '@ohos.deviceInfo';
 import pasteboard from '@ohos.pasteboard';
+import { promptAction } from '@kit.ArkUI';
 
 import { createTopBarMaterial } from '../../../utils/ImmersiveMaterialUtils';
 import { PreferenceConfigs } from '../../../utils/CalculatorConfigs';
@@ -229,21 +230,43 @@ export struct BaseConverter {
     if (next) { this.undoStack.push(this.session.copy()); this.session = next; this.persistSettings(); }
   }
 
+  private showPasteToast(message: string): void {
+    promptAction.showToast({ message: message, duration: 2000, bottom: 80 });
+  }
+
   private async paste(): Promise<void> {
-    // 整数粘贴直接确认，浮点与数值粘贴先预览；各自会话校验对应输入上限。
+    let text: string;
     try {
       const data = await pasteboard.getSystemPasteboard().getData();
-      const text = data.getPrimaryText().trim();
-      this.apply(() => {
-        if (text.length > (this.session.mode === 'integer' ? 1024 : 768)) throw new Error('剪贴板输入过长');
-        if (this.session.mode === 'integer') {
-          this.session.expression = text;
-          this.session.evaluated = false;
-          this.session.confirm();
-        } else if (this.session.mode === 'numeric') this.session.numeric.replaceInput(text);
-        else this.session.replaceFloatInput(text);
-      });
-    } catch (_) { this.session.error = '无法读取剪贴板'; this.session = this.session.copy(); }
+      text = data.getPrimaryText().trim();
+    } catch (_) {
+      this.showPasteToast('粘贴失败：无法读取剪贴板');
+      return;
+    }
+    // 先在副本校验，失败不替换输入、不新增撤销记录，也不生成页面内提示行。
+    const next = this.session.copy();
+    try {
+      if (text.length === 0) throw new Error('剪贴板没有可粘贴的文本');
+      if (text.length > (next.mode === 'integer' ? 1024 : 768)) throw new Error('剪贴板输入过长');
+      next.error = '';
+      if (next.mode === 'numeric') {
+        next.numeric.replaceInput(text);
+        if (!next.numeric.previewValid) next.numeric.confirm();
+      } else if (next.mode === 'integer') {
+        next.expression = text;
+        next.evaluated = false;
+        next.confirm();
+      } else {
+        next.replaceFloatInput(text);
+        if (!next.floatPreviewValid) next.confirm();
+      }
+    } catch (error) {
+      this.showPasteToast('粘贴失败：' + (error as Error).message);
+      return;
+    }
+    // 浮点与数值仍停留在有效预览，只有整数粘贴直接确认。
+    this.apply(() => { this.session = next; });
+    this.showPasteToast('已粘贴');
   }
 
   private keyboardHeight(): number {
