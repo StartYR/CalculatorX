@@ -22,7 +22,13 @@ import { PreferenceManager } from '../../../utils/PreferenceManager';
 import { HistoryRepository, HistoryRecord } from '../../../database/HistoryRepository';
 import { BaseConversionMemory, BaseConversionSettings, settingsOf, recordOf, historyRecordOf, restoreSettings, restoreRecord } from '../../../utils/base/BaseConversionState';
 
-const BASE_TOOLBAR_HEIGHT: number = 52;
+// 布局调节量均为 vp；顶栏位置从系统状态栏底部开始计算。
+const BASE_TOOLBAR_TOP_OFFSET: number = 60;
+const BASE_TOOLBAR_HEIGHT: number = 44;
+const BASE_CONTENT_TOP_GAP: number = 12;
+// 页面视口避开应用标题栏；材质留白仅容纳阴影，不计入顶栏可见高度。
+const BASE_PAGE_TOP_OFFSET: number = 56;
+const BASE_TOOLBAR_SHADOW_GUTTER: number = 24;
 
 // 数值换算实时预览，键盘只提供数字、小数点和输入控制。
 const NUMERIC_KEYS: string[] = [
@@ -87,7 +93,7 @@ struct BaseChip {
     Button(this.labelText()).fontSize(13).fontWeight(this.selected ? FontWeight.Medium : FontWeight.Normal)
       .fontColor(this.selected ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary'))
       .backgroundColor(this.selected ? $r('sys.color.comp_background_secondary') : Color.Transparent)
-      .width(this.stretch ? '100%' : undefined).height(this.stretch ? 36 : 32)
+      .width(this.stretch ? '100%' : undefined).height(this.stretch ? BASE_TOOLBAR_HEIGHT - 8 : 32)
       .padding({ left: this.stretch ? 4 : 10, right: this.stretch ? 4 : 10 }).id(this.semanticId)
       .accessibilityText(this.labelText() + (this.selected ? '，已选中' : '')).onClick(() => {
         HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
@@ -386,7 +392,7 @@ export struct BaseConverter {
           onActivate: () => {
             this.apply(() => { this.session.mode = 'float'; this.session.error = ''; });
           }, semanticId: 'base.mode.float' }).layoutWeight(1.35)
-      }.layoutWeight(1).height(44).padding(4).borderRadius(22)
+      }.layoutWeight(1).height(BASE_TOOLBAR_HEIGHT).padding(4).borderRadius(BASE_TOOLBAR_HEIGHT / 2)
       .attributeModifier(baseToolbarVisualModifier)
       Row() {
         Button('粘贴').width('100%').height('100%').padding(0).fontSize(13)
@@ -396,7 +402,7 @@ export struct BaseConverter {
             HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
             this.paste();
           })
-      }.width(52).height(44).borderRadius(22).attributeModifier(baseToolbarVisualModifier)
+      }.width(52).height(BASE_TOOLBAR_HEIGHT).borderRadius(BASE_TOOLBAR_HEIGHT / 2).attributeModifier(baseToolbarVisualModifier)
       Row() {
         Button() {
           SymbolGlyph($r('sys.symbol.questionmark_circle'))
@@ -408,8 +414,10 @@ export struct BaseConverter {
           HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
           this.panel = this.panel === 'help' ? '' : 'help';
         })
-      }.width(44).height(44).borderRadius(22).attributeModifier(baseToolbarVisualModifier)
-    }.width('100%').height(44)
+      }.width(BASE_TOOLBAR_HEIGHT).height(BASE_TOOLBAR_HEIGHT).borderRadius(BASE_TOOLBAR_HEIGHT / 2).attributeModifier(baseToolbarVisualModifier)
+    }.width('100%').height(BASE_TOOLBAR_HEIGHT + BASE_TOOLBAR_SHADOW_GUTTER * 2)
+    .padding({ left: 14, right: 14, top: BASE_TOOLBAR_SHADOW_GUTTER, bottom: BASE_TOOLBAR_SHADOW_GUTTER })
+    .clip(false).hitTestBehavior(HitTestMode.Transparent)
   }
 
   @Builder
@@ -418,7 +426,11 @@ export struct BaseConverter {
       // 局部横向底部 TabBar 提供材质生效区域；容器本身仍定位在页面顶部。
       Tabs({ barPosition: BarPosition.End }) {
         TabContent() { Column().width('100%').height('100%') }.tabBar(this.Toolbar)
-      }.vertical(false).scrollable(false).animationDuration(0).barHeight(44).width('100%').height(44)
+      }.vertical(false).scrollable(false).animationDuration(0)
+      // TabBar 内部同样预留透明区域，避免系统材质阴影在按钮边缘被截断。
+      .barHeight(BASE_TOOLBAR_HEIGHT + BASE_TOOLBAR_SHADOW_GUTTER * 2)
+      .width('100%').height(BASE_TOOLBAR_HEIGHT + BASE_TOOLBAR_SHADOW_GUTTER * 2)
+      .clip(false).hitTestBehavior(HitTestMode.Transparent)
     } else {
       this.Toolbar()
     }
@@ -513,10 +525,11 @@ export struct BaseConverter {
           BaseInspector({ session: this.session, panel: this.panel,
             onFlip: (index: number) => this.select(() => this.session.flip(index)) })
         }
-      }.width('100%').padding({ left: 14, right: 14, top: BASE_TOOLBAR_HEIGHT + 8, bottom: this.keyboardHeight() + 12 })
+      }.width('100%').padding({ left: 14, right: 14, top: BASE_TOOLBAR_TOP_OFFSET + BASE_TOOLBAR_HEIGHT + BASE_CONTENT_TOP_GAP - BASE_PAGE_TOP_OFFSET,
+        bottom: this.keyboardHeight() + 12 })
     }.width('100%').height('100%').scrollBar(BarState.Off).align(Alignment.Top)
     .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
-    .padding({ top: this.statusBarHeight + 56 })
+    .padding({ top: this.statusBarHeight + BASE_PAGE_TOP_OFFSET })
   }
 
   private keyboardColumns(): number { return this.session.mode === 'numeric' ? 4 : 5; }
@@ -583,10 +596,11 @@ export struct BaseConverter {
           else { this.LegacyKeyboardLayout() }
         } else { this.LegacyKeyboardLayout() }
       }.width('100%').height(this.keyboardHeight()).zIndex(1)
-      // 顶栏独立于滚动内容；仅自身高度参与命中，不遮挡页面其余交互。
+      // 阴影留白不改变可见顶栏位置，透明区域允许触摸传递给下方滚动页。
       Column() { this.FloatingToolbar() }
-        .width('100%').height(BASE_TOOLBAR_HEIGHT).padding({ left: 14, right: 14, top: 4, bottom: 4 })
-        .position({ x: 0, y: this.statusBarHeight + 56 }).zIndex(2)
+        .width('100%').height(BASE_TOOLBAR_HEIGHT + BASE_TOOLBAR_SHADOW_GUTTER * 2)
+        .clip(false).hitTestBehavior(HitTestMode.Transparent)
+        .position({ x: 0, y: this.statusBarHeight + BASE_TOOLBAR_TOP_OFFSET - BASE_TOOLBAR_SHADOW_GUTTER }).zIndex(2)
     }.width('100%').height('100%').backgroundColor($r('sys.color.comp_background_tertiary'))
     .onAreaChange((_, area: Area) => { this.pageHeight = Number(area.height); }).id('base.programmer')
     .accessibilityDescription(this.semanticState())
