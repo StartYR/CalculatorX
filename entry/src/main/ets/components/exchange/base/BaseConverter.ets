@@ -22,6 +22,8 @@ import { HistoryRepository, HistoryRecord } from '../../../database/HistoryRepos
 import { BaseConversionMemory, BaseConversionSettings, settingsOf, recordOf, historyRecordOf, restoreSettings, restoreRecord } from '../../../utils/base/BaseConversionState';
 
 // 数值换算实时预览，键盘只提供数字、小数点和输入控制。
+const BASE_TOOLBAR_HEIGHT: number = 52;
+
 const NUMERIC_KEYS: string[] = [
   'E', 'F', '⌫', 'AC',
   '7', '8', '9', 'D',
@@ -351,28 +353,40 @@ export struct BaseConverter {
   }
 
   @Builder
+  private Toolbar() {
+    Row() {
+      BaseChip({ label: $r('app.string.base_numeric_tab'), selected: this.session.mode === 'numeric',
+        onActivate: () => {
+          this.apply(() => { this.session.mode = 'numeric'; this.session.error = ''; });
+        }, semanticId: 'base.mode.numeric' })
+      BaseChip({ label: '整数', selected: this.session.mode === 'integer',
+        onActivate: () => {
+          this.apply(() => { this.session.mode = 'integer'; this.session.error = ''; });
+        }, semanticId: 'base.mode.integer' })
+      BaseChip({ label: 'IEEE 754', selected: this.session.mode === 'float',
+        onActivate: () => {
+          this.apply(() => { this.session.mode = 'float'; this.session.error = ''; });
+        }, semanticId: 'base.mode.float' })
+      Blank()
+      BaseChip({ label: '粘贴', selected: false,
+        onActivate: () => { this.paste(); }, semanticId: 'base.paste' })
+      Button() {
+        SymbolGlyph($r('sys.symbol.questionmark_circle'))
+          .fontSize(22)
+          .fontColor([this.panel === 'help' ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary')])
+      }.width(40).height(36).backgroundColor(Color.Transparent)
+      .id('base.help').accessibilityText('帮助')
+      .onClick(() => {
+        HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
+        this.panel = this.panel === 'help' ? '' : 'help';
+      })
+    }.width('100%')
+  }
+
+  @Builder
   private Display() {
     Scroll() {
       Column({ space: 7 }) {
-        Row() {
-          BaseChip({ label: $r('app.string.base_numeric_tab'), selected: this.session.mode === 'numeric',
-            onActivate: () => {
-              this.apply(() => { this.session.mode = 'numeric'; this.session.error = ''; });
-            }, semanticId: 'base.mode.numeric' })
-          BaseChip({ label: '整数', selected: this.session.mode === 'integer',
-            onActivate: () => {
-              this.apply(() => { this.session.mode = 'integer'; this.session.error = ''; });
-            }, semanticId: 'base.mode.integer' })
-          BaseChip({ label: 'IEEE 754', selected: this.session.mode === 'float',
-            onActivate: () => {
-              this.apply(() => { this.session.mode = 'float'; this.session.error = ''; });
-            }, semanticId: 'base.mode.float' })
-          Blank()
-          BaseChip({ label: '粘贴', selected: false,
-            onActivate: () => { this.paste(); }, semanticId: 'base.paste' })
-          BaseChip({ label: '?', selected: this.panel === 'help',
-            onActivate: () => { this.panel = this.panel === 'help' ? '' : 'help'; }, semanticId: 'base.help' })
-        }.width('100%')
         if (this.session.mode !== 'numeric') {
           Scroll() {
             Text(this.session.mode === 'integer' ? this.session.expression : this.session.floatText)
@@ -458,7 +472,7 @@ export struct BaseConverter {
           BaseInspector({ session: this.session, panel: this.panel,
             onFlip: (index: number) => this.select(() => this.session.flip(index)) })
         }
-      }.width('100%').padding({ left: 14, right: 14, top: 8, bottom: this.keyboardHeight() + 12 })
+      }.width('100%').padding({ left: 14, right: 14, top: BASE_TOOLBAR_HEIGHT + 8, bottom: this.keyboardHeight() + 12 })
     }.width('100%').height('100%').scrollBar(BarState.Off).align(Alignment.Top)
     .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
     .padding({ top: this.statusBarHeight + 56 })
@@ -528,6 +542,10 @@ export struct BaseConverter {
           else { this.LegacyKeyboardLayout() }
         } else { this.LegacyKeyboardLayout() }
       }.width('100%').height(this.keyboardHeight()).zIndex(1)
+      // 顶栏独立于滚动内容；仅自身高度参与命中，不遮挡页面其余交互。
+      Column() { this.Toolbar() }
+        .width('100%').height(BASE_TOOLBAR_HEIGHT).padding({ left: 14, right: 14, top: 4, bottom: 4 })
+        .position({ x: 0, y: this.statusBarHeight + 56 }).zIndex(2)
     }.width('100%').height('100%').backgroundColor($r('sys.color.comp_background_tertiary'))
     .onAreaChange((_, area: Area) => { this.pageHeight = Number(area.height); }).id('base.programmer')
     .accessibilityDescription(this.semanticState())
