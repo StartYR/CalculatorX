@@ -477,6 +477,39 @@ export struct BaseConverter {
     }
   }
 
+  private restoreKeyboard(): void {
+    HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
+    this.panel = '';
+  }
+
+  @Builder
+  private KeyboardRestoreButton() {
+    Row() {
+      Row() {
+        Button('显示键盘')
+          .width('100%').height('100%').padding(0)
+          .fontSize(15).fontColor($r('sys.color.font_emphasize')).backgroundColor(Color.Transparent)
+          .id('base.keyboard.show').accessibilityText('显示键盘并关闭展开面板')
+          .onClick(() => this.restoreKeyboard())
+      }.width(144).height(BASE_KEYBOARD_RESTORE_HEIGHT).borderRadius(BASE_KEYBOARD_RESTORE_HEIGHT / 2)
+      .attributeModifier(baseToolbarVisualModifier)
+    }.width('100%').height('100%').justifyContent(FlexAlign.Center)
+    .padding(BASE_TOOLBAR_SHADOW_GUTTER).clip(false).hitTestBehavior(HitTestMode.Transparent)
+  }
+
+  @Builder
+  private FloatingKeyboardRestore() {
+    if (deviceInfo.apiAvailable('26.0.0')) {
+      // 独立 TabBar 为悬浮按钮提供光感区域，透明留白容纳材质阴影。
+      Tabs({ barPosition: BarPosition.End }) {
+        TabContent() { Column().width('100%').height('100%') }.tabBar(this.KeyboardRestoreButton)
+      }.vertical(false).scrollable(false).animationDuration(0).barHeight('100%')
+      .width('100%').height('100%').clip(false).hitTestBehavior(HitTestMode.Transparent)
+    } else {
+      this.KeyboardRestoreButton()
+    }
+  }
+
   @Builder
   private Display() {
     Scroll() {
@@ -640,6 +673,13 @@ export struct BaseConverter {
       .accessibilityLevel(this.keyboardHidden() ? 'no-hide-descendants' : 'auto')
       .translate({ y: this.keyboardHidden() ? this.keyboardHeight() + BASE_TOOLBAR_SHADOW_GUTTER : 0 })
       .animation({ duration: BASE_KEYBOARD_SLIDE_DURATION, curve: Curve.EaseInOut })
+      if (this.keyboardHidden()) {
+        Column() { this.FloatingKeyboardRestore() }
+          .width(144 + BASE_TOOLBAR_SHADOW_GUTTER * 2)
+          .height(BASE_KEYBOARD_RESTORE_HEIGHT + BASE_TOOLBAR_SHADOW_GUTTER * 2)
+          .margin({ bottom: this.restoreButtonBottom() - BASE_TOOLBAR_SHADOW_GUTTER })
+          .clip(false).hitTestBehavior(HitTestMode.Transparent).zIndex(1)
+      }
       // 阴影留白不改变可见顶栏位置，透明区域允许触摸传递给下方滚动页。
       Column() { this.FloatingToolbar() }
         .width('100%').height(BASE_TOOLBAR_HEIGHT + BASE_TOOLBAR_SHADOW_GUTTER * 2)
