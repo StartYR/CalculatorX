@@ -145,9 +145,9 @@ export struct GraphingCalc {
   }
 
   aboutToAppear() {
-    // 读取失败时禁止默认函数自动迁移回写；实际编辑也保留在内存，等待下次重新加载。
+    // 读取失败或存量类型异常时禁止默认函数迁移回写，避免覆盖尚未恢复的数据。
     const stored = PreferenceManager.read(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS, '[]');
-    this.canPersistFunctions = stored.ok;
+    this.canPersistFunctions = stored.ok && typeof stored.value === 'string';
     if (stored.ok && typeof stored.value === 'string') this.graphingFunctionsJson = stored.value;
     let originalJson = this.graphingFunctionsJson;
     try {

@@ -2,6 +2,7 @@
 import { registerHooks, stripTypeScriptTypes } from 'node:module';
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
+import { runInNewContext } from 'node:vm';
 
 const cache = new Map();
 const disk = new Map();
@@ -139,5 +140,59 @@ assert.ok(graphBytes < 16*1024*1024);
 manager.set('graphingFunctions', graphJson);
 assert.equal((await manager.commit()).ok, true);
 assert.deepEqual(JSON.parse(disk.get('graphingFunctions')), graph);
+
+// 提取绘图组件的非 UI 存储路径，覆盖读失败、类型损坏和原有迁移备份。
+const graphSource = readFileSync(new URL('../entry/src/main/ets/components/graphing/GraphingCalc.ets', import.meta.url), 'utf8');
+const helperStart = graphSource.indexOf('private createDefaultFunction()');
+const appearStart = graphSource.indexOf('  aboutToAppear()', helperStart);
+const appearEnd = graphSource.indexOf('    this.darkMediaQuery.on(', appearStart);
+const saveStart = graphSource.indexOf('private saveFunctions =');
+const saveEnd = graphSource.indexOf('  onShiftChange()', saveStart);
+assert.ok(helperStart >= 0 && appearStart > helperStart && appearEnd > appearStart && saveStart >= 0 && saveEnd > saveStart);
+const GraphStorage = runInNewContext(stripTypeScriptTypes('class GraphStorage {\n' +
+  'graphingFunctionsJson = "[]"; functionList = []; canPersistFunctions = true;\n' +
+  graphSource.slice(helperStart, appearEnd) + '}\n' + graphSource.slice(saveStart, saveEnd) + '}\nGraphStorage;'), {
+  PreferenceManager: manager,
+  PreferenceConfigs: {KEY_GRAPHING_FUNCTIONS:'graphingFunctions', KEY_GRAPHING_FUNCTIONS_MIGRATION_BACKUP:'graphingBackup'},
+  GRAPHING_COLORS:['#FF0000'],
+  FunctionType:{NORMAL:0, PARAMETRIC:1, POLAR:2, IMPLICIT:3, POINT:4}
+});
+store.failRead = true;
+const unreadGraph = new GraphStorage();
+const graphFlushes = store.flushes;
+unreadGraph.aboutToAppear();
+unreadGraph.saveFunctions();
+await manager.commit();
+assert.equal(unreadGraph.canPersistFunctions, false);
+assert.equal(store.flushes, graphFlushes);
+assert.equal(cache.get('graphingFunctions'), graphJson);
+store.failRead = false;
+cache.set('graphingFunctions', 42);
+const wrongTypeGraph = new GraphStorage();
+wrongTypeGraph.aboutToAppear();
+wrongTypeGraph.saveFunctions();
+await manager.commit();
+assert.equal(wrongTypeGraph.canPersistFunctions, false);
+assert.equal(cache.get('graphingFunctions'), 42);
+assert.equal(store.flushes, graphFlushes);
+
+cache.set('graphingFunctions', graphJson);
+const loadedGraph = new GraphStorage();
+loadedGraph.aboutToAppear();
+assert.deepEqual(JSON.parse(JSON.stringify(loadedGraph.functionList)), graph);
+loadedGraph.saveFunctions();
+await manager.commit();
+assert.deepEqual(JSON.parse(disk.get('graphingFunctions')), graph);
+const legacyGraph = '[{"id":"old","latex":"x^2","base64":"image"}]';
+cache.set('graphingFunctions', legacyGraph);
+const migratedGraph = new GraphStorage();
+migratedGraph.aboutToAppear();
+await manager.commit();
+assert.equal(disk.get('graphingBackup'), legacyGraph);
+assert.equal(JSON.parse(disk.get('graphingFunctions'))[0].latex, 'x^2');
+cache.set('graphingFunctions', '{broken');
+new GraphStorage().aboutToAppear();
+await manager.commit();
+assert.equal(disk.get('graphingBackup'), '{broken');
 console.log(`Synthetic graph snapshot: ${graphBytes} UTF-8 bytes, 10 functions`);
 console.log('Preferences commit, failure and retry checks passed');
