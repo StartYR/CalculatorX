@@ -96,7 +96,7 @@ export struct ExchangeRate {
   // ---------------------------------------------------------
 
   /** 读取失败或未知版本时只显示回退状态，禁止默认值覆盖未读取的存量记录。 */
-  private loadSnapshot(key: string, legacy: () => Object): Object | undefined {
+  private loadSnapshot(key: string, legacy: () => Record<string, Object>): Record<string, Object> | undefined {
     const result = PreferenceManager.read(key, '');
     if (!result.ok) return undefined;
     if (!result.exists) {
@@ -116,17 +116,22 @@ export struct ExchangeRate {
   }
 
   loadData(): void {
-    const user = this.loadSnapshot(PreferenceConfigs.KEY_EXCHANGE_USER_SNAPSHOT, (): Object => {
+    const noData: Record<string, Object> = {};
+    const user = this.loadSnapshot(PreferenceConfigs.KEY_EXCHANGE_USER_SNAPSHOT, (): Record<string, Object> => {
       const list = PreferenceManager.read(PreferenceConfigs.KEY_EXCHANGE_CURRENCY_LIST, '[]');
       const active = PreferenceManager.read(PreferenceConfigs.KEY_EXCHANGE_ACTIVE_ID, '1');
       const amount = PreferenceManager.read(PreferenceConfigs.KEY_EXCHANGE_BASE_AMOUNT, '100');
       if (!list.ok || !active.ok || !amount.ok) throw new Error('旧用户状态读取失败');
       let currencyList: Object = [];
       try { currencyList = JSON.parse(list.value as string) as Object; } catch (_) {}
-      return { currencyList: currencyList, activeId: active.value, baseAmount: amount.value };
+      const legacy: Record<string, Object> = {};
+      legacy.currencyList = currencyList;
+      legacy.activeId = active.value as Object;
+      legacy.baseAmount = amount.value as Object;
+      return legacy;
     });
     this.canSaveUser = user !== undefined;
-    const snapshot = ExchangeMemory.user ?? normalizeExchangeUser(user ?? {});
+    const snapshot = ExchangeMemory.user ?? normalizeExchangeUser(user ?? noData);
     this.currencyList = snapshot.currencyList.map((item: CurrencyListItem): CurrencyListItem =>
       new CurrencyListItem(item.id, item.code));
     this.activeId = snapshot.activeId;
@@ -137,16 +142,19 @@ export struct ExchangeRate {
       if (saved.ok && !saved.exists) this.saveData();
     }
 
-    const cache = this.loadSnapshot(PreferenceConfigs.KEY_EXCHANGE_CACHE_SNAPSHOT, (): Object => {
+    const cache = this.loadSnapshot(PreferenceConfigs.KEY_EXCHANGE_CACHE_SNAPSHOT, (): Record<string, Object> => {
       const rates = PreferenceManager.read(PreferenceConfigs.KEY_EXCHANGE_RATES, '{}');
       const time = PreferenceManager.read(PreferenceConfigs.KEY_EXCHANGE_LAST_UPDATE, 0);
       if (!rates.ok || !time.ok) throw new Error('旧汇率缓存读取失败');
-      let values: Object = {};
-      try { values = JSON.parse(rates.value as string) as Object; } catch (_) {}
-      return { rates: values, fetchedAt: time.value };
+      let values: Record<string, Object> = {};
+      try { values = JSON.parse(rates.value as string) as Record<string, Object>; } catch (_) {}
+      const legacy: Record<string, Object> = {};
+      legacy.rates = values;
+      legacy.fetchedAt = time.value as Object;
+      return legacy;
     });
     this.canSaveCache = cache !== undefined;
-    const savedCache = ExchangeMemory.cache ?? normalizeExchangeCache(cache ?? {});
+    const savedCache = ExchangeMemory.cache ?? normalizeExchangeCache(cache ?? noData);
     this.rateMap = savedCache.rates;
     this.lastUpdateTimeStamp = savedCache.fetchedAt;
     if (this.canSaveCache) {
