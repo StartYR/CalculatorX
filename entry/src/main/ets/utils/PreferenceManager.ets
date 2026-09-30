@@ -186,16 +186,5 @@ export class PreferenceManager {
       const value = PreferenceManager.get(setting.key, setting.defaultValue);
       AppStorage.setOrCreate(setting.key, normalizePreference(setting, value as Object));
     });
-    // 汇率迁移到模块快照前仍需启动镜像；迁移完成后移除此兼容注入。
-    const exchangeDefaults: PreferenceEntry[] = [
-      { key: PreferenceConfigs.KEY_EXCHANGE_CURRENCY_LIST, value: '[]' },
-      { key: PreferenceConfigs.KEY_EXCHANGE_ACTIVE_ID, value: '1' },
-      { key: PreferenceConfigs.KEY_EXCHANGE_BASE_AMOUNT, value: '100' },
-      { key: PreferenceConfigs.KEY_EXCHANGE_RATES, value: '{}' },
-      { key: PreferenceConfigs.KEY_EXCHANGE_LAST_UPDATE, value: 0 }
-    ];
-    exchangeDefaults.forEach((entry: PreferenceEntry): void => {
-      AppStorage.setOrCreate(entry.key, PreferenceManager.get(entry.key, entry.value));
-    });
   }
 }

@@ -217,6 +217,8 @@ export class PreferenceConfigs {
   static readonly KEY_LAST_USED_MODULE = 'lastUsedModule';
 
   // 汇率模块
+  static readonly KEY_EXCHANGE_USER_SNAPSHOT = 'exchange.user.v1';
+  static readonly KEY_EXCHANGE_CACHE_SNAPSHOT = 'exchange.cache.v1';
   static readonly KEY_EXCHANGE_CURRENCY_LIST = 'exchangeCurrencyList';
   static readonly KEY_EXCHANGE_ACTIVE_ID = 'exchangeActiveId';
   static readonly KEY_EXCHANGE_BASE_AMOUNT = 'exchangeBaseAmount';

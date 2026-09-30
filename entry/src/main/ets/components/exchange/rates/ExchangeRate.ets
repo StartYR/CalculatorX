@@ -21,6 +21,10 @@ import promptAction from '@ohos.promptAction';
 import connection from '@ohos.net.connection';
 import curves from '@ohos.curves';
 import { createSheetMaterial } from '../../../utils/ImmersiveMaterialUtils';
+import { SaveScheduler } from '../../../utils/SaveScheduler';
+import { ExchangeMemory, normalizeExchangeUser, normalizeExchangeRates,
+  normalizeExchangeCache, exchangeCacheValid } from './ExchangeSnapshot';
+import type { ExchangeUserSnapshot, ExchangeCacheSnapshot } from './ExchangeSnapshot';
 
 // ==================== 主组件 ====================
 @Component
@@ -52,7 +56,11 @@ export struct ExchangeRate {
   @State isUpdateFailed: boolean = false;           // 控制失败提示 UI 的显隐
   @State isUpdateSuccess: boolean = false;          // 控制成功提示 UI 的显隐
   private feedbackTimer: number = -1;               // 反馈动画淡出定时器句柄，用于防抖
-  private keyboardSaveTimer: number = -1;           // 键盘输入的高频写盘防抖定时器
+  private inputSave: SaveScheduler = new SaveScheduler((): void => this.saveData(), 500);
+  private onSavePending = (): void => this.inputSave.flush();
+  private isAlive: boolean = false;
+  private canSaveUser: boolean = true;
+  private canSaveCache: boolean = true;
 
   // [拖拽排序状态]
   @State draggingId: string = '';                   // 当前被拖拽的列表项 ID
@@ -68,74 +76,100 @@ export struct ExchangeRate {
    * 负责调度初始化数据的加载，并触发统一的刷新中枢
    */
   aboutToAppear() {
+    this.isAlive = true;
+    PreferenceManager.registerSave(this.onSavePending);
     Logger.info('[ExchangeRate] 模块初始化');
     this.loadData();
-    this.handleRefresh();
+    void this.handleRefresh();
+  }
+
+  aboutToDisappear(): void {
+    this.isAlive = false;
+    this.inputSave.flush();
+    void PreferenceManager.commit();
+    PreferenceManager.unregisterSave(this.onSavePending);
+    if (this.feedbackTimer !== -1) clearTimeout(this.feedbackTimer);
   }
 
   // ---------------------------------------------------------
   // 3. 数据初始化与持久化 (Data & Persistence)
   // ---------------------------------------------------------
 
-  /**
-   * 默认货币列表
-   */
-  private getDefaultCurrencies(): Array<CurrencyListItem> {
-    return [
-      new CurrencyListItem('1', 'USD'),
-      new CurrencyListItem('2', 'CNY'),
-      new CurrencyListItem('3', 'HKD'),
-      new CurrencyListItem('4', 'EUR'),
-      new CurrencyListItem('5', 'GBP'),
-      new CurrencyListItem('6', 'JPY'),
-      new CurrencyListItem('7', 'KRW'),
-    ];
+  /** 读取失败或未知版本时只显示回退状态，禁止默认值覆盖未读取的存量记录。 */
+  private loadSnapshot(key: string, legacy: () => Object): Object | undefined {
+    const result = PreferenceManager.read(key, '');
+    if (!result.ok) return undefined;
+    if (!result.exists) {
+      try { return legacy(); } catch (_) { return undefined; }
+    }
+    if (typeof result.value !== 'string') return {};
+    try {
+      const data = JSON.parse(result.value) as Record<string, Object>;
+      if (!data || typeof data !== 'object' || Array.isArray(data)) return {};
+      if (data.schemaVersion !== 1) return undefined;
+      return data;
+    } catch (_) {
+      // 损坏的记录暂存为有界副本；用户后续修改可重建当前版本快照。
+      PreferenceManager.set(key + '.invalid', result.value.slice(0, 8192));
+      return {};
+    }
   }
 
-  /**
-   * 从本地首选项 (Preferences) 中读取货币列表、汇率字典和时间戳
-   * 加载完成后同步触发 UI 时间的初始渲染
-   */
-  loadData() {
-    // 1. 加载 UI 状态（列表、选中项、金额等）
-    let listStr = AppStorage.get<string>(PreferenceConfigs.KEY_EXCHANGE_CURRENCY_LIST) || '[]';
-    try {
-      let parsedList = JSON.parse(listStr) as Array<CurrencyListItem>;
-      if (parsedList && parsedList.length > 0) {
-        this.currencyList = parsedList;
-      } else {
-        // 默认兜底数据
-        this.currencyList = this.getDefaultCurrencies();
+  loadData(): void {
+    const user = this.loadSnapshot(PreferenceConfigs.KEY_EXCHANGE_USER_SNAPSHOT, (): Object => {
+      const list = PreferenceManager.read(PreferenceConfigs.KEY_EXCHANGE_CURRENCY_LIST, '[]');
+      const active = PreferenceManager.read(PreferenceConfigs.KEY_EXCHANGE_ACTIVE_ID, '1');
+      const amount = PreferenceManager.read(PreferenceConfigs.KEY_EXCHANGE_BASE_AMOUNT, '100');
+      if (!list.ok || !active.ok || !amount.ok) throw new Error('旧用户状态读取失败');
+      let currencyList: Object = [];
+      try { currencyList = JSON.parse(list.value as string) as Object; } catch (_) {}
+      return { currencyList: currencyList, activeId: active.value, baseAmount: amount.value };
+    });
+    this.canSaveUser = user !== undefined;
+    const snapshot = ExchangeMemory.user ?? normalizeExchangeUser(user ?? {});
+    this.currencyList = snapshot.currencyList.map((item: CurrencyListItem): CurrencyListItem =>
+      new CurrencyListItem(item.id, item.code));
+    this.activeId = snapshot.activeId;
+    this.baseAmount = snapshot.baseAmount;
+    if (this.canSaveUser) {
+      this.rememberUser();
+      const saved = PreferenceManager.read(PreferenceConfigs.KEY_EXCHANGE_USER_SNAPSHOT, '');
+      if (saved.ok && !saved.exists) this.saveData();
+    }
+
+    const cache = this.loadSnapshot(PreferenceConfigs.KEY_EXCHANGE_CACHE_SNAPSHOT, (): Object => {
+      const rates = PreferenceManager.read(PreferenceConfigs.KEY_EXCHANGE_RATES, '{}');
+      const time = PreferenceManager.read(PreferenceConfigs.KEY_EXCHANGE_LAST_UPDATE, 0);
+      if (!rates.ok || !time.ok) throw new Error('旧汇率缓存读取失败');
+      let values: Object = {};
+      try { values = JSON.parse(rates.value as string) as Object; } catch (_) {}
+      return { rates: values, fetchedAt: time.value };
+    });
+    this.canSaveCache = cache !== undefined;
+    const savedCache = ExchangeMemory.cache ?? normalizeExchangeCache(cache ?? {});
+    this.rateMap = savedCache.rates;
+    this.lastUpdateTimeStamp = savedCache.fetchedAt;
+    if (this.canSaveCache) {
+      ExchangeMemory.cache = savedCache;
+      const saved = PreferenceManager.read(PreferenceConfigs.KEY_EXCHANGE_CACHE_SNAPSHOT, '');
+      if (saved.ok && !saved.exists) {
+        PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_CACHE_SNAPSHOT, JSON.stringify(savedCache));
       }
-    } catch (err) {
-      this.currencyList = this.getDefaultCurrencies();
     }
-
-    this.activeId = AppStorage.get<string>(PreferenceConfigs.KEY_EXCHANGE_ACTIVE_ID) || this.currencyList[0].id;
-    let savedAmount = AppStorage.get<string>(PreferenceConfigs.KEY_EXCHANGE_BASE_AMOUNT) || '100';
-    this.baseAmount = (!savedAmount || isNaN(parseFloat(savedAmount))) ? '100' : savedAmount;
-
-    // 2. 加载网络动态汇率字典
-    let ratesStr = AppStorage.get<string>(PreferenceConfigs.KEY_EXCHANGE_RATES) || '{}';
-    try {
-      this.rateMap = JSON.parse(ratesStr);
-    } catch (err) {
-      this.rateMap = {};
-    }
-
-    // 3. 加载上次更新时间戳
-    this.lastUpdateTimeStamp = AppStorage.get<number>(PreferenceConfigs.KEY_EXCHANGE_LAST_UPDATE) || 0;
     this.updateTimeDisplay();
   }
 
-  /**
-   * 监听关键状态变化，统一下发落盘指令
-   * 保证内存状态与本地存储的一致性
-   */
-  saveData() {
-    PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_CURRENCY_LIST, JSON.stringify(this.currencyList));
-    PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_ACTIVE_ID, this.activeId);
-    PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_BASE_AMOUNT, this.baseAmount);
+  private rememberUser(): ExchangeUserSnapshot {
+    const snapshot: ExchangeUserSnapshot = { schemaVersion: 1,
+      currencyList: this.currencyList.map((item: CurrencyListItem): CurrencyListItem =>
+        new CurrencyListItem(item.id, item.code)), activeId: this.activeId, baseAmount: this.baseAmount };
+    ExchangeMemory.user = snapshot;
+    return snapshot;
+  }
+
+  saveData(): void {
+    const snapshot = this.rememberUser();
+    if (this.canSaveUser) PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_USER_SNAPSHOT, JSON.stringify(snapshot));
   }
 
   // ---------------------------------------------------------
@@ -148,7 +182,7 @@ export struct ExchangeRate {
    */
   async handleRefresh() {
     // 防抖拦截
-    if (this.isRefreshing) return;
+    if (this.isRefreshing || !this.isAlive) return;
 
     // 1. 毫秒级原生探网
     let hasNet = false;
@@ -173,6 +207,7 @@ export struct ExchangeRate {
         Logger.info('[ExchangeRate] 明确有网且缓存有效，执行视觉障眼法...');
         this.isRefreshing = true;
         setTimeout(() => {
+          if (!this.isAlive) return;
           this.commitUpdateState(true);
           this.isRefreshing = false;
         }, 400);
@@ -208,26 +243,20 @@ export struct ExchangeRate {
           ? JSON.parse(response.result)
           : response.result) as Record<string, Object>;
 
-        let rawRates = resObj['rates'] as Record<string, number>;
-
-        if (rawRates) {
-          let newRateMap: Record<string, number> = {};
-          let rateKeys = Object.keys(rawRates);
-
-          for (let i = 0; i < rateKeys.length; i++) {
-            newRateMap[rateKeys[i]] = Number(rawRates[rateKeys[i]]);
-          }
-
+        if (!this.isAlive) return;
+        const newRateMap = normalizeExchangeRates(resObj?.['rates']);
+        if (Object.keys(newRateMap).length > 0) {
           this.rateMap = newRateMap;
-          Logger.info(`[ExchangeRate] 真实更新成功！已缓存 ${rateKeys.length} 种货币汇率。`);
-
-          // 真实请求成功后，只落盘核心的汇率数值字典
-          PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_RATES, JSON.stringify(this.rateMap));
-
-          // 提交成功状态（内部会自动把时间戳落盘，并刷新 UI）
+          this.lastUpdateTimeStamp = Date.now();
+          const snapshot: ExchangeCacheSnapshot = { schemaVersion: 1, rates: newRateMap,
+            fetchedAt: this.lastUpdateTimeStamp };
+          ExchangeMemory.cache = snapshot;
+          if (this.canSaveCache) {
+            PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_CACHE_SNAPSHOT, JSON.stringify(snapshot));
+          }
+          this.updateTimeDisplay();
           this.commitUpdateState(true);
         } else {
-          Logger.error(`[ExchangeRate] 数据结构异常，未能提取到 rates 字段`);
           this.commitUpdateState(false, '数据解析异常，已使用本地缓存');
         }
       } else {
@@ -248,32 +277,22 @@ export struct ExchangeRate {
    * @returns {boolean} 缓存有效返回 true，跨越整点或无缓存返回 false
    */
   isCacheValid(): boolean {
-    if (this.lastUpdateTimeStamp === 0) return false;
-    let now = new Date();
-    let cachedDate = new Date(this.lastUpdateTimeStamp);
-
-    let nowHourStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}`;
-    let cachedHourStr = `${cachedDate.getFullYear()}-${cachedDate.getMonth()}-${cachedDate.getDate()}-${cachedDate.getHours()}`;
-
-    return nowHourStr === cachedHourStr;
+    return exchangeCacheValid({ schemaVersion: 1, rates: this.rateMap, fetchedAt: this.lastUpdateTimeStamp });
   }
 
   /**
    * 统一的状态提交与动画触发器
-   * 负责拦截冗余定时器、下发时间戳落盘、调用时间格式化，并执行 UI 视觉反馈
+   * 只提交反馈；汇率数据时间在真实网络响应通过校验后更新
    * @param isSuccess - 更新是否成功
    * @param toastMsg - 失败时展示的错误提示信息
    */
   commitUpdateState(isSuccess: boolean, toastMsg?: string) {
+    if (!this.isAlive) return;
     if (this.feedbackTimer !== -1) {
       clearTimeout(this.feedbackTimer);
     }
 
     if (isSuccess) {
-      this.lastUpdateTimeStamp = new Date().getTime();
-      PreferenceManager.set(PreferenceConfigs.KEY_EXCHANGE_LAST_UPDATE, this.lastUpdateTimeStamp);
-      this.updateTimeDisplay();
-
       this.isUpdateSuccess = true;
       this.isUpdateFailed = false;
     } else {
@@ -389,6 +408,7 @@ export struct ExchangeRate {
 
     // 防遮挡动态避让：让被点击的卡片自动滚到视区中间
     setTimeout(() => {
+      if (!this.isAlive) return;
       let itemIndex = this.currencyList.findIndex(item => item.id === id);
       if (itemIndex !== -1) {
         // 开启自动滚动锁，防止触发 onScrollStart 收起键盘
@@ -438,14 +458,9 @@ export struct ExchangeRate {
       }
     }
 
-    // 2. 500ms 防抖写盘
-    if (this.keyboardSaveTimer !== -1) {
-      clearTimeout(this.keyboardSaveTimer);
-    }
-    this.keyboardSaveTimer = setTimeout(() => {
-      this.saveData();
-      this.keyboardSaveTimer = -1;
-    }, 500);
+    this.rememberUser();
+    this.inputSave.schedule();
+    if (action === 'AC' || action === '确定' || action === '⌨⇩') this.inputSave.flush();
   }
 
   /**
