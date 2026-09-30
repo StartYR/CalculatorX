@@ -145,13 +145,17 @@ export struct GraphingCalc {
   }
 
   aboutToAppear() {
+    // 读取失败时禁止默认函数自动迁移回写；实际编辑也保留在内存，等待下次重新加载。
+    const stored = PreferenceManager.read(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS, '[]');
+    this.canPersistFunctions = stored.ok;
+    if (stored.ok && typeof stored.value === 'string') this.graphingFunctionsJson = stored.value;
     let originalJson = this.graphingFunctionsJson;
     try {
       this.functionList = this.loadNormalizedFunctions();
     } catch (e) {
       this.functionList = [this.createDefaultFunction()];
     }
-    this.persistMigratedFunctions(originalJson, this.functionList);
+    if (this.canPersistFunctions) this.persistMigratedFunctions(originalJson, this.functionList);
 
     this.darkMediaQuery.on('change', this.onDarkModeChange);
     this.onColorModeChange();
@@ -225,11 +229,15 @@ export struct GraphingCalc {
     getContext(this).eventHub.off('response_graph_base64_ready');
   }
 
+  private canPersistFunctions: boolean = true;
+
   private saveFunctions = () => {
     // 更新内存与 UI
     this.graphingFunctionsJson = JSON.stringify(this.functionList);
     // 调用 PreferenceManager，将数据真正写入磁盘
-    PreferenceManager.set(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS, this.graphingFunctionsJson);
+    if (this.canPersistFunctions) {
+      PreferenceManager.set(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS, this.graphingFunctionsJson);
+    }
   }
 
   onShiftChange() {

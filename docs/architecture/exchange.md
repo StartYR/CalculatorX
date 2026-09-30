@@ -109,7 +109,7 @@ connection.hasDefaultNetSync()
 
 `isCacheValid()` 比较当前时间与 `lastUpdateTimeStamp` 的年、月、日和小时。两者处于同一自然小时即命中缓存；跨整点后下一次刷新执行真实请求。
 
-成功或缓存命中反馈通过 `commitUpdateState()` 统一提交：更新时间戳、刷新顶部时间、显示成功/失败文字，并在失败时弹出 Toast。
+`commitUpdateState()` 只提交成功/失败反馈，失败时弹出 Toast。实际接受有效网络响应后才更新数据时间，缓存命中不会改变该时间；空字典或未来时间不会建立有效缓存。
 
 ## 5. 货币白名单
 
@@ -190,15 +190,14 @@ connection.hasDefaultNetSync()
 
 ## 9. 持久化
 
-| Key | 类型 | 内容 |
-|-----|------|------|
-| `KEY_EXCHANGE_CURRENCY_LIST` | JSON string | 列表与排序 |
-| `KEY_EXCHANGE_ACTIVE_ID` | string | 当前活动列表项 ID |
-| `KEY_EXCHANGE_BASE_AMOUNT` | string | 输入金额 |
-| `KEY_EXCHANGE_RATES` | JSON string | 最近成功获取的汇率字典 |
-| `KEY_EXCHANGE_LAST_UPDATE` | number | 缓存时间戳 |
+- `KEY_EXCHANGE_USER_SNAPSHOT`（`exchange.user.v1`）：schemaVersion、货币列表与排序、活动 ID、输入金额。
+- `KEY_EXCHANGE_CACHE_SNAPSHOT`（`exchange.cache.v1`）：schemaVersion、有限正数汇率字典、实际获取时间。
 
-PreferenceManager 在应用启动时将这些值注入 AppStorage；ExchangeRate 初始化时读取，交互或刷新后落盘。
+每类关联字段保存在一份记录中。新键不存在时迁移旧的五个键，旧键保留但不再双写。未知版本和读取失败时禁止回写，损坏 JSON 先保存最多 8192 字符的诊断副本。合法尾随小数点和科学计数金额保留，`--` 等占位符不进入金额。
+
+`ExchangeMemory` 保存进程内最新快照，页面每次重新进入读取该快照或 Preferences，而不是启动时的旧 AppStorage 镜像。用户操作立即更新内存；输入 500 ms 防抖、最长等待 2 s，AC/确认/离开和后台收尾及时提交。离开时清理保存与反馈计时器并注销回调；旧网络响应不更新新实例。
+
+`ExchangeSnapshot.ets` 负责纯数据校验，`PreferenceManager` 负责可等待的提交和失败保留。设备测试必须等待提交并重启正式应用，缓存读回不能证明落盘。
 
 ## 10. 修改边界
 

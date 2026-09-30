@@ -470,6 +470,7 @@ export struct Settings {
                   .onSelect((index: number) => {
                     this.startupPageMode = index;
                     PreferenceManager.set(PreferenceConfigs.KEY_STARTUP_PAGE, index);
+                    AppStorage.setOrCreate(PreferenceConfigs.KEY_STARTUP_PAGE, index);
                   })
               }
               .width('100%')

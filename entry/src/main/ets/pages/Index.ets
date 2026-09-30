@@ -262,6 +262,7 @@ struct Index {
 
             // 每次切换时，静默记忆当前模块
             PreferenceManager.set(PreferenceConfigs.KEY_LAST_USED_MODULE, module);
+            AppStorage.setOrCreate(PreferenceConfigs.KEY_LAST_USED_MODULE, module);
           }
         })
       }

@@ -74,11 +74,6 @@ CalculatorX 不使用第三方状态管理库，而是按生命周期和作用�
 | Key | 类型 | 模块 |
 |-----|------|------|
 | `KEY_GRAPHING_FUNCTIONS` | JSON string | 函数图像列表 |
-| `KEY_EXCHANGE_CURRENCY_LIST` | JSON string | 汇率货币列表/排序 |
-| `KEY_EXCHANGE_ACTIVE_ID` | string | 汇率活动项 |
-| `KEY_EXCHANGE_BASE_AMOUNT` | string | 汇率输入金额 |
-| `KEY_EXCHANGE_RATES` | JSON string | 汇率字典 |
-| `KEY_EXCHANGE_LAST_UPDATE` | number | 汇率缓存时间 |
 
 ## 4. PreferenceManager
 
