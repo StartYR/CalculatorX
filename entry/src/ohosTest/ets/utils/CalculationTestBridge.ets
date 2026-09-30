@@ -1,9 +1,17 @@
+/**
+ * Copyright (c) 2026 StartYi. All rights reserved.
+ * @file CalculationTestBridge.ets
+ * @description 设备计算测试与设置预置的响应协议
+ * @author StartYi
+ * @date 2026/09/15 23:35
+ */
 import { webview } from '@kit.ArkWeb';
 import { common } from '@kit.AbilityKit';
 import { preferences } from '@kit.ArkData';
 import { CalcConfig, EngineService } from '../../../main/ets/utils/EngineService';
 import { PreferenceConfigs } from '../../../main/ets/utils/CalculatorConfigs';
 
+/** CLI 与测试 Ability 共用的版本 1 请求契约；requestId 用于匹配日志中的响应。 */
 export interface CalculationRequest {
   protocolVersion: number;
   requestId: string;
@@ -13,6 +21,7 @@ export interface CalculationRequest {
   precision: string;
 }
 
+/** stage 定位失败边界；成功响应的中间表示供调用方核对计算路径。 */
 export interface CalculationResponse {
   protocolVersion: number;
   requestId: string;
@@ -37,11 +46,13 @@ interface NormalizedSetting {
   value: string | number | boolean;
 }
 
+/** WebView 就绪后沿应用现有 MathJSON 与原生引擎调用链执行计算。 */
 export class CalculationTestBridge {
   private static controller: webview.WebviewController | undefined = undefined;
   private static ready: boolean = false;
 
   static attach(controller: webview.WebviewController): void {
+    // 换绑控制器时必须清除旧就绪状态，避免请求落入尚未加载的 WebView。
     CalculationTestBridge.controller = controller;
     CalculationTestBridge.ready = false;
   }
@@ -51,6 +62,7 @@ export class CalculationTestBridge {
   }
 
   static async waitUntilReady(timeoutMs: number): Promise<webview.WebviewController> {
+    // 页面加载和测试 Ability 启动异步进行；仅在有效控制器已就绪时继续。
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       if (CalculationTestBridge.ready && CalculationTestBridge.controller !== undefined) {
@@ -69,6 +81,7 @@ export class CalculationTestBridge {
       return CalculationTestBridge.failure(request.requestId, 'web-ready', `${error}`);
     }
 
+    // 与正式计算路径一致，先经 WebView 得到可解析的 MathJSON，再交给原生引擎。
     const normalizedLatex = EngineService.cleanRawLatex(JSON.stringify(request.latex));
     let mathJson: string;
     try {
@@ -123,6 +136,7 @@ export class CalculationTestBridge {
     timeoutMs: number, entryContext: common.UIAbilityContext): Promise<CalculationResponse> {
     try {
       await CalculationTestBridge.waitUntilReady(timeoutMs);
+      // 使用主应用同一 Preferences 存储，flush 后回读确认，应用重启后才观察 UI 生效。
       const normalized = CalculationTestBridge.normalizeSetting(setting, value);
       const store = preferences.getPreferencesSync(entryContext, { name: PreferenceConfigs.STORE_NAME });
       store.putSync(normalized.key, normalized.value);
@@ -154,6 +168,7 @@ export class CalculationTestBridge {
       if (!entryContext.applicationInfo.debug) {
         throw new Error('formula setup is available only in debug builds');
       }
+      // 版本前缀表示待启动消费的公式，调试构建以外不能从测试协议注入输入。
       const store = preferences.getPreferencesSync(entryContext, { name: PreferenceConfigs.STORE_NAME });
       store.putSync(PreferenceConfigs.KEY_CLI_PENDING_FORMULA, `1:${latex}`);
       await store.flush();
@@ -170,6 +185,7 @@ export class CalculationTestBridge {
     }
   }
 
+  /** CLI 字符串值映射到应用真实键与存储类型；必须与宿主白名单同步。 */
   private static normalizeSetting(setting: string, value: string): NormalizedSetting {
     switch (setting) {
       case 'angle':
@@ -218,6 +234,7 @@ export class CalculationTestBridge {
   }
 
   private static toNativePrecision(precision: string): number {
+    // -1/-2 是原生引擎的自动精度模式，数字精度不使用负值。
     if (precision === 'auto') {
       return -1;
     }

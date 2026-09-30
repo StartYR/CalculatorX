@@ -5,6 +5,11 @@
  * @author StartYi
  * @date 2026/09/22 21:00
  */
+/**
+ * 低位在前，元素只能是 0/1；最高位的零被去除，零统一用空数组表示。
+ * 运算返回新对象，调用方不得直接修改 bits，以便会话快照共享值对象。
+ * 完整数值不经过 number，避免 64 位整数与浮点中间有理数丢失精度。
+ */
 export class Natural {
   bits: number[];
 
@@ -13,6 +18,7 @@ export class Natural {
     while (this.bits.length > 0 && this.bits[this.bits.length - 1] === 0) this.bits.pop();
   }
 
+  /** 仅接收非负安全整数；较大数值必须通过 parse 构造。 */
   static small(value: number): Natural {
     const bits: number[] = [];
     while (value > 0) {
@@ -22,6 +28,7 @@ export class Natural {
     return new Natural(bits);
   }
 
+  // 按 value × radix + digit 累积，拒绝空串、超长输入和进制外字符。
   static parse(text: string, radix: number): Natural {
     if (radix < 2 || radix > 36 || text.length === 0 || text.length > 4096) {
       throw new Error('输入长度或进制无效');
@@ -57,6 +64,7 @@ export class Natural {
     return new Natural(bits);
   }
 
+  /** 非负减法要求 this >= other；借位超出范围时抛错，不执行模运算。 */
   subtract(other: Natural): Natural {
     if (this.compare(other) < 0) throw new Error('非负整数减法越界');
     const bits: number[] = [];
@@ -69,6 +77,7 @@ export class Natural {
     return new Natural(bits);
   }
 
+  // 正计数补低位零，负计数丢弃低位；只移动绝对值，不做符号扩展。
   shift(count: number): Natural {
     if (count < 0) return new Natural(this.bits.slice(-count));
     if (this.isZero()) return new Natural();
@@ -87,6 +96,10 @@ export class Natural {
     return result;
   }
 
+  /**
+   * 从最高位逐位长除，每步保持 0 <= remainder < other。
+   * 商向零截断，余数用于精确舍入；除零必须由调用方处理或传播异常。
+   */
   divide(other: Natural): NaturalDivision {
     if (other.isZero()) throw new Error('除数不能为零');
     let remainder = new Natural();
@@ -99,6 +112,7 @@ export class Natural {
     return { quotient: new Natural(quotient), remainder: remainder };
   }
 
+  // 仅允许最多 53 位的中间值进入 number；完整 64 位路径使用 toString。
   toNumber(): number {
     if (this.bits.length > 53) throw new Error('整数超出安全数值范围');
     let value = 0;
@@ -128,6 +142,7 @@ export class Natural {
   }
 }
 
+/** 保持 dividend = quotient × divisor + remainder。 */
 export interface NaturalDivision {
   quotient: Natural;
   remainder: Natural;

@@ -30,6 +30,7 @@ export struct HistorySheet {
   onClose?: () => void;
   onHistoryClick?: () => void;
 
+  // 帮助弹窗随抽屉组件持有，避免标题栏重建时重复创建控制器。
   private helpDialogController: CustomDialogController = new CustomDialogController({
     builder: this.helpDialogBuilder,
     alignment: DialogAlignment.Center,
@@ -55,12 +56,14 @@ export struct HistorySheet {
   }
 
   aboutToAppear() {
+    // 菜单只在当前模块有记录时显示清空入口；查询结果仅决定入口显隐。
     HistoryRepository.queryRecords(this.moduleType, 1).then(res => {
       this.hasData = res.length > 0;
     })
   }
 
   private showClearHistoryDialog(): void {
+    // 清空限定当前 moduleType，成功后同时刷新列表和标题栏菜单。
     AlertDialog.show({
       title: '清空历史记录',
       message: '确定要清空此模式下的所有历史记录吗？此操作无法撤销。',
@@ -112,6 +115,7 @@ export struct HistorySheet {
   }
 
   private getTitleBarMenuItems(): HdsNavigationMenuItemOptions[] {
+    // 全局历史入口始终可用；清空当前模式仅在检测到记录时提供。
     const menuItems: HdsNavigationMenuItemOptions[] = [
       {
         content: {
@@ -149,6 +153,7 @@ export struct HistorySheet {
         refreshCounter: this.refreshSignal,
         topContentPadding: 56,
         scroller: this.scroller,
+        // 将输入或结果交还调用模块，再关闭抽屉，避免插入目标尚未处理就销毁列表。
         onItemClick: (item: HistoryRecord, insertType: 'input' | 'output') => {
           if (this.onItemClick) this.onItemClick(item, insertType);
           if (this.onClose) this.onClose();
@@ -160,6 +165,7 @@ export struct HistorySheet {
     .width('100%')
     .height('100%')
     .mode(NavigationMode.Stack)
+    // 滚动前后都固定标题与菜单颜色，保持沉浸模糊背景下的文字对比度。
     .titleBar({
       padding: { start: LengthMetrics.vp(24) },
       content: {

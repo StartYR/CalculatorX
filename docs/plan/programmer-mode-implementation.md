@@ -212,7 +212,7 @@
 - IEEE 十进制浮点格式；
 - binary128；
 - bfloat16；
-- 浮点四则运算与异常标志；
+- 浮点异常标志（四则运算已纳入后续实施）；
 - 用户可选舍入模式；
 - 对某个 CPU 浮点环境的逐指令模拟。
 
@@ -226,14 +226,16 @@
 entry/src/main/ets/
 ├── components/exchange/base/
 │   ├── BaseConverter.ets             # 页面、双效果键盘、历史与事件
-│   └── ProgrammerInspector.ets       # 位编辑、编码、浮点字段与帮助
+│   ├── BaseKey.ets                   # 单键表面、长按菜单与连续退格
+│   └── BaseInspector.ets             # 位编辑、编码、浮点字段与帮助
 └── utils/base/
     ├── Natural.ets                   # 精确非负 bit 数组算术
-    ├── ProgrammerEngine.ets          # Word、标志与整数编码
-    ├── ProgrammerExpression.ets      # 词法与优先级求值
-    ├── Ieee754.ets                   # 精确舍入和格式转换
-    ├── ProgrammerSession.ets         # 两种输入会话与配置切换
-    └── ProgrammerState.ets           # 设置、进程内会话、历史契约
+    ├── IntegerEngine.ets             # Word、标志与整数编码
+    ├── IntegerExpression.ets         # 词法与优先级求值
+    ├── Ieee754.ets                   # 精确舍入、四则运算和格式转换
+    ├── FloatExpression.ets           # 浮点表达式与逐节点舍入
+    ├── BaseConversionSession.ets     # 两种输入会话与配置切换
+    └── BaseConversionState.ets       # 设置、进程内会话、历史契约
 ```
 
 约束：
@@ -249,7 +251,7 @@ entry/src/main/ets/
 
 ### 2026-09-23 首版执行记录
 
-下方勾选代表实现或对应代码检查完成，不代表真机检查点通过。阶段 0–14 已形成首版，设备验收与阶段 15 尚未完成；[实际实现及边界](../architecture/programmer.md)为当前代码说明。
+下方勾选代表实现或对应代码检查完成，不代表真机检查点通过。阶段 0–14 已形成首版，设备验收与阶段 15 尚未完成；[实际实现及边界](../architecture/base-conversion.md)为当前代码说明。
 
 - `Natural` + `Word` 使用精确 bit 数组，避免完整 64 位整数进入 `number`；选择理由见架构专题。
 - 整数采用五列六行键盘、四进制列表和可折叠检查面板；截图原文件在实施时不可访问，依据本计划记录的布局实现。
@@ -260,6 +262,12 @@ entry/src/main/ets/
 - IEEE 格式转换直接处理有效数字与指数；跨格式 NaN 规范为同符号 quiet NaN，同格式和原始位模式编辑保留 payload。
 - 节点状态、核心测试、历史契约、偏好与 CLI 场景已接入。普通数值转换未暴露入口。
 - 尚待：API 26 两种键盘效果、API 23 回退、深浅色、小窗口、长按/连续删除、重启偏好与历史回填的设备验收。设备场景仅完成静态检查。
+
+### 2026-09-28 后续实施顺序
+
+1. [x] 代码风格整改：为 `8ae7728` 起新增的核心、组件和测试文件补充文件头与边界注释，单独提交且不修改可执行代码；后续代码持续遵守注释规范。
+2. [x] IEEE 754 四则运算：binary16/32/64 逐节点 roundTiesToEven，覆盖优先级、科学记数法、负零、无穷、NaN、溢出与非正规数；HEX/BIN 仍为原始位串。
+3. [x] IEEE 754 实时预览：隔离草稿、最近有效预览和已确认结果；同步各进制、分类与字段，覆盖撤销、配置切换与历史恢复。
 
 ### 阶段 0：冻结语义与保存界面基线
 
@@ -330,7 +338,7 @@ entry/src/main/ets/
 ### 阶段 5：搭建程序员整数页面骨架
 
 - [x] 将 `BaseConverter.ets` 改为页面与键盘装配入口；
-- [x] 创建独立 ProgrammerSession 状态协调类；
+- [x] 创建独立 BaseConversionSession 状态协调类；
 - [x] 创建表达式/结果区和四进制同步列表；
 - [x] 创建字长、符号和位视图控制栏；
 - [x] 创建标志位栏；
@@ -422,7 +430,11 @@ entry/src/main/ets/
 
 检查点：整数设置不会污染浮点页面，浮点格式切换后的字段数量与分组始终正确。
 
+后续优化（2026-09-28 已实现，待真机验收）：IEEE 754 输入增加实时预览。十进制数值或 HEX/BIN 位模式完整且有效时，预览对应的 DEC、HEX、BIN 与字段；`1e`、`1e-` 等未完成输入保留上一有效显示并提示待完成。预览与按 `=` 确认的位模式分开，编辑过程不写入历史，也不覆盖已确认的 NaN payload。纯核心、会话、模块 lint 和 ArkTS/资源编译验证已完成；设备交互待验收。
+
 ### 阶段 12：持久化、历史和恢复
+
+后续跨启动会话保存与现有存储补强见[持久化补强与进制转换会话保存计划](./persistence-hardening-and-base-session.md)。本阶段已完成项指设置与历史恢复，不包含未确认草稿的磁盘保存。
 
 - [x] 明确哪些状态只在组件生命周期内保留；
 - [x] 保存最近使用的整数/浮点页、输入进制、字长和符号解释；
@@ -625,7 +637,7 @@ entry/src/main/ets/
 - DB/DW/DD/DQ 汇编数据声明；
 - 自定义任意 bit 字长；
 - IEEE decimal32/64/128、binary128 和 bfloat16；
-- 浮点四则运算、异常标志和多舍入模式；
+- 浮点异常标志和多舍入模式；
 - 因实现本模块而重构其他计算器、FormulaScreen 或 CAS 管线。
 
 [返回功能演进规划](../planning.md)

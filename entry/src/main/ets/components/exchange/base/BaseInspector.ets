@@ -1,19 +1,22 @@
 /**
  * Copyright (c) 2026 StartYi. All rights reserved.
- * @file ProgrammerInspector.ets
+ * @file BaseInspector.ets
  * @description 位编辑、整数编码与浮点字段观察
+ * @author StartYi
+ * @date 2026/09/23 01:00
  */
-import { ProgrammerSession } from '../../../utils/base/ProgrammerSession';
-import { encodingRows, decodeEncoding, EncodingRow } from '../../../utils/base/ProgrammerEngine';
-import { FloatFormat, decodeFloat } from '../../../utils/base/Ieee754';
+import { BaseConversionSession } from '../../../utils/base/BaseConversionSession';
+import { encodingRows, decodeEncoding, EncodingRow } from '../../../utils/base/IntegerEngine';
+import { FloatFormat, decodeFloat } from '../../../utils/base/IEEE754';
 import { Natural } from '../../../utils/base/Natural';
 
 @Component
-export struct ProgrammerInspector {
-  @Prop session: ProgrammerSession = new ProgrammerSession();
+export struct BaseInspector {
+  @Prop session: BaseConversionSession = new BaseConversionSession();
   @Prop panel: string = 'bits';
   onFlip: (index: number) => void = () => {};
 
+  // 视觉顺序从高位到低位；点击仍传真实位索引，与 Natural 的低位在前存储区分。
   private indices(): number[] {
     const result: number[] = [];
     const width = this.session.mode === 'integer' ? this.session.width : this.session.floatWidth;
@@ -21,8 +24,9 @@ export struct ProgrammerInspector {
     return result;
   }
   private bit(index: number): number {
-    return this.session.mode === 'integer' ? this.session.word.value.bit(index) : this.session.floatBits.bit(index);
+    return this.session.mode === 'integer' ? this.session.word.value.bit(index) : this.session.displayedFloatBits().bit(index);
   }
+  // 字段边界由当前浮点格式推导，避免 binary16/32/64 切换后沿用旧分段。
   private fieldColor(index: number): ResourceColor {
     if (this.session.mode === 'integer') return $r('sys.color.font_emphasize');
     const format = new FloatFormat(this.session.floatWidth);
@@ -30,6 +34,7 @@ export struct ProgrammerInspector {
       index >= format.fractionBits ? $r('sys.color.font_emphasize') : $r('sys.color.font_primary');
   }
 
+  // 范围通过精确整数构造，64 位极值不能先进入 number。
   private ranges(): string {
     const sign = Natural.small(1).shift(this.session.width - 1);
     const maximum = sign.subtract(Natural.small(1)).toString();
@@ -61,6 +66,7 @@ export struct ProgrammerInspector {
     .height(this.indices().length / 8 * 48).width('100%')
   }
 
+  // 数学值重新编码和原始位串重新解释是两种含义，分别展示以免混淆符号。
   @Builder
   private Encodings() {
     Text('按当前数学值生成编码').fontSize(14).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_primary'))
@@ -84,22 +90,22 @@ export struct ProgrammerInspector {
 
   @Builder
   private FloatFields() {
-    Text(decodeFloat(this.session.floatBits, this.session.floatWidth).category)
+    Text(decodeFloat(this.session.displayedFloatBits(), this.session.floatWidth).category)
       .fontSize(18).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_emphasize'))
     Row({ space: 8 }) {
-      Text('S ' + decodeFloat(this.session.floatBits, this.session.floatWidth).sign).fontColor($r('sys.color.warning')).fontSize(13)
-      Text('E ' + decodeFloat(this.session.floatBits, this.session.floatWidth).exponent).fontColor($r('sys.color.font_emphasize')).fontSize(13)
+      Text('S ' + decodeFloat(this.session.displayedFloatBits(), this.session.floatWidth).sign).fontColor($r('sys.color.warning')).fontSize(13)
+      Text('E ' + decodeFloat(this.session.displayedFloatBits(), this.session.floatWidth).exponent).fontColor($r('sys.color.font_emphasize')).fontSize(13)
       Text('偏置 ' + new FloatFormat(this.session.floatWidth).bias).fontColor($r('sys.color.font_secondary')).fontSize(13)
     }.margin({ top: 8 })
-    Text('尾数 F：' + decodeFloat(this.session.floatBits, this.session.floatWidth).fraction)
+    Text('尾数 F：' + decodeFloat(this.session.displayedFloatBits(), this.session.floatWidth).fraction)
       .fontSize(13).fontFamily('monospace').fontColor($r('sys.color.font_primary'))
       .copyOption(CopyOptions.LocalDevice).margin({ top: 8 })
-    Text('精确解释：' + decodeFloat(this.session.floatBits, this.session.floatWidth).exact)
+    Text('精确解释：' + decodeFloat(this.session.displayedFloatBits(), this.session.floatWidth).exact)
       .fontSize(13).fontColor($r('sys.color.font_secondary')).copyOption(CopyOptions.LocalDevice).margin({ top: 8 })
-    if (!decodeFloat(this.session.floatBits, this.session.floatWidth).category.includes('NaN') &&
-      decodeFloat(this.session.floatBits, this.session.floatWidth).category !== '无穷') {
-      Text('实际指数：' + decodeFloat(this.session.floatBits, this.session.floatWidth).actualExponent +
-        ' · 有效数字：' + (decodeFloat(this.session.floatBits, this.session.floatWidth).exponent === 0 ? '0.F' : '1.F'))
+    if (!decodeFloat(this.session.displayedFloatBits(), this.session.floatWidth).category.includes('NaN') &&
+      decodeFloat(this.session.displayedFloatBits(), this.session.floatWidth).category !== '无穷') {
+      Text('实际指数：' + decodeFloat(this.session.displayedFloatBits(), this.session.floatWidth).actualExponent +
+        ' · 有效数字：' + (decodeFloat(this.session.displayedFloatBits(), this.session.floatWidth).exponent === 0 ? '0.F' : '1.F'))
         .fontSize(13).fontColor($r('sys.color.font_secondary')).margin({ top: 8 })
     }
     Text('十进制显示采用简短表示；输入按 roundTiesToEven 舍入。修改位模式保留 NaN payload，切换格式重新编码。')
@@ -109,11 +115,7 @@ export struct ProgrammerInspector {
 
   build() {
     Column() {
-      if (this.panel === 'help') {
-        Text('操作说明').fontSize(18).fontWeight(FontWeight.Medium).fontColor($r('sys.color.font_primary'))
-        Text('长按 AND：OR / XOR / NOT\n长按 SHL / SHR：算术移位、循环和带进位循环\n长按 + / −：ADC / SBB\n长按退格：连续删除\n四进制行切换输入进制，长按数值可复制\n切换配置先确认表达式；无效草稿会保留并提示\nCF：进位或借位；OF：有符号溢出\nZF：全零；SF：最高位；—：不适用\nC-in 独立控制 ADC / SBB / RCL / RCR 的输入进位\n移位计数为 0 保持标志；旋转计数按字长（带进位时字长 + 1）取模\n乘除只更新 ZF / SF，结果按字长截断\n括号 > 一元 > 乘除 > 加减 > 移位 > AND > XOR > OR\n这些是 CalculatorX 的固定规则，不模拟特定 CPU。')
-          .fontSize(14).lineHeight(23).fontColor($r('sys.color.font_secondary')).margin({ top: 8 })
-      } else if (this.session.mode === 'float') { this.FloatFields() }
+      if (this.session.mode === 'float') { this.FloatFields() }
       else if (this.panel === 'encoding') { this.Encodings() }
       else { this.Bits() }
     }.width('100%').alignItems(HorizontalAlign.Start).padding(14)

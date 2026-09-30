@@ -19,6 +19,7 @@ $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path (Split-Path -Parent $PSScriptRoot) 'CalcXCli.Common.psm1') -Force
 
 $resultPrefix = 'CALCX_TEST_RESULT:'
+# 白名单与设备端 normalizeSetting 的键和值同步；不把任意偏好键暴露给 CLI。
 $allowedSettings = @{
     'angle' = @('degree', 'radian')
     'answer-output' = @('auto', 'decimal')
@@ -54,6 +55,7 @@ try {
         exit 10
     }
 
+    # 设置通过测试桥写入 Preferences，停止应用后启动测试 Ability 以取得正确上下文。
     $initialStopResult = Invoke-CalcXProcessWithTimeout -FilePath $resolvedHdc `
         -ArgumentList @('-t', $selectedDevice, 'shell', 'aa', 'force-stop', (Get-CalcXBundleName)) `
         -TimeoutSeconds $TimeoutSeconds
@@ -87,6 +89,7 @@ try {
 
     $combinedOutput = $testResult.StdOut + "`n" + $testResult.StdErr
     $response = $null
+    # 只接受本次 requestId 对应的成功标记，避免旧日志被误认为设置已生效。
     foreach ($match in [regex]::Matches($combinedOutput, [regex]::Escape($resultPrefix) + '([A-Za-z0-9_-]+)')) {
         try {
             $candidate = ConvertFrom-CalcXBase64Url $match.Groups[1].Value | ConvertFrom-Json
@@ -102,6 +105,7 @@ try {
     [Console]::Out.WriteLine(($response | ConvertTo-Json -Compress -Depth 10))
     if (-not $response.ok) { exit 20 }
 
+    # 桥接写入后再次重启应用，后续 UI 查询读取的是重新加载的设置。
     $stopResult = Invoke-CalcXProcessWithTimeout -FilePath $resolvedHdc `
         -ArgumentList @('-t', $selectedDevice, 'shell', 'aa', 'force-stop', (Get-CalcXBundleName)) `
         -TimeoutSeconds $TimeoutSeconds

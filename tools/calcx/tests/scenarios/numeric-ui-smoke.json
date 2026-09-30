@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "name": "numeric-ui-smoke",
+  "steps": [
+    {
+      "command": "ui.click",
+      "target": "nav.sidebar.open"
+    },
+    {
+      "command": "ui.click",
+      "target": "module.base"
+    },
+    {
+      "command": "wait",
+      "path": "screen.module",
+      "equals": "base",
+      "timeoutSeconds": 10
+    },
+    {
+      "command": "ui.click",
+      "target": "base.mode.numeric"
+    },
+    {
+      "command": "ui.click",
+      "target": "base.key.clear"
+    },
+    {
+      "command": "ui.click",
+      "target": "base.radix.10"
+    },
+    {
+      "command": "ui.click",
+      "target": "base.key.0"
+    },
+    {
+      "command": "ui.click",
+      "target": "base.key.decimal"
+    },
+    {
+      "command": "ui.click",
+      "target": "base.key.1"
+    },
+    {
+      "command": "wait",
+      "path": "programmer.numericPreviewValid",
+      "equals": true,
+      "timeoutSeconds": 10
+    },
+    {
+      "command": "ui.click",
+      "target": "base.radix.2"
+    },
+    {
+      "command": "wait",
+      "path": "programmer.data.settings.numericRadix",
+      "equals": 2,
+      "timeoutSeconds": 10
+    },
+    {
+      "command": "ui.click",
+      "target": "base.radix.16"
+    },
+    {
+      "command": "ui.click",
+      "target": "base.radix.10"
+    },
+    {
+      "command": "wait",
+      "path": "programmer.numericInput",
+      "equals": "0.1",
+      "timeoutSeconds": 10
+    },
+    {
+      "command": "ui.click",
+      "target": "base.radix.2"
+    },
+    {
+      "command": "ui.click",
+      "target": "base.numeric.source"
+    },
+    {
+      "command": "wait",
+      "path": "programmer.data.settings.numericRadix",
+      "equals": 10,
+      "timeoutSeconds": 10
+    },
+    {
+      "command": "wait",
+      "path": "programmer.numericInput",
+      "equals": "0.1",
+      "timeoutSeconds": 10
+    }
+  ]
+}

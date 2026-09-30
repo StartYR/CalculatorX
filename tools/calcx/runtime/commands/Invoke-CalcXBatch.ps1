@@ -22,6 +22,7 @@ $summaryPrefix = 'CALCX_TEST_BATCH_SUMMARY:'
 $maxItems = 50
 $maxPayloadCharacters = 60000
 
+# 批量文件可为顶层数组或带 items 的对象，缺省字段与单次计算协议保持一致。
 function Get-ItemValue {
     param(
         [Parameter(Mandatory)][psobject]$Item,
@@ -35,6 +36,7 @@ function Get-ItemValue {
     return $DefaultValue
 }
 
+# 每个子请求独立生成 requestId，设备输出才能按原始输入顺序完整回收。
 function Test-BatchItem {
     param([Parameter(Mandatory)][psobject]$Item)
 
@@ -85,6 +87,7 @@ try {
         exit 2
     }
     $resolvedPath = (Resolve-Path -LiteralPath $Path).Path
+    # 文件大小、项目数与编码后长度分别限制解析、运行和 aa test 参数负载。
     if ((Get-Item -LiteralPath $resolvedPath).Length -gt 262144) {
         Write-CalcXDiagnostic 'Batch file must not exceed 256 KiB.'
         exit 2
@@ -146,6 +149,7 @@ try {
     }
 
     $combinedOutput = $testResult.StdOut + "`n" + $testResult.StdErr
+    # 日志中子结果可能与摘要或其他输出交错，先按 requestId 收集再按请求顺序输出。
     $responsesById = @{}
     foreach ($match in [regex]::Matches($combinedOutput, [regex]::Escape($resultPrefix) + '([A-Za-z0-9_-]+)')) {
         try {
@@ -166,6 +170,7 @@ try {
         } catch { }
     }
 
+    # 摘要是批量执行完成的证据；单独收到若干子结果不足以认定批次成功。
     if ($null -eq $summary) {
         Write-CalcXDiagnostic "The test run did not return a valid batch summary (HDC exit $($testResult.ExitCode))."
         exit 13

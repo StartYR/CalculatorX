@@ -20,6 +20,7 @@ function Remove-GeneratedDirectory {
     if (-not (Test-Path -LiteralPath $Path)) {
         return
     }
+    # -Clean 只允许删除工具目录下名称确定的生成目录，防止路径计算失误扩大范围。
     $resolved = (Resolve-Path -LiteralPath $Path).Path
     if ((Split-Path -Leaf $resolved) -ne $ExpectedLeaf -or
         -not $resolved.StartsWith($toolRoot, [StringComparison]::OrdinalIgnoreCase)) {
@@ -60,6 +61,7 @@ if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) {
     throw "Launcher output was not found: $launcher"
 }
 
+# 成功生成并确认文件存在后才覆盖仓库根目录的 CLI 启动器。
 $destination = Join-Path $repositoryRoot 'calcx.exe'
 Copy-Item -LiteralPath $launcher -Destination $destination -Force
 

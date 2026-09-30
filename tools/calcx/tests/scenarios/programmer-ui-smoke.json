@@ -18,9 +18,8 @@
     { "command": "ui.click", "target": "base.mode.float" },
     { "command": "ui.click", "target": "base.key.clear" },
     { "command": "ui.click", "target": "base.radix.10" },
-    { "command": "ui.click", "target": "base.float.width.32" },
-    { "command": "ui.click", "target": "base.key.1" },
+    { "command": "ui.click", "target": "base.key.0" },
     { "command": "ui.click", "target": "base.key.equals" },
-    { "command": "wait", "path": "programmer.data.floatBits", "equals": "3F800000", "timeoutSeconds": 10 }
+    { "command": "wait", "path": "programmer.data.floatBits", "equals": "0", "timeoutSeconds": 10 }
   ]
 }

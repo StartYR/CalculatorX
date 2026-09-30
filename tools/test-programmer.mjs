@@ -3,6 +3,7 @@ import { registerHooks, stripTypeScriptTypes } from 'node:module';
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 
+// 宿主机只擦除纯核心类型，不模拟 ArkUI；框架类型错误仍需 ArkTS 工具验证。
 registerHooks({
   resolve(specifier, context, next) {
     if (context.parentURL?.endsWith('.ets') && specifier.startsWith('./')) specifier += '.ets';
@@ -14,15 +15,17 @@ registerHooks({
     return next(url, context);
   }
 });
-const { Word, Flags, operate, encodingRows, decodeEncoding } = await import('../entry/src/main/ets/utils/base/ProgrammerEngine.ets');
+const { Word, Flags, operate, encodingRows, decodeEncoding } = await import('../entry/src/main/ets/utils/base/IntegerEngine.ets');
 const { Natural } = await import('../entry/src/main/ets/utils/base/Natural.ets');
-const { ProgrammerExpression } = await import('../entry/src/main/ets/utils/base/ProgrammerExpression.ets');
-const { encodeFloat, decodeFloat, convertFloat } = await import('../entry/src/main/ets/utils/base/Ieee754.ets');
-const { ProgrammerSession } = await import('../entry/src/main/ets/utils/base/ProgrammerSession.ets');
-const { recordOf, historyRecordOf, restoreRecord, settingsOf, restoreSettings } = await import('../entry/src/main/ets/utils/base/ProgrammerState.ets');
+const { IntegerExpression } = await import('../entry/src/main/ets/utils/base/IntegerExpression.ets');
+const { encodeFloat, decodeFloat, convertFloat, operateFloat, negateFloat } = await import('../entry/src/main/ets/utils/base/Ieee754.ets');
+const { FloatExpression } = await import('../entry/src/main/ets/utils/base/FloatExpression.ets');
+const { BaseConversionSession } = await import('../entry/src/main/ets/utils/base/BaseConversionSession.ets');
+const { recordOf, historyRecordOf, restoreRecord, settingsOf, restoreSettings } = await import('../entry/src/main/ets/utils/base/BaseConversionState.ets');
 let checks = 0;
 function equal(actual, expected) { assert.equal(actual, expected); checks++; }
 function word(value, width = 8) { return Word.parse(String(value), 10, width); }
+// 固定种子保证边界组合与随机样本可复现，测试参照使用独立的 BigInt 运算。
 let seed = 0x173025;
 function random() { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed; }
 for (const width of [8, 16, 32, 64]) {
@@ -91,10 +94,10 @@ equal(decodeEncoding(word(128), '原码'), '-0');
 equal(decodeEncoding(word(255), '反码'), '-0');
 for (const [text, expected] of [['2 + 3 * 4', '14'], ['( 2 + 3 ) * 4', '20'], ['-7 / 3', '-2'],
   ['-7 MOD 3', '-1'], ['1 OR 2 AND 4', '1'], ['NOT 0', '-1'], ['1 RCL 1', '3']]) {
-  equal(new ProgrammerExpression(10, 8, true, 1).evaluate(text).word.format(10, true), expected);
+  equal(new IntegerExpression(10, 8, true, 1).evaluate(text).word.format(10, true), expected);
 }
 for (const text of ['1 / 0', '1 +', '(1', '1)', '1 . 2', '256', '-129', '1 SHL -1']) {
-  assert.throws(() => new ProgrammerExpression(10, 8, true).evaluate(text)); checks++;
+  assert.throws(() => new IntegerExpression(10, 8, true).evaluate(text)); checks++;
 }
 const known = [
   [16, '0', '0000'], [16, '-0', '8000'], [16, '1', '3C00'], [16, '-2.5', 'C100'],
@@ -129,6 +132,7 @@ for (let bits = 0; bits <= 65535; bits++) {
   if (!decoded.category.includes('NaN')) equal(encodeFloat(decoded.decimal, 16).toString(16), raw.toString(16));
   if (!decoded.category.includes('NaN')) equal(convertFloat(convertFloat(raw, 16, 64), 64, 16).toString(16), raw.toString(16));
 }
+// DataView 按宿主 IEEE 格式产生参照位串，检查编码器的目标格式舍入。
 const buffer = new ArrayBuffer(8), view = new DataView(buffer);
 for (const width of [32, 64]) for (let i = 0; i < 300; i++) {
   const input = (random() / 1000) + 'e' + ((random() % (width === 32 ? 80 : 620)) - (width === 32 ? 45 : 320));
@@ -138,7 +142,7 @@ for (const width of [32, 64]) for (let i = 0; i < 300; i++) {
 }
 for (const width of [16, 32, 64]) {
   for (const input of ['-0', '0', '-2.5', 'Infinity', 'NaN']) {
-    const session = new ProgrammerSession();
+    const session = new BaseConversionSession();
     session.mode = 'float'; session.floatWidth = width; session.floatText = input; session.floatEvaluated = false;
     session.confirm(); session.changeRadix(16);
     const bits = session.floatBits.toString(16);
@@ -149,7 +153,39 @@ for (const width of [16, 32, 64]) {
     equal(restored.mode, 'float');
   }
 }
-const session = new ProgrammerSession();
+// 切换有符号解释不改变位模式；十进制表达式及后续运算应使用新的解释。
+for (const [width, hex, unsigned] of [[8, 'FF', '255'], [64, 'FFFFFFFFFFFFFFFF', '18446744073709551615']]) {
+  const toggle = new BaseConversionSession();
+  toggle.mode = 'integer';
+  toggle.changeWidth(width);
+  toggle.changeRadix(16);
+  for (const digit of hex) toggle.key(digit);
+  toggle.changeRadix(10);
+  equal(toggle.signed, true);
+  equal(toggle.expression, '-1');
+  for (let repeat = 0; repeat < 2; repeat++) {
+    toggle.changeSigned();
+    equal(toggle.signed, false);
+    equal(toggle.expression, unsigned);
+    equal(toggle.word.format(10, toggle.signed), unsigned);
+    equal(toggle.word.format(16), hex);
+    toggle.changeSigned();
+    equal(toggle.signed, true);
+    equal(toggle.expression, '-1');
+    equal(toggle.word.format(16), hex);
+  }
+  for (const isSigned of [false, true]) {
+    if (toggle.signed !== isSigned) toggle.changeSigned();
+    toggle.changeRadix(16);
+    toggle.key('AC');
+    for (const digit of hex) toggle.key(digit);
+    toggle.changeRadix(10);
+    for (const key of ['/', '2', '=']) toggle.key(key);
+    equal(toggle.word.format(10, toggle.signed), isSigned ? '0' : (BigInt(unsigned) / 2n).toString());
+  }
+}
+const session = new BaseConversionSession();
+session.mode = 'integer';
 session.changeWidth(8);
 for (const key of ['2', '5', '5', '+', '1', '=']) session.key(key);
 equal(session.word.format(10), '0'); equal(session.flags.cf, 1);
@@ -178,4 +214,161 @@ equal(restoreRecord(JSON.stringify(historyRecordOf(session))).floatText, '0');
 equal(encodingRows(word(255), false)[1].bits, '同宽不可表示');
 equal(encodingRows(word(255), true)[0].bits, '同宽不可表示');
 equal(convertFloat(encodeFloat('0.0000000894069671630859375', 64), 64, 16).toString(16), '2');
+// 目标格式的每一步都舍入；溢出、非正规数和零符号不能用近似数值比较代替位串。
+for (const width of [16, 32, 64]) {
+  const expression = new FloatExpression(width);
+  for (const [input, expected] of [
+    ['2 + 3 * 4', '14'], ['(2 + 3) * 4', '20'], ['8 / 4 / 2', '1'],
+    ['1e-2 + 2E+1', '20.01'], ['1 - -2', '3'], ['-0 + -0', '-0'],
+    ['-0 - -0', '0'], ['-0 * 3', '-0'], ['0 / -3', '-0'],
+    ['1 / -0', '-Infinity'], ['-1 / -0', 'Infinity'], ['1 / -Infinity', '-0'],
+    ['Infinity - Infinity', 'NaN'], ['0 / 0', 'NaN'], ['0 * Infinity', 'NaN'],
+    ['Infinity / Infinity', 'NaN'], ['NaN + 1', 'NaN']
+  ]) equal(expression.evaluate(input).toString(16), encodeFloat(expected, width).toString(16));
+  for (const input of ['', '1e', '1e-', '1 +', '1 2', '1..2', '2(3)', '1 AND 2', '1e -2', '(1', '1)']) {
+    assert.throws(() => expression.evaluate(input)); checks++;
+  }
+  assert.throws(() => expression.evaluate('('.repeat(70) + '1' + ')'.repeat(70))); checks++;
+  const minimum = Natural.small(1);
+  equal(operateFloat('/', minimum, encodeFloat('2', width), width).toString(16), '0');
+  equal(operateFloat('/', Natural.small(3), encodeFloat('2', width), width).toString(16), '2');
+  equal(operateFloat('*', negateFloat(minimum, width), encodeFloat('0.5', width), width).toString(16),
+    encodeFloat('-0', width).toString(16));
+  const f = new BaseConversionSession(); f.mode = 'float'; f.floatWidth = width;
+  for (const key of ['2', '+', '3', '*', '4', '=']) f.key(key);
+  equal(decodeFloat(f.floatBits, width).decimal, '14');
+  for (const key of ['/', '2', '=']) f.key(key);
+  equal(decodeFloat(f.floatBits, width).decimal, '7');
+  f.key('='); equal(decodeFloat(f.floatBits, width).decimal, '7');
+  f.key('1'); f.key('='); equal(decodeFloat(f.floatBits, width).decimal, '1');
+  for (const key of ['AC', '1', 'e', '-', '2', '=']) f.key(key);
+  equal(f.floatBits.toString(16), encodeFloat('0.01', width).toString(16));
+  for (const key of ['AC', '2', '+', '3', '±', '=']) f.key(key);
+  equal(decodeFloat(f.floatBits, width).decimal, '-1');
+  for (const key of ['AC', '1', '/', '∞', '=']) f.key(key);
+  equal(decodeFloat(f.floatBits, width).decimal, '0');
+  f.changeRadix(16);
+  for (const key of ['+', '-', '*', '/', 'e', '.', 'NaN', 'AND', 'SHL']) equal(f.inputEnabled(key), false);
+  const before = f.floatText; f.key('*'); equal(f.floatText, before);
+}
+equal(new FloatExpression(16).evaluate('2048 + 1 - 2048').toString(16), '0');
+equal(new FloatExpression(16).evaluate('65504 * 2').toString(16), '7C00');
+equal(new FloatExpression(32).evaluate('16777216 + 1 - 16777216').toString(16), '0');
+equal(new FloatExpression(64).evaluate('9007199254740992 + 1 - 9007199254740992').toString(16), '0');
+
+// DataView 独立产生宿主 IEEE 运算的参照位串；NaN 仅核对分类，payload 策略由固定向量检查。
+for (const width of [16, 32, 64]) {
+  const read = bits => {
+    if (width === 16) { view.setUint16(0, Number(bits)); return view.getFloat16(0); }
+    if (width === 32) { view.setUint32(0, Number(bits)); return view.getFloat32(0); }
+    view.setBigUint64(0, bits); return view.getFloat64(0);
+  };
+  const write = number => {
+    if (width === 16) { view.setFloat16(0, number); return BigInt(view.getUint16(0)); }
+    if (width === 32) { view.setFloat32(0, number); return BigInt(view.getUint32(0)); }
+    view.setFloat64(0, number); return view.getBigUint64(0);
+  };
+  const mask = (1n << BigInt(width)) - 1n;
+  for (let i = 0; i < 180; i++) {
+    const a = (BigInt(random()) << 32n | BigInt(random())) & mask;
+    const b = (BigInt(random()) << 32n | BigInt(random())) & mask;
+    const x = read(a), y = read(b);
+    for (const action of ['+', '-', '*', '/']) {
+      const expected = action === '+' ? x + y : action === '-' ? x - y : action === '*' ? x * y : x / y;
+      const actual = operateFloat(action, Natural.parse(a.toString(16), 16), Natural.parse(b.toString(16), 16), width);
+      if (Number.isNaN(expected)) equal(decodeFloat(actual, width).category, 'quiet NaN');
+      else equal(actual.toString(16), write(expected).toString(16).toUpperCase());
+    }
+  }
+}
+// 草稿、预览、确认结果各自独立；预览快照供撤销/重做复用，历史仅记录确认位串。
+for (const width of [16, 32, 64]) {
+  const f = new BaseConversionSession(); f.mode = 'float'; f.floatWidth = width;
+  f.key('2');
+  equal(f.floatBits.toString(16), '0');
+  equal(f.displayedFloatBits().toString(16), encodeFloat('2', width).toString(16));
+  equal(f.floatEvaluated, false); equal(f.floatPreviewValid, true);
+  f.key('+');
+  equal(f.floatPreviewValid, false);
+  equal(decodeFloat(f.displayedFloatBits(), width).decimal, '2');
+  const pending = f.copy();
+  f.key('3');
+  equal(decodeFloat(f.displayedFloatBits(), width).decimal, '5');
+  equal(decodeFloat(pending.displayedFloatBits(), width).decimal, '2');
+  equal(pending.floatPreviewValid, false);
+  equal(recordOf(f).floatBits, '0');
+  f.key('=');
+  equal(decodeFloat(f.floatBits, width).decimal, '5');
+  const history = historyRecordOf(f);
+  equal(decodeFloat(restoreRecord(JSON.stringify(history)).displayedFloatBits(), width).decimal, '5');
+  f.replaceFloatInput('1e');
+  equal(f.floatPreviewValid, false);
+  equal(decodeFloat(f.displayedFloatBits(), width).decimal, '5');
+  const beforeWidth = f.floatWidth;
+  assert.throws(() => f.changeFloatWidth(width === 16 ? 32 : 16)); checks++;
+  equal(f.floatWidth, beforeWidth);
+  assert.throws(() => f.changeRadix(16)); checks++;
+  equal(f.floatRadix, 10);
+  assert.throws(() => f.flip(0)); checks++;
+  f.key('-'); equal(f.floatPreviewValid, false);
+  f.key('2'); equal(f.floatPreviewValid, true);
+  equal(f.displayedFloatBits().toString(16), encodeFloat('0.01', width).toString(16));
+  equal(f.floatBits.toString(16), encodeFloat('5', width).toString(16));
+  f.key('⌫'); equal(f.floatPreviewValid, false);
+  equal(f.displayedFloatBits().toString(16), encodeFloat('0.01', width).toString(16));
+  f.mode = 'integer';
+  equal(historyRecordOf(f).floatText, '5');
+  f.mode = 'float';
+  f.replaceFloatInput('1 / 0');
+  equal(decodeFloat(f.displayedFloatBits(), width).category, '无穷');
+  f.replaceFloatInput('0 / 0');
+  equal(decodeFloat(f.displayedFloatBits(), width).category, 'quiet NaN');
+  f.key('AC');
+  equal(f.floatBits.toString(16), '0'); equal(f.displayedFloatBits().toString(16), '0');
+  equal(f.floatEvaluated, true); equal(f.floatPreviewValid, true);
+  f.changeRadix(16);
+  const exponentBits = width === 16 ? 5 : width === 32 ? 8 : 11;
+  const fractionBits = width - exponentBits - 1;
+  const nanBits = ((1n << BigInt(exponentBits)) - 1n) << BigInt(fractionBits) | 0x15n;
+  f.replaceFloatInput(nanBits.toString(16));
+  equal(decodeFloat(f.displayedFloatBits(), width).category, 'signaling NaN');
+  equal(f.floatBits.toString(16), '0');
+  f.key('='); f.changeRadix(10);
+  f.replaceFloatInput('1 +');
+  equal(f.floatBits.toString(16), nanBits.toString(16).toUpperCase());
+  equal(f.displayedFloatBits().toString(16), nanBits.toString(16).toUpperCase());
+  f.replaceFloatInput('3');
+  equal(decodeFloat(f.displayedFloatBits(), width).decimal, '3');
+  equal(f.floatBits.toString(16), nanBits.toString(16).toUpperCase());
+  const restored = restoreRecord(JSON.stringify(history));
+  restored.replaceFloatInput('4');
+  equal(decodeFloat(restored.displayedFloatBits(), width).decimal, '4');
+  f.key('AC'); f.changeRadix(2);
+  f.replaceFloatInput('1');
+  equal(f.displayedFloatBits().toString(16), '1');
+  f.replaceFloatInput('1'.repeat(width + 1));
+  equal(f.floatPreviewValid, false); equal(f.displayedFloatBits().toString(16), '1');
+  assert.throws(() => f.confirm()); checks++;
+  equal(f.floatBits.toString(16), '0');
+  f.replaceFloatInput('1'); f.flip(width - 1);
+  equal(f.floatBits.bit(width - 1), 1);
+  equal(f.displayedFloatBits().bit(width - 1), 1);
+  equal(f.floatRadix, 16); equal(f.floatEvaluated, true);
+}
+// 输入框不补固定字长的高位零，切换进制及位编辑仍保持原始浮点位模式。
+for (const width of [16, 32, 64]) {
+  const f = new BaseConversionSession();
+  f.mode = 'float'; f.floatWidth = width;
+  f.changeRadix(16); equal(f.floatText, '0');
+  f.replaceFloatInput('1'); f.confirm();
+  f.changeRadix(16); equal(f.floatText, '1');
+  f.changeRadix(2); equal(f.floatText, '1');
+  equal(f.floatBits.toString(16), '1');
+  f.flip(1); equal(f.floatText, '3');
+  f.flip(0); equal(f.floatText, '2');
+  equal(f.floatBits.toString(16), '2');
+  f.changeFloatWidth(width); equal(f.floatText, '2');
+  const restored = restoreRecord(JSON.stringify(historyRecordOf(f)));
+  equal(restored.floatText, '2'); equal(restored.floatBits.toString(16), '2');
+}
 console.log(`Programmer core and session: ${checks} assertions passed.`);

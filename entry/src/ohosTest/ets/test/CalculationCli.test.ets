@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 StartYi. All rights reserved.
+ * @file CalculationCli.test.ets
+ * @description 从 aa test 请求执行计算与设置预置并输出机器可读结果
+ * @author StartYi
+ * @date 2026/09/15 23:35
+ */
 import { describe, expect, it } from '@ohos/hypium';
 import { util } from '@kit.ArkTS';
 import { Want } from '@kit.AbilityKit';
@@ -8,11 +15,13 @@ import {
   CalculationTestBridge
 } from '../utils/CalculationTestBridge';
 
+// aa test 日志还包含框架输出，宿主只解析此前缀后的 URL-safe Base64 响应。
 const RESULT_PREFIX = 'CALCX_TEST_RESULT:';
 const BATCH_SUMMARY_PREFIX = 'CALCX_TEST_BATCH_SUMMARY:';
 const MAX_RESULT_LINE_LENGTH = 9500;
 const MAX_BATCH_ITEMS = 50;
 
+/** 一次性请求可为计算、批量计算或调试预置；字段长度与宿主侧校验共同限制负载。 */
 interface CalculationCliRequest {
   protocolVersion: number;
   requestId: string;
@@ -40,6 +49,7 @@ interface EntryAbilityMonitor {
   moduleName: string;
 }
 
+/** 拒绝非 URL-safe 输入，再用严格 UTF-8 解码，避免损坏的请求进入计算核心。 */
 function decodeRequest(payload: string): CalculationCliRequest {
   if (!/^[A-Za-z0-9_-]+$/.test(payload)) {
     throw new Error('calcxRequest is not URL-safe Base64');
@@ -73,6 +83,7 @@ function validateCalculationRequest(request: CalculationRequest): void {
   }
 }
 
+/** 先按命令类型校验专属字段；普通计算复用单项校验。 */
 function validateRequest(request: CalculationCliRequest): void {
   if (request.protocolVersion !== 1) {
     throw new Error('protocolVersion must be 1');
@@ -127,6 +138,7 @@ function responseFailure(requestId: string): CalculationResponse {
   };
 }
 
+/** 控制单条日志长度；超限时返回可关联 requestId 的明确失败标记。 */
 async function printResponse(response: CalculationResponse): Promise<void> {
   const delegator = abilityDelegatorRegistry.getAbilityDelegator();
   let resultLine = RESULT_PREFIX + encodeResponse(response);
@@ -136,6 +148,7 @@ async function printResponse(response: CalculationResponse): Promise<void> {
   await delegator.print(resultLine);
 }
 
+// 顺序执行并逐项打印，宿主侧再依 requestId 聚合，最后输出批次摘要。
 async function runBatch(request: CalculationCliRequest): Promise<CalculationBatchSummary> {
   const items = request.items ?? [];
   let succeeded = 0;
@@ -161,6 +174,7 @@ export default function calculationCliTest(): void {
     it('calculateFromLatex', 0, async () => {
       const delegator = abilityDelegatorRegistry.getAbilityDelegator();
       const parameters = abilityDelegatorRegistry.getArguments().parameters;
+      // 测试框架版本可能用两种参数键名，保留两条读取路径。
       const payload = parameters['-s calcxRequest'] ?? parameters['calcxRequest'];
       let requestId = '';
       let succeeded = false;
@@ -181,6 +195,7 @@ export default function calculationCliTest(): void {
             abilityName: 'EntryAbility'
           };
           let response: CalculationResponse = requestFailure(request.requestId, 'EntryAbility did not start');
+          // 预置命令需要 UIAbilityContext；无论执行结果如何都释放监视器。
           await delegator.addAbilityMonitor(entryMonitor);
           try {
             await delegator.startAbility(entryWant);

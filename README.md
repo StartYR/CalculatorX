@@ -116,11 +116,10 @@ ArkUI 原生界面
 
 - [ ] 统计分析
 - [ ] 单位转换
-- [ ] 普通数值转换
 
 ### 首版已实现，待设备验收
 
-- [程序员模式](docs/architecture/programmer.md)：8–64 位精确整数、四进制、位运算与标志位、原反补码观察、IEEE 754 binary16/32/64，以及传统/沉浸光感键盘。
+- [进制转换](docs/architecture/base-conversion.md)：8–64 位精确整数、四进制、位运算与标志位、原反补码观察、IEEE 754 binary16/32/64、支持正负数与小数的普通数值换算，以及传统/沉浸光感键盘。
 
 ## 获取 CalculatorX
 

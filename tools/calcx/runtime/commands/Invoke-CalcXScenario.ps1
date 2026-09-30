@@ -27,6 +27,7 @@ $supportedCommands = @(
     'assert', 'wait'
 )
 
+# 场景字段缺失时返回显式默认值，避免 PowerShell 的空值传播改变协议类型。
 function Get-StepProperty {
     param(
         [Parameter(Mandatory)][psobject]$Step,
@@ -38,6 +39,7 @@ function Get-StepProperty {
     return $DefaultValue
 }
 
+# 只替换 ${name} 变量；未定义变量直接失败，防止断言静默比较错误文本。
 function Resolve-ScenarioText {
     param(
         [Parameter(Mandatory)][string]$Text,
@@ -53,6 +55,7 @@ function Resolve-ScenarioText {
     })
 }
 
+# 每一步隔离在新的 CLI 进程中，收集逐行 JSON 和退出码供后续断言使用。
 function Invoke-RootCommand {
     param([Parameter(Mandatory)][string[]]$Arguments)
 
@@ -77,6 +80,7 @@ function Invoke-RootCommand {
     }
 }
 
+# 点分路径只遍历 JSON 属性，任何缺失节点统一返回空值。
 function Get-ValueAtPath {
     param(
         [Parameter(Mandatory)][object]$Value,
@@ -137,6 +141,7 @@ function Get-CommandArguments {
     }
 }
 
+# control.exists 使用 find 的退出码；其余断言读取当前 screen.get 快照。
 function Test-ScenarioAssertion {
     param(
         [Parameter(Mandatory)][psobject]$Step,
@@ -179,6 +184,7 @@ try {
         Write-CalcXDiagnostic 'Scenario must contain 1 to 200 steps.'
         exit 2
     }
+    # 变量属于本次场景运行，不跨文件或步骤重新加载。
     $variables = @{}
     $variablesProperty = $document.PSObject.Properties['variables']
     if ($variablesProperty -and $variablesProperty.Value) {
@@ -206,6 +212,7 @@ try {
                         evidence = $assertion.Evidence
                     }
                 } elseif ($command -eq 'wait') {
+                    # wait 重复读取新快照，而非反复检查启动时缓存的状态。
                     $stepTimeout = [int](Get-StepProperty $step 'timeoutSeconds' 10)
                     $deadline = [DateTime]::UtcNow.AddSeconds($stepTimeout)
                     $assertion = $null
@@ -240,6 +247,7 @@ try {
 
         $completed++
         if (-not $outcome.ok) { $failed++ }
+        # 每一步输出一行机器可读结果；失败时是否继续由 ContinueOnFailure 决定。
         [Console]::Out.WriteLine(([ordered]@{
             type = 'step'
             index = $index

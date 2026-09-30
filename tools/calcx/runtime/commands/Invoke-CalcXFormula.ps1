@@ -45,6 +45,7 @@ try {
         exit 10
     }
 
+    # 待输入公式经 debug 偏好写入，应用必须重启才会消费这份一次性草稿。
     $stopResult = Invoke-CalcXProcessWithTimeout -FilePath $resolvedHdc `
         -ArgumentList @('-t', $selectedDevice, 'shell', 'aa', 'force-stop', (Get-CalcXBundleName)) `
         -TimeoutSeconds $TimeoutSeconds
@@ -79,6 +80,7 @@ try {
 
     $combinedOutput = $testResult.StdOut + "`n" + $testResult.StdErr
     $response = $null
+    # 测试运行器可能打印其他请求的结果，只接收当前版本与 requestId。
     foreach ($match in [regex]::Matches($combinedOutput, [regex]::Escape($resultPrefix) + '([A-Za-z0-9_-]+)')) {
         try {
             $candidate = ConvertFrom-CalcXBase64Url $match.Groups[1].Value | ConvertFrom-Json
@@ -96,6 +98,7 @@ try {
         exit 20
     }
 
+    # 写入成功只说明待输入草稿已落盘；重新启动后还需确认 WebView 真正加载它。
     $restartStopResult = Invoke-CalcXProcessWithTimeout -FilePath $resolvedHdc `
         -ArgumentList @('-t', $selectedDevice, 'shell', 'aa', 'force-stop', (Get-CalcXBundleName)) `
         -TimeoutSeconds $TimeoutSeconds
@@ -111,6 +114,7 @@ try {
         exit 13
     }
 
+    # WebView 就绪与 LaTeX 回填是异步的，轮询语义状态直到两者都满足或超时。
     $formulaState = $null
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
     do {

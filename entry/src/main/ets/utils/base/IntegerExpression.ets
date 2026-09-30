@@ -1,11 +1,14 @@
 /**
  * Copyright (c) 2026 StartYi. All rights reserved.
- * @file ProgrammerExpression.ets
+ * @file IntegerExpression.ets
  * @description 固定字长表达式解析与优先级求值
+ * @author StartYi
+ * @date 2026/09/22 20:51
  */
-import { Word, Flags, OperationResult, operate } from './ProgrammerEngine';
+import { Word, Flags, OperationResult, operate } from './IntegerEngine';
 
-export class ProgrammerExpression {
+/** 优先级爬升解析器；每个运算节点立即按固定字长求值，避免整式末尾才截断。 */
+export class IntegerExpression {
   private tokens: string[] = [];
   private position: number = 0;
   private radix: number;
@@ -24,6 +27,7 @@ export class ProgrammerExpression {
     this.initialFlags = flags;
   }
 
+  // 重置游标和初始标志，保证复用解析器时没有上次计算残留。
   evaluate(text: string): OperationResult {
     if (text.length > 1024) throw new Error('表达式过长');
     this.tokens = text.toUpperCase().match(/[0-9A-Z]+|[()+\-*/]|[^\s]/g) || [];
@@ -44,6 +48,7 @@ export class ProgrammerExpression {
     return -1;
   }
 
+  // 右操作数使用更高的最低优先级，使同优先级二元运算左结合；深度上限约束递归。
   private expression(minimum: number, depth: number): Word {
     if (depth > 64) throw new Error('括号或一元运算嵌套过深');
     let left = this.primary(depth + 1);
@@ -71,6 +76,7 @@ export class ProgrammerExpression {
       return result;
     }
     if (token === '+' || token === '-' || token === 'NOT') {
+      // 将直接负字面量整体校验，允许最小补码负数且拒绝比它更小的输入。
       if (token === '-' && this.position < this.tokens.length && /^[0-9A-F]+$/.test(this.tokens[this.position])) {
         return Word.parse('-' + this.tokens[this.position++], this.radix, this.width);
       }

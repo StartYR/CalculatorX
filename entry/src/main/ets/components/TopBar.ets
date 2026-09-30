@@ -59,16 +59,18 @@ export struct TopBar {
   onUndoClick?: () => void;
   onRedoClick?: () => void;
 
+  // 是否显示撤销和重做
   private showUndoRedo(): boolean {
-    return ['scientific', 'equation', 'matrix', 'base'].includes(this.currentModule);
+    return ['scientific', 'equation', 'matrix'].includes(this.currentModule);
   }
 
+  // 最右侧的按钮显示逻辑
   private trailingAction(): TopBarTrailingAction {
     if (this.currentModule === 'graphing') {
       return TopBarTrailingAction.EDIT;
     }
 
-    if (['basic', 'scientific', 'equation', 'matrix', 'base'].includes(this.currentModule)) {
+    if (['basic', 'scientific', 'equation', 'matrix'].includes(this.currentModule)) {
       return TopBarTrailingAction.HISTORY;
     }
 
