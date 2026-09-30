@@ -174,8 +174,8 @@ export struct Settings {
 
   aboutToAppear() {
     PreferenceManager.registerSave(this.onSavePending);
-    // 页面加载时，通过 PreferenceManager 拿到最新数据赋值给 UI
-    this.startupPageMode = PreferenceManager.get(PreferenceConfigs.KEY_STARTUP_PAGE, 0) as number;
+    // 使用启动时校验过的镜像，避免损坏枚举进入选择控件。
+    this.startupPageMode = AppStorage.get<number>(PreferenceConfigs.KEY_STARTUP_PAGE) ?? 0;
   }
 
   @StorageProp(PreferenceConfigs.KEY_COMBINATION_SELECT) combSelect: number = 1;

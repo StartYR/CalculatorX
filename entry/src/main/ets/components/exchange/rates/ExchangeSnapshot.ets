@@ -8,6 +8,9 @@
 import { CurrencyListItem } from './ExchangeTypes';
 import { CURRENCY_MAP } from './CurrencyData';
 
+// 字典的继承属性不是币种；恢复和网络入口共用明确的代码白名单。
+const SUPPORTED_CODES: string[] = Object.keys(CURRENCY_MAP);
+
 export interface ExchangeUserSnapshot {
   schemaVersion: number;
   currencyList: CurrencyListItem[];
@@ -49,7 +52,7 @@ export function normalizeExchangeUser(raw: Object): ExchangeUserSnapshot {
       if (!item || typeof item !== 'object' || Array.isArray(item)) return;
       const entry = item as Record<string, Object>;
       if (typeof entry.id !== 'string' || entry.id.length === 0 || entry.id.length > 128 ||
-        typeof entry.code !== 'string' || !CURRENCY_MAP[entry.code] || ids.has(entry.id)) return;
+        typeof entry.code !== 'string' || !SUPPORTED_CODES.includes(entry.code) || ids.has(entry.id)) return;
       ids.add(entry.id);
       list.push(new CurrencyListItem(entry.id, entry.code));
     });
@@ -67,7 +70,9 @@ export function normalizeExchangeRates(raw: Object): Record<string, number> {
   const source = raw as Record<string, Object>;
   Object.keys(source).forEach((code: string): void => {
     const value = source[code];
-    if (CURRENCY_MAP[code] && typeof value === 'number' && Number.isFinite(value) && value > 0) rates[code] = value;
+    if (SUPPORTED_CODES.includes(code) && typeof value === 'number' && Number.isFinite(value) && value > 0) {
+      rates[code] = value;
+    }
   });
   return rates;
 }

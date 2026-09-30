@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 const cache = new Map();
 const disk = new Map();
 const store = {
-  failRead: false, failPut: false, failFlush: false, flushes: 0, gate: null,
+  failInit: false, failRead: false, failPut: false, failFlush: false, flushes: 0, gate: null,
   hasSync(key) { if (this.failRead) throw Error('read'); return cache.has(key); },
   getSync(key, fallback) { if (this.failRead) throw Error('read'); return cache.has(key) ? cache.get(key) : fallback; },
   putSync(key, value) { if (this.failPut) throw Error('put'); cache.set(key, value); },
@@ -27,7 +27,7 @@ globalThis.AppStorage = { setOrCreate(key, value) { appStorage.set(key, value); 
 registerHooks({
   resolve(specifier, context, next) {
     if (specifier === '@kit.ArkData') return { shortCircuit: true,
-      url: 'data:text/javascript,export const preferences={getPreferencesSync:()=>globalThis.preferenceTestStore};' };
+      url: 'data:text/javascript,export const preferences={getPreferencesSync:()=>{const s=globalThis.preferenceTestStore;if(s.failInit)throw Error("init");return s;}};' };
     if (specifier === '@kit.AbilityKit') return { shortCircuit: true, url: 'data:text/javascript,export const common={};' };
     if (specifier === '@ohos.hilog') return { shortCircuit: true,
       url: 'data:text/javascript,export default {info(){},error(){},warn(){},debug(){}};' };
@@ -45,6 +45,10 @@ assert.equal(manager.read('absent', 3).ok, false);
 manager.set('before-init', 7);
 assert.deepEqual(await manager.commit(), { ok: false, pending: true });
 assert.equal(manager.get('before-init', 0), 7);
+store.failInit = true;
+assert.equal(manager.init({}), false);
+assert.equal(manager.get('before-init', 0), 7);
+store.failInit = false;
 manager.init({});
 assert.equal((await manager.commit()).ok, true);
 assert.equal(disk.get('before-init'), 7);
@@ -105,4 +109,35 @@ cache.set('decimalPrecision', 16);
 manager.loadAllToAppStorage();
 assert.equal(appStorage.get('isRad'), false);
 assert.equal(appStorage.get('decimalPrecision'), 16);
+
+// 后台必须先收集防抖窗口中的输入，回调异常不能阻止其他模块提交。
+let collected = 0;
+const onSave = () => { collected++; manager.stage('lifecycle', 'latest'); };
+const brokenSave = () => { throw Error('callback'); };
+manager.registerSave(brokenSave);
+manager.registerSave(onSave);
+manager.registerSave(onSave);
+manager.savePending();
+await manager.commit();
+assert.equal(collected, 1);
+assert.equal(disk.get('lifecycle'), 'latest');
+manager.unregisterSave(onSave);
+manager.unregisterSave(brokenSave);
+manager.savePending();
+await manager.commit();
+assert.equal(collected, 1);
+
+// 合成绘图样本验证大字符串经过生产提交层后没有缺项；不代表真实 SDK 容量或渲染性能。
+const graph = Array.from({length:10}, (_, index) => ({id:String(index), color:'#FF0000', isVisible:true,
+  type:1, latex:'x(t)='+'t+'.repeat(1024)+'0', latex2:'y(t)=sin(t)',
+  base64:Buffer.alloc(256*1024, index).toString('base64'), base64_2:Buffer.alloc(256*1024, index+1).toString('base64'),
+  ast:JSON.stringify({sample:'x'.repeat(64*1024)}), ast2:JSON.stringify({sample:'y'.repeat(64*1024)}),
+  tMin:-10, tMax:10}));
+const graphJson = JSON.stringify(graph);
+const graphBytes = Buffer.byteLength(graphJson, 'utf8');
+assert.ok(graphBytes < 16*1024*1024);
+manager.set('graphingFunctions', graphJson);
+assert.equal((await manager.commit()).ok, true);
+assert.deepEqual(JSON.parse(disk.get('graphingFunctions')), graph);
+console.log(`Synthetic graph snapshot: ${graphBytes} UTF-8 bytes, 10 functions`);
 console.log('Preferences commit, failure and retry checks passed');

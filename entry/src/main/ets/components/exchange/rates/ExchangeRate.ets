@@ -56,6 +56,9 @@ export struct ExchangeRate {
   @State isUpdateFailed: boolean = false;           // 控制失败提示 UI 的显隐
   @State isUpdateSuccess: boolean = false;          // 控制成功提示 UI 的显隐
   private feedbackTimer: number = -1;               // 反馈动画淡出定时器句柄，用于防抖
+  private refreshTimer: number = -1;
+  private scrollTimer: number = -1;
+  private scrollUnlockTimer: number = -1;
   private inputSave: SaveScheduler = new SaveScheduler((): void => this.saveData(), 500);
   private onSavePending = (): void => this.inputSave.flush();
   private isAlive: boolean = false;
@@ -89,6 +92,11 @@ export struct ExchangeRate {
     void PreferenceManager.commit();
     PreferenceManager.unregisterSave(this.onSavePending);
     if (this.feedbackTimer !== -1) clearTimeout(this.feedbackTimer);
+    if (this.refreshTimer !== -1) clearTimeout(this.refreshTimer);
+    if (this.scrollTimer !== -1) clearTimeout(this.scrollTimer);
+    if (this.scrollUnlockTimer !== -1) clearTimeout(this.scrollUnlockTimer);
+    this.isRefreshing = false;
+    this.isAutoScrolling = false;
   }
 
   // ---------------------------------------------------------
@@ -214,7 +222,8 @@ export struct ExchangeRate {
 
         Logger.info('[ExchangeRate] 明确有网且缓存有效，执行视觉障眼法...');
         this.isRefreshing = true;
-        setTimeout(() => {
+        this.refreshTimer = setTimeout(() => {
+          this.refreshTimer = -1;
           if (!this.isAlive) return;
           this.commitUpdateState(true);
           this.isRefreshing = false;
@@ -415,7 +424,11 @@ export struct ExchangeRate {
     });
 
     // 防遮挡动态避让：让被点击的卡片自动滚到视区中间
-    setTimeout(() => {
+    if (this.scrollTimer !== -1) clearTimeout(this.scrollTimer);
+    if (this.scrollUnlockTimer !== -1) clearTimeout(this.scrollUnlockTimer);
+    this.isAutoScrolling = false;
+    this.scrollTimer = setTimeout(() => {
+      this.scrollTimer = -1;
       if (!this.isAlive) return;
       let itemIndex = this.currencyList.findIndex(item => item.id === id);
       if (itemIndex !== -1) {
@@ -426,7 +439,9 @@ export struct ExchangeRate {
         this.scroller.scrollToIndex(itemIndex + 1, true, ScrollAlign.CENTER);
 
         // 动画完成后释放锁
-        setTimeout(() => {
+        this.scrollUnlockTimer = setTimeout(() => {
+          this.scrollUnlockTimer = -1;
+          if (!this.isAlive) return;
           this.isAutoScrolling = false;
         }, 500);
       }
