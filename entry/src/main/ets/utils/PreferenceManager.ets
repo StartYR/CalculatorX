@@ -10,6 +10,8 @@ import { preferences } from '@kit.ArkData';
 import { common } from '@kit.AbilityKit';
 import { PreferenceConfigs } from './CalculatorConfigs';
 import Logger from './Logger';
+import { PREFERENCE_SETTINGS, normalizePreference } from './PreferenceDefaults';
+import type { PreferenceSetting } from './PreferenceDefaults';
 
 export interface PreferenceReadResult {
   ok: boolean;
@@ -38,6 +40,23 @@ export class PreferenceManager {
   private static pending: Map<string, PendingPreference> = new Map();
   private static committing: Promise<PreferenceCommitResult> | undefined = undefined;
   private static saveTimer: number = -1;
+  private static saveCallbacks: Set<() => void> = new Set();
+
+  public static registerSave(callback: () => void): void {
+    PreferenceManager.saveCallbacks.add(callback);
+  }
+
+  public static unregisterSave(callback: () => void): void {
+    PreferenceManager.saveCallbacks.delete(callback);
+  }
+
+  /** 后台先收集模块防抖中的最新快照，再提交首选项缓存。 */
+  public static savePending(): void {
+    PreferenceManager.saveCallbacks.forEach((callback: () => void): void => {
+      try { callback(); } catch (_) { Logger.error('[PreferenceManager] 收集待保存状态失败'); }
+    });
+    void PreferenceManager.commit();
+  }
 
   /**
    * 1. 全局初始化 (建议在 EntryAbility.ets 的 onCreate 或 onWindowStageCreate 中调用一次)
@@ -162,29 +181,21 @@ export class PreferenceManager {
   public static loadAllToAppStorage(): void {
     if (!PreferenceManager.instance) {
       Logger.error(`[PreferenceManager] 无法同步到 AppStorage，未初始化！`);
-      return;
     }
-    // 隐私同意状态加载到内存 (默认值为 false，未同意)
-    AppStorage.setOrCreate(PreferenceConfigs.KEY_PRIVACY_VERSION, PreferenceManager.get(PreferenceConfigs.KEY_PRIVACY_VERSION, 0));
-
-    AppStorage.setOrCreate('isRad', PreferenceManager.get(PreferenceConfigs.KEY_IS_RAD, true));
-    AppStorage.setOrCreate('hapticFeedback', PreferenceManager.get(PreferenceConfigs.KEY_HAPTIC_FEEDBACK, true));
-    AppStorage.setOrCreate(
-      PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL,
-      PreferenceManager.get(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL, false)
-    );
-    AppStorage.setOrCreate('vibrationCurve', PreferenceManager.get(PreferenceConfigs.KEY_VIBRATION_CURVE, 0));
-    AppStorage.setOrCreate('decimalPrecision', PreferenceManager.get(PreferenceConfigs.KEY_DECIMAL_PRECISION, 6));
-    AppStorage.setOrCreate('colorModeIndex', PreferenceManager.get(PreferenceConfigs.KEY_COLOR_MODE, 2));
-    AppStorage.setOrCreate('answerOutputMode', PreferenceManager.get(PreferenceConfigs.KEY_ANSWER_OUTPUT_MODE, 0));
-    AppStorage.setOrCreate(PreferenceConfigs.KEY_COMBINATION_SELECT, PreferenceManager.get(PreferenceConfigs.KEY_COMBINATION_SELECT, 1));
-    AppStorage.setOrCreate(PreferenceConfigs.KEY_PERMUTATION_SELECT, PreferenceManager.get(PreferenceConfigs.KEY_PERMUTATION_SELECT, 1));
-    AppStorage.setOrCreate(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS, PreferenceManager.get(PreferenceConfigs.KEY_GRAPHING_FUNCTIONS, '[]'));
-    AppStorage.setOrCreate(PreferenceConfigs.KEY_EXCHANGE_CURRENCY_LIST, PreferenceManager.get(PreferenceConfigs.KEY_EXCHANGE_CURRENCY_LIST, '[]'));
-    AppStorage.setOrCreate(PreferenceConfigs.KEY_EXCHANGE_ACTIVE_ID, PreferenceManager.get(PreferenceConfigs.KEY_EXCHANGE_ACTIVE_ID, '1'));
-    AppStorage.setOrCreate(PreferenceConfigs.KEY_EXCHANGE_BASE_AMOUNT, PreferenceManager.get(PreferenceConfigs.KEY_EXCHANGE_BASE_AMOUNT, '100'));
-    AppStorage.setOrCreate(PreferenceConfigs.KEY_EXCHANGE_RATES, PreferenceManager.get(PreferenceConfigs.KEY_EXCHANGE_RATES, '{}'));
-    AppStorage.setOrCreate(PreferenceConfigs.KEY_EXCHANGE_LAST_UPDATE, PreferenceManager.get(PreferenceConfigs.KEY_EXCHANGE_LAST_UPDATE, 0));
-    Logger.info(`[PreferenceManager] 所有配置已成功加载到 AppStorage`);
+    PREFERENCE_SETTINGS.forEach((setting: PreferenceSetting): void => {
+      const value = PreferenceManager.get(setting.key, setting.defaultValue);
+      AppStorage.setOrCreate(setting.key, normalizePreference(setting, value as Object));
+    });
+    // 汇率迁移到模块快照前仍需启动镜像；迁移完成后移除此兼容注入。
+    const exchangeDefaults: PreferenceEntry[] = [
+      { key: PreferenceConfigs.KEY_EXCHANGE_CURRENCY_LIST, value: '[]' },
+      { key: PreferenceConfigs.KEY_EXCHANGE_ACTIVE_ID, value: '1' },
+      { key: PreferenceConfigs.KEY_EXCHANGE_BASE_AMOUNT, value: '100' },
+      { key: PreferenceConfigs.KEY_EXCHANGE_RATES, value: '{}' },
+      { key: PreferenceConfigs.KEY_EXCHANGE_LAST_UPDATE, value: 0 }
+    ];
+    exchangeDefaults.forEach((entry: PreferenceEntry): void => {
+      AppStorage.setOrCreate(entry.key, PreferenceManager.get(entry.key, entry.value));
+    });
   }
 }

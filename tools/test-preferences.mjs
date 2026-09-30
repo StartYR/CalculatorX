@@ -22,7 +22,8 @@ const store = {
 globalThis.preferenceTestStore = store;
 globalThis.$rawfile = name => name;
 globalThis.$r = name => name;
-globalThis.AppStorage = { setOrCreate() {} };
+const appStorage = new Map();
+globalThis.AppStorage = { setOrCreate(key, value) { appStorage.set(key, value); } };
 registerHooks({
   resolve(specifier, context, next) {
     if (specifier === '@kit.ArkData') return { shortCircuit: true,
@@ -89,4 +90,19 @@ const finalFlushes = store.flushes;
 manager.set('a', 60);
 await manager.commit();
 assert.equal(store.flushes, finalFlushes);
+cache.set('isRad', 'bad');
+cache.set('decimalPrecision', 99);
+cache.set('colorModeIndex', 1);
+cache.set('lastUsedModule', 'missing');
+manager.loadAllToAppStorage();
+assert.equal(appStorage.get('isRad'), true);
+assert.equal(appStorage.get('decimalPrecision'), 6);
+assert.equal(appStorage.get('colorModeIndex'), 1);
+assert.equal(appStorage.get('lastUsedModule'), 'scientific');
+assert.equal(cache.get('decimalPrecision'), 99);
+cache.set('isRad', false);
+cache.set('decimalPrecision', 16);
+manager.loadAllToAppStorage();
+assert.equal(appStorage.get('isRad'), false);
+assert.equal(appStorage.get('decimalPrecision'), 16);
 console.log('Preferences commit, failure and retry checks passed');

@@ -130,8 +130,6 @@ struct Index {
     font.registerFont({ familyName: 'Cambria Math', familySrc: $rawfile('fonts/Cambria Math.ttf') });
     font.registerFont({ familyName: 'Cambria Italic', familySrc: $rawfile('fonts/Cambria Italic.ttf') });
 
-    PreferenceManager.init(getContext(this) as common.UIAbilityContext);
-    PreferenceManager.loadAllToAppStorage();
 
     // 隐私声明弹窗，版本号比对
     let storedPrivacyVersion = AppStorage.get<number>(PreferenceConfigs.KEY_PRIVACY_VERSION) || 0;
@@ -157,10 +155,10 @@ struct Index {
       'exchange'
     ];
 
-    let startupMode = PreferenceManager.get(PreferenceConfigs.KEY_STARTUP_PAGE, 0) as number;
+    let startupMode = AppStorage.get<number>(PreferenceConfigs.KEY_STARTUP_PAGE) ?? 0;
 
     if (startupMode === 0) {
-      this.currentModule = PreferenceManager.get(PreferenceConfigs.KEY_LAST_USED_MODULE, 'scientific') as string;
+      this.currentModule = AppStorage.get<string>(PreferenceConfigs.KEY_LAST_USED_MODULE) ?? 'scientific';
     } else if (startupMode > 0 && startupMode < MODULE_MAP.length) {
       this.currentModule = MODULE_MAP[startupMode];
     } else {

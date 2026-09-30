@@ -18,6 +18,8 @@ import {
 } from '@kit.UIDesignKit';
 import { ConfigurationConstant, common } from '@kit.AbilityKit';
 import { PreferenceManager } from '../../utils/PreferenceManager';
+import { PreferenceDefaults } from '../../utils/PreferenceDefaults';
+import { SaveScheduler } from '../../utils/SaveScheduler';
 import Logger from '../../utils/Logger'
 
 // 引入全局菜单组件库
@@ -152,17 +154,26 @@ struct MathStyleSheet {
 @Component
 export struct Settings {
   @StorageProp('navBarHeight') navBarHeight: number = 0;
-  @StorageLink('isRad') isRad: boolean = false;
+  @StorageLink('isRad') isRad: boolean = PreferenceDefaults.IS_RAD;
   @StorageLink('hapticFeedback') hapticFeedback: boolean = true;
   @StorageLink('vibrationCurve') vibrationCurve: number = 0;
-  @StorageLink('decimalPrecision') decimalPrecision: number = 6;
+  @StorageLink('decimalPrecision') decimalPrecision: number = PreferenceDefaults.DECIMAL_PRECISION;
   @StorageLink('colorModeIndex') colorModeIndex: number = 2;
   @StorageLink('answerOutputMode') answerOutputMode: number = 0;
   @StorageLink(PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL) keyImmersiveMaterial: boolean = false;
 
   // 读取启动偏好的状态 (默认值为0: 记忆上次)
   @State startupPageMode: number = 0;
+  private precisionSave: SaveScheduler = new SaveScheduler((): void => { void PreferenceManager.commit(); }, 300);
+  private onSavePending = (): void => this.precisionSave.flush();
+
+  aboutToDisappear(): void {
+    this.precisionSave.flush();
+    PreferenceManager.unregisterSave(this.onSavePending);
+  }
+
   aboutToAppear() {
+    PreferenceManager.registerSave(this.onSavePending);
     // 页面加载时，通过 PreferenceManager 拿到最新数据赋值给 UI
     this.startupPageMode = PreferenceManager.get(PreferenceConfigs.KEY_STARTUP_PAGE, 0) as number;
   }
@@ -314,7 +325,8 @@ export struct Settings {
                       this.decimalPrecision = value;
 
                       // 保存
-                      PreferenceManager.set(PreferenceConfigs.KEY_DECIMAL_PRECISION, value);
+                      PreferenceManager.stage(PreferenceConfigs.KEY_DECIMAL_PRECISION, value);
+                      this.precisionSave.schedule();
                     })
                 }
                 .width('100%')
