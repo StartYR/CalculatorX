@@ -86,6 +86,7 @@ CalculatorX 不使用第三方状态管理库，而是按生命周期和作用�
 - `read(key, defaultValue)`：区分缺失键与读取失败，避免迁移时误覆盖旧数据
 - `get(key, defaultValue)`：同步读取
 - `loadAllToAppStorage()`：启动时批量发布响应式状态
+- `registerSave()` / `unregisterSave()` / `savePending()`：后台先收集模块的待保存快照，再提交
 
 提交期间更新的键会进入下一轮提交，旧完成回调不会移除新值。未初始化的写入也会保留；初始化成功、用户再次修改或生命周期收尾时可重试。调用方保存对象或数组时，应提交不会在异步过程中原地修改的快照。缓存读回不代表磁盘保存完成，设备验证应等待提交后重启应用。
 
@@ -99,7 +100,7 @@ CalculatorX 不使用第三方状态管理库，而是按生命周期和作用�
 |-----|--------|------|
 | `KEY_COLOR_MODE` | 2 | 浅色/深色/跟随系统 |
 | `KEY_VIBRATION_CURVE` | 0 | 自动/清脆/轻柔/厚重 |
-| `KEY_IS_RAD` | 代码当前默认值 | DEG/RAD |
+| `KEY_IS_RAD` | true | RAD |
 | `KEY_DECIMAL_PRECISION` | 6 | 0–16 位小数 |
 | `KEY_ANSWER_OUTPUT_MODE` | 0 | 自动/小数 |
 | `KEY_COMBINATION_SELECT` | 1 | 五种组合数样式 |
@@ -108,13 +109,10 @@ CalculatorX 不使用第三方状态管理库，而是按生命周期和作用�
 | `KEY_STARTUP_PAGE` | 0 | 上次使用或指定模块 |
 | `KEY_LAST_USED_MODULE` | `scientific` | 上次模块 ID |
 | `KEY_GRAPHING_FUNCTIONS` | `[]` | 函数列表 JSON |
-| `KEY_EXCHANGE_CURRENCY_LIST` | `[]` | 汇率列表 JSON |
-| `KEY_EXCHANGE_ACTIVE_ID` | `1` | 汇率活动项 |
-| `KEY_EXCHANGE_BASE_AMOUNT` | `100` | 汇率金额 |
-| `KEY_EXCHANGE_RATES` | `{}` | 汇率缓存 JSON |
-| `KEY_EXCHANGE_LAST_UPDATE` | 0 | 汇率时间戳 |
+| `KEY_EXCHANGE_USER_SNAPSHOT` | 模块默认列表、活动首项、金额 `100` | 用户状态 v1 |
+| `KEY_EXCHANGE_CACHE_SNAPSHOT` | 空汇率、时间 0 | 网络缓存 v1 |
 
-> 默认值应以当前源码为最终事实。修改默认值时同时检查 PreferenceManager 注入值、模块内兜底值和设置 UI。
+启动配置默认值与校验集中在 `PreferenceDefaults.ets`，默认回退不自动回写磁盘。汇率原五键仅用于新键缺失时的迁移，不再注入 AppStorage；具体字段见[汇率架构](exchange.md)。
 
 ## 5. 启动初始化
 
@@ -137,6 +135,8 @@ Index.aboutToAppear()
 ```
 
 顺序很重要：模块首次构建前，AppStorage 必须已经包含默认值或磁盘值。
+
+Ability 进入后台时调用 `savePending()`，前台恢复重试初始化和待保存提交。精度滑块即时更新镜像与首选项缓存，300 ms 防抖、最长 2 s 等待，离开设置页面时收尾。
 
 ## 6. 历史数据库
 
