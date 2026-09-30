@@ -85,9 +85,14 @@ CalculatorX 不使用第三方状态管理库，而是按生命周期和作用�
 [PreferenceManager.ets](../../entry/src/main/ets/utils/PreferenceManager.ets) 封装 HarmonyOS Preferences：
 
 - `init(context)`：创建全局 Preferences 实例
-- `set(key, value)`：`putSync` 后异步 `flush`
+- `set(key, value)` / `setMany(entries)`：更新缓存并合并同一轮提交；批量写入不提供事务
+- `stage(key, value)`：更新待保存缓存，由模块安排提交时机
+- `commit()`：串行等待落盘，返回 `{ ok, pending }`；失败保留最新内容供后续重试
+- `read(key, defaultValue)`：区分缺失键与读取失败，避免迁移时误覆盖旧数据
 - `get(key, defaultValue)`：同步读取
 - `loadAllToAppStorage()`：启动时批量发布响应式状态
+
+提交期间更新的键会进入下一轮提交，旧完成回调不会移除新值。未初始化的写入也会保留；初始化成功、用户再次修改或生命周期收尾时可重试。调用方保存对象或数组时，应提交不会在异步过程中原地修改的快照。缓存读回不代表磁盘保存完成，设备验证应等待提交后重启应用。
 
 配置键统一声明在 [CalculatorConfigs.ets](../../entry/src/main/ets/utils/CalculatorConfigs.ets) 的 `PreferenceConfigs`。
 
