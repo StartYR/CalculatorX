@@ -11,7 +11,90 @@ from release_sync import (
 )
 
 
-def main() -> int:
+def inventory(mirror: Mirror, tag: str) -> dict[str, dict]:
+    result = {}
+    for asset in mirror.assets(tag):
+        name = asset["name"]
+        if name in result:
+            raise SyncError(f"{mirror.platform} 存在多个同名附件 {name}，请先在网页处理")
+        result[name] = asset
+    return result
+
+
+def sync_release(client: HttpClient, mirrors: list[Mirror], release: dict, args) -> int:
+    tag = release["tag_name"]
+    print(f"Release：{tag}", flush=True)
+    # 删除以完整源清单为准，--asset 只限制上传和校验范围。
+    all_assets = release_assets(client, args.source, release, [])
+    source_names = {asset["name"] for asset in all_assets}
+    missing = set(args.asset) - source_names
+    if missing:
+        raise SyncError("指定附件不存在：" + ", ".join(sorted(missing)))
+    assets = [asset for asset in all_assets if not args.asset or asset["name"] in args.asset]
+    if not assets:
+        print("  没有上传附件")
+    failures = 0
+    targets = {}
+    failed = set()
+    for mirror in mirrors:
+        try:
+            targets[mirror] = inventory(mirror, tag)
+        except SyncError as exc:
+            failures += 1
+            failed.add(mirror)
+            print(f"  {mirror.platform} 读取附件失败：{exc}", file=sys.stderr)
+    for asset in assets:
+        pending = []
+        for mirror, existing in targets.items():
+            same_name = asset["name"] in existing
+            action = "待替换" if same_name and args.force else "已有同名附件，跳过（未校验内容）" if same_name else "待上传"
+            if args.dry_run or (same_name and not args.force and not args.verify_only):
+                print(f"  {mirror.platform}：{asset['name']} — {action}", flush=True)
+            else:
+                pending.append(mirror)
+        if not pending and not args.download_only:
+            continue
+        try:
+            path, digest = cache_asset(client, args.source, asset, args.cache_dir)
+        except (SyncError, OSError) as exc:
+            failures += 1
+            failed.update(pending)
+            detail = str(exc) if isinstance(exc, SyncError) else "无法读写本地缓存"
+            print(f"  {asset['name']} 下载失败：{detail}", file=sys.stderr)
+            continue
+        print(f"  源附件 SHA-256：{digest}", flush=True)
+        for mirror in pending:
+            try:
+                result = sync_asset(mirror, tag, asset, path, digest, args.force, args.verify_only)
+                print(f"  {mirror.platform}：{asset['name']} — {result}", flush=True)
+            except (SyncError, OSError) as exc:
+                failures += 1
+                failed.add(mirror)
+                detail = str(exc) if isinstance(exc, SyncError) else "无法读取本地源文件"
+                print(f"  {mirror.platform} / {asset['name']} 失败：{detail}", file=sys.stderr)
+    if args.download_only or args.verify_only:
+        return failures
+    for mirror in targets:
+        if mirror in failed:
+            print(f"  {mirror.platform}：本轮有失败，暂停删除多余附件", flush=True)
+            continue
+        try:
+            # 写入成功后刷新清单，再逐个删除多余附件；源码包已由平台适配层排除。
+            current = targets[mirror] if args.dry_run else inventory(mirror, tag)
+            for name, asset in current.items():
+                if name not in source_names:
+                    if args.dry_run:
+                        print(f"  {mirror.platform}：{name} — 待删除多余附件", flush=True)
+                    else:
+                        mirror.delete(tag, asset)
+                        print(f"  {mirror.platform}：已删除多余附件 {name}", flush=True)
+        except SyncError as exc:
+            failures += 1
+            print(f"  {mirror.platform} 清理失败：{exc}", file=sys.stderr)
+    return failures
+
+
+def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="通过本机同步 GitHub Release 附件")
     selection = parser.add_mutually_exclusive_group(required=True)
     selection.add_argument("--tag", help="指定 GitHub Release Tag")
@@ -28,15 +111,15 @@ def main() -> int:
     parser.add_argument("--gitcode-repo", default="StartYi/CalculatorX", help="GitCode owner/repo")
     parser.add_argument("--gitee-credential", default="Gitee", help="Windows 普通凭据名称")
     parser.add_argument("--gitcode-credential", default="GitCode", help="Windows 普通凭据名称")
-    parser.add_argument("--replace", action="store_true", help="备份后替换同名且内容不同的附件")
+    parser.add_argument("--force", action="store_true", help="强制替换所有选中的同名附件")
     parser.add_argument("--cache-dir", type=Path, default=Path(__file__).resolve().parents[1] / "temp/release-assets")
     parser.add_argument("--github-proxy", help="GitHub 代理 URL；空字符串表示直连")
     parser.add_argument("--mirror-proxy", help="镜像 API 和对象存储代理 URL；空字符串表示直连")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if args.tag is not None and (not args.tag.strip() or any(ord(character) < 32 for character in args.tag)):
         parser.error("--tag 必须是非空且不包含控制字符的 Tag")
-    if args.replace and (args.download_only or args.verify_only):
-        parser.error("--replace 不能与 --download-only 或 --verify-only 同时使用")
+    if args.force and (args.download_only or args.verify_only):
+        parser.error("--force 不能与 --download-only 或 --verify-only 同时使用")
     client = HttpClient(GITHUB_API, os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN", ""), args.github_proxy)
     mirrors = []
     lock = None
@@ -63,41 +146,12 @@ def main() -> int:
         if not selected:
             raise SyncError("没有找到已发布的 GitHub Release")
         for release in selected:
-            print(f"Release：{release['tag_name']}", flush=True)
             try:
-                assets = release_assets(client, args.source, release, args.asset)
+                failures += sync_release(client, mirrors, release, args)
             except SyncError as exc:
                 failures += 1
-                print(f"  读取附件失败：{exc}", file=sys.stderr)
+                print(f"  {release['tag_name']} 读取源附件失败：{exc}", file=sys.stderr)
                 continue
-            if not assets:
-                print("  没有上传附件")
-            for asset in assets:
-                if args.dry_run:
-                    for mirror in mirrors:
-                        try:
-                            existing = mirror.find(release["tag_name"], asset["name"])
-                            action = "已有同名附件，实际运行时核验内容" if existing else "待上传"
-                            print(f"  {mirror.platform}：{asset['name']}（{asset['size']} 字节）— {action}")
-                        except SyncError as exc:
-                            failures += 1
-                            print(f"  {mirror.platform} 计划失败：{exc}", file=sys.stderr)
-                    continue
-                try:
-                    path, digest = cache_asset(client, args.source, asset, args.cache_dir)
-                except SyncError as exc:
-                    failures += 1
-                    print(f"  下载失败：{exc}", file=sys.stderr)
-                    continue
-                print(f"  源附件 SHA-256：{digest}", flush=True)
-                for mirror in mirrors:
-                    try:
-                        result = sync_asset(mirror, release["tag_name"], asset, path, digest, args.cache_dir,
-                                            args.replace, args.verify_only)
-                        print(f"  {mirror.platform}：{result}", flush=True)
-                    except SyncError as exc:
-                        failures += 1
-                        print(f"  {mirror.platform} / {asset['name']} 失败：{exc}", file=sys.stderr)
         print(f"{'预览' if args.dry_run else '处理'}结束：{failures} 项失败", flush=True)
         return 1 if failures else 0
     except SyncError as exc:

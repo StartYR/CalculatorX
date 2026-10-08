@@ -160,23 +160,25 @@ class MirrorTests(unittest.TestCase):
         self.temporary.cleanup()
 
     def sync(self, **kwargs):
-        return sync_asset(self.mirror, "v1", self.asset, self.path, self.digest, self.cache, **kwargs)
+        return sync_asset(self.mirror, "v1", self.asset, self.path, self.digest, **kwargs)
 
-    def test_same_name_and_size_with_different_bytes_is_conflict(self):
+    def test_same_name_skips_without_downloading_even_if_bytes_differ(self):
         with patch.object(self.mirror, "find", return_value=self.existing), \
-                patch.object(self.client, "binary", return_value=Response(b"changed")), \
+                patch.object(self.client, "binary") as download, \
                 patch.object(self.mirror, "upload") as upload, patch.object(self.mirror, "delete") as delete:
-            with self.assertRaisesRegex(SyncError, "同名附件内容不同"):
-                self.sync()
+            self.assertIn("未校验内容", self.sync())
+        download.assert_not_called()
         upload.assert_not_called()
         delete.assert_not_called()
 
-    def test_identical_attachment_is_not_uploaded(self):
+    def test_verify_only_detects_changed_content_without_mutations(self):
         with patch.object(self.mirror, "find", return_value=self.existing), \
-                patch.object(self.client, "binary", return_value=Response()), \
-                patch.object(self.mirror, "upload") as upload:
-            self.assertIn("跳过", self.sync())
+                patch.object(self.client, "binary", return_value=Response(b"changed")), \
+                patch.object(self.mirror, "upload") as upload, patch.object(self.mirror, "delete") as delete:
+            with self.assertRaisesRegex(SyncError, "SHA-256 不符"):
+                self.sync(verify_only=True)
         upload.assert_not_called()
+        delete.assert_not_called()
 
     def test_timeout_after_success_queries_and_verifies_without_retry(self):
         with patch.object(self.mirror, "find", side_effect=[None, self.existing]), \
@@ -206,27 +208,32 @@ class MirrorTests(unittest.TestCase):
                 self.sync(verify_only=True)
         upload.assert_not_called()
 
-    def test_replace_keeps_backup_before_deletion_and_upload_failure(self):
-        def check_backup(*args):
-            backups = list(self.cache.glob("backup-*.bin"))
-            self.assertEqual(len(backups), 1)
-            self.assertEqual(backups[0].read_bytes(), b"old-content")
-        with patch.object(self.mirror, "find", side_effect=[self.existing, None, None, None, None]), \
-                patch.object(self.client, "binary", return_value=Response(b"old-content")), \
-                patch.object(self.mirror, "delete", side_effect=check_backup), \
-                patch.object(self.mirror, "upload", side_effect=SyncError("上传失败")), \
-                patch("release_sync.time.sleep"):
-            with self.assertRaises(SyncError):
-                self.sync(replace=True)
-        self.assertEqual(len(list(self.cache.glob("backup-*.bin"))), 1)
+    def test_force_replaces_identical_attachment_without_old_download(self):
+        order = []
+        with patch.object(self.mirror, "find", side_effect=[self.existing, {**self.existing, "id": 789}]), \
+                patch.object(self.client, "binary", return_value=Response()) as download, \
+                patch.object(self.mirror, "delete", side_effect=lambda *args: order.append("delete")), \
+                patch.object(self.mirror, "upload", side_effect=lambda *args: order.append("upload")):
+            self.assertIn("SHA-256 已验证", self.sync(force=True))
+        self.assertEqual(order, ["delete", "upload"])
+        self.assertEqual(download.call_count, 1)
 
-    def test_failed_backup_does_not_delete_remote_attachment(self):
+    def test_force_validates_source_before_deleting(self):
+        self.path.write_bytes(b"corrupt")
         with patch.object(self.mirror, "find", return_value=self.existing), \
-                patch.object(self.client, "binary", side_effect=SyncError("下载失败")), \
                 patch.object(self.mirror, "delete") as delete:
-            with self.assertRaises(SyncError):
-                self.sync(replace=True)
+            with self.assertRaisesRegex(SyncError, "本地源文件校验失败"):
+                self.sync(force=True)
         delete.assert_not_called()
+
+    def test_force_waits_for_new_attachment_id(self):
+        with patch.object(self.mirror, "find", side_effect=[self.existing, self.existing,
+                                                          {**self.existing, "id": 789}]), \
+                patch.object(self.client, "binary", return_value=Response()) as download, \
+                patch.object(self.mirror, "delete"), patch.object(self.mirror, "upload"), \
+                patch("release_sync.time.sleep"):
+            self.assertIn("上传成功", self.sync(force=True))
+        self.assertEqual(download.call_count, 1)
 
     def test_gitcode_upload_uses_signed_headers_and_raw_file(self):
         signed_headers = {"x-obs-callback": "test-placeholder", "Content-Type": "application/octet-stream"}
@@ -307,6 +314,7 @@ class CliTests(unittest.TestCase):
                 patch.object(self.cli, "get_token", return_value="test-only-placeholder"), \
                 patch.object(self.cli, "releases", return_value=[{"tag_name": "v1"}]), \
                 patch.object(self.cli, "release_assets", return_value=[{"name": "app.hap"}]), \
+                patch.object(Mirror, "assets", return_value=[]), \
                 patch.object(self.cli, "cache_asset", return_value=(Path(directory) / "source.bin", "digest")), \
                 patch.object(self.cli, "sync_asset", side_effect=[SyncError("上传失败"), "成功"]) as sync, \
                 redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
@@ -323,13 +331,123 @@ class CliTests(unittest.TestCase):
                 patch.object(self.cli, "get_token", return_value="test-only-placeholder"), \
                 patch.object(self.cli, "releases", return_value=[{"tag_name": "v1"}]), \
                 patch.object(self.cli, "release_assets", return_value=[{"name": "app.hap", "size": 7}]), \
-                patch.object(Mirror, "find", return_value=None), \
+                patch.object(Mirror, "assets", return_value=[]), \
                 patch.object(self.cli, "cache_asset") as download, patch.object(self.cli, "sync_asset") as sync, \
                 redirect_stdout(io.StringIO()):
             self.assertEqual(self.cli.main(), 0)
             self.assertFalse((Path(directory) / "absent").exists())
         download.assert_not_called()
         sync.assert_not_called()
+
+    def run_release(self, assets, targets, options=(), download_error=None, sync_results=None):
+        self.gitee = Mock(platform="gitee")
+        self.gitcode = Mock(platform="gitcode")
+        self.gitee.assets.return_value = targets
+        self.gitcode.assets.return_value = targets
+        args = Mock(source="owner/repo", asset=[], force=False, verify_only=False,
+                    download_only=False, dry_run=False, cache_dir=Path("unused"))
+        for name, value in options:
+            setattr(args, name, value)
+        with patch.object(self.cli, "release_assets", return_value=assets), \
+                patch.object(self.cli, "cache_asset", return_value=(Path("source.bin"), "digest"),
+                             side_effect=download_error) as download, \
+                patch.object(self.cli, "sync_asset", side_effect=sync_results) as sync, \
+                redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+            result = self.cli.sync_release(Mock(), [self.gitee, self.gitcode], {"tag_name": "v1"}, args)
+        return result, download, sync
+
+    def test_default_same_names_never_downloads_any_binary(self):
+        result, download, sync = self.run_release([{"name": "app.hap"}], [{"name": "app.hap"}])
+        self.assertEqual(result, 0)
+        download.assert_not_called()
+        sync.assert_not_called()
+
+    def test_missing_asset_downloads_source_once_for_both_platforms(self):
+        result, download, sync = self.run_release([{"name": "app.hap"}], [])
+        self.assertEqual(result, 0)
+        self.assertEqual(download.call_count, 1)
+        self.assertEqual(sync.call_count, 2)
+
+    def test_filtered_sync_preserves_unselected_source_assets(self):
+        source = [{"name": "app.hap"}, {"name": "debug.hap"}]
+        target = source + [{"name": "extra.hap", "id": 99}]
+        result, download, _ = self.run_release(source, target, [("asset", ["app.hap"])])
+        self.assertEqual(result, 0)
+        download.assert_not_called()
+        self.gitee.delete.assert_called_once_with("v1", target[-1])
+        self.gitcode.delete.assert_called_once_with("v1", target[-1])
+
+    def test_failed_platform_upload_suppresses_only_its_pruning(self):
+        extra = {"name": "extra.hap"}
+        result, _, sync = self.run_release([{"name": "app.hap"}], [extra],
+                                          sync_results=[SyncError("上传失败"), "成功"])
+        self.assertEqual(result, 1)
+        self.assertEqual(sync.call_count, 2)
+        self.gitee.delete.assert_not_called()
+        self.gitcode.delete.assert_called_once_with("v1", extra)
+
+    def test_source_download_failure_prevents_force_deletion_and_pruning(self):
+        result, _, sync = self.run_release([{"name": "app.hap"}],
+                                          [{"name": "app.hap"}, {"name": "extra.hap"}],
+                                          [("force", True)], download_error=SyncError("下载失败"))
+        self.assertEqual(result, 1)
+        sync.assert_not_called()
+        self.gitee.delete.assert_not_called()
+        self.gitcode.delete.assert_not_called()
+
+    def test_empty_source_release_prunes_uploaded_assets(self):
+        extra = {"name": "extra.hap"}
+        result, download, _ = self.run_release([], [extra])
+        self.assertEqual(result, 0)
+        download.assert_not_called()
+        self.gitee.delete.assert_called_once_with("v1", extra)
+
+    def test_preview_shows_extra_without_mutating(self):
+        result, download, sync = self.run_release([{"name": "app.hap"}], [{"name": "extra.hap"}],
+                                                 [("dry_run", True), ("force", True)])
+        self.assertEqual(result, 0)
+        download.assert_not_called()
+        sync.assert_not_called()
+        self.gitee.delete.assert_not_called()
+        self.gitcode.delete.assert_not_called()
+
+    def test_verify_only_never_prunes(self):
+        result, _, _ = self.run_release([{"name": "app.hap"}], [{"name": "extra.hap"}],
+                                       [("verify_only", True)])
+        self.assertEqual(result, 0)
+        self.gitee.delete.assert_not_called()
+        self.gitcode.delete.assert_not_called()
+
+    def test_duplicate_names_prevent_all_mutations(self):
+        result, download, sync = self.run_release([], [{"name": "app.hap"}, {"name": "app.hap"}])
+        self.assertEqual(result, 2)
+        download.assert_not_called()
+        sync.assert_not_called()
+        self.gitee.delete.assert_not_called()
+
+    def test_pruning_occurs_after_every_selected_asset_is_synced(self):
+        events = []
+        mirror = Mock(platform="gitee")
+        mirror.assets.return_value = [{"name": "extra.hap"}]
+        mirror.delete.side_effect = lambda *args: events.append("delete")
+        args = Mock(source="owner/repo", asset=[], force=False, verify_only=False,
+                    download_only=False, dry_run=False, cache_dir=Path("unused"))
+        with patch.object(self.cli, "release_assets", return_value=[{"name": "app.hap"}, {"name": "debug.hap"}]), \
+                patch.object(self.cli, "cache_asset", return_value=(Path("source.bin"), "digest")), \
+                patch.object(self.cli, "sync_asset", side_effect=lambda *args: events.append("sync")), \
+                redirect_stdout(io.StringIO()):
+            self.assertEqual(self.cli.sync_release(Mock(), [mirror], {"tag_name": "v1"}, args), 0)
+        self.assertEqual(events, ["sync", "sync", "delete"])
+
+    def test_missing_filter_aborts_before_target_inventory_or_mutations(self):
+        mirror = Mock(platform="gitee")
+        args = Mock(source="owner/repo", asset=["missing.hap"])
+        with patch.object(self.cli, "release_assets", return_value=[{"name": "app.hap"}]), \
+                redirect_stdout(io.StringIO()):
+            with self.assertRaisesRegex(SyncError, "指定附件不存在"):
+                self.cli.sync_release(Mock(), [mirror], {"tag_name": "v1"}, args)
+        mirror.assets.assert_not_called()
+        mirror.delete.assert_not_called()
 
 
 if __name__ == "__main__":

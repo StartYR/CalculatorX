@@ -444,52 +444,38 @@ class Mirror:
 
     def delete(self, tag: str, asset: dict) -> None:
         attachment_id = asset.get("id")
-        if not isinstance(attachment_id, (int, str)) or not str(attachment_id):
-            raise SyncError(f"{self.platform} 没有提供附件 ID，无法安全替换")
+        if type(attachment_id) not in (int, str) or not str(attachment_id):
+            raise SyncError(f"{self.platform} 没有提供附件 ID，无法安全删除")
         release_key = str(self.release(tag)["id"]) if self.platform == "gitee" else quote(tag, safe="")
         url = f"{self.client.api}{self.base}/releases/{release_key}/attach_files/{quote(str(attachment_id), safe='')}"
-        with self.client.request("DELETE", url, f"删除 {self.platform} 冲突附件",
+        with self.client.request("DELETE", url, f"删除 {self.platform} 附件",
                                  headers=self.client.headers(url)) as response:
             if response.status_code not in (200, 204):
-                raise SyncError(f"删除 {self.platform} 冲突附件：HTTP {response.status_code}；本地备份已保留")
+                raise SyncError(f"删除 {self.platform} 附件：HTTP {response.status_code}")
 
 
-def remote_digest(mirror: Mirror, asset: dict, backup: Path | None = None) -> str:
+def remote_digest(mirror: Mirror, asset: dict) -> str:
     url = secure_url(asset.get("browser_download_url"))
-    if backup is None:
-        return consume_binary(mirror.client, url, f"验证 {mirror.platform} 附件", None)
-    with backup.open("wb") as file:
-        return consume_binary(mirror.client, url, f"备份 {mirror.platform} 冲突附件", None, file)
+    return consume_binary(mirror.client, url, f"验证 {mirror.platform} 附件", None)
 
 
-def sync_asset(mirror: Mirror, tag: str, asset: dict, path: Path, digest: str, cache: Path,
-               replace: bool = False, verify_only: bool = False) -> str:
+def sync_asset(mirror: Mirror, tag: str, asset: dict, path: Path, digest: str,
+               force: bool = False, verify_only: bool = False) -> str:
     existing = mirror.find(tag, asset["name"])
+    if verify_only:
+        if not existing:
+            raise SyncError("目标附件缺失")
+        if remote_digest(mirror, existing) != digest:
+            raise SyncError("目标附件 SHA-256 不符；使用 --force 可替换")
+        return "一致，SHA-256 已验证"
+    if existing and not force:
+        return "已有同名附件，跳过（未校验内容）"
     if existing:
-        if replace and not verify_only:
-            # 删除前完整下载旧附件。备份不含签名 URL，可在上传失败后用于人工恢复。
-            backup_key = hashlib.sha256(json.dumps([mirror.platform, mirror.repository, tag, existing.get("id"),
-                                                    asset["name"], time.time_ns()]).encode()).hexdigest()
-            backup = cache / f"backup-{backup_key}.bin"
-            temporary = backup.with_suffix(".part")
-            try:
-                old_digest = remote_digest(mirror, existing, temporary)
-                if old_digest == digest:
-                    return "一致，跳过"
-                temporary.replace(backup)
-                backup.with_suffix(".json").write_text(json.dumps({"platform": mirror.platform,
-                    "repository": mirror.repository, "tag": tag, "name": asset["name"],
-                    "sha256": old_digest}, ensure_ascii=False, indent=2), encoding="utf-8")
-                print(f"    旧附件已备份：{backup.name}", flush=True)
-                mirror.delete(tag, existing)
-            finally:
-                temporary.unlink(missing_ok=True)
-        elif remote_digest(mirror, existing) == digest:
-            return "一致，跳过"
-        else:
-            raise SyncError("同名附件内容不同；使用 --replace 才会备份并替换，请先确认计划")
-    elif verify_only:
-        raise SyncError("目标附件缺失")
+        # 删除前核对本地源文件，上传失败后仍可用源缓存补传。
+        size, actual_digest = hash_file(path)
+        if size != asset["size"] or actual_digest != digest:
+            raise SyncError("本地源文件校验失败，未删除目标附件")
+        mirror.delete(tag, existing)
 
     print(f"    上传：{mirror.platform} / {asset['name']}", flush=True)
     upload_error = None
@@ -503,7 +489,8 @@ def sync_asset(mirror: Mirror, tag: str, asset: dict, path: Path, digest: str, c
         if attempt:
             time.sleep(2)
         uploaded = mirror.find(tag, asset["name"])
-        if uploaded:
+        # 替换后的列表可能短暂返回旧条目，必须等待新的附件 ID。
+        if uploaded and (not existing or uploaded.get("id") != existing.get("id")):
             if remote_digest(mirror, uploaded) != digest:
                 raise SyncError("上传后的附件 SHA-256 不符，请检查网页端文件")
             return "上传成功，SHA-256 已验证"
