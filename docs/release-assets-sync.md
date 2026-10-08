@@ -9,11 +9,11 @@ GitHub 是发布源。GitHub Actions 的 `.github/scripts/sync-releases.py` 负�
 使用 Python 3.10 或更新版本。在项目根目录执行：
 
 ```powershell
-python -m venv temp/release-sync-venv
-./temp/release-sync-venv/Scripts/python.exe -m pip install -r tools/requirements-release-sync.txt
+python -m venv .venv
+./.venv/Scripts/python.exe -m pip install -r tools/requirements-release-sync.txt
 ```
 
-虚拟环境、下载缓存和冲突附件备份保存在已被 Git 忽略的 `temp/` 下，独立于应用的 OHPM 和 Hvigor 依赖。后文命令均在项目根目录执行，无需激活虚拟环境。
+虚拟环境保存在已被 Git 忽略的 `.venv/` 下，下载缓存和冲突附件备份保存在 `temp/` 下，独立于应用的 OHPM 和 Hvigor 依赖。后文命令均在项目根目录执行，无需激活虚拟环境。
 
 ## 令牌
 
@@ -35,30 +35,30 @@ Windows 推荐在“凭据管理器 → Windows 凭据 → 添加普通凭据”
 先查看某个版本的同步计划：
 
 ```powershell
-./temp/release-sync-venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --dry-run
+./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --dry-run
 ```
 
 同步这个版本的全部附件到两个平台：
 
 ```powershell
-./temp/release-sync-venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5
+./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5
 ```
 
 只处理 GitCode，或只选一个附件：
 
 ```powershell
-./temp/release-sync-venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --platform gitcode
-./temp/release-sync-venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --asset CalcX-1.6.5-release-signed.hap
+./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --platform gitcode
+./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --asset CalcX-1.6.5-release-signed.hap
 ```
 
 仅下载到本机、只验证远端内容、同步最新正式版或补传全部历史版本：
 
 ```powershell
-./temp/release-sync-venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --download-only
-./temp/release-sync-venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --verify-only
-./temp/release-sync-venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --latest
-./temp/release-sync-venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --all --dry-run
-./temp/release-sync-venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --all
+./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --download-only
+./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --verify-only
+./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --latest
+./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --all --dry-run
+./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --all
 ```
 
 `--all` 包含已发布的预发布版本，排除草稿；`--latest` 使用 GitHub 最新正式 Release 接口。`--asset` 可重复指定，使用精确文件名；如果某个 Release 缺少指定附件，该 Release 会报告失败。
@@ -68,13 +68,13 @@ Windows 推荐在“凭据管理器 → Windows 凭据 → 添加普通凭据”
 默认遵循 Requests 的代理环境配置。可单独指定 GitHub 与镜像平台的代理，下面的空字符串表示国内平台直连：
 
 ```powershell
-./temp/release-sync-venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --github-proxy http://127.0.0.1:7890 --mirror-proxy ""
+./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --github-proxy http://127.0.0.1:7890 --mirror-proxy ""
 ```
 
 自定义仓库、凭据名称和缓存目录：
 
 ```powershell
-./temp/release-sync-venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.0.0 --source owner/project --gitee-repo owner/project --gitcode-repo owner/project --gitee-credential Gitee --gitcode-credential GitCode --cache-dir temp/other-release-assets
+./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.0.0 --source owner/project --gitee-repo owner/project --gitcode-repo owner/project --gitee-credential Gitee --gitcode-credential GitCode --cache-dir temp/other-release-assets
 ```
 
 平台令牌仅发送给该平台的 API；跨域下载和 GitCode 对象存储上传不会携带平台令牌。错误信息不输出原始 HTTP 异常、响应正文和签名 URL。
@@ -93,7 +93,7 @@ Windows 推荐在“凭据管理器 → Windows 凭据 → 添加普通凭据”
 同名附件内容不一致时默认失败。明确需要替换时执行：
 
 ```powershell
-./temp/release-sync-venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --asset CalcX-1.6.5-release-signed.hap --replace
+./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --asset CalcX-1.6.5-release-signed.hap --replace
 ```
 
 `--replace` 会先完整下载旧附件，保存 `backup-*.bin` 和包含原文件名、平台、仓库、Tag、SHA-256 的 `backup-*.json`，然后删除旧附件并上传新文件。替换不是原子操作，失败后备份仍保留；需要恢复时根据 JSON 中的原文件名重命名备份并在目标网页上传。备份文件不会自动清理。平台未提供附件 ID、存在多个同名附件或旧附件无法下载时停止替换。
@@ -103,7 +103,7 @@ Windows 推荐在“凭据管理器 → Windows 凭据 → 添加普通凭据”
 ## 维护与测试
 
 ```powershell
-./temp/release-sync-venv/Scripts/python.exe -X utf8 -m unittest discover -s tools/tests -p test_release_sync.py -v
+./.venv/Scripts/python.exe -X utf8 -m unittest discover -s tools/tests -p test_release_sync.py -v
 git diff --check
 ```
 

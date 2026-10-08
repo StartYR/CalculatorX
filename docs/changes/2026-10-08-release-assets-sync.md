@@ -28,7 +28,7 @@
 
 ## 兼容性与边界
 
-- 需要 Python 3.10+ 及独立的 Requests、requests-toolbelt 依赖，推荐放在 `temp/` 下的虚拟环境。
+- 需要 Python 3.10+ 及独立的 Requests、requests-toolbelt 依赖，使用根目录 `.venv/` 虚拟环境。
 - 目标 Release 必须预先存在；工具不会创建 Release、修改发布说明、同步 Git 仓库或删除多余附件。
 - `--all` 包含预发布版、排除草稿；未执行全部历史版本的线上补传。
 - 远端逐次重新下载校验会产生额外流量；中断文件重新传输，尚无字节断点续传。
