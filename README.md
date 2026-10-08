@@ -40,7 +40,7 @@
 <p align="center">
   <a href="https://github.com/StartYR/CalculatorX">
     <img
-      src="https://img.startyi.com/CalcX/github-stats.svg"
+      src="./docs/image/github-stats.svg"
       alt="CalculatorX GitHub Repository"
       width="460"
     />
