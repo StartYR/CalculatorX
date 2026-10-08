@@ -3,7 +3,7 @@ import importlib.util
 import io
 import json
 import os
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import nullcontext, redirect_stderr, redirect_stdout
 from pathlib import Path
 import sys
 import tempfile
@@ -13,8 +13,8 @@ from unittest.mock import Mock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from release_sync import (
-    GITHUB_API, GITEE_API, GITCODE_API, CacheLock, HttpClient, Mirror, SyncError,
-    ProgressFile, cache_asset, release_assets, secure_url, sync_asset, validate_asset,
+    GITHUB_API, GITEE_API, GITCODE_API, SyncLock, HttpClient, Mirror, SyncError,
+    ProgressFile, downloaded_asset, release_assets, secure_url, sync_asset, validate_asset,
 )
 
 
@@ -47,10 +47,13 @@ class SourceTests(unittest.TestCase):
         self.asset = {"id": 123, "name": "app.hap", "size": 7, "updated_at": "2026-10-08",
                       "digest": "sha256:" + hashlib.sha256(b"package").hexdigest()}
         self.temporary = tempfile.TemporaryDirectory()
-        self.cache = Path(self.temporary.name)
+        self.work_dir = Path(self.temporary.name)
+        self.temp_redirect = patch("release_sync.tempfile.tempdir", str(self.work_dir))
+        self.temp_redirect.start()
 
     def tearDown(self):
         self.client.close()
+        self.temp_redirect.stop()
         self.temporary.cleanup()
 
     def test_redirect_does_not_forward_platform_token(self):
@@ -61,31 +64,61 @@ class SourceTests(unittest.TestCase):
         self.assertNotIn("Authorization", request.call_args_list[1].kwargs["headers"])
         self.assertTrue(redirect.closed)
 
-    def test_corrupt_cache_is_downloaded_again(self):
+    def test_download_is_validated_and_deleted_after_context(self):
+        with patch.object(self.client, "binary", return_value=Response()):
+            with downloaded_asset(self.client, "owner/repo", self.asset) as (path, digest):
+                self.assertEqual(path.read_bytes(), b"package")
+                self.assertEqual(digest, self.asset["digest"].split(":")[1])
+                self.assertEqual([item.name for item in path.parent.iterdir()], ["asset.bin"])
+        self.assertFalse(path.parent.exists())
+        self.assertEqual(list(self.work_dir.iterdir()), [])
+
+    def test_separate_runs_always_download_fresh_source(self):
         with patch.object(self.client, "binary", return_value=Response()) as download:
-            path, _ = cache_asset(self.client, "owner/repo", self.asset, self.cache)
-            path.write_bytes(b"changed")
-            cache_asset(self.client, "owner/repo", self.asset, self.cache)
+            with downloaded_asset(self.client, "owner/repo", self.asset) as (previous, _):
+                self.assertTrue(previous.exists())
+            with downloaded_asset(self.client, "owner/repo", self.asset) as (current, _):
+                self.assertFalse(previous.exists())
+                self.assertNotEqual(previous, current)
         self.assertEqual(download.call_count, 2)
-        self.assertEqual(path.read_bytes(), b"package")
+        self.assertEqual(list(self.work_dir.iterdir()), [])
 
-    def test_valid_cache_does_not_download_again(self):
-        with patch.object(self.client, "binary", return_value=Response()) as download:
-            cache_asset(self.client, "owner/repo", self.asset, self.cache)
-            cache_asset(self.client, "owner/repo", self.asset, self.cache)
-        self.assertEqual(download.call_count, 1)
-
-    def test_digest_mismatch_leaves_no_completed_cache(self):
+    def test_digest_mismatch_leaves_no_temporary_file(self):
         with patch.object(self.client, "binary", return_value=Response(b"invalid")):
             with self.assertRaises(SyncError):
-                cache_asset(self.client, "owner/repo", self.asset, self.cache)
-        self.assertEqual(list(self.cache.iterdir()), [])
+                with downloaded_asset(self.client, "owner/repo", self.asset):
+                    self.fail("摘要不符时不能交给上传流程")
+        self.assertEqual(list(self.work_dir.iterdir()), [])
 
-    def test_changed_source_uses_different_cache(self):
+    def test_consumer_failure_cleans_up_temporary_file(self):
         with patch.object(self.client, "binary", return_value=Response()):
-            previous, _ = cache_asset(self.client, "owner/repo", self.asset, self.cache)
-            changed, _ = cache_asset(self.client, "owner/repo", {**self.asset, "updated_at": "later"}, self.cache)
-        self.assertNotEqual(previous, changed)
+            with self.assertRaises(RuntimeError):
+                with downloaded_asset(self.client, "owner/repo", self.asset):
+                    raise RuntimeError("上传失败")
+        self.assertEqual(list(self.work_dir.iterdir()), [])
+
+    def test_keyboard_interrupt_cleans_up_temporary_file(self):
+        with patch.object(self.client, "binary", return_value=Response()):
+            with self.assertRaises(KeyboardInterrupt):
+                with downloaded_asset(self.client, "owner/repo", self.asset):
+                    raise KeyboardInterrupt
+        self.assertEqual(list(self.work_dir.iterdir()), [])
+
+    def test_retry_restarts_partial_file_and_cleans_up_after_use(self):
+        import requests
+
+        class InterruptedResponse(Response):
+            def iter_content(self, size):
+                yield b"pack"
+                raise requests.ConnectionError("private-signed-url")
+
+        self.client.attempts = 2
+        with patch.object(self.client, "binary", side_effect=[InterruptedResponse(), Response()]) as download, \
+                patch("release_sync.time.sleep"), redirect_stdout(io.StringIO()):
+            with downloaded_asset(self.client, "owner/repo", self.asset) as (path, _):
+                self.assertEqual(path.read_bytes(), b"package")
+        self.assertEqual(download.call_count, 2)
+        self.assertEqual(list(self.work_dir.iterdir()), [])
 
     def test_sensitive_http_exception_is_not_reported(self):
         import requests
@@ -103,7 +136,7 @@ class SourceTests(unittest.TestCase):
         with self.assertRaises(SyncError):
             secure_url("http://example.com/file")
 
-    def test_interrupted_download_does_not_leave_complete_or_partial_cache(self):
+    def test_interrupted_download_does_not_leave_temporary_file(self):
         import requests
         class InterruptedResponse(Response):
             def iter_content(self, size):
@@ -112,9 +145,10 @@ class SourceTests(unittest.TestCase):
         response = InterruptedResponse()
         with patch.object(self.client, "binary", return_value=response):
             with self.assertRaises(SyncError) as error:
-                cache_asset(self.client, "owner/repo", self.asset, self.cache)
+                with downloaded_asset(self.client, "owner/repo", self.asset):
+                    self.fail("中断的下载不能交给上传流程")
         self.assertNotIn("private", str(error.exception))
-        self.assertEqual(list(self.cache.iterdir()), [])
+        self.assertEqual(list(self.work_dir.iterdir()), [])
         self.assertTrue(response.closed)
 
     def test_attachment_list_is_paginated(self):
@@ -147,8 +181,8 @@ class SourceTests(unittest.TestCase):
 class MirrorTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
-        self.cache = Path(self.temporary.name)
-        self.path = self.cache / "source.bin"
+        self.work_dir = Path(self.temporary.name)
+        self.path = self.work_dir / "source.bin"
         self.path.write_bytes(b"package")
         self.digest = hashlib.sha256(b"package").hexdigest()
         self.asset = {"id": 123, "name": "app.hap", "size": 7}
@@ -272,14 +306,14 @@ class MirrorTests(unittest.TestCase):
             with self.assertRaisesRegex(SyncError, "多个同名附件"):
                 self.mirror.find("v1", "app.hap")
 
-    def test_cache_lock_prevents_second_process(self):
-        lock = CacheLock(self.cache)
+    def test_sync_lock_prevents_second_process(self):
+        lock = SyncLock(self.work_dir / "sync.lock")
         try:
             with self.assertRaises(SyncError):
-                CacheLock(self.cache)
+                SyncLock(self.work_dir / "sync.lock")
         finally:
             lock.close()
-        CacheLock(self.cache).close()
+        SyncLock(self.work_dir / "sync.lock").close()
 
     def test_upload_progress_retains_length_and_position(self):
         import requests
@@ -310,33 +344,34 @@ class CliTests(unittest.TestCase):
 
     def test_one_platform_failure_does_not_stop_other_platform(self):
         with tempfile.TemporaryDirectory() as directory, \
-                patch.object(sys, "argv", ["sync-release-assets.py", "--tag", "v1", "--cache-dir", directory]), \
+                patch.object(self.cli, "SYNC_LOCK_PATH", Path(directory) / ".release-sync.lock"), \
+                patch.object(sys, "argv", ["sync-release-assets.py", "--tag", "v1"]), \
                 patch.object(self.cli, "HttpClient", return_value=Mock()), \
                 patch.object(self.cli, "get_token", return_value="test-only-placeholder"), \
                 patch.object(self.cli, "releases", return_value=[{"tag_name": "v1"}]), \
                 patch.object(self.cli, "release_assets", return_value=[{"name": "app.hap"}]), \
                 patch.object(Mirror, "assets", return_value=[]), \
-                patch.object(self.cli, "cache_asset", return_value=(Path(directory) / "source.bin", "digest")), \
+                patch.object(self.cli, "downloaded_asset", return_value=nullcontext((Path(directory) / "source.bin", "digest"))), \
                 patch.object(self.cli, "sync_asset", side_effect=[SyncError("上传失败"), "成功"]) as sync, \
                 redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
             self.assertEqual(self.cli.main(), 1)
-            self.assertFalse((Path(directory) / ".sync.lock").exists())
+            self.assertFalse((Path(directory) / ".release-sync.lock").exists())
         self.assertEqual(sync.call_count, 2)
         self.assertEqual(sync.call_args_list[1].args[0].platform, "gitcode")
 
-    def test_preview_does_not_download_or_modify_cache_and_remote(self):
+    def test_preview_does_not_download_create_lock_or_modify_remote(self):
         with tempfile.TemporaryDirectory() as directory, \
-                patch.object(sys, "argv", ["sync-release-assets.py", "--tag", "v1", "--dry-run",
-                                           "--cache-dir", str(Path(directory) / "absent")]), \
+                patch.object(self.cli, "SYNC_LOCK_PATH", Path(directory) / ".release-sync.lock"), \
+                patch.object(sys, "argv", ["sync-release-assets.py", "--tag", "v1", "--dry-run"]), \
                 patch.object(self.cli, "HttpClient", return_value=Mock()), \
                 patch.object(self.cli, "get_token", return_value="test-only-placeholder"), \
                 patch.object(self.cli, "releases", return_value=[{"tag_name": "v1"}]), \
                 patch.object(self.cli, "release_assets", return_value=[{"name": "app.hap", "size": 7}]), \
                 patch.object(Mirror, "assets", return_value=[]), \
-                patch.object(self.cli, "cache_asset") as download, patch.object(self.cli, "sync_asset") as sync, \
+                patch.object(self.cli, "downloaded_asset") as download, patch.object(self.cli, "sync_asset") as sync, \
                 redirect_stdout(io.StringIO()):
             self.assertEqual(self.cli.main(), 0)
-            self.assertFalse((Path(directory) / "absent").exists())
+            self.assertFalse((Path(directory) / ".release-sync.lock").exists())
         download.assert_not_called()
         sync.assert_not_called()
 
@@ -346,11 +381,11 @@ class CliTests(unittest.TestCase):
         self.gitee.assets.return_value = targets
         self.gitcode.assets.return_value = targets
         args = Mock(source="owner/repo", asset=[], force=False, verify_only=False,
-                    download_only=False, dry_run=False, cache_dir=Path("unused"))
+                    dry_run=False)
         for name, value in options:
             setattr(args, name, value)
         with patch.object(self.cli, "release_assets", return_value=assets), \
-                patch.object(self.cli, "cache_asset", return_value=(Path("source.bin"), "digest"),
+                patch.object(self.cli, "downloaded_asset", return_value=nullcontext((Path("source.bin"), "digest")),
                              side_effect=download_error) as download, \
                 patch.object(self.cli, "sync_asset", side_effect=sync_results) as sync, \
                 redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
@@ -432,9 +467,9 @@ class CliTests(unittest.TestCase):
         mirror.assets.return_value = [{"name": "extra.hap"}]
         mirror.delete.side_effect = lambda *args: events.append("delete")
         args = Mock(source="owner/repo", asset=[], force=False, verify_only=False,
-                    download_only=False, dry_run=False, cache_dir=Path("unused"))
+                    dry_run=False)
         with patch.object(self.cli, "release_assets", return_value=[{"name": "app.hap"}, {"name": "debug.hap"}]), \
-                patch.object(self.cli, "cache_asset", return_value=(Path("source.bin"), "digest")), \
+                patch.object(self.cli, "downloaded_asset", return_value=nullcontext((Path("source.bin"), "digest"))), \
                 patch.object(self.cli, "sync_asset", side_effect=lambda *args: events.append("sync") or "成功"), \
                 redirect_stdout(io.StringIO()):
             self.assertEqual(self.cli.sync_release(Mock(), [mirror], {"tag_name": "v1"}, args), 0)
@@ -454,16 +489,17 @@ class CliTests(unittest.TestCase):
         output = io.StringIO()
         errors = io.StringIO()
         with tempfile.TemporaryDirectory() as directory, \
+                patch.object(self.cli, "SYNC_LOCK_PATH", Path(directory) / ".release-sync.lock"), \
                 patch.object(self.cli, "HttpClient", return_value=Mock()), \
                 patch.object(self.cli, "get_token", return_value="test-only-placeholder"), \
                 patch.object(self.cli, "releases", return_value=[{"tag_name": "v1"}]), \
                 patch.object(self.cli, "release_assets", return_value=[{"name": "app.hap"}]), \
                 patch.object(Mirror, "assets", return_value=[]), \
-                patch.object(self.cli, "cache_asset", return_value=(Path(directory) / "source.bin", "digest")), \
+                patch.object(self.cli, "downloaded_asset", return_value=nullcontext((Path(directory) / "source.bin", "digest"))), \
                 patch.object(self.cli, "sync_asset", side_effect=[SyncError("上传失败"), "上传成功，SHA-256 已验证"]), \
                 patch("release_sync_terminal.supports_ansi", return_value=True), \
                 patch.dict(os.environ, {}, clear=True), redirect_stdout(output), redirect_stderr(errors):
-            self.assertEqual(self.cli.main(["--tag", "v1", "--cache-dir", directory]), 1)
+            self.assertEqual(self.cli.main(["--tag", "v1"]), 1)
         self.assertIn("\033[32m  gitcode：app.hap — 上传成功，SHA-256 已验证\033[0m", output.getvalue())
         self.assertIn("\033[33m  gitee：本轮有失败，暂停删除多余附件\033[0m", output.getvalue())
         self.assertIn("\033[31m处理结束：1 项失败\033[0m", output.getvalue())
@@ -472,17 +508,78 @@ class CliTests(unittest.TestCase):
     def test_redirected_verified_sync_keeps_compact_results_without_control_codes(self):
         output = io.StringIO()
         with tempfile.TemporaryDirectory() as directory, \
+                patch.object(self.cli, "SYNC_LOCK_PATH", Path(directory) / ".release-sync.lock"), \
                 patch.object(self.cli, "HttpClient", return_value=Mock()), \
                 patch.object(self.cli, "get_token", return_value="test-only-placeholder"), \
                 patch.object(self.cli, "releases", return_value=[{"tag_name": "v1"}]), \
                 patch.object(self.cli, "release_assets", return_value=[{"name": "app.hap"}]), \
                 patch.object(Mirror, "assets", return_value=[]), \
-                patch.object(self.cli, "cache_asset", return_value=(Path(directory) / "source.bin", "digest")), \
+                patch.object(self.cli, "downloaded_asset", return_value=nullcontext((Path(directory) / "source.bin", "digest"))), \
                 patch.object(self.cli, "sync_asset", return_value="上传成功，SHA-256 已验证"), redirect_stdout(output):
-            self.assertEqual(self.cli.main(["--tag", "v1", "--cache-dir", directory]), 0)
+            self.assertEqual(self.cli.main(["--tag", "v1"]), 0)
         self.assertEqual(len(output.getvalue().splitlines()), 4)
         self.assertNotIn("\033", output.getvalue())
         self.assertNotIn("\r", output.getvalue())
+
+    def test_each_asset_is_shared_by_platforms_then_deleted_before_next_asset(self):
+        source = [{"id": 123, "name": "app.hap", "size": 7}, {"id": 124, "name": "debug.hap", "size": 7}]
+        observed = {}
+        client = HttpClient(GITHUB_API, attempts=1)
+        mirrors = [Mock(platform="gitee"), Mock(platform="gitcode")]
+        for mirror in mirrors:
+            mirror.assets.return_value = []
+        args = Mock(source="owner/repo", asset=[], force=False, verify_only=False, dry_run=False)
+
+        def upload(mirror, tag, asset, path, *args):
+            if asset["name"] not in observed:
+                self.assertTrue(all(not previous.exists() for previous in observed.values()))
+                observed[asset["name"]] = path
+            self.assertEqual(path, observed[asset["name"]])
+            self.assertEqual(path.read_bytes(), b"package")
+            return "成功"
+
+        try:
+            with tempfile.TemporaryDirectory() as directory, \
+                    patch("release_sync.tempfile.tempdir", directory), \
+                    patch.object(client, "binary", return_value=Response()) as download, \
+                    patch.object(self.cli, "release_assets", return_value=source), \
+                    patch.object(self.cli, "sync_asset", side_effect=upload) as sync, redirect_stdout(io.StringIO()):
+                self.assertEqual(self.cli.sync_release(client, mirrors, {"tag_name": "v1"}, args), 0)
+                self.assertEqual(list(Path(directory).iterdir()), [])
+            self.assertEqual(download.call_count, 2)
+            self.assertEqual(sync.call_count, 4)
+        finally:
+            client.close()
+
+    def test_upload_failure_or_interrupt_leaves_no_payload_or_sync_lock(self):
+        for failure, expected in ((SyncError("上传失败"), 1), (KeyboardInterrupt(), 130)):
+            with self.subTest(failure=type(failure).__name__), tempfile.TemporaryDirectory() as directory:
+                client = HttpClient(GITHUB_API, attempts=1)
+                source = {"id": 123, "name": "app.hap", "size": 7}
+                try:
+                    with patch("release_sync.tempfile.tempdir", directory), \
+                            patch.object(self.cli, "SYNC_LOCK_PATH", Path(directory) / ".release-sync.lock"), \
+                            patch.object(self.cli, "HttpClient", return_value=client), \
+                            patch.object(client, "binary", return_value=Response()), \
+                            patch.object(self.cli, "get_token", return_value="test-only-placeholder"), \
+                            patch.object(self.cli, "releases", return_value=[{"tag_name": "v1"}]), \
+                            patch.object(self.cli, "release_assets", return_value=[source]), \
+                            patch.object(Mirror, "assets", return_value=[]), \
+                            patch.object(self.cli, "sync_asset", side_effect=failure), \
+                            redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+                        self.assertEqual(self.cli.main(["--tag", "v1"]), expected)
+                    self.assertEqual(list(Path(directory).iterdir()), [])
+                finally:
+                    client.close()
+
+    def test_removed_cache_options_are_rejected_before_network(self):
+        for options in (["--cache-dir", "unused"], ["--download-only"]):
+            with self.subTest(options=options), patch.object(self.cli, "HttpClient") as client, \
+                    redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as error:
+                    self.cli.main(["--tag", "v1", *options])
+            self.assertEqual(error.exception.code, 2)
+            client.assert_not_called()
 
 
 if __name__ == "__main__":

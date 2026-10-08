@@ -1,15 +1,16 @@
-"""GitHub Release 附件的本地缓存、凭据读取与平台同步。"""
+"""GitHub Release 附件的临时中转、凭据读取与平台同步。"""
 
 from __future__ import annotations
 
 import ctypes
 from ctypes import wintypes
 import hashlib
-import json
+from contextlib import contextmanager
 import os
 from pathlib import Path
 import re
 import time
+import tempfile
 from urllib.parse import quote, urljoin, urlsplit
 
 import requests
@@ -298,34 +299,19 @@ def consume_binary(client: HttpClient, url: str, action: str, expected_size: int
     return digest.hexdigest()
 
 
-def cache_asset(client: HttpClient, repository: str, asset: dict, cache: Path) -> tuple[Path, str]:
+@contextmanager
+def downloaded_asset(client: HttpClient, repository: str, asset: dict):
+    """完整下载并校验后交给调用方使用，离开上下文时删除本次临时文件。"""
     validate_asset(asset)
-    identity = {key: asset.get(key) for key in ("id", "name", "size", "updated_at", "digest")}
-    identity["repository"] = repository
-    # 路径只使用哈希，不把远端文件名或 Tag 用作本地路径。
-    key = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
-    path = cache / f"{key}.bin"
-    manifest = cache / f"{key}.json"
-    if path.is_file() and manifest.is_file():
-        try:
-            recorded = json.loads(manifest.read_text(encoding="utf-8"))
-            size, digest = hash_file(path)
-            if (recorded.get("source") == identity and size == asset["size"]
-                    and digest == recorded.get("sha256")
-                    and (not asset.get("digest") or f"sha256:{digest}" == asset["digest"].lower())):
-                report(f"  缓存有效：{asset['name']}")
-                return path, digest
-        except (ValueError, AttributeError):
-            pass
-    cache.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".part")
     url = f"{GITHUB_API}/repos/{repository_path(repository)}/releases/assets/{asset['id']}"
-    try:
+    # 不使用远端文件名构造本地路径，每个附件使用独立临时目录。
+    with tempfile.TemporaryDirectory(prefix="calcx-release-") as directory:
+        path = Path(directory) / "asset.bin"
         for attempt in range(client.attempts):
             if attempt:
                 report(f"  下载重试：{asset['name']}（第 {attempt + 1} 次）", "warning")
             try:
-                with temporary.open("wb") as file:
+                with path.open("wb") as file:
                     digest = consume_binary(client, url, f"下载 GitHub / {asset['name']}", asset["size"], file)
                 if asset.get("digest") and f"sha256:{digest}" != asset["digest"].lower():
                     raise SyncError(f"附件 {asset['name']} 的 SHA-256 不符")
@@ -334,27 +320,21 @@ def cache_asset(client: HttpClient, repository: str, asset: dict, cache: Path) -
                 if attempt + 1 == client.attempts:
                     raise
                 time.sleep(min(2 ** attempt, 8))
-        temporary.replace(path)
-        manifest_temporary = manifest.with_suffix(".part")
-        manifest_temporary.write_text(json.dumps({"source": identity, "sha256": digest}, indent=2), encoding="utf-8")
-        manifest_temporary.replace(manifest)
         report(f"  下载完成：{asset['name']}（{asset['size'] / (1024 * 1024):.1f} MiB）", "success")
-        return path, digest
-    finally:
-        temporary.unlink(missing_ok=True)
+        yield path, digest
 
 
-class CacheLock:
-    """同一缓存目录只允许一个写入进程，避免重复上传和缓存覆盖。"""
+class SyncLock:
+    """同一项目只允许一个同步进程，避免并发替换或重复上传。"""
 
-    def __init__(self, cache: Path):
-        cache.mkdir(parents=True, exist_ok=True)
-        self.path = cache / ".sync.lock"
+    def __init__(self, path: Path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        self.path = path
         try:
             with self.path.open("x", encoding="utf-8") as file:
                 file.write(str(os.getpid()))
         except FileExistsError:
-            raise SyncError("缓存正在被另一个同步进程使用；若上次异常退出，请确认进程结束后删除 .sync.lock") from None
+            raise SyncError("已有同步进程在运行；若上次被强制终止，请确认进程结束后删除 temp/.release-sync.lock") from None
 
     def close(self) -> None:
         self.path.unlink(missing_ok=True)
@@ -468,7 +448,7 @@ def sync_asset(mirror: Mirror, tag: str, asset: dict, path: Path, digest: str,
     if existing and not force:
         return "已有同名附件，跳过（未校验内容）"
     if existing:
-        # 删除前核对本地源文件，上传失败后仍可用源缓存补传。
+        # 删除前复核临时源文件，避免用损坏文件替换远端附件。
         size, actual_digest = hash_file(path)
         if size != asset["size"] or actual_digest != digest:
             raise SyncError("本地源文件校验失败，未删除目标附件")
