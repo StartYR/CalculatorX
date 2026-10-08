@@ -27,7 +27,7 @@
 </div>
 
 <!-- MIRROR_NOTICE_START -->
-<!--
+
 
 ---
 
@@ -45,6 +45,10 @@
       width="460"
     />
   </a>
+</p>
+
+<p align="center">
+  如果 CalculatorX 对你有帮助，欢迎点击上方卡片，前往 GitHub 主仓库点亮 ⭐ Star
 </p>
 
 ---
