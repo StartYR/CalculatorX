@@ -5,6 +5,8 @@ on:
     branches:
       - main
   workflow_dispatch:
+  schedule:
+    - cron: "15 */6 * * *"
 
 permissions:
   contents: read
@@ -59,30 +61,40 @@ jobs:
           set -euo pipefail
           git clone --bare "https://github.com/${GITHUB_REPOSITORY}.git" repository.git
 
-      - name: Sync to Gitee
-        run: |
-          set -euo pipefail
-          cd repository.git
-          git push --mirror git@gitee-mirror:StartYi/CalculatorX.git
-
-      - name: Sync to GitCode
-        run: |
-          set -euo pipefail
-          cd repository.git
-          git push --mirror git@gitcode-mirror:StartYi/CalculatorX.git
-
       - name: Show README notice on mirrors
         run: |
           set -euo pipefail
 
-          # 从本次镜像使用的 main 创建提交，避免累积镜像专属历史。
+          # 始终基于 GitHub main 创建镜像专属提交，避免积累历史。
           git -C repository.git worktree add --detach ../mirror-worktree refs/heads/main
           cd mirror-worktree
           source_sha="$(git rev-parse HEAD)"
 
+          # 下载统计卡片到镜像仓库内部；请求失败时不推送不完整的镜像。
+          mkdir -p docs/image
+          curl --fail --location --silent --show-error \
+            --retry 2 --retry-delay 3 --connect-timeout 10 --max-time 25 \
+            'https://github-readme-stats.vercel.app/api/pin/?username=StartYR&repo=CalculatorX&theme=transparent&show_owner=true&description_lines_count=1&cache_seconds=21600' \
+            --output docs/image/github-stats.svg
+
           python3 - <<'PY'
           import re
+          import xml.etree.ElementTree as ET
           from pathlib import Path
+
+          # 检查下载内容，防止服务端错误页面被保存为 SVG。
+          svg_path = Path("docs/image/github-stats.svg")
+          svg = svg_path.read_bytes()
+          if not (1024 <= len(svg) <= 200_000):
+              raise SystemExit("统计卡片 SVG 文件大小异常")
+          try:
+              root = ET.fromstring(svg)
+          except ET.ParseError as exc:
+              raise SystemExit(f"统计卡片 SVG 解析失败: {exc}") from exc
+          if root.tag != "{http://www.w3.org/2000/svg}svg" or b"CalculatorX" not in svg:
+              raise SystemExit("下载内容不是预期的 CalculatorX SVG 卡片")
+          if any(message in svg for message in (b"Could not fetch", b"Something went wrong")):
+              raise SystemExit("统计卡片服务返回错误信息")
 
           readme_path = Path("README.md")
           content = readme_path.read_bytes()
@@ -112,17 +124,34 @@ jobs:
           if not body.strip() or b"<!--" in body or b"-->" in body:
               raise SystemExit("README 镜像提示正文不能为空，也不能嵌套 HTML 注释")
 
+          # 仅镜像 README 引用仓库内图片，GitHub 主仓库 README 保持不变。
+          old_url = b"https://img.startyi.com/CalcX/github-stats.svg"
+          if body.count(old_url) != 1:
+              raise SystemExit("README 镜像提示中应当恰有一个原统计卡片地址")
+          body = body.replace(old_url, b"./docs/image/github-stats.svg", 1)
+
           newline = match.group("newline")
           readme_path.write_bytes(content[:start] + newline + body + newline + content[end:])
           PY
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- README.md
-          git commit -m "docs: 显示镜像仓库的主仓库提示"
+          git add -- README.md docs/image/github-stats.svg
+          git commit -m "docs: 更新镜像仓库说明和统计卡片"
 
-          # 两个镜像复用同一提交；只在 main 仍指向本次源提交时更新。
-          git push --force-with-lease="refs/heads/main:$source_sha" \
-            git@gitee-mirror:StartYi/CalculatorX.git HEAD:refs/heads/main
-          git push --force-with-lease="refs/heads/main:$source_sha" \
-            git@gitcode-mirror:StartYi/CalculatorX.git HEAD:refs/heads/main
+          # 让待推送的裸仓库 main 指向完整的镜像专属提交。
+          # 后续一次 push --mirror 即可同步全部内容，避免先覆盖再补图。
+          mirror_commit="$(git rev-parse HEAD)"
+          git -C ../repository.git update-ref refs/heads/main "$mirror_commit" "$source_sha"
+
+      - name: Sync to Gitee
+        run: |
+          set -euo pipefail
+          cd repository.git
+          git push --mirror git@gitee-mirror:StartYi/CalculatorX.git
+
+      - name: Sync to GitCode
+        run: |
+          set -euo pipefail
+          cd repository.git
+          git push --mirror git@gitcode-mirror:StartYi/CalculatorX.git
