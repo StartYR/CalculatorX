@@ -32,7 +32,7 @@ Windows 下双击根目录 `sync-release.cmd`，或在项目根目录执行：
 python -X utf8 tools/setup-release-sync.py
 ```
 
-虚拟环境保存在已被 Git 忽略的 `.venv/` 下，下载缓存保存在 `temp/` 下，独立于应用的 OHPM 和 Hvigor 依赖。后文命令均在项目根目录执行，无需激活虚拟环境。初始化脚本会检查 Python 版本和依赖，健康环境不会重复安装；换电脑时重新运行初始化，不复制 `.venv/`。安装失败后检查网络和目录权限再重试；若 `.venv` 已存在但不是虚拟环境，需先重命名该目录，脚本不会清空它。
+虚拟环境保存在已被 Git 忽略的 `.venv/` 下，附件通过系统临时目录中转，独立于应用的 OHPM 和 Hvigor 依赖。后文命令均在项目根目录执行，无需激活虚拟环境。初始化脚本会检查 Python 版本和依赖，健康环境不会重复安装；换电脑时重新运行初始化，不复制 `.venv/`。安装失败后检查网络和目录权限再重试；若 `.venv` 已存在但不是虚拟环境，需先重命名该目录，脚本不会清空它。
 
 ## 令牌
 
@@ -70,10 +70,9 @@ Windows 推荐在“凭据管理器 → Windows 凭据 → 添加普通凭据”
 ./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --asset CalcX-1.6.5-release-signed.hap
 ```
 
-仅下载到本机、只验证远端内容、同步最新正式版或全部历史版本：
+只验证远端内容、同步最新正式版或全部历史版本：
 
 ```powershell
-./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --download-only
 ./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --verify-only
 ./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --latest
 ./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --all --dry-run
@@ -90,17 +89,17 @@ Windows 推荐在“凭据管理器 → Windows 凭据 → 添加普通凭据”
 ./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --github-proxy http://127.0.0.1:7890 --mirror-proxy ""
 ```
 
-自定义仓库、凭据名称和缓存目录：
+自定义仓库和凭据名称：
 
 ```powershell
-./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.0.0 --source owner/project --gitee-repo owner/project --gitcode-repo owner/project --gitee-credential Gitee --gitcode-credential GitCode --cache-dir temp/other-release-assets
+./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.0.0 --source owner/project --gitee-repo owner/project --gitcode-repo owner/project --gitee-credential Gitee --gitcode-credential GitCode
 ```
 
 平台令牌仅发送给该平台的 API；跨域下载和 GitCode 对象存储上传不会携带平台令牌。错误信息不输出原始 HTTP 异常、响应正文和签名 URL。
 
 ## 同步规则与校验
 
-默认按完整附件清单同步：同名附件直接跳过，不下载或校验内容；仅在需要上传时下载 GitHub 附件，两个平台共享同一份源缓存。补齐缺失附件后，删除目标平台中 GitHub 没有的上传附件。各平台自动生成的源码包不参与同步或删除。
+默认按完整附件清单同步：同名附件直接跳过，不下载或校验内容；仅在需要上传时下载 GitHub 附件。每个附件在系统临时目录中只下载一次，两个需要处理的平台共享这份临时文件；该附件处理结束立即删除文件和目录，再处理下一附件。下载失败、上传失败或 Ctrl+C 中止也会清理，不跨次复用下载内容。补齐缺失附件后，删除目标平台中 GitHub 没有的上传附件。各平台自动生成的源码包不参与同步或删除。
 
 需要覆盖同名附件时使用 `--force`：
 
@@ -108,19 +107,19 @@ Windows 推荐在“凭据管理器 → Windows 凭据 → 添加普通凭据”
 ./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --force
 ```
 
-`--force` 会替换所有选中的同名附件，无论内容是否一致。先完整下载并校验 GitHub 源文件，再删除目标同名附件并上传；不下载旧附件或保存旧附件备份。替换不是原子操作，上传失败时可复用本地源缓存重新补传。原来的 `--replace` 参数已移除。
+`--force` 会替换所有选中的同名附件，无论内容是否一致。先完整下载并校验 GitHub 源文件，再删除目标同名附件并上传；不下载旧附件或保存旧附件备份。替换不是原子操作，上传失败后重跑会重新下载源文件再补传。原来的 `--replace`、`--cache-dir`、`--download-only` 参数已移除。
 
 - 删除多余附件放在该平台所有补传、替换成功后执行。读取清单、下载或上传失败时，暂停该平台的多余附件删除，其他平台继续处理。
 - `--asset` 只限制补传、替换和内容校验，删除仍以 GitHub 完整清单为准；GitHub 上未选中的合法附件会保留。GitHub Release 没有上传附件时，目标所有上传附件均视为多余。
-- `--dry-run` 展示跳过、上传、替换、删除计划，只查询元数据，不下载、写缓存或修改远端。
+- `--dry-run` 展示跳过、上传、替换、删除计划，只查询元数据，不下载、创建临时文件或修改远端。
 - `--verify-only` 显式下载源附件和目标附件比对 SHA-256，不补传、替换或删除。默认同名跳过不表示内容已验证；同名文件发生变化时需使用 `--force`。
-- 源下载检查大小和 GitHub 提供的 SHA-256；缓存使用前重新检查本地哈希。上传后会下载新目标附件校验 SHA-256，因此首次上传和强制替换仍有校验流量。
+- 源下载检查大小和 GitHub 提供的 SHA-256；强制替换删除目标前复核临时源文件大小和哈希。上传后会下载新目标附件校验 SHA-256，因此首次上传和强制替换仍有校验流量。
 - 下载与只读请求可重试；上传响应不确定时查询远端并校验，不盲目重复上传。
 - 存在失败时退出码为 `1`，全部成功为 `0`，参数错误为 `2`，手动中止为 `130`。
 - 目标 Release 必须已存在，缺失时先运行元数据同步工作流。
-- `.sync.lock` 阻止使用同一缓存的并发进程。强制终止后，确认进程已结束再手动删除锁；不要使用不同缓存同时同步同一目标 Release，也应避免同步时在网页修改附件。
+- 项目根目录下的 `temp/.release-sync.lock` 阻止同一项目的并发同步，与下载内容独立，正常退出或 Ctrl+C 中止时删除。强制终止后，确认进程已结束再手动删除锁；不要从多个项目副本同时同步同一目标 Release，也应避免同步时在网页修改附件。
 
-大文件传输中断后重跑会重新传输该文件，尚未实现字节断点续传；完整缓存可以复用，无需重新构建或签名安装包。
+大文件传输中断后重试或重跑会重新传输该文件，尚未实现字节断点续传。系统临时目录使用 `calcx-release-` 前缀；强杀进程或断电可能留下临时目录，确认没有同步进程使用后可手动删除。源文件始终来自 GitHub，无需重新构建或签名安装包。
 
 ## 进度与结果显示
 
@@ -132,7 +131,7 @@ Windows 推荐在“凭据管理器 → Windows 凭据 → 添加普通凭据”
 
 `| / - \` 轮流显示；即使正在等待网络响应，动画也会继续。无法确定文件总大小时显示转圈动画和已处理大小，不显示虚假的百分比。窗口较窄时缩短进度行，结果摘要仍保留完整文件名。
 
-传输结束或中断时清理动态行，仅保留结果、错误和重试信息。成功与验证通过为绿色，失败或错误为红色，重试、暂停清理和替换、删除预览为黄色；普通信息和同名跳过使用默认颜色。日常输出不再逐个打印源文件 SHA-256，缓存清单仍保存摘要，内容校验规则保持一致。
+传输结束或中断时清理动态行，仅保留结果、错误和重试信息。成功与验证通过为绿色，失败或错误为红色，重试、暂停清理和替换、删除预览为黄色；普通信息和同名跳过使用默认颜色。日常输出不再逐个打印源文件 SHA-256，摘要仅在本次运行内用于校验。
 
 Windows 控制台会尝试启用 VT 支持；不支持的终端、`TERM=dumb` 或重定向输出使用普通文本，不输出进度动画、颜色控制码或逐帧日志。设置 `NO_COLOR` 可关闭颜色，支持的终端仍保留动画。此显示功能仅使用 Python 标准库，无需新增依赖。Windows 支持依据见 [控制台 VT 文档](https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences)。
 
@@ -143,7 +142,7 @@ Windows 控制台会尝试启用 VT 支持；不支持的终端、`TERM=dumb` �
 git diff --check
 ```
 
-测试使用临时缓存与模拟响应，不依赖真实令牌、不写入线上仓库。真实上传验证应选择已有 GitHub Release，补传它的原始附件，并在上传后核对目标文件内容。
+测试使用临时目录与模拟响应，不依赖真实令牌、不写入线上仓库，覆盖正常完成、重试、下载或上传失败及 Ctrl+C 时的文件与锁清理。真实上传验证应选择已有 GitHub Release，补传它的原始附件，并在上传后核对目标文件内容。
 
 接口依据：[GitHub 附件 API](https://docs.github.com/en/rest/releases/assets)、[Gitee 官方 SDK 附件接口](https://gitee.com/sdk/gitee5j/releases)、[GitCode 上传地址 API](https://docs.gitcode.com/docs/apis/get-api-v-5-repos-owner-repo-releases-tag-upload-url/)、[Windows CredReadW](https://learn.microsoft.com/en-us/windows/win32/api/wincred/nf-wincred-credreadw)。
 
