@@ -14,6 +14,8 @@ from urllib.parse import quote, urljoin, urlsplit
 
 import requests
 
+from release_sync_terminal import TransferProgress, report
+
 
 GITHUB_API = "https://api.github.com"
 GITEE_API = "https://gitee.com/api/v5"
@@ -95,23 +97,6 @@ def secure_url(url: str) -> str:
     return url
 
 
-class TransferProgress:
-    def __init__(self, action: str, total: int | None):
-        self.action = action
-        self.total = total
-        self.last_report = time.monotonic()
-
-    def update(self, transferred: int) -> None:
-        now = time.monotonic()
-        if now - self.last_report < 5:
-            return
-        self.last_report = now
-        amount = f"{transferred / (1024 * 1024):.1f} MiB"
-        if self.total:
-            amount += f" / {self.total / (1024 * 1024):.1f} MiB（{100 * transferred / self.total:.0f}%）"
-        print(f"    {self.action}：{amount}", flush=True)
-
-
 class ProgressFile:
     """保留文件长度和游标语义，让 Requests 以 Content-Length 流式上传。"""
 
@@ -123,6 +108,13 @@ class ProgressFile:
         chunk = self.file.read(size)
         self.progress.update(self.file.tell())
         return chunk
+
+    def __enter__(self):
+        self.progress.__enter__()
+        return self
+
+    def __exit__(self, *args):
+        self.progress.__exit__(*args)
 
     def __getattr__(self, name):
         return getattr(self.file, name)
@@ -285,9 +277,12 @@ def hash_file(path: Path) -> tuple[int, str]:
 def consume_binary(client: HttpClient, url: str, action: str, expected_size: int | None, file=None) -> str:
     digest = hashlib.sha256()
     size = 0
-    progress = TransferProgress(action, expected_size)
     try:
-        with client.binary(url, action) as response:
+        with TransferProgress(action, expected_size) as progress, client.binary(url, action) as response:
+            length = response.headers.get("Content-Length", "")
+            if (expected_size is None and length.isdecimal()
+                    and response.headers.get("Content-Encoding", "identity") == "identity"):
+                progress.set_total(int(length))
             for chunk in response.iter_content(CHUNK_SIZE):
                 size += len(chunk)
                 if expected_size is not None and size > expected_size:
@@ -318,7 +313,7 @@ def cache_asset(client: HttpClient, repository: str, asset: dict, cache: Path) -
             if (recorded.get("source") == identity and size == asset["size"]
                     and digest == recorded.get("sha256")
                     and (not asset.get("digest") or f"sha256:{digest}" == asset["digest"].lower())):
-                print(f"  缓存有效：{asset['name']}", flush=True)
+                report(f"  缓存有效：{asset['name']}")
                 return path, digest
         except (ValueError, AttributeError):
             pass
@@ -327,10 +322,11 @@ def cache_asset(client: HttpClient, repository: str, asset: dict, cache: Path) -
     url = f"{GITHUB_API}/repos/{repository_path(repository)}/releases/assets/{asset['id']}"
     try:
         for attempt in range(client.attempts):
-            print(f"  下载：{asset['name']}（{asset['size']} 字节，第 {attempt + 1} 次）", flush=True)
+            if attempt:
+                report(f"  下载重试：{asset['name']}（第 {attempt + 1} 次）", "warning")
             try:
                 with temporary.open("wb") as file:
-                    digest = consume_binary(client, url, "下载 GitHub 附件", asset["size"], file)
+                    digest = consume_binary(client, url, f"下载 GitHub / {asset['name']}", asset["size"], file)
                 if asset.get("digest") and f"sha256:{digest}" != asset["digest"].lower():
                     raise SyncError(f"附件 {asset['name']} 的 SHA-256 不符")
                 break
@@ -342,6 +338,7 @@ def cache_asset(client: HttpClient, repository: str, asset: dict, cache: Path) -
         manifest_temporary = manifest.with_suffix(".part")
         manifest_temporary.write_text(json.dumps({"source": identity, "sha256": digest}, indent=2), encoding="utf-8")
         manifest_temporary.replace(manifest)
+        report(f"  下载完成：{asset['name']}（{asset['size'] / (1024 * 1024):.1f} MiB）", "success")
         return path, digest
     finally:
         temporary.unlink(missing_ok=True)
@@ -412,7 +409,7 @@ class Mirror:
         return matches[0] if matches else None
 
     def upload(self, tag: str, asset: dict, path: Path) -> None:
-        action = f"上传 {self.platform} 附件"
+        action = f"上传 {self.platform} / {asset['name']}"
         if self.platform == "gitee":
             # requests 的 files 参数会把整个文件读入内存，使用流式 multipart 编码器。
             from requests_toolbelt.multipart.encoder import MultipartEncoder, MultipartEncoderMonitor
@@ -421,12 +418,12 @@ class Mirror:
             url = f"{self.client.api}{self.base}/releases/{release['id']}/attach_files"
             with path.open("rb") as file:
                 body = MultipartEncoder(fields={"file": (asset["name"], file, "application/octet-stream")})
-                progress = TransferProgress(action, body.len)
-                monitor = MultipartEncoderMonitor(body, lambda encoder: progress.update(encoder.bytes_read))
-                headers = {**self.client.headers(url), "Content-Type": monitor.content_type}
-                with self.client.request("POST", url, action, headers=headers, data=monitor) as response:
-                    if response.status_code not in (200, 201):
-                        raise SyncError(f"{action}：HTTP {response.status_code}")
+                with TransferProgress(action, body.len) as progress:
+                    monitor = MultipartEncoderMonitor(body, lambda encoder: progress.update(encoder.bytes_read))
+                    headers = {**self.client.headers(url), "Content-Type": monitor.content_type}
+                    with self.client.request("POST", url, action, headers=headers, data=monitor) as response:
+                        if response.status_code not in (200, 201):
+                            raise SyncError(f"{action}：HTTP {response.status_code}")
         else:
             upload = self.client.json(f"{self.base}/releases/{quote(tag, safe='')}/upload_url",
                                       "获取 GitCode 上传地址", params={"file_name": asset["name"]})
@@ -436,9 +433,9 @@ class Mirror:
             headers = upload["headers"]
             if any(not isinstance(key, str) or not isinstance(value, str) for key, value in headers.items()):
                 raise SyncError("GitCode 上传请求头无效")
-            with path.open("rb") as file:
+            with path.open("rb") as file, ProgressFile(file, action) as body:
                 # 只携带上传接口返回的签名头，禁止加入平台令牌，也不跟随上传重定向。
-                with self.client.request("PUT", url, action, headers=headers, data=ProgressFile(file, action)) as response:
+                with self.client.request("PUT", url, action, headers=headers, data=body) as response:
                     if response.status_code not in (200, 201, 204):
                         raise SyncError(f"{action}：HTTP {response.status_code}")
 
@@ -456,7 +453,7 @@ class Mirror:
 
 def remote_digest(mirror: Mirror, asset: dict) -> str:
     url = secure_url(asset.get("browser_download_url"))
-    return consume_binary(mirror.client, url, f"验证 {mirror.platform} 附件", None)
+    return consume_binary(mirror.client, url, f"验证 {mirror.platform} / {asset['name']}", None)
 
 
 def sync_asset(mirror: Mirror, tag: str, asset: dict, path: Path, digest: str,
@@ -477,13 +474,12 @@ def sync_asset(mirror: Mirror, tag: str, asset: dict, path: Path, digest: str,
             raise SyncError("本地源文件校验失败，未删除目标附件")
         mirror.delete(tag, existing)
 
-    print(f"    上传：{mirror.platform} / {asset['name']}", flush=True)
     upload_error = None
     try:
         mirror.upload(tag, asset, path)
     except SyncError as exc:
         upload_error = exc
-        print("    上传响应未确认，查询远端附件状态", flush=True)
+        report("    上传响应未确认，查询远端附件状态", "warning")
     # 处理超时和回调延迟：先重新查询并校验，禁止盲目重试 POST/PUT。
     for attempt in range(4):
         if attempt:
