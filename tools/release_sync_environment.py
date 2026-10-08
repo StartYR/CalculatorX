@@ -7,11 +7,13 @@ import venv
 
 
 MINIMUM_PYTHON = (3, 10)
-ENVIRONMENT_CHECK = """
+INTERPRETER_CHECK = """
 from pathlib import Path
 import sys
 if sys.version_info < (3, 10) or sys.prefix == sys.base_prefix:
     sys.exit(1)
+"""
+DEPENDENCY_CHECK = """
 import requests
 import requests_toolbelt
 from importlib.metadata import version
@@ -19,7 +21,6 @@ def parts(name):
     return tuple(int(part) for part in version(name).split('.')[:3])
 if not ((2, 32, 5) <= parts('requests') < (3,) and (1, 0, 0) <= parts('requests-toolbelt') < (2,)):
     sys.exit(1)
-print(str(Path(sys.prefix).resolve()))
 """
 
 
@@ -27,15 +28,17 @@ def environment_python(root: Path) -> Path:
     return root / ".venv" / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
 
 
-def environment_status(root: Path) -> tuple[bool, str]:
+def environment_status(root: Path, check_dependencies: bool = True) -> tuple[bool, str]:
     environment = root / ".venv"
     if environment.resolve() != environment.absolute():
         return False, ".venv 指向其他目录，请使用项目内独立的虚拟环境"
     interpreter = environment_python(root)
     if not interpreter.is_file():
         return False, "未找到可用的 Python 虚拟环境"
+    check = INTERPRETER_CHECK + (DEPENDENCY_CHECK if check_dependencies else "")
+    check += "\nprint(str(Path(sys.prefix).resolve()))\n"
     try:
-        result = subprocess.run([str(interpreter), "-X", "utf8", "-c", ENVIRONMENT_CHECK],
+        result = subprocess.run([str(interpreter), "-X", "utf8", "-c", check],
                                 capture_output=True, text=True, encoding="utf-8", timeout=20)
     except (OSError, subprocess.TimeoutExpired):
         return False, "虚拟环境的 Python 无法运行"
@@ -61,11 +64,20 @@ def install_environment(root: Path) -> int:
         print(".venv 环境已就绪，无需重复安装")
         return 0
     try:
-        print("创建或修复 .venv 虚拟环境……", flush=True)
-        # 不清空已有目录，保留其中的其他依赖和文件。
-        venv.EnvBuilder(with_pip=True).create(environment)
+        interpreter_ready, _ = environment_status(root, check_dependencies=False)
+        if not interpreter_ready:
+            print("创建或修复 .venv 虚拟环境……", flush=True)
+            # 不清空已有目录，保留其中的其他依赖和文件。
+            venv.EnvBuilder(with_pip=True).create(environment)
+        else:
+            result = subprocess.run([str(environment_python(root)), "-m", "ensurepip", "--upgrade"])
+            if result.returncode:
+                print("pip 修复失败，请检查 Python 安装和目录权限")
+                return 1
         print("安装 Release 同步依赖（需要联网）……", flush=True)
-        result = subprocess.run([str(environment_python(root)), "-m", "pip", "install", "-r",
+        # 解释器正常时只修复依赖，避免 Windows 覆盖正在运行的 python.exe。
+        repair = ["--force-reinstall"] if interpreter_ready else []
+        result = subprocess.run([str(environment_python(root)), "-m", "pip", "install", *repair, "-r",
                                  str(root / "tools" / "requirements-release-sync.txt")])
         if result.returncode:
             print("依赖安装失败，请检查网络、pip 配置和磁盘空间后重试")

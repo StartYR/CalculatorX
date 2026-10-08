@@ -51,7 +51,7 @@ class EnvironmentTests(unittest.TestCase):
         builder.return_value.create.assert_called_once_with(self.root / ".venv")
 
     def test_successful_setup_checks_environment_after_install(self):
-        with patch.object(environment, "environment_status", side_effect=[(False, "missing"), (True, "ready")]), \
+        with patch.object(environment, "environment_status", side_effect=[(False, "missing"), (False, "missing"), (True, "ready")]), \
                 patch.object(environment.venv, "EnvBuilder"), \
                 patch.object(environment.subprocess, "run", return_value=Mock(returncode=0)) as run, \
                 redirect_stdout(io.StringIO()):
@@ -81,6 +81,28 @@ class EnvironmentTests(unittest.TestCase):
             self.assertEqual(environment.install_environment(self.root), 1)
         self.assertIn("Python 安装", output.getvalue())
         self.assertNotIn("private-error", output.getvalue())
+
+    def test_dependency_repair_does_not_overwrite_running_interpreter(self):
+        with patch.object(environment, "environment_status", side_effect=[(False, "dependencies missing"),
+                                                                         (True, "interpreter ready"),
+                                                                         (True, "ready")]), \
+                patch.object(environment.venv, "EnvBuilder") as builder, \
+                patch.object(environment.subprocess, "run", return_value=Mock(returncode=0)) as run, \
+                redirect_stdout(io.StringIO()):
+            self.assertEqual(environment.install_environment(self.root), 0)
+        builder.assert_not_called()
+        self.assertIn("--force-reinstall", run.call_args.args[0])
+
+    def test_failed_pip_repair_does_not_attempt_dependency_install(self):
+        with patch.object(environment, "environment_status", side_effect=[(False, "dependencies missing"),
+                                                                         (True, "interpreter ready")]), \
+                patch.object(environment.venv, "EnvBuilder") as builder, \
+                patch.object(environment.subprocess, "run", return_value=Mock(returncode=1)) as run, \
+                redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(environment.install_environment(self.root), 1)
+        builder.assert_not_called()
+        self.assertEqual(run.call_count, 1)
+        self.assertIn("pip 修复失败", output.getvalue())
 
 
 if __name__ == "__main__":
