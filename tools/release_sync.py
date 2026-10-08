@@ -85,10 +85,47 @@ def repository_path(repository: str) -> str:
 def secure_url(url: str) -> str:
     if not isinstance(url, str):
         raise SyncError("平台返回了无效的文件地址")
-    parsed = urlsplit(url)
+    try:
+        parsed = urlsplit(url)
+        parsed.port
+    except ValueError:
+        raise SyncError("平台返回的文件地址格式无效") from None
     if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
         raise SyncError("文件地址必须为 HTTPS，且不能包含用户名或密码")
     return url
+
+
+class TransferProgress:
+    def __init__(self, action: str, total: int | None):
+        self.action = action
+        self.total = total
+        self.last_report = time.monotonic()
+
+    def update(self, transferred: int) -> None:
+        now = time.monotonic()
+        if now - self.last_report < 5:
+            return
+        self.last_report = now
+        amount = f"{transferred / (1024 * 1024):.1f} MiB"
+        if self.total:
+            amount += f" / {self.total / (1024 * 1024):.1f} MiB（{100 * transferred / self.total:.0f}%）"
+        print(f"    {self.action}：{amount}", flush=True)
+
+
+class ProgressFile:
+    """保留文件长度和游标语义，让 Requests 以 Content-Length 流式上传。"""
+
+    def __init__(self, file, action: str):
+        self.file = file
+        self.progress = TransferProgress(action, os.fstat(file.fileno()).st_size)
+
+    def read(self, size: int = -1) -> bytes:
+        chunk = self.file.read(size)
+        self.progress.update(self.file.tell())
+        return chunk
+
+    def __getattr__(self, name):
+        return getattr(self.file, name)
 
 
 class HttpClient:
@@ -130,7 +167,11 @@ class HttpClient:
             else:
                 if response.status_code not in (429, 500, 502, 503, 504) or attempt + 1 == attempts:
                     return response
+                retry_after = response.headers.get("Retry-After", "")
                 response.close()
+                if retry_after.isdecimal():
+                    time.sleep(min(int(retry_after), 30))
+                    continue
             time.sleep(min(2 ** attempt, 8))
         raise SyncError(f"{action}：重试失败")
 
@@ -244,6 +285,7 @@ def hash_file(path: Path) -> tuple[int, str]:
 def consume_binary(client: HttpClient, url: str, action: str, expected_size: int | None, file=None) -> str:
     digest = hashlib.sha256()
     size = 0
+    progress = TransferProgress(action, expected_size)
     try:
         with client.binary(url, action) as response:
             for chunk in response.iter_content(CHUNK_SIZE):
@@ -253,6 +295,7 @@ def consume_binary(client: HttpClient, url: str, action: str, expected_size: int
                 digest.update(chunk)
                 if file is not None:
                     file.write(chunk)
+                progress.update(size)
     except requests.RequestException as exc:
         raise SyncError(f"{action}：下载中断（{type(exc).__name__}）") from None
     if expected_size is not None and size != expected_size:
@@ -355,7 +398,9 @@ class Mirror:
             result = release.get("assets")
             if not isinstance(result, list):
                 raise SyncError("GitCode 附件列表无效")
-            result = [asset for asset in result if isinstance(asset, dict) and asset.get("type") != "source"]
+            if any(not isinstance(asset, dict) for asset in result):
+                raise SyncError("GitCode 附件元数据无效")
+            result = [asset for asset in result if asset.get("type") != "source"]
         if any(not isinstance(asset, dict) or not isinstance(asset.get("name"), str) for asset in result):
             raise SyncError(f"{self.platform} 附件元数据无效")
         return result
@@ -370,14 +415,16 @@ class Mirror:
         action = f"上传 {self.platform} 附件"
         if self.platform == "gitee":
             # requests 的 files 参数会把整个文件读入内存，使用流式 multipart 编码器。
-            from requests_toolbelt.multipart.encoder import MultipartEncoder
+            from requests_toolbelt.multipart.encoder import MultipartEncoder, MultipartEncoderMonitor
 
             release = self.release(tag)
             url = f"{self.client.api}{self.base}/releases/{release['id']}/attach_files"
             with path.open("rb") as file:
                 body = MultipartEncoder(fields={"file": (asset["name"], file, "application/octet-stream")})
-                headers = {**self.client.headers(url), "Content-Type": body.content_type}
-                with self.client.request("POST", url, action, headers=headers, data=body) as response:
+                progress = TransferProgress(action, body.len)
+                monitor = MultipartEncoderMonitor(body, lambda encoder: progress.update(encoder.bytes_read))
+                headers = {**self.client.headers(url), "Content-Type": monitor.content_type}
+                with self.client.request("POST", url, action, headers=headers, data=monitor) as response:
                     if response.status_code not in (200, 201):
                         raise SyncError(f"{action}：HTTP {response.status_code}")
         else:
@@ -391,7 +438,7 @@ class Mirror:
                 raise SyncError("GitCode 上传请求头无效")
             with path.open("rb") as file:
                 # 只携带上传接口返回的签名头，禁止加入平台令牌，也不跟随上传重定向。
-                with self.client.request("PUT", url, action, headers=headers, data=file) as response:
+                with self.client.request("PUT", url, action, headers=headers, data=ProgressFile(file, action)) as response:
                     if response.status_code not in (200, 201, 204):
                         raise SyncError(f"{action}：HTTP {response.status_code}")
 

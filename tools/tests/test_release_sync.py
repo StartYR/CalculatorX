@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from release_sync import (
     GITHUB_API, GITEE_API, GITCODE_API, CacheLock, HttpClient, Mirror, SyncError,
-    cache_asset, secure_url, sync_asset, validate_asset,
+    ProgressFile, cache_asset, release_assets, secure_url, sync_asset, validate_asset,
 )
 
 
@@ -98,6 +98,46 @@ class SourceTests(unittest.TestCase):
     def test_insecure_redirect_is_rejected(self):
         with self.assertRaises(SyncError):
             secure_url("http://example.com/file")
+
+    def test_interrupted_download_does_not_leave_complete_or_partial_cache(self):
+        import requests
+        class InterruptedResponse(Response):
+            def iter_content(self, size):
+                yield b"pack"
+                raise requests.ConnectionError("private-signed-url")
+        response = InterruptedResponse()
+        with patch.object(self.client, "binary", return_value=response):
+            with self.assertRaises(SyncError) as error:
+                cache_asset(self.client, "owner/repo", self.asset, self.cache)
+        self.assertNotIn("private", str(error.exception))
+        self.assertEqual(list(self.cache.iterdir()), [])
+        self.assertTrue(response.closed)
+
+    def test_attachment_list_is_paginated(self):
+        first = [{**self.asset, "id": index + 1, "name": f"app-{index}.hap"} for index in range(100)]
+        with patch.object(self.client, "json", side_effect=[first, [self.asset]]) as request:
+            assets = release_assets(self.client, "owner/repo", {"id": 42}, [])
+        self.assertEqual(len(assets), 101)
+        self.assertEqual(request.call_args_list[1].kwargs["params"]["page"], 2)
+
+    def test_write_requests_are_never_automatically_retried(self):
+        self.client.attempts = 3
+        with patch.object(self.client.session, "request", return_value=Response(status=503)) as request:
+            response = self.client.request("POST", GITHUB_API, "上传")
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(request.call_count, 1)
+
+    def test_rate_limit_uses_bounded_retry_after(self):
+        self.client.attempts = 2
+        with patch.object(self.client.session, "request", side_effect=[
+                Response(status=429, headers={"Retry-After": "999"}), Response()]), \
+                patch("release_sync.time.sleep") as sleep:
+            self.client.request("GET", GITHUB_API, "读取").close()
+        sleep.assert_called_once_with(30)
+
+    def test_malformed_signed_url_does_not_escape_safe_errors(self):
+        with self.assertRaises(SyncError):
+            secure_url("https://[invalid/file?signature=placeholder")
 
 
 class MirrorTests(unittest.TestCase):
@@ -229,6 +269,16 @@ class MirrorTests(unittest.TestCase):
         finally:
             lock.close()
         CacheLock(self.cache).close()
+
+    def test_upload_progress_retains_length_and_position(self):
+        import requests
+        with self.path.open("rb") as file:
+            progress = ProgressFile(file, "上传")
+            request = requests.Request("PUT", "https://objects.example/upload", data=progress).prepare()
+            self.assertEqual(request.headers["Content-Length"], "7")
+            self.assertNotIn("Transfer-Encoding", request.headers)
+            self.assertEqual(progress.read(3), b"pac")
+            self.assertEqual(progress.tell(), 3)
 
 
 if __name__ == "__main__":
