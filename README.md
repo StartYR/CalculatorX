@@ -26,6 +26,16 @@
 ---
 </div>
 
+<!-- MIRROR_NOTICE_START -->
+<!--
+## 镜像仓库说明
+
+Gitee 和 GitCode（AtomGit）为自动同步镜像，开发与版本发布以 [GitHub 主仓库](https://github.com/StartYR/CalculatorX) 为准。
+
+如果 CalculatorX 对你有帮助，欢迎前往 [GitHub 主仓库](https://github.com/StartYR/CalculatorX) 点亮 ⭐ Star，支持项目持续开发。
+-->
+<!-- MIRROR_NOTICE_END -->
+
 ## 效果一览
 
 <div align="center">

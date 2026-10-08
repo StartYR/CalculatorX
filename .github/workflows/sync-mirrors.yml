@@ -70,3 +70,59 @@ jobs:
           set -euo pipefail
           cd repository.git
           git push --mirror git@gitcode-mirror:StartYi/CalculatorX.git
+
+      - name: Show README notice on mirrors
+        run: |
+          set -euo pipefail
+
+          # 从本次镜像使用的 main 创建提交，避免累积镜像专属历史。
+          git -C repository.git worktree add --detach ../mirror-worktree refs/heads/main
+          cd mirror-worktree
+          source_sha="$(git rev-parse HEAD)"
+
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          readme_path = Path("README.md")
+          content = readme_path.read_bytes()
+          start_marker = b"<!-- MIRROR_NOTICE_START -->"
+          end_marker = b"<!-- MIRROR_NOTICE_END -->"
+
+          if content.count(start_marker) != 1 or content.count(end_marker) != 1:
+              raise SystemExit("README 镜像提示的起止标记必须各出现一次")
+
+          start = content.index(start_marker) + len(start_marker)
+          end = content.index(end_marker)
+          if start >= end:
+              raise SystemExit("README 镜像提示的起止标记顺序错误")
+
+          # 只解除正文外层注释，保留标记、正文和文件原有换行。
+          region = content[start:end]
+          match = re.fullmatch(
+              rb"(?P<newline>\r?\n)[ \t]*<!--[ \t]*\r?\n"
+              rb"(?P<body>.*?)\r?\n[ \t]*-->[ \t]*\r?\n",
+              region,
+              flags=re.DOTALL,
+          )
+          if match is None:
+              raise SystemExit("README 镜像提示必须由独立行的 HTML 注释完整包裹")
+
+          body = match.group("body")
+          if not body.strip() or b"<!--" in body or b"-->" in body:
+              raise SystemExit("README 镜像提示正文不能为空，也不能嵌套 HTML 注释")
+
+          newline = match.group("newline")
+          readme_path.write_bytes(content[:start] + newline + body + newline + content[end:])
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- README.md
+          git commit -m "docs: 显示镜像仓库的主仓库提示"
+
+          # 两个镜像复用同一提交；只在 main 仍指向本次源提交时更新。
+          git push --force-with-lease="refs/heads/main:$source_sha" \
+            git@gitee-mirror:StartYi/CalculatorX.git HEAD:refs/heads/main
+          git push --force-with-lease="refs/heads/main:$source_sha" \
+            git@gitcode-mirror:StartYi/CalculatorX.git HEAD:refs/heads/main
