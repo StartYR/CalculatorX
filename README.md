@@ -23,15 +23,15 @@
     <a href="https://github.com/StartYR/CalculatorX/issues/new"><img src="./docs/image/badges/Issue.svg" height="30" alt="提交 Issue"></a>
   </p>
 
----
+
 </div>
 
 <!-- MIRROR_NOTICE_START -->
-<!--
+
 <h2 align="center">镜像仓库说明</h2>
 
 <p align="center">
-  本仓库为自动同步镜像，开发与版本发布均以 GitHub 主仓库  <a href="https://github.com/StartYR/CalculatorX">StartYR/CalculatorX</a> 为准
+  本仓库为自动同步镜像，开发与版本发布均以 GitHub 主仓库 <a href="https://github.com/StartYR/CalculatorX">StartYR/CalculatorX</a> 为准
 </p>
 
 <p align="center">
@@ -44,7 +44,7 @@
   </a>
 </p>
 
--->
+
 <!-- MIRROR_NOTICE_END -->
 
 ## 效果一览
