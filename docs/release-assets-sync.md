@@ -9,11 +9,10 @@ GitHub 是发布源。GitHub Actions 的 `.github/scripts/sync-releases.py` 负�
 使用 Python 3.10 或更新版本。在项目根目录执行：
 
 ```powershell
-python -m venv .venv
-./.venv/Scripts/python.exe -m pip install -r tools/requirements-release-sync.txt
+python -X utf8 tools/setup-release-sync.py
 ```
 
-虚拟环境保存在已被 Git 忽略的 `.venv/` 下，下载缓存保存在 `temp/` 下，独立于应用的 OHPM 和 Hvigor 依赖。后文命令均在项目根目录执行，无需激活虚拟环境。
+虚拟环境保存在已被 Git 忽略的 `.venv/` 下，下载缓存保存在 `temp/` 下，独立于应用的 OHPM 和 Hvigor 依赖。后文命令均在项目根目录执行，无需激活虚拟环境。初始化脚本会检查 Python 版本和依赖，健康环境不会重复安装；换电脑时重新运行初始化，不复制 `.venv/`。安装失败后检查网络和目录权限再重试；若 `.venv` 已存在但不是虚拟环境，需先重命名该目录，脚本不会清空它。
 
 ## 令牌
 
