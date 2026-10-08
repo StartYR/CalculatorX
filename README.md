@@ -28,6 +28,7 @@
 
 <!-- MIRROR_NOTICE_START -->
 <!--
+<hr style="height:4px; border:none;">
 <h2 align="center">镜像仓库说明</h2>
 
 <p align="center">
@@ -43,6 +44,8 @@
     />
   </a>
 </p>
+
+<hr style="height:4px; border:none;">
 
 -->
 <!-- MIRROR_NOTICE_END -->
