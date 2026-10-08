@@ -241,21 +241,21 @@ def hash_file(path: Path) -> tuple[int, str]:
     return size, digest.hexdigest()
 
 
-def consume_binary(client: HttpClient, url: str, action: str, expected_size: int, file=None) -> str:
+def consume_binary(client: HttpClient, url: str, action: str, expected_size: int | None, file=None) -> str:
     digest = hashlib.sha256()
     size = 0
     try:
         with client.binary(url, action) as response:
             for chunk in response.iter_content(CHUNK_SIZE):
                 size += len(chunk)
-                if size > expected_size:
+                if expected_size is not None and size > expected_size:
                     raise SyncError(f"{action}：文件超过预期大小")
                 digest.update(chunk)
                 if file is not None:
                     file.write(chunk)
     except requests.RequestException as exc:
         raise SyncError(f"{action}：下载中断（{type(exc).__name__}）") from None
-    if size != expected_size:
+    if expected_size is not None and size != expected_size:
         raise SyncError(f"{action}：文件大小不符（预期 {expected_size}，实际 {size}）")
     return digest.hexdigest()
 
@@ -302,3 +302,164 @@ def cache_asset(client: HttpClient, repository: str, asset: dict, cache: Path) -
         return path, digest
     finally:
         temporary.unlink(missing_ok=True)
+
+
+class CacheLock:
+    """同一缓存目录只允许一个写入进程，避免重复上传和缓存覆盖。"""
+
+    def __init__(self, cache: Path):
+        cache.mkdir(parents=True, exist_ok=True)
+        self.path = cache / ".sync.lock"
+        try:
+            with self.path.open("x", encoding="utf-8") as file:
+                file.write(str(os.getpid()))
+        except FileExistsError:
+            raise SyncError("缓存正在被另一个同步进程使用；若上次异常退出，请确认进程结束后删除 .sync.lock") from None
+
+    def close(self) -> None:
+        self.path.unlink(missing_ok=True)
+
+
+class Mirror:
+    def __init__(self, platform: str, repository: str, client: HttpClient):
+        self.platform = platform
+        self.repository = repository
+        self.client = client
+        self.base = f"/repos/{repository_path(repository)}"
+
+    def release(self, tag: str) -> dict:
+        result = self.client.json(f"{self.base}/releases/tags/{quote(tag, safe='')}", f"读取 {self.platform} Release")
+        if not isinstance(result, dict) or result.get("tag_name") != tag:
+            raise SyncError(f"{self.platform} 返回的 Release Tag 不符")
+        return result
+
+    def assets(self, tag: str) -> list[dict]:
+        release = self.release(tag)
+        if self.platform == "gitee":
+            release_id = release.get("id")
+            if type(release_id) is not int or release_id <= 0:
+                raise SyncError("Gitee Release ID 无效")
+            result = []
+            for page in range(1, 1001):
+                batch = self.client.json(f"{self.base}/releases/{release_id}/attach_files", "列出 Gitee 附件",
+                                         params={"page": page, "per_page": 100})
+                if not isinstance(batch, list):
+                    raise SyncError("Gitee 附件列表无效")
+                result.extend(batch)
+                if len(batch) < 100:
+                    break
+            else:
+                raise SyncError("Gitee 附件分页超出限制")
+        else:
+            # GitCode 的列表混有自动生成的源码压缩包，它们不属于上传附件。
+            result = release.get("assets")
+            if not isinstance(result, list):
+                raise SyncError("GitCode 附件列表无效")
+            result = [asset for asset in result if isinstance(asset, dict) and asset.get("type") != "source"]
+        if any(not isinstance(asset, dict) or not isinstance(asset.get("name"), str) for asset in result):
+            raise SyncError(f"{self.platform} 附件元数据无效")
+        return result
+
+    def find(self, tag: str, name: str) -> dict | None:
+        matches = [asset for asset in self.assets(tag) if asset["name"] == name]
+        if len(matches) > 1:
+            raise SyncError(f"{self.platform} 存在多个同名附件 {name}，请先在网页处理")
+        return matches[0] if matches else None
+
+    def upload(self, tag: str, asset: dict, path: Path) -> None:
+        action = f"上传 {self.platform} 附件"
+        if self.platform == "gitee":
+            # requests 的 files 参数会把整个文件读入内存，使用流式 multipart 编码器。
+            from requests_toolbelt.multipart.encoder import MultipartEncoder
+
+            release = self.release(tag)
+            url = f"{self.client.api}{self.base}/releases/{release['id']}/attach_files"
+            with path.open("rb") as file:
+                body = MultipartEncoder(fields={"file": (asset["name"], file, "application/octet-stream")})
+                headers = {**self.client.headers(url), "Content-Type": body.content_type}
+                with self.client.request("POST", url, action, headers=headers, data=body) as response:
+                    if response.status_code not in (200, 201):
+                        raise SyncError(f"{action}：HTTP {response.status_code}")
+        else:
+            upload = self.client.json(f"{self.base}/releases/{quote(tag, safe='')}/upload_url",
+                                      "获取 GitCode 上传地址", params={"file_name": asset["name"]})
+            if not isinstance(upload, dict) or not isinstance(upload.get("headers"), dict):
+                raise SyncError("GitCode 上传地址响应无效")
+            url = secure_url(upload.get("url"))
+            headers = upload["headers"]
+            if any(not isinstance(key, str) or not isinstance(value, str) for key, value in headers.items()):
+                raise SyncError("GitCode 上传请求头无效")
+            with path.open("rb") as file:
+                # 只携带上传接口返回的签名头，禁止加入平台令牌，也不跟随上传重定向。
+                with self.client.request("PUT", url, action, headers=headers, data=file) as response:
+                    if response.status_code not in (200, 201, 204):
+                        raise SyncError(f"{action}：HTTP {response.status_code}")
+
+    def delete(self, tag: str, asset: dict) -> None:
+        attachment_id = asset.get("id")
+        if not isinstance(attachment_id, (int, str)) or not str(attachment_id):
+            raise SyncError(f"{self.platform} 没有提供附件 ID，无法安全替换")
+        release_key = str(self.release(tag)["id"]) if self.platform == "gitee" else quote(tag, safe="")
+        url = f"{self.client.api}{self.base}/releases/{release_key}/attach_files/{quote(str(attachment_id), safe='')}"
+        with self.client.request("DELETE", url, f"删除 {self.platform} 冲突附件",
+                                 headers=self.client.headers(url)) as response:
+            if response.status_code not in (200, 204):
+                raise SyncError(f"删除 {self.platform} 冲突附件：HTTP {response.status_code}；本地备份已保留")
+
+
+def remote_digest(mirror: Mirror, asset: dict, backup: Path | None = None) -> str:
+    url = secure_url(asset.get("browser_download_url"))
+    if backup is None:
+        return consume_binary(mirror.client, url, f"验证 {mirror.platform} 附件", None)
+    with backup.open("wb") as file:
+        return consume_binary(mirror.client, url, f"备份 {mirror.platform} 冲突附件", None, file)
+
+
+def sync_asset(mirror: Mirror, tag: str, asset: dict, path: Path, digest: str, cache: Path,
+               replace: bool = False, verify_only: bool = False) -> str:
+    existing = mirror.find(tag, asset["name"])
+    if existing:
+        if replace and not verify_only:
+            # 删除前完整下载旧附件。备份不含签名 URL，可在上传失败后用于人工恢复。
+            backup_key = hashlib.sha256(json.dumps([mirror.platform, mirror.repository, tag, existing.get("id"),
+                                                    asset["name"], time.time_ns()]).encode()).hexdigest()
+            backup = cache / f"backup-{backup_key}.bin"
+            temporary = backup.with_suffix(".part")
+            try:
+                old_digest = remote_digest(mirror, existing, temporary)
+                if old_digest == digest:
+                    return "一致，跳过"
+                temporary.replace(backup)
+                backup.with_suffix(".json").write_text(json.dumps({"platform": mirror.platform,
+                    "repository": mirror.repository, "tag": tag, "name": asset["name"],
+                    "sha256": old_digest}, ensure_ascii=False, indent=2), encoding="utf-8")
+                print(f"    旧附件已备份：{backup.name}", flush=True)
+                mirror.delete(tag, existing)
+            finally:
+                temporary.unlink(missing_ok=True)
+        elif remote_digest(mirror, existing) == digest:
+            return "一致，跳过"
+        else:
+            raise SyncError("同名附件内容不同；使用 --replace 才会备份并替换，请先确认计划")
+    elif verify_only:
+        raise SyncError("目标附件缺失")
+
+    print(f"    上传：{mirror.platform} / {asset['name']}", flush=True)
+    upload_error = None
+    try:
+        mirror.upload(tag, asset, path)
+    except SyncError as exc:
+        upload_error = exc
+        print("    上传响应未确认，查询远端附件状态", flush=True)
+    # 处理超时和回调延迟：先重新查询并校验，禁止盲目重试 POST/PUT。
+    for attempt in range(4):
+        if attempt:
+            time.sleep(2)
+        uploaded = mirror.find(tag, asset["name"])
+        if uploaded:
+            if remote_digest(mirror, uploaded) != digest:
+                raise SyncError("上传后的附件 SHA-256 不符，请检查网页端文件")
+            return "上传成功，SHA-256 已验证"
+    if upload_error:
+        raise SyncError(f"{upload_error}；远端尚未确认，请稍后重新运行以核对并补传")
+    raise SyncError("上传接口成功，但附件暂未出现在列表中；请稍后重新运行或检查网页")
