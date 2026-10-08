@@ -9,6 +9,14 @@ from release_sync import (
     GITHUB_API, GITEE_API, GITCODE_API, CacheLock, HttpClient, Mirror, SyncError,
     cache_asset, get_token, release_assets, releases, repository_path, sync_asset,
 )
+from release_sync_terminal import report
+
+
+class SyncArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        report(f"{self.prog}: 错误：{message}", "error", file=sys.stderr)
+        self.exit(2)
 
 
 def inventory(mirror: Mirror, tag: str) -> dict[str, dict]:
@@ -23,7 +31,7 @@ def inventory(mirror: Mirror, tag: str) -> dict[str, dict]:
 
 def sync_release(client: HttpClient, mirrors: list[Mirror], release: dict, args) -> int:
     tag = release["tag_name"]
-    print(f"Release：{tag}", flush=True)
+    report(f"Release：{tag}")
     # 删除以完整源清单为准，--asset 只限制上传和校验范围。
     all_assets = release_assets(client, args.source, release, [])
     source_names = {asset["name"] for asset in all_assets}
@@ -32,7 +40,7 @@ def sync_release(client: HttpClient, mirrors: list[Mirror], release: dict, args)
         raise SyncError("指定附件不存在：" + ", ".join(sorted(missing)))
     assets = [asset for asset in all_assets if not args.asset or asset["name"] in args.asset]
     if not assets:
-        print("  没有上传附件")
+        report("  没有上传附件")
     failures = 0
     targets = {}
     failed = set()
@@ -42,7 +50,7 @@ def sync_release(client: HttpClient, mirrors: list[Mirror], release: dict, args)
         except SyncError as exc:
             failures += 1
             failed.add(mirror)
-            print(f"  {mirror.platform} 读取附件失败：{exc}", file=sys.stderr)
+            report(f"  {mirror.platform} 读取附件失败：{exc}", "error", file=sys.stderr)
     for asset in assets:
         pending = []
         for mirror, existing in targets.items():
@@ -52,7 +60,8 @@ def sync_release(client: HttpClient, mirrors: list[Mirror], release: dict, args)
             else:
                 action = "待上传"
             if args.dry_run or (same_name and not args.force and not args.verify_only):
-                print(f"  {mirror.platform}：{asset['name']} — {action}", flush=True)
+                report(f"  {mirror.platform}：{asset['name']} — {action}",
+                       "warning" if args.dry_run and same_name and args.force else "info")
             else:
                 pending.append(mirror)
         if not pending and not args.download_only:
@@ -63,23 +72,23 @@ def sync_release(client: HttpClient, mirrors: list[Mirror], release: dict, args)
             failures += 1
             failed.update(pending)
             detail = str(exc) if isinstance(exc, SyncError) else "无法读写本地缓存"
-            print(f"  {asset['name']} 下载失败：{detail}", file=sys.stderr)
+            report(f"  {asset['name']} 下载失败：{detail}", "error", file=sys.stderr)
             continue
-        print(f"  源附件 SHA-256：{digest}", flush=True)
         for mirror in pending:
             try:
                 result = sync_asset(mirror, tag, asset, path, digest, args.force, args.verify_only)
-                print(f"  {mirror.platform}：{asset['name']} — {result}", flush=True)
+                report(f"  {mirror.platform}：{asset['name']} — {result}",
+                       "info" if "跳过" in result else "success")
             except (SyncError, OSError) as exc:
                 failures += 1
                 failed.add(mirror)
                 detail = str(exc) if isinstance(exc, SyncError) else "无法读取本地源文件"
-                print(f"  {mirror.platform} / {asset['name']} 失败：{detail}", file=sys.stderr)
+                report(f"  {mirror.platform} / {asset['name']} 失败：{detail}", "error", file=sys.stderr)
     if args.download_only or args.verify_only:
         return failures
     for mirror in targets:
         if mirror in failed:
-            print(f"  {mirror.platform}：本轮有失败，暂停删除多余附件", flush=True)
+            report(f"  {mirror.platform}：本轮有失败，暂停删除多余附件", "warning")
             continue
         try:
             # 写入成功后刷新清单，再逐个删除多余附件；源码包已由平台适配层排除。
@@ -87,18 +96,18 @@ def sync_release(client: HttpClient, mirrors: list[Mirror], release: dict, args)
             for name, asset in current.items():
                 if name not in source_names:
                     if args.dry_run:
-                        print(f"  {mirror.platform}：{name} — 待删除多余附件", flush=True)
+                        report(f"  {mirror.platform}：{name} — 待删除多余附件", "warning")
                     else:
                         mirror.delete(tag, asset)
-                        print(f"  {mirror.platform}：已删除多余附件 {name}", flush=True)
+                        report(f"  {mirror.platform}：已删除多余附件 {name}", "success")
         except SyncError as exc:
             failures += 1
-            print(f"  {mirror.platform} 清理失败：{exc}", file=sys.stderr)
+            report(f"  {mirror.platform} 清理失败：{exc}", "error", file=sys.stderr)
     return failures
 
 
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description="通过本机同步 GitHub Release 附件")
+    parser = SyncArgumentParser(description="通过本机同步 GitHub Release 附件")
     selection = parser.add_mutually_exclusive_group(required=True)
     selection.add_argument("--tag", help="指定 GitHub Release Tag")
     selection.add_argument("--latest", action="store_true", help="最新正式版")
@@ -140,7 +149,7 @@ def main(argv=None) -> int:
                     mirrors.append(Mirror(platform, repository, HttpClient(api, token, args.mirror_proxy)))
                 except SyncError as exc:
                     failures += 1
-                    print(f"{platform} 初始化失败：{exc}", file=sys.stderr)
+                    report(f"{platform} 初始化失败：{exc}", "error", file=sys.stderr)
             if not mirrors:
                 raise SyncError("没有可用的目标平台")
         if not args.dry_run:
@@ -153,18 +162,18 @@ def main(argv=None) -> int:
                 failures += sync_release(client, mirrors, release, args)
             except SyncError as exc:
                 failures += 1
-                print(f"  {release['tag_name']} 读取源附件失败：{exc}", file=sys.stderr)
+                report(f"  {release['tag_name']} 读取源附件失败：{exc}", "error", file=sys.stderr)
                 continue
-        print(f"{'预览' if args.dry_run else '处理'}结束：{failures} 项失败", flush=True)
+        report(f"{'预览' if args.dry_run else '处理'}结束：{failures} 项失败", "error" if failures else "success")
         return 1 if failures else 0
     except SyncError as exc:
-        print(f"失败：{exc}", file=sys.stderr)
+        report(f"失败：{exc}", "error", file=sys.stderr)
         return 1
     except OSError:
-        print("失败：无法读写缓存，请检查磁盘空间和目录权限", file=sys.stderr)
+        report("失败：无法读写缓存，请检查磁盘空间和目录权限", "error", file=sys.stderr)
         return 1
     except KeyboardInterrupt:
-        print("已中止；完整缓存可在下次运行时复用", file=sys.stderr)
+        report("已中止；完整缓存可在下次运行时复用", "warning", file=sys.stderr)
         return 130
     finally:
         client.close()

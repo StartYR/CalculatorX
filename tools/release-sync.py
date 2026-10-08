@@ -5,6 +5,7 @@ import subprocess
 import sys
 
 from release_sync_environment import environment_python, environment_status
+from release_sync_terminal import report
 
 
 def ask_yes_no(prompt: str, default: bool) -> bool:
@@ -16,7 +17,7 @@ def ask_yes_no(prompt: str, default: bool) -> bool:
             return True
         if answer in ("n", "no", "否"):
             return False
-        print("请输入 y 或 n，也可直接回车选择默认值")
+        report("请输入 y 或 n，也可直接回车选择默认值", "warning")
 
 
 def ensure_environment(root: Path) -> bool:
@@ -24,9 +25,9 @@ def ensure_environment(root: Path) -> bool:
         ready, reason = environment_status(root)
         if ready:
             return True
-        print(reason, flush=True)
+        report(reason, "warning")
         if not ask_yes_no("是否创建或修复 .venv 并安装脚本依赖？此操作需要联网下载依赖。[Y/n]：", True):
-            print("已取消环境初始化")
+            report("已取消环境初始化", "warning")
             return False
         # 修复损坏的环境时，使用基础解释器，避免替换正在运行的虚拟环境解释器。
         interpreter = getattr(sys, "_base_executable", None) or sys.executable
@@ -35,7 +36,7 @@ def ensure_environment(root: Path) -> bool:
             ready, reason = environment_status(root)
             if ready:
                 return True
-            print(f"初始化后检查失败：{reason}")
+            report(f"初始化后检查失败：{reason}", "error")
         if not ask_yes_no("初始化未成功，是否重试？[y/N]：", False):
             return False
 
@@ -53,11 +54,11 @@ def interactive_menu(root: Path) -> int:
         if choice == "0":
             return 0
         if choice not in ("1", "2"):
-            print("请输入 1、2 或 0")
+            report("请输入 1、2 或 0", "warning")
             continue
         tag = input("请输入 Tag（例如 v1.6.5，直接回车处理全部已发布版本）：").strip()
         if any(ord(character) < 32 for character in tag):
-            print("Tag 不能包含控制字符")
+            report("Tag 不能包含控制字符", "error")
             continue
         force = ask_yes_no("是否替换同名文件？[y/N]：", False)
         arguments = ["--tag", tag] if tag else ["--all"]
@@ -70,11 +71,11 @@ def interactive_menu(root: Path) -> int:
         print("缺失附件：补传；多余附件：删除（平台生成的源码包除外）", flush=True)
         result = run_sync(root, arguments)
         if result == 0:
-            print("操作完成")
+            report("操作完成", "success")
         elif result in (130, -2):
-            print("操作已中止")
+            report("操作已中止", "warning")
         else:
-            print(f"操作未全部成功（退出码 {result}），请查看上方错误后重试")
+            report(f"操作未全部成功（退出码 {result}），请查看上方错误后重试", "error")
 
 
 def main(argv=None) -> int:
@@ -88,10 +89,10 @@ def main(argv=None) -> int:
         print("\n输入已结束，退出")
         return 0
     except KeyboardInterrupt:
-        print("\n已中止")
+        report("\n已中止", "warning")
         return 130
     except OSError:
-        print("无法启动环境安装或同步脚本，请检查 Python 和目录权限")
+        report("无法启动环境安装或同步脚本，请检查 Python 和目录权限", "error")
         return 1
 
 

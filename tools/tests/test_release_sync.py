@@ -2,6 +2,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 import sys
@@ -434,7 +435,7 @@ class CliTests(unittest.TestCase):
                     download_only=False, dry_run=False, cache_dir=Path("unused"))
         with patch.object(self.cli, "release_assets", return_value=[{"name": "app.hap"}, {"name": "debug.hap"}]), \
                 patch.object(self.cli, "cache_asset", return_value=(Path("source.bin"), "digest")), \
-                patch.object(self.cli, "sync_asset", side_effect=lambda *args: events.append("sync")), \
+                patch.object(self.cli, "sync_asset", side_effect=lambda *args: events.append("sync") or "成功"), \
                 redirect_stdout(io.StringIO()):
             self.assertEqual(self.cli.sync_release(Mock(), [mirror], {"tag_name": "v1"}, args), 0)
         self.assertEqual(events, ["sync", "sync", "delete"])
@@ -448,6 +449,40 @@ class CliTests(unittest.TestCase):
                 self.cli.sync_release(Mock(), [mirror], {"tag_name": "v1"}, args)
         mirror.assets.assert_not_called()
         mirror.delete.assert_not_called()
+
+    def test_terminal_colors_distinguish_success_error_and_paused_pruning(self):
+        output = io.StringIO()
+        errors = io.StringIO()
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(self.cli, "HttpClient", return_value=Mock()), \
+                patch.object(self.cli, "get_token", return_value="test-only-placeholder"), \
+                patch.object(self.cli, "releases", return_value=[{"tag_name": "v1"}]), \
+                patch.object(self.cli, "release_assets", return_value=[{"name": "app.hap"}]), \
+                patch.object(Mirror, "assets", return_value=[]), \
+                patch.object(self.cli, "cache_asset", return_value=(Path(directory) / "source.bin", "digest")), \
+                patch.object(self.cli, "sync_asset", side_effect=[SyncError("上传失败"), "上传成功，SHA-256 已验证"]), \
+                patch("release_sync_terminal.supports_ansi", return_value=True), \
+                patch.dict(os.environ, {}, clear=True), redirect_stdout(output), redirect_stderr(errors):
+            self.assertEqual(self.cli.main(["--tag", "v1", "--cache-dir", directory]), 1)
+        self.assertIn("\033[32m  gitcode：app.hap — 上传成功，SHA-256 已验证\033[0m", output.getvalue())
+        self.assertIn("\033[33m  gitee：本轮有失败，暂停删除多余附件\033[0m", output.getvalue())
+        self.assertIn("\033[31m处理结束：1 项失败\033[0m", output.getvalue())
+        self.assertIn("\033[31m  gitee / app.hap 失败：上传失败\033[0m", errors.getvalue())
+
+    def test_redirected_verified_sync_keeps_compact_results_without_control_codes(self):
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(self.cli, "HttpClient", return_value=Mock()), \
+                patch.object(self.cli, "get_token", return_value="test-only-placeholder"), \
+                patch.object(self.cli, "releases", return_value=[{"tag_name": "v1"}]), \
+                patch.object(self.cli, "release_assets", return_value=[{"name": "app.hap"}]), \
+                patch.object(Mirror, "assets", return_value=[]), \
+                patch.object(self.cli, "cache_asset", return_value=(Path(directory) / "source.bin", "digest")), \
+                patch.object(self.cli, "sync_asset", return_value="上传成功，SHA-256 已验证"), redirect_stdout(output):
+            self.assertEqual(self.cli.main(["--tag", "v1", "--cache-dir", directory]), 0)
+        self.assertEqual(len(output.getvalue().splitlines()), 4)
+        self.assertNotIn("\033", output.getvalue())
+        self.assertNotIn("\r", output.getvalue())
 
 
 if __name__ == "__main__":

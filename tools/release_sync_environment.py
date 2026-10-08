@@ -5,6 +5,8 @@ import subprocess
 import sys
 import venv
 
+from release_sync_terminal import report
+
 
 MINIMUM_PYTHON = (3, 10)
 INTERPRETER_CHECK = """
@@ -49,42 +51,42 @@ def environment_status(root: Path, check_dependencies: bool = True) -> tuple[boo
 
 def install_environment(root: Path) -> int:
     if sys.version_info < MINIMUM_PYTHON:
-        print("需要 Python 3.10 或更新版本")
+        report("需要 Python 3.10 或更新版本", "error")
         return 1
     environment = root / ".venv"
     if environment.resolve() != environment.absolute():
-        print("无法安装：.venv 指向其他目录，请先处理此目录链接")
+        report("无法安装：.venv 指向其他目录，请先处理此目录链接", "error")
         return 1
     if environment.exists() and not (environment / "pyvenv.cfg").is_file():
         if not environment.is_dir() or any(environment.iterdir()):
-            print("无法安装：.venv 已存在但不是虚拟环境，请先重命名该目录，再重新运行")
+            report("无法安装：.venv 已存在但不是虚拟环境，请先重命名该目录，再重新运行", "error")
             return 1
     ready, _ = environment_status(root)
     if ready:
-        print(".venv 环境已就绪，无需重复安装")
+        report(".venv 环境已就绪，无需重复安装", "success")
         return 0
     try:
         interpreter_ready, _ = environment_status(root, check_dependencies=False)
         if not interpreter_ready:
-            print("创建或修复 .venv 虚拟环境……", flush=True)
+            report("创建或修复 .venv 虚拟环境……")
             # 不清空已有目录，保留其中的其他依赖和文件。
             venv.EnvBuilder(with_pip=True).create(environment)
         else:
             result = subprocess.run([str(environment_python(root)), "-m", "ensurepip", "--upgrade"])
             if result.returncode:
-                print("pip 修复失败，请检查 Python 安装和目录权限")
+                report("pip 修复失败，请检查 Python 安装和目录权限", "error")
                 return 1
-        print("安装 Release 同步依赖（需要联网）……", flush=True)
+        report("安装 Release 同步依赖（需要联网）……")
         # 解释器正常时只修复依赖，避免 Windows 覆盖正在运行的 python.exe。
         repair = ["--force-reinstall"] if interpreter_ready else []
         result = subprocess.run([str(environment_python(root)), "-m", "pip", "install", *repair, "-r",
                                  str(root / "tools" / "requirements-release-sync.txt")])
         if result.returncode:
-            print("依赖安装失败，请检查网络、pip 配置和磁盘空间后重试")
+            report("依赖安装失败，请检查网络、pip 配置和磁盘空间后重试", "error")
             return 1
     except (OSError, subprocess.SubprocessError):
-        print("环境创建失败，请检查 Python 安装、目录权限和磁盘空间")
+        report("环境创建失败，请检查 Python 安装、目录权限和磁盘空间", "error")
         return 1
     ready, reason = environment_status(root)
-    print(".venv 初始化完成" if ready else f"环境检查失败：{reason}")
+    report(".venv 初始化完成" if ready else f"环境检查失败：{reason}", "success" if ready else "error")
     return 0 if ready else 1
