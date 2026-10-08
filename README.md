@@ -28,11 +28,22 @@
 
 <!-- MIRROR_NOTICE_START -->
 <!--
-## 镜像仓库说明
+<h2 align="center">镜像仓库说明</h2>
 
-Gitee 和 GitCode（AtomGit）为自动同步镜像，开发与版本发布以 [GitHub 主仓库](https://github.com/StartYR/CalculatorX) 为准。
+<p align="center">
+  本仓库为自动同步镜像，开发与版本发布均以 GitHub 主仓库  <a href="https://github.com/StartYR/CalculatorX">StartYR/CalculatorX</a> 为准
+</p>
 
-如果 CalculatorX 对你有帮助，欢迎前往 [GitHub 主仓库](https://github.com/StartYR/CalculatorX) 点亮 ⭐ Star，支持项目持续开发。
+<p align="center">
+  <a href="https://github.com/StartYR/CalculatorX">
+    <img
+      src="https://github-readme-stats.vercel.app/api/pin/?username=StartYR&amp;repo=CalculatorX&amp;theme=transparent&amp;show_owner=true&amp;description_lines_count=1"
+      alt="CalculatorX GitHub Repository"
+      width="460"
+    />
+  </a>
+</p>
+
 -->
 <!-- MIRROR_NOTICE_END -->
 
