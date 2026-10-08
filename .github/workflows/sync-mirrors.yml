@@ -124,12 +124,6 @@ jobs:
           if not body.strip() or b"<!--" in body or b"-->" in body:
               raise SystemExit("README 镜像提示正文不能为空，也不能嵌套 HTML 注释")
 
-          # 仅镜像 README 引用仓库内图片，GitHub 主仓库 README 保持不变。
-          old_url = b"https://img.startyi.com/CalcX/github-stats.svg"
-          if body.count(old_url) != 1:
-              raise SystemExit("README 镜像提示中应当恰有一个原统计卡片地址")
-          body = body.replace(old_url, b"./docs/image/github-stats.svg", 1)
-
           newline = match.group("newline")
           readme_path.write_bytes(content[:start] + newline + body + newline + content[end:])
           PY
