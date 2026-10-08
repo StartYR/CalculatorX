@@ -1,10 +1,13 @@
 import hashlib
+import importlib.util
+import io
 import json
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -279,6 +282,54 @@ class MirrorTests(unittest.TestCase):
             self.assertNotIn("Transfer-Encoding", request.headers)
             self.assertEqual(progress.read(3), b"pac")
             self.assertEqual(progress.tell(), 3)
+
+
+class CliTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        path = Path(__file__).resolve().parents[1] / "sync-release-assets.py"
+        spec = importlib.util.spec_from_file_location("sync_release_assets_cli", path)
+        cls.cli = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.cli)
+
+    def test_empty_tag_is_rejected_before_any_network_request(self):
+        with patch.object(sys, "argv", ["sync-release-assets.py", "--tag", ""]), \
+                patch.object(self.cli, "HttpClient") as client, redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as error:
+                self.cli.main()
+        self.assertEqual(error.exception.code, 2)
+        client.assert_not_called()
+
+    def test_one_platform_failure_does_not_stop_other_platform(self):
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(sys, "argv", ["sync-release-assets.py", "--tag", "v1", "--cache-dir", directory]), \
+                patch.object(self.cli, "HttpClient", return_value=Mock()), \
+                patch.object(self.cli, "get_token", return_value="test-only-placeholder"), \
+                patch.object(self.cli, "releases", return_value=[{"tag_name": "v1"}]), \
+                patch.object(self.cli, "release_assets", return_value=[{"name": "app.hap"}]), \
+                patch.object(self.cli, "cache_asset", return_value=(Path(directory) / "source.bin", "digest")), \
+                patch.object(self.cli, "sync_asset", side_effect=[SyncError("上传失败"), "成功"]) as sync, \
+                redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+            self.assertEqual(self.cli.main(), 1)
+            self.assertFalse((Path(directory) / ".sync.lock").exists())
+        self.assertEqual(sync.call_count, 2)
+        self.assertEqual(sync.call_args_list[1].args[0].platform, "gitcode")
+
+    def test_preview_does_not_download_or_modify_cache_and_remote(self):
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(sys, "argv", ["sync-release-assets.py", "--tag", "v1", "--dry-run",
+                                           "--cache-dir", str(Path(directory) / "absent")]), \
+                patch.object(self.cli, "HttpClient", return_value=Mock()), \
+                patch.object(self.cli, "get_token", return_value="test-only-placeholder"), \
+                patch.object(self.cli, "releases", return_value=[{"tag_name": "v1"}]), \
+                patch.object(self.cli, "release_assets", return_value=[{"name": "app.hap", "size": 7}]), \
+                patch.object(Mirror, "find", return_value=None), \
+                patch.object(self.cli, "cache_asset") as download, patch.object(self.cli, "sync_asset") as sync, \
+                redirect_stdout(io.StringIO()):
+            self.assertEqual(self.cli.main(), 0)
+            self.assertFalse((Path(directory) / "absent").exists())
+        download.assert_not_called()
+        sync.assert_not_called()
 
 
 if __name__ == "__main__":

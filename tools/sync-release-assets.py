@@ -33,6 +33,8 @@ def main() -> int:
     parser.add_argument("--github-proxy", help="GitHub 代理 URL；空字符串表示直连")
     parser.add_argument("--mirror-proxy", help="镜像 API 和对象存储代理 URL；空字符串表示直连")
     args = parser.parse_args()
+    if args.tag is not None and (not args.tag.strip() or any(ord(character) < 32 for character in args.tag)):
+        parser.error("--tag 必须是非空且不包含控制字符的 Tag")
     if args.replace and (args.download_only or args.verify_only):
         parser.error("--replace 不能与 --download-only 或 --verify-only 同时使用")
     client = HttpClient(GITHUB_API, os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN", ""), args.github_proxy)
