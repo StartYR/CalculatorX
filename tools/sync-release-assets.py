@@ -47,7 +47,10 @@ def sync_release(client: HttpClient, mirrors: list[Mirror], release: dict, args)
         pending = []
         for mirror, existing in targets.items():
             same_name = asset["name"] in existing
-            action = "待替换" if same_name and args.force else "已有同名附件，跳过（未校验内容）" if same_name else "待上传"
+            if same_name:
+                action = "待替换" if args.force else "已有同名附件，跳过（未校验内容）"
+            else:
+                action = "待上传"
             if args.dry_run or (same_name and not args.force and not args.verify_only):
                 print(f"  {mirror.platform}：{asset['name']} — {action}", flush=True)
             else:

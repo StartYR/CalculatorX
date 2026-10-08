@@ -4,6 +4,26 @@ GitHub 是发布源。GitHub Actions 的 `.github/scripts/sync-releases.py` 负�
 
 运行前，目标平台必须已经存在同名 Tag 的 Release。附件工具不会创建 Release、修改说明或推送 Git 仓库，也不会把各平台自动生成的源码压缩包当作发布附件。
 
+## 交互入口
+
+Windows 下双击根目录 `sync-release.cmd`，或在项目根目录执行：
+
+```powershell
+.\sync-release.cmd
+```
+
+菜单提供“1. 同步附件”“2. 预览同步计划”“0. 退出”。选择操作后输入 Tag，例如 `v1.6.5`；直接回车会处理全部已发布版本，包含预发布版。随后选择是否替换同名附件，直接回车默认不替换。
+
+运行前会显示版本范围、同名处理方式以及补传、删除规则；完成或失败后返回菜单。首次启动或环境不可用时，询问是否创建或修复 `.venv` 并联网安装依赖，直接回车默认同意；安装失败可选择重试或退出。没有 Python 3.10+ 时提示安装系统 Python。
+
+跳板优先使用项目的 `.venv`，健康环境不依赖全局 Python 或重复安装；启动路径不受当前工作目录影响。也支持直接传递命令行参数：
+
+```powershell
+.\sync-release.cmd --tag v1.6.5 --dry-run
+.\sync-release.cmd --tag v1.6.5
+.\sync-release.cmd --tag v1.6.5 --force
+```
+
 ## 环境准备
 
 使用 Python 3.10 或更新版本。在项目根目录执行：
@@ -50,7 +70,7 @@ Windows 推荐在“凭据管理器 → Windows 凭据 → 添加普通凭据”
 ./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --asset CalcX-1.6.5-release-signed.hap
 ```
 
-仅下载到本机、只验证远端内容、同步最新正式版或补传全部历史版本：
+仅下载到本机、只验证远端内容、同步最新正式版或全部历史版本：
 
 ```powershell
 ./.venv/Scripts/python.exe -X utf8 tools/sync-release-assets.py --tag v1.6.5 --download-only
@@ -105,7 +125,7 @@ Windows 推荐在“凭据管理器 → Windows 凭据 → 添加普通凭据”
 ## 维护与测试
 
 ```powershell
-./.venv/Scripts/python.exe -X utf8 -m unittest discover -s tools/tests -p test_release_sync.py -v
+./.venv/Scripts/python.exe -X utf8 -m unittest discover -s tools/tests -p 'test_release_sync*.py' -v
 git diff --check
 ```
 
