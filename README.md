@@ -27,7 +27,7 @@
 </div>
 
 <!-- MIRROR_NOTICE_START -->
-
+<!--
 <h2 align="center">镜像仓库说明</h2>
 
 <p align="center">
@@ -44,7 +44,7 @@
   </a>
 </p>
 
-
+-->
 <!-- MIRROR_NOTICE_END -->
 
 ## 效果一览
