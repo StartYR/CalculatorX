@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://calcx.startyi.com/">
-    <img src="https://img.startyi.com/CalcX/CalcX-icon.webp" width="180" alt="CalculatorX 图标">
+    <img src="https://img.startyi.com/CalcX/CalcX-icon.webp?v=20261008" width="180" alt="CalculatorX 图标">
   </a>
 
   <h1>CalculatorX</h1>
@@ -56,20 +56,20 @@
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/AdvMath-dark.webp">
-    <img src="https://img.startyi.com/CalcX/AdvMath.webp" width="20%" alt="CalculatorX 科学计算">
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/AdvMath-dark.webp?v=20261008">
+    <img src="https://img.startyi.com/CalcX/AdvMath.webp?v=20261008" width="20%" alt="CalculatorX 科学计算">
   </picture>
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/Matrix-dark.webp">
-    <img src="https://img.startyi.com/CalcX/Matrix.webp" width="20%" alt="CalculatorX 矩阵运算">
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/Matrix-dark.webp?v=20261008">
+    <img src="https://img.startyi.com/CalcX/Matrix.webp?v=20261008" width="20%" alt="CalculatorX 矩阵运算">
   </picture>
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/Graph-dark.webp">
-    <img src="https://img.startyi.com/CalcX/Graph.webp" width="20%" alt="CalculatorX 函数图像">
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/Graph-dark.webp?v=20261008">
+    <img src="https://img.startyi.com/CalcX/Graph.webp?v=20261008" width="20%" alt="CalculatorX 函数图像">
   </picture>
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/Exchange-dark.webp">
-    <img src="https://img.startyi.com/CalcX/Exchange.webp" width="20%" alt="CalculatorX 汇率转换">
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.startyi.com/CalcX/Exchange-dark.webp?v=20261008">
+    <img src="https://img.startyi.com/CalcX/Exchange.webp?v=20261008" width="20%" alt="CalculatorX 汇率转换">
   </picture>
 
   <p><em>科学计算 · 矩阵与线性代数 · 函数图像 · 汇率转换</em></p>
