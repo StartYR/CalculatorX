@@ -55,3 +55,7 @@ entry/src/main/ets/utils/ApiConfig.ets
 
 # CalculatorX CLI 构建产物
 /tools/calcx/.build/
+
+# Python 本地工具缓存
+__pycache__/
+*.pyc
