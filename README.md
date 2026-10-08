@@ -37,7 +37,7 @@
 <p align="center">
   <a href="https://github.com/StartYR/CalculatorX">
     <img
-      src="https://github-readme-stats.vercel.app/api/pin/?username=StartYR&amp;repo=CalculatorX&amp;theme=transparent&amp;show_owner=true&amp;description_lines_count=1"
+      src="https://img.startyi.com/CalcX/github-stats.svg"
       alt="CalculatorX GitHub Repository"
       width="460"
     />
