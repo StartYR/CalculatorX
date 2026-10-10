@@ -23,7 +23,6 @@
     <a href="https://github.com/StartYR/CalculatorX/issues/new"><img src="./docs/image/badges/Issue.svg" height="30" alt="提交 Issue"></a>
   </p>
 
-
 </div>
 
 <!-- MIRROR_NOTICE_START -->
