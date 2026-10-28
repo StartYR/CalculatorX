@@ -702,9 +702,22 @@ export struct BaseConverter {
             Select([{ value: '8 bit · BYTE' }, { value: '16 bit · WORD' }, { value: '32 bit · DWORD' }, { value: '64 bit · QWORD' }])
               .selected([8, 16, 32, 64].indexOf(this.session.width)).value(this.session.width + ' bit').font({ size: 14 }).height(34)
               .id('base.width').onSelect((index: number) => this.select(() => this.session.changeWidth([8, 16, 32, 64][index])))
-            BaseChip({ label: this.session.signed ? '有符号' : '无符号', selected: this.session.signed,
-              onActivate: () => this.apply(() => this.session.changeSigned()), semanticId: 'base.signed' })
-            Blank()
+            // 两个选项直接选择解释方式；重复点击当前项不确认草稿或新增撤销记录。
+            Row() {
+              BaseChip({ label: '有符号', selected: this.session.signed, stretch: true,
+                onActivate: () => {
+                  if (!this.session.signed) this.apply(() => this.session.changeSigned());
+                }, semanticId: 'base.signed' }).layoutWeight(1)
+              BaseChip({ label: '无符号', selected: !this.session.signed, stretch: true,
+                onActivate: () => {
+                  if (this.session.signed) this.apply(() => this.session.changeSigned());
+                }, semanticId: 'base.unsigned' }).layoutWeight(1)
+            }
+            .layoutWeight(1)
+            .height(BASE_TOOLBAR_HEIGHT)
+            .padding(4)
+            .borderRadius(BASE_TOOLBAR_HEIGHT / 2)
+            .backgroundColor($r('sys.color.comp_background_primary'))
             BaseChip({ label: '位', selected: this.panel === 'bits',
               onActivate: () => { this.panel = this.panel === 'bits' ? '' : 'bits'; }, semanticId: 'base.bits' })
             BaseChip({ label: '编码', selected: this.panel === 'encoding',

@@ -23,7 +23,7 @@ if ($state.Programmer.data.bits -ne 'FFFFFFFFFFFFFFFF' -or $state.Programmer.dat
 }
 $empty = Get-SemanticState ([pscustomobject]@{ Controls = @() })
 if ($null -ne $empty.Programmer) { throw 'Absent programmer mode must report null.' }
-foreach ($id in @('base.key.1', 'base.key.equals', 'base.key.exponent', 'base.mode.float', 'base.radix.16', 'base.float.width', 'base.mode.numeric', 'base.numeric.source', 'base.keyboard.show')) {
+foreach ($id in @('base.key.1', 'base.key.equals', 'base.key.exponent', 'base.mode.float', 'base.radix.16', 'base.float.width', 'base.mode.numeric', 'base.numeric.source', 'base.keyboard.show', 'base.signed', 'base.unsigned')) {
   Assert-SemanticTargetAllowed $id
 }
 # 剪贴板和逐位修改等目标不在自动化点击白名单，拒绝范围外或无效字长。
