@@ -662,6 +662,37 @@ export struct BaseConverter {
   }
 
   @Builder
+  private IntegerControls() {
+    Row({ space: 6 }) {
+      Select([{ value: '8 bit · BYTE' }, { value: '16 bit · WORD' }, { value: '32 bit · DWORD' }, { value: '64 bit · QWORD' }])
+        .selected([8, 16, 32, 64].indexOf(this.session.width)).value(this.session.width + ' bit').font({ size: 14 }).height(34)
+        .id('base.width').onSelect((index: number) => this.select(() => this.session.changeWidth([8, 16, 32, 64][index])))
+      // 两个选项直接选择解释方式；重复点击当前项不确认草稿或新增撤销记录。
+      Row() {
+        BaseChip({ label: '有符号', selected: this.session.signed, stretch: true,
+          onActivate: () => {
+            if (!this.session.signed) this.apply(() => this.session.changeSigned());
+          }, semanticId: 'base.signed' }).layoutWeight(1)
+        BaseChip({ label: '无符号', selected: !this.session.signed, stretch: true,
+          onActivate: () => {
+            if (this.session.signed) this.apply(() => this.session.changeSigned());
+          }, semanticId: 'base.unsigned' }).layoutWeight(1)
+      }
+      .layoutWeight(1)
+      .height(BASE_TOOLBAR_HEIGHT)
+      .padding(4)
+      .borderRadius(BASE_TOOLBAR_HEIGHT / 2)
+      .attributeModifier(baseToolbarVisualModifier)
+      BaseChip({ label: '位', selected: this.panel === 'bits',
+        onActivate: () => { this.panel = this.panel === 'bits' ? '' : 'bits'; }, semanticId: 'base.bits' })
+      BaseChip({ label: '编码', selected: this.panel === 'encoding',
+        onActivate: () => { this.panel = this.panel === 'encoding' ? '' : 'encoding'; }, semanticId: 'base.encoding' })
+    }.width('100%').height(BASE_TOOLBAR_HEIGHT + BASE_TOOLBAR_SHADOW_GUTTER * 2)
+      .padding({ top: BASE_TOOLBAR_SHADOW_GUTTER, bottom: BASE_TOOLBAR_SHADOW_GUTTER })
+      .clip(false).hitTestBehavior(HitTestMode.Transparent)
+  }
+
+  @Builder
   private Display() {
     Scroll() {
       Column({ space: 7 }) {
@@ -698,31 +729,20 @@ export struct BaseConverter {
           this.BinaryRadixRow()
         }
         if (this.session.mode === 'integer') {
-          Row({ space: 6 }) {
-            Select([{ value: '8 bit · BYTE' }, { value: '16 bit · WORD' }, { value: '32 bit · DWORD' }, { value: '64 bit · QWORD' }])
-              .selected([8, 16, 32, 64].indexOf(this.session.width)).value(this.session.width + ' bit').font({ size: 14 }).height(34)
-              .id('base.width').onSelect((index: number) => this.select(() => this.session.changeWidth([8, 16, 32, 64][index])))
-            // 两个选项直接选择解释方式；重复点击当前项不确认草稿或新增撤销记录。
-            Row() {
-              BaseChip({ label: '有符号', selected: this.session.signed, stretch: true,
-                onActivate: () => {
-                  if (!this.session.signed) this.apply(() => this.session.changeSigned());
-                }, semanticId: 'base.signed' }).layoutWeight(1)
-              BaseChip({ label: '无符号', selected: !this.session.signed, stretch: true,
-                onActivate: () => {
-                  if (this.session.signed) this.apply(() => this.session.changeSigned());
-                }, semanticId: 'base.unsigned' }).layoutWeight(1)
+          // 阴影容器超出布局占位，保持控制行高度与相邻内容的位置。
+          Stack({ alignContent: Alignment.Center }) {
+            if (deviceInfo.apiAvailable('26.0.0')) {
+              // 普通滚动内容区不提供光感区域，使用与悬浮顶栏相同的局部底部 TabBar。
+              Tabs({ barPosition: BarPosition.End }) {
+                TabContent() { Column().width('100%').height('100%') }.tabBar(this.IntegerControls)
+              }.vertical(false).scrollable(false).animationDuration(0)
+                .barHeight(BASE_TOOLBAR_HEIGHT + BASE_TOOLBAR_SHADOW_GUTTER * 2)
+                .width('100%').height(BASE_TOOLBAR_HEIGHT + BASE_TOOLBAR_SHADOW_GUTTER * 2)
+                .clip(false).hitTestBehavior(HitTestMode.Transparent)
+            } else {
+              this.IntegerControls()
             }
-            .layoutWeight(1)
-            .height(BASE_TOOLBAR_HEIGHT)
-            .padding(4)
-            .borderRadius(BASE_TOOLBAR_HEIGHT / 2)
-            .backgroundColor($r('sys.color.comp_background_primary'))
-            BaseChip({ label: '位', selected: this.panel === 'bits',
-              onActivate: () => { this.panel = this.panel === 'bits' ? '' : 'bits'; }, semanticId: 'base.bits' })
-            BaseChip({ label: '编码', selected: this.panel === 'encoding',
-              onActivate: () => { this.panel = this.panel === 'encoding' ? '' : 'encoding'; }, semanticId: 'base.encoding' })
-          }.width('100%')
+          }.width('100%').height(BASE_TOOLBAR_HEIGHT).clip(false).hitTestBehavior(HitTestMode.Transparent)
           Row({ space: 12 }) {
             IntegerFlag({ label: 'CF', flagValue: this.session.flags.cf })
             IntegerFlag({ label: 'OF', flagValue: this.session.flags.of })
