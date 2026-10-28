@@ -33,6 +33,7 @@ const BASE_PAGE_TOP_OFFSET: number = 56;
 const BASE_TOOLBAR_SHADOW_GUTTER: number = 24;
 const BASE_KEYBOARD_SLIDE_DURATION: number = 280;
 const BASE_COPY_LONG_PRESS_DURATION: number = 350;
+const BASE_SELECTION_SLIDE_DURATION: number = 220;
 // 唤起按钮的可见尺寸；外层另加阴影留白。
 const BASE_KEYBOARD_RESTORE_WIDTH: number = 72;
 const BASE_KEYBOARD_RESTORE_HEIGHT: number = 50;
@@ -89,6 +90,7 @@ struct BaseChip {
   @Prop label: ResourceStr = '';
   @Prop selected: boolean = false;
   @Prop stretch: boolean = false;
+  @Prop selectionBackground: boolean = true;
   semanticId: string = '';
   onActivate: () => void = () => {};
 
@@ -99,13 +101,76 @@ struct BaseChip {
   build() {
     Button(this.labelText()).fontSize(13).fontWeight(this.selected ? FontWeight.Medium : FontWeight.Normal)
       .fontColor(this.selected ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary'))
-      .backgroundColor(this.selected ? $r('sys.color.comp_background_secondary') : Color.Transparent)
+      .backgroundColor(this.selected && this.selectionBackground ? $r('sys.color.comp_background_secondary') : Color.Transparent)
       .width(this.stretch ? '100%' : undefined).height(this.stretch ? BASE_TOOLBAR_HEIGHT - 8 : 32)
       .padding({ left: this.stretch ? 4 : 10, right: this.stretch ? 4 : 10 }).id(this.semanticId)
       .accessibilityText(this.labelText() + (this.selected ? '，已选中' : '')).onClick(() => {
       HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
       this.onActivate();
     })
+  }
+}
+
+interface BaseSegmentOption {
+  label: ResourceStr;
+  semanticId: string;
+  weight: number;
+}
+
+const BASE_MODE_OPTIONS: BaseSegmentOption[] = [
+  { label: $r('app.string.base_numeric_tab'), semanticId: 'base.mode.numeric', weight: 1 },
+  { label: '整数', semanticId: 'base.mode.integer', weight: 1 },
+  { label: 'IEEE 754', semanticId: 'base.mode.float', weight: 1.35 }
+];
+const BASE_SIGN_OPTIONS: BaseSegmentOption[] = [
+  { label: '有符号', semanticId: 'base.signed', weight: 1 },
+  { label: '无符号', semanticId: 'base.unsigned', weight: 1 }
+];
+
+/** 单个底色胶囊跟随选中状态移动，按钮只负责文字、触感与点击命中。 */
+@Component
+struct BaseSegmentedControl {
+  @Prop selectedIndex: number = 0;
+  options: BaseSegmentOption[] = [];
+  onSelect: (index: number) => void = () => {};
+
+  private totalWeight(): number {
+    return this.options.reduce((total: number, option: BaseSegmentOption): number => total + option.weight, 0);
+  }
+
+  private highlightWidth(): string {
+    return `${this.options[this.selectedIndex].weight / this.totalWeight() * 100}%`;
+  }
+
+  private highlightOffset(): string {
+    let precedingWeight = 0;
+    for (let index = 0; index < this.selectedIndex; index++) precedingWeight += this.options[index].weight;
+    return `${precedingWeight / this.totalWeight() * 100}%`;
+  }
+
+  build() {
+    Row() {
+      Stack({ alignContent: Alignment.Start }) {
+        // 使用与按钮相同的权重计算位置和宽度，IEEE 754 的较宽选项也能准确对齐。
+        Row()
+          .width(this.highlightWidth())
+          .height('100%')
+          .borderRadius((BASE_TOOLBAR_HEIGHT - 8) / 2)
+          .backgroundColor($r('sys.color.comp_background_secondary'))
+          .position({ x: this.highlightOffset(), y: 0 })
+          .animation({ duration: BASE_SELECTION_SLIDE_DURATION, curve: Curve.EaseInOut })
+          .hitTestBehavior(HitTestMode.None)
+          .accessibilityLevel('no')
+        Row() {
+          ForEach(this.options, (option: BaseSegmentOption, index: number) => {
+            BaseChip({ label: option.label, selected: this.selectedIndex === index, stretch: true,
+              selectionBackground: false, semanticId: option.semanticId,
+              onActivate: () => this.onSelect(index) }).layoutWeight(option.weight)
+          }, (option: BaseSegmentOption) => option.semanticId)
+        }.width('100%').height('100%')
+      }.width('100%').height('100%')
+    }.width('100%').height(BASE_TOOLBAR_HEIGHT).padding(4).borderRadius(BASE_TOOLBAR_HEIGHT / 2)
+    .attributeModifier(baseToolbarVisualModifier)
   }
 }
 
@@ -568,21 +633,9 @@ export struct BaseConverter {
   @Builder
   private Toolbar() {
     Row({ space: 8 }) {
-      Row() {
-        BaseChip({ label: $r('app.string.base_numeric_tab'), selected: this.session.mode === 'numeric', stretch: true,
-          onActivate: () => {
-            this.changeMode('numeric');
-          }, semanticId: 'base.mode.numeric' }).layoutWeight(1)
-        BaseChip({ label: '整数', selected: this.session.mode === 'integer', stretch: true,
-          onActivate: () => {
-            this.changeMode('integer');
-          }, semanticId: 'base.mode.integer' }).layoutWeight(1)
-        BaseChip({ label: 'IEEE 754', selected: this.session.mode === 'float', stretch: true,
-          onActivate: () => {
-            this.changeMode('float');
-          }, semanticId: 'base.mode.float' }).layoutWeight(1.35)
-      }.layoutWeight(1).height(BASE_TOOLBAR_HEIGHT).padding(4).borderRadius(BASE_TOOLBAR_HEIGHT / 2)
-      .attributeModifier(baseToolbarVisualModifier)
+      BaseSegmentedControl({ options: BASE_MODE_OPTIONS,
+        selectedIndex: this.session.mode === 'numeric' ? 0 : this.session.mode === 'integer' ? 1 : 2,
+        onSelect: (index: number) => this.changeMode(['numeric', 'integer', 'float'][index]) }).layoutWeight(1)
       Row() {
         Button('粘贴').width('100%').height('100%').padding(0).fontSize(13)
           .fontColor($r('sys.color.font_primary')).backgroundColor(Color.Transparent)
@@ -668,21 +721,10 @@ export struct BaseConverter {
         .selected([8, 16, 32, 64].indexOf(this.session.width)).value(this.session.width + ' bit').font({ size: 14 }).height(34)
         .id('base.width').onSelect((index: number) => this.select(() => this.session.changeWidth([8, 16, 32, 64][index])))
       // 两个选项直接选择解释方式；重复点击当前项不确认草稿或新增撤销记录。
-      Row() {
-        BaseChip({ label: '有符号', selected: this.session.signed, stretch: true,
-          onActivate: () => {
-            if (!this.session.signed) this.apply(() => this.session.changeSigned());
-          }, semanticId: 'base.signed' }).layoutWeight(1)
-        BaseChip({ label: '无符号', selected: !this.session.signed, stretch: true,
-          onActivate: () => {
-            if (this.session.signed) this.apply(() => this.session.changeSigned());
-          }, semanticId: 'base.unsigned' }).layoutWeight(1)
-      }
-      .layoutWeight(1)
-      .height(BASE_TOOLBAR_HEIGHT)
-      .padding(4)
-      .borderRadius(BASE_TOOLBAR_HEIGHT / 2)
-      .attributeModifier(baseToolbarVisualModifier)
+      BaseSegmentedControl({ options: BASE_SIGN_OPTIONS, selectedIndex: this.session.signed ? 0 : 1,
+        onSelect: (index: number) => {
+          if (this.session.signed !== (index === 0)) this.apply(() => this.session.changeSigned());
+        } }).layoutWeight(1)
       BaseChip({ label: '位', selected: this.panel === 'bits',
         onActivate: () => { this.panel = this.panel === 'bits' ? '' : 'bits'; }, semanticId: 'base.bits' })
       BaseChip({ label: '编码', selected: this.panel === 'encoding',
