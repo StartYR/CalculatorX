@@ -8,6 +8,8 @@
 
 import deviceInfo from '@ohos.deviceInfo';
 import { uiMaterial } from '@kit.ArkUI';
+import { hdsMaterial, SystemMaterialParams } from '@kit.UIDesignKit';
+
 import { KeyboardKeyRole } from '../components/common/keyboard/KeyboardKeyTypes';
 
 let normalKeyboardMaterial: uiMaterial.Material | undefined = undefined;
@@ -26,15 +28,35 @@ export function isImmersiveMaterialAvailable(): boolean {
   return deviceInfo.apiAvailable('26.0.0');
 }
 
+/** 仅选择布局或传统样式；新 API 调用仍须在调用处使用直接正向版本保护。 */
+export function isImmersiveMaterialEnabled(globalEnabled: boolean = true): boolean {
+  return isImmersiveMaterialAvailable() && globalEnabled;
+}
+
+/** 全局关闭只影响生效状态，不改写用户保存的键盘偏好。 */
+export function isKeyboardMaterialEnabled(keyboardEnabled: boolean, globalEnabled: boolean = true): boolean {
+  return isImmersiveMaterialEnabled(globalEnabled) && keyboardEnabled;
+}
+
+/** HDS 自适应材质自 API 23 可用，沿用系统降级；关闭时显式使用 NONE。 */
+export function createNavigationMaterial(globalEnabled: boolean = true): SystemMaterialParams {
+  return {
+    materialType: globalEnabled ? hdsMaterial.MaterialType.ADAPTIVE : hdsMaterial.MaterialType.NONE,
+    materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+  };
+}
+
 /**
  * 创建用于 Sheet 的常规强度沉浸光感材质。
  *
  * 版本判断必须直接包围新 API 构造，以便 ArkTS 兼容性分析识别安全边界。
  *
- * @returns 支持时返回材质实例，否则返回 `undefined`
+ * @returns API 26 开启时返回材质，关闭时返回 `Material.empty`；低版本返回 `undefined`
  */
-export function createSheetMaterial(): uiMaterial.Material | undefined {
+export function createSheetMaterial(globalEnabled: boolean = true): uiMaterial.Material | undefined {
   if (deviceInfo.apiAvailable('26.0.0')) {
+    // undefined 会恢复系统默认材质，不能用于显式关闭光感。
+    if (!globalEnabled) return uiMaterial.Material.empty;
     return new uiMaterial.ImmersiveMaterial({
       style: uiMaterial.ImmersiveStyle.REGULAR
     });
@@ -46,10 +68,11 @@ export function createSheetMaterial(): uiMaterial.Material | undefined {
 /**
  * 创建用于弹窗的高遮挡沉浸光感材质。
  *
- * @returns 支持时返回材质实例，否则返回 `undefined`
+ * @returns API 26 开启时返回材质，关闭时返回 `Material.empty`；低版本返回 `undefined`
  */
-export function createDialogMaterial(): uiMaterial.Material | undefined {
+export function createDialogMaterial(globalEnabled: boolean = true): uiMaterial.Material | undefined {
   if (deviceInfo.apiAvailable('26.0.0')) {
+    if (!globalEnabled) return uiMaterial.Material.empty;
     return new uiMaterial.ImmersiveMaterial({
       style: uiMaterial.ImmersiveStyle.ULTRA_THICK
     });
@@ -61,10 +84,11 @@ export function createDialogMaterial(): uiMaterial.Material | undefined {
 /**
  * 创建用于菜单的较厚沉浸光感材质。
  *
- * @returns 支持时返回材质实例，否则返回 `undefined`
+ * @returns API 26 开启时返回材质，关闭时返回 `Material.empty`；低版本返回 `undefined`
  */
-export function createMenuMaterial(): uiMaterial.Material | undefined {
+export function createMenuMaterial(globalEnabled: boolean = true): uiMaterial.Material | undefined {
   if (deviceInfo.apiAvailable('26.0.0')) {
+    if (!globalEnabled) return uiMaterial.Material.empty;
     return new uiMaterial.ImmersiveMaterial({
       style: uiMaterial.ImmersiveStyle.THICK
     });
@@ -76,10 +100,11 @@ export function createMenuMaterial(): uiMaterial.Material | undefined {
 /**
  * 创建用于搜索框的薄款沉浸光感材质。
  *
- * @returns 支持时返回材质实例，否则返回 `undefined`
+ * @returns API 26 开启时返回材质，关闭时返回 `Material.empty`；低版本返回 `undefined`
  */
-export function createSearchMaterial(): uiMaterial.Material | undefined {
+export function createSearchMaterial(globalEnabled: boolean = true): uiMaterial.Material | undefined {
   if (deviceInfo.apiAvailable('26.0.0')) {
+    if (!globalEnabled) return uiMaterial.Material.empty;
     return new uiMaterial.ImmersiveMaterial({
       style: uiMaterial.ImmersiveStyle.THIN
     });
@@ -91,10 +116,11 @@ export function createSearchMaterial(): uiMaterial.Material | undefined {
 /**
  * 创建用于 TopBar 按钮的超薄交互式沉浸光感材质。
  *
- * @returns 支持时返回材质实例，否则返回 `undefined`
+ * @returns API 26 开启时返回材质，关闭时返回 `Material.empty`；低版本返回 `undefined`
  */
-export function createTopBarMaterial(): uiMaterial.Material | undefined {
+export function createTopBarMaterial(globalEnabled: boolean = true): uiMaterial.Material | undefined {
   if (deviceInfo.apiAvailable('26.0.0')) {
+    if (!globalEnabled) return uiMaterial.Material.empty;
     return new uiMaterial.ImmersiveMaterial({
       style: uiMaterial.ImmersiveStyle.ULTRA_THIN,
       colorInvert: true,
@@ -111,13 +137,16 @@ export function createTopBarMaterial(): uiMaterial.Material | undefined {
  *
  * 每类语义按键共用材质实例，避免为每个按键重复构造。
  *
- * @returns 支持时返回材质实例，否则返回 `undefined`
+ * @returns API 26 开启时返回材质，关闭时返回 `Material.empty`；低版本返回 `undefined`
  */
 export function createKeyboardMaterial(
   role: KeyboardKeyRole,
-  shiftActive: boolean = false
+  shiftActive: boolean = false,
+  globalEnabled: boolean = true
 ): uiMaterial.Material | undefined {
   if (deviceInfo.apiAvailable('26.0.0')) {
+    // 在缓存命中前处理关闭，避免已创建的材质绕过总开关。
+    if (!globalEnabled) return uiMaterial.Material.empty;
     if (role === KeyboardKeyRole.FUNCTION || role === KeyboardKeyRole.OPERATOR) {
       if (!operatorKeyboardMaterial) {
         operatorKeyboardMaterial = new uiMaterial.ImmersiveMaterial({
