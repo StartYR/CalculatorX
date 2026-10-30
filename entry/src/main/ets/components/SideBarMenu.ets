@@ -12,13 +12,13 @@ import {
   HdsNavigation,
   HdsNavigationMenuItemOptions,
   HdsNavigationTitleMode,
-  hdsMaterial,
   ScrollEffectType
 } from '@kit.UIDesignKit';
 
 import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from './common/MenuComponents';
 import { RoutePath } from '../utils/CalculatorConfigs';
 import { SemanticIds, getModuleSemanticId } from '../utils/SemanticIds';
+import { createNavigationMaterial } from '../utils/ImmersiveMaterialUtils';
 
 @Component
 export struct SideBarMenu {
@@ -287,10 +287,7 @@ export struct SideBarMenu {
                 menuStyle: { iconColor: $r('sys.color.icon_primary') }
               }
             },
-            systemMaterialEffect: {
-              materialType: hdsMaterial.MaterialType.ADAPTIVE,
-              materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
-            }
+            systemMaterialEffect: createNavigationMaterial()
           },
           avoidLayoutSafeArea: true,
           enableComponentSafeArea: false

@@ -13,10 +13,9 @@ import {
   HdsNavigation,
   HdsNavigationMenuItemOptions,
   HdsNavigationTitleMode,
-  hdsMaterial,
   ScrollEffectType
 } from '@kit.UIDesignKit';
-import { createDialogMaterial } from '../utils/ImmersiveMaterialUtils';
+import { createNavigationMaterial, createDialogMaterial } from '../utils/ImmersiveMaterialUtils';
 
 @Component
 export struct HistorySheet {
@@ -193,10 +192,7 @@ export struct HistorySheet {
             menuStyle: { iconColor: $r('sys.color.icon_primary') }
           }
         },
-        systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
-        }
+        systemMaterialEffect: createNavigationMaterial()
       },
       enableComponentSafeArea: false
     })

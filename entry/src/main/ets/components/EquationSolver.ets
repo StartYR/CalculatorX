@@ -6,6 +6,7 @@
  * @date 2026/7/24 22:52
  */
 
+import { isKeyboardMaterialEnabled } from '../utils/ImmersiveMaterialUtils';
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { vibrator } from '@kit.SensorServiceKit';
@@ -371,7 +372,7 @@ export struct EquationSolver {
 
   build() {
     if (deviceInfo.apiAvailable('26.0.0')) {
-      if (this.keyImmersiveMaterial) {
+      if (isKeyboardMaterialEnabled(this.keyImmersiveMaterial)) {
         this.ImmersiveEquationLayout()
       } else {
         this.LegacyEquationLayout()

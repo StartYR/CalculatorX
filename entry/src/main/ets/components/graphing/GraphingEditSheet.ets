@@ -6,6 +6,7 @@
  * @date 2026/8/3 19:46
  */
 
+import { isKeyboardMaterialEnabled } from '../../utils/ImmersiveMaterialUtils';
 import { FormulaScreen } from '../FormulaScreen';
 import { GRAPHING_COLORS, getActionId, PreferenceConfigs } from '../../utils/CalculatorConfigs';
 import { GraphFunctionItem, FunctionType } from './GraphingTypes';
@@ -624,7 +625,7 @@ export struct GraphingEditSheet {
   @Builder
   private GraphingKeyboardDockBuilder() {
     if (deviceInfo.apiAvailable('26.0.0')) {
-      if (this.keyImmersiveMaterial) {
+      if (isKeyboardMaterialEnabled(this.keyImmersiveMaterial)) {
         this.ImmersiveGraphingKeyboardLayout()
       } else {
         this.LegacyGraphingKeyboardBuilder()

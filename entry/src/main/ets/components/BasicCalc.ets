@@ -6,6 +6,7 @@
  * @date 2026/6/26 02:20
  */
 
+import { isKeyboardMaterialEnabled } from '../utils/ImmersiveMaterialUtils';
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { getActionId, getFontColor, PreferenceConfigs, icon_backspace } from '../utils/CalculatorConfigs';
@@ -213,7 +214,7 @@ export struct BasicCalc {
 
   build() {
     if (deviceInfo.apiAvailable('26.0.0')) {
-      if (this.keyImmersiveMaterial) {
+      if (isKeyboardMaterialEnabled(this.keyImmersiveMaterial)) {
         this.ImmersiveBasicLayout()
       } else {
         this.LegacyBasicLayout()

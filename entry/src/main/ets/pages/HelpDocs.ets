@@ -12,8 +12,9 @@ import {
   HdsNavigation,
   HdsNavigationTitleMode,
   ScrollEffectType,
-  hdsMaterial
 } from '@kit.UIDesignKit';
+
+import { createNavigationMaterial } from '../utils/ImmersiveMaterialUtils';
 
 @Entry
 @Component
@@ -91,10 +92,7 @@ struct HelpDocs {
           enableScrollEffect: true,
           scrollEffectType: ScrollEffectType.GRADIENT_BLUR,
         },
-        systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
-        },
+        systemMaterialEffect: createNavigationMaterial(),
       },
       avoidLayoutSafeArea: true,
       enableComponentSafeArea: false

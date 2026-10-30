@@ -10,6 +10,7 @@
  * @date 2026/6/25 17:30
  */
 
+import { isKeyboardMaterialEnabled } from '../utils/ImmersiveMaterialUtils';
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { KeyGestureWrapper } from './common/KeyGestureWrapper';
@@ -396,7 +397,7 @@ export struct ScientificCalc {
 
   build() {
     if (deviceInfo.apiAvailable('26.0.0')) {
-      if (this.keyImmersiveMaterial) {
+      if (isKeyboardMaterialEnabled(this.keyImmersiveMaterial)) {
         this.ImmersiveScientificLayout()
       } else {
         this.LegacyScientificLayout()

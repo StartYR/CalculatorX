@@ -47,6 +47,7 @@ foreach ($file in $allEtsFiles) {
 $allowedPreferenceReaders = @(
   (Join-Path $sourceRoot 'utils\CalculatorConfigs.ets'),
   (Join-Path $sourceRoot 'utils\PreferenceManager.ets'),
+  (Join-Path $sourceRoot 'utils\PreferenceDefaults.ets'),
   (Join-Path $sourceRoot 'entryability\EntryAbility.ets'),
   (Join-Path $sourceRoot 'pages\settings\Settings.ets')
 ) + $renderModules

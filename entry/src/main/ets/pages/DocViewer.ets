@@ -11,8 +11,9 @@ import {
   HdsNavigation,
   HdsNavigationTitleMode,
   ScrollEffectType,
-  hdsMaterial
 } from '@kit.UIDesignKit';
+
+import { createNavigationMaterial } from '../utils/ImmersiveMaterialUtils';
 
 @Entry
 @Component
@@ -64,10 +65,7 @@ struct DocViewer {
           enableScrollEffect: true,
           scrollEffectType: ScrollEffectType.GRADIENT_BLUR,
         },
-        systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
-        },
+        systemMaterialEffect: createNavigationMaterial(),
       },
       avoidLayoutSafeArea: true,
       enableComponentSafeArea: false

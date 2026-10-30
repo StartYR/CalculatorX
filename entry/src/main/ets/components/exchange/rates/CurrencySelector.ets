@@ -6,34 +6,20 @@
  * @date 2026/8/19 23:35
  */
 
+import { createNavigationMaterial } from '../../../utils/ImmersiveMaterialUtils';
 import Logger from '../../../utils/Logger';
 import { CURRENCY_WHITELIST, CURRENCY_MAP, CurrencyInfo } from './CurrencyData';
 import { GroupHeader, MenuGroup, ItemDivider } from '../../common/MenuComponents';
-import deviceInfo from '@ohos.deviceInfo';
 import { LengthMetrics } from '@kit.ArkUI';
 import {
   BottomBuilderShowType,
   HdsNavigation,
   HdsNavigationTitleMode,
-  hdsMaterial,
   ScrollEffectType
 } from '@kit.UIDesignKit';
-import { createSearchMaterial } from '../../../utils/ImmersiveMaterialUtils';
+import { ImmersiveSearchModifier } from '../../common/ImmersiveVisualModifiers';
 
-class CurrencySearchVisualModifier implements AttributeModifier<SearchAttribute> {
-  applyNormalAttribute(instance: SearchAttribute): void {
-    if (deviceInfo.apiAvailable('26.0.0')) {
-      instance.systemMaterial(createSearchMaterial());
-    } else {
-      instance.borderWidth(0.1);
-      instance.borderColor($r('sys.color.comp_divider'));
-      instance.backgroundColor(Color.Transparent);
-      instance.backgroundBlurStyle(BlurStyle.Thin);
-    }
-  }
-}
-
-const currencySearchVisualModifier: CurrencySearchVisualModifier = new CurrencySearchVisualModifier();
+const currencySearchVisualModifier: ImmersiveSearchModifier = new ImmersiveSearchModifier();
 
 // 定义分组数据接口
 class CurrencyGroup {
@@ -423,10 +409,7 @@ export struct CurrencySelector {
             titleStyle: { mainTitleColor: $r('sys.color.font_primary') }
           }
         },
-        systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
-        }
+        systemMaterialEffect: createNavigationMaterial()
       },
       enableComponentSafeArea: false
     })

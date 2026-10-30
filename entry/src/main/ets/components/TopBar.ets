@@ -7,9 +7,8 @@
  */
 
 import Logger from '../utils/Logger'
-import deviceInfo from '@ohos.deviceInfo';
 import { SemanticIds } from '../utils/SemanticIds';
-import { createTopBarMaterial } from '../utils/ImmersiveMaterialUtils';
+import { ImmersiveToolbarButtonModifier } from './common/ImmersiveVisualModifiers';
 
 // 定义模块名称映射
 const MODULE_TITLES: Record<string, string> = {
@@ -31,21 +30,7 @@ enum TopBarTrailingAction {
   EDIT
 }
 
-class TopBarButtonVisualModifier implements AttributeModifier<ButtonAttribute> {
-  applyNormalAttribute(instance: ButtonAttribute): void {
-    if (deviceInfo.apiAvailable('26.0.0')) {
-      instance.buttonStyle(ButtonStyleMode.TEXTUAL);
-      instance.systemMaterial(createTopBarMaterial());
-    } else {
-      instance.backgroundColor('#54ffffff');
-      instance.backgroundBlurStyle(BlurStyle.COMPONENT_THICK);
-      instance.border({ width: 0.5, color: $r('sys.color.comp_divider'), radius: 16 });
-      instance.shadow({ radius: 32, color: '#25000000', offsetX: 3, offsetY: 6 });
-    }
-  }
-}
-
-const topBarButtonVisualModifier: TopBarButtonVisualModifier = new TopBarButtonVisualModifier();
+const topBarButtonVisualModifier: ImmersiveToolbarButtonModifier = new ImmersiveToolbarButtonModifier();
 
 @Component
 export struct TopBar {

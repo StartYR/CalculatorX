@@ -11,7 +11,6 @@ import { common, ConfigurationConstant } from '@kit.AbilityKit';
 import {
   HdsNavigation,
   HdsNavigationTitleMode,
-  hdsMaterial,
   ScrollEffectType,
   HdsTabs,
   HdsTabsController,
@@ -20,7 +19,7 @@ import {
 import { SymbolGlyphModifier, promptAction } from '@kit.ArkUI';
 import Logger from '../../utils/Logger'
 import { SemanticIds } from '../../utils/SemanticIds';
-import { createDialogMaterial } from '../../utils/ImmersiveMaterialUtils';
+import { createNavigationMaterial, createDialogMaterial } from '../../utils/ImmersiveMaterialUtils';
 
 import pasteboard from '@ohos.pasteboard'; // 剪贴板
 
@@ -187,10 +186,7 @@ export struct HistoryManager {
     .barPosition(BarPosition.End)
     .barFloatingStyle({
       barBottomMargin: 24,
-      systemMaterialEffect: {
-        materialType: hdsMaterial.MaterialType.ADAPTIVE,
-        materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
-      }
+      systemMaterialEffect: createNavigationMaterial()
     })
     .height('100%')
     .width('100%')
@@ -211,7 +207,7 @@ export struct HistoryManager {
       },
       style: {
         scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: ScrollEffectType.GRADIENT_BLUR },
-        systemMaterialEffect: { materialType: hdsMaterial.MaterialType.ADAPTIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE }
+        systemMaterialEffect: createNavigationMaterial()
       },
       avoidLayoutSafeArea: true,
       enableComponentSafeArea: false

@@ -6,6 +6,7 @@
  * @date 2026/7/3 02:32
  */
 
+import { isKeyboardMaterialEnabled } from '../utils/ImmersiveMaterialUtils';
 import { FormulaScreen } from './FormulaScreen';
 import { HapticUtils } from '../utils/HapticUtils';
 import { KeyGestureWrapper } from './common/KeyGestureWrapper';
@@ -304,7 +305,7 @@ export struct MatrixCalc {
 
   build() {
     if (deviceInfo.apiAvailable('26.0.0')) {
-      if (this.keyImmersiveMaterial) {
+      if (isKeyboardMaterialEnabled(this.keyImmersiveMaterial)) {
         this.ImmersiveMatrixLayout()
       } else {
         this.LegacyMatrixLayout()

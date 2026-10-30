@@ -5,6 +5,7 @@
  * @author StartYi
  * @date 2026/8/3 19:46
  */
+import { isKeyboardMaterialEnabled } from '../../utils/ImmersiveMaterialUtils';
 import { HapticUtils } from '../../utils/HapticUtils';
 import { getActionId, getFontFamily, getFontSize, getFontColor } from '../../utils/CalculatorConfigs';
 import { PreferenceConfigs } from '../../utils/CalculatorConfigs';
@@ -329,7 +330,7 @@ export struct DomainKeyboard {
 
   build() {
     if (deviceInfo.apiAvailable('26.0.0')) {
-      if (this.keyImmersiveMaterial) {
+      if (isKeyboardMaterialEnabled(this.keyImmersiveMaterial)) {
         this.ImmersiveDomainKeyboardLayout()
       } else {
         this.LegacyDomainKeyboardBuilder()

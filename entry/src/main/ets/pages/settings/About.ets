@@ -13,10 +13,10 @@ import {
   HdsNavigation,
   HdsNavigationTitleMode,
   ScrollEffectType,
-  hdsMaterial
 } from '@kit.UIDesignKit';
 import Logger from '../../utils/Logger'
 import bundleManager from '@ohos.bundle.bundleManager';
+import { createNavigationMaterial } from '../../utils/ImmersiveMaterialUtils';
 
 // 定义鸣谢数据结构
 interface CreditItem {
@@ -278,10 +278,7 @@ struct About {
           enableScrollEffect: true,
           scrollEffectType: ScrollEffectType.GRADIENT_BLUR,
         },
-        systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
-        },
+        systemMaterialEffect: createNavigationMaterial(),
       },
       avoidLayoutSafeArea: true,
       enableComponentSafeArea: false

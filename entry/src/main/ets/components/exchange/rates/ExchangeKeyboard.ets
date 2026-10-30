@@ -7,6 +7,7 @@
  * @date 2026/8/20
  */
 
+import { isKeyboardMaterialEnabled } from '../../../utils/ImmersiveMaterialUtils';
 import { HapticUtils } from '../../../utils/HapticUtils';
 import { getActionId, getFontFamily, getFontSize, getFontColor, icon_backspace, PreferenceConfigs } from '../../../utils/CalculatorConfigs';
 import { KeyGestureWrapper } from '../../common/KeyGestureWrapper';
@@ -170,7 +171,7 @@ export struct ExchangeKeyboard {
 
   build() {
     if (deviceInfo.apiAvailable('26.0.0')) {
-      if (this.keyImmersiveMaterial) {
+      if (isKeyboardMaterialEnabled(this.keyImmersiveMaterial)) {
         this.ImmersiveKeyboardLayout()
       } else {
         this.LegacyKeyboardBuilder()

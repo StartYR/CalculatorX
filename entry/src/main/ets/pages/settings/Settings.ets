@@ -14,7 +14,6 @@ import {
   HdsNavigationTitleMode,
   HdsNavigationMenuContentOptions,
   ScrollEffectType,
-  hdsMaterial
 } from '@kit.UIDesignKit';
 import { ConfigurationConstant, common } from '@kit.AbilityKit';
 import { PreferenceManager } from '../../utils/PreferenceManager';
@@ -25,19 +24,12 @@ import Logger from '../../utils/Logger'
 // 引入全局菜单组件库
 import { GroupHeader, ItemDivider, MenuButton, MenuGroup } from '../../components/common/MenuComponents';
 import { SemanticIds } from '../../utils/SemanticIds';
-import { createMenuMaterial, createSheetMaterial } from '../../utils/ImmersiveMaterialUtils';
+import { createNavigationMaterial, createSheetMaterial } from '../../utils/ImmersiveMaterialUtils';
+import { ImmersiveSelectMenuModifier } from '../../components/common/ImmersiveVisualModifiers';
 import deviceInfo from '@ohos.deviceInfo';
 
-class SettingsSelectMenuMaterialModifier implements AttributeModifier<SelectAttribute> {
-  applyNormalAttribute(instance: SelectAttribute): void {
-    if (deviceInfo.apiAvailable('26.0.0')) {
-      instance.menuSystemMaterial(createMenuMaterial());
-    }
-  }
-}
-
-const settingsSelectMenuMaterialModifier: SettingsSelectMenuMaterialModifier =
-  new SettingsSelectMenuMaterialModifier();
+const settingsSelectMenuMaterialModifier: ImmersiveSelectMenuModifier =
+  new ImmersiveSelectMenuModifier();
 
 // ==================== 底部半模态面板内容：数学公式样式选择 ====================
 @Component
@@ -737,10 +729,7 @@ export struct Settings {
           enableScrollEffect: true,
           scrollEffectType: ScrollEffectType.GRADIENT_BLUR,
         },
-        systemMaterialEffect: {
-          materialType: hdsMaterial.MaterialType.ADAPTIVE,
-          materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
-        },
+        systemMaterialEffect: createNavigationMaterial(),
       },
       avoidLayoutSafeArea: true,
       enableComponentSafeArea: false

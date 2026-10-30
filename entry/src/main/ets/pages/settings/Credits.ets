@@ -13,9 +13,9 @@ import {
   HdsNavigation,
   HdsNavigationTitleMode,
   ScrollEffectType,
-  hdsMaterial
 } from '@kit.UIDesignKit';
 import Logger from '../../utils/Logger'
+import { createNavigationMaterial } from '../../utils/ImmersiveMaterialUtils';
 
 interface CreditItem {
   name: string;
@@ -96,7 +96,7 @@ struct Credits {
       },
       style: {
         scrollEffectOpts: { enableScrollEffect: true, scrollEffectType: ScrollEffectType.GRADIENT_BLUR },
-        systemMaterialEffect: { materialType: hdsMaterial.MaterialType.ADAPTIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE }
+        systemMaterialEffect: createNavigationMaterial()
       },
       avoidLayoutSafeArea: true,
       enableComponentSafeArea: false

@@ -86,4 +86,39 @@ assert.equal(material.createTopBarMaterial().options.lightEffect !== undefined, 
 // 低版本即使已有缓存也不能接触新 API 或返回缓存的沉浸材质。
 apiVersion = 23;
 assert.equal(material.createKeyboardMaterial(role.SHIFT, true), undefined);
-console.log('Immersive policy, API 23–26 fallback, explicit disable and material cache checks passed.');
+// 在同一个属性对象上往返应用样式，检查材质与传统属性不会残留到另一条路径。
+globalThis.Color = { Transparent: 'transparent' };
+globalThis.ShadowStyle = { OUTER_DEFAULT_SM: 'small-shadow' };
+globalThis.BlurStyle = { NONE: 'none', COMPONENT_THICK: 'thick', Thin: 'thin' };
+globalThis.ButtonStyleMode = { TEXTUAL: 'textual', EMPHASIZED: 'emphasized' };
+const modifiers = await import('../entry/src/main/ets/components/common/ImmersiveVisualModifiers.ets');
+function attributeRecorder() {
+  const values = {};
+  return { values, instance: new Proxy({}, { get: (_, name) => value => { values[name] = value; } }) };
+}
+for (const Modifier of [modifiers.ImmersiveToolbarRowModifier, modifiers.ImmersiveToolbarButtonModifier,
+  modifiers.ImmersiveSearchModifier]) {
+  const { values, instance } = attributeRecorder();
+  apiVersion = 23;
+  new Modifier().applyNormalAttribute(instance);
+  assert.equal(values.systemMaterial, undefined);
+  const legacyBackground = values.backgroundColor;
+  apiVersion = 26;
+  for (let repeat = 0; repeat < 2; repeat++) {
+    new Modifier(true).applyNormalAttribute(instance);
+    assert.ok(values.systemMaterial.options);
+    assert.equal(values.borderWidth, 0);
+    if (values.backgroundBlurStyle !== undefined) assert.equal(values.backgroundBlurStyle, 'none');
+    new Modifier(false).applyNormalAttribute(instance);
+    assert.equal(values.systemMaterial, emptyMaterial);
+    assert.equal(values.backgroundColor, legacyBackground);
+  }
+}
+const menu = attributeRecorder();
+apiVersion = 23;
+new modifiers.ImmersiveSelectMenuModifier().applyNormalAttribute(menu.instance);
+assert.deepEqual(menu.values, {});
+apiVersion = 26;
+new modifiers.ImmersiveSelectMenuModifier(false).applyNormalAttribute(menu.instance);
+assert.equal(menu.values.menuSystemMaterial, emptyMaterial);
+console.log('Immersive policy, API 23–26 fallback, explicit disable, cache and visual transition checks passed.');
