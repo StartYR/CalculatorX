@@ -11,7 +11,9 @@ import pasteboard from '@ohos.pasteboard';
 import { abilityAccessCtrl, common } from '@kit.AbilityKit';
 import { promptAction } from '@kit.ArkUI';
 
-import { createTopBarMaterial, createDialogMaterial } from '../../../utils/ImmersiveMaterialUtils';
+import { ImmersiveToolbarRowModifier } from '../../common/ImmersiveVisualModifiers';
+import { ImmersiveSegmentedControl, ImmersiveSegmentOption } from '../../common/ImmersiveSegmentedControl';
+import { isKeyboardMaterialEnabled, createDialogMaterial } from '../../../utils/ImmersiveMaterialUtils';
 import { PreferenceConfigs } from '../../../utils/CalculatorConfigs';
 import { HapticUtils } from '../../../utils/HapticUtils';
 import { BaseConversionSession } from '../../../utils/base/BaseConversionSession';
@@ -67,20 +69,7 @@ const FLOAT_KEYS: string[] = [
   '.', '0', '0', '±', '='
 ];
 
-class BaseToolbarVisualModifier implements AttributeModifier<RowAttribute> {
-  applyNormalAttribute(instance: RowAttribute): void {
-    if (deviceInfo.apiAvailable('26.0.0')) {
-      instance.backgroundColor(Color.Transparent);
-      instance.systemMaterial(createTopBarMaterial());
-    } else {
-      instance.backgroundColor($r('sys.color.comp_background_secondary'));
-      instance.border({ width: 0.5, color: $r('sys.color.comp_divider') });
-      instance.shadow(ShadowStyle.OUTER_DEFAULT_SM);
-    }
-  }
-}
-
-const baseToolbarVisualModifier: BaseToolbarVisualModifier = new BaseToolbarVisualModifier();
+const baseToolbarVisualModifier: ImmersiveToolbarRowModifier = new ImmersiveToolbarRowModifier();
 
 // 标签文字和选中态通过响应式属性更新，不能使用按值传参的 Builder 固定初始状态。
 @Component
@@ -89,8 +78,6 @@ struct BaseChip {
   @StorageProp('vibrationCurve') vibrationCurve: number = 0;
   @Prop label: ResourceStr = '';
   @Prop selected: boolean = false;
-  @Prop stretch: boolean = false;
-  @Prop selectionBackground: boolean = true;
   semanticId: string = '';
   onActivate: () => void = () => {};
 
@@ -101,9 +88,9 @@ struct BaseChip {
   build() {
     Button(this.labelText()).fontSize(13).fontWeight(this.selected ? FontWeight.Medium : FontWeight.Normal)
       .fontColor(this.selected ? $r('sys.color.font_emphasize') : $r('sys.color.font_secondary'))
-      .backgroundColor(this.selected && this.selectionBackground ? $r('sys.color.comp_background_secondary') : Color.Transparent)
-      .width(this.stretch ? '100%' : undefined).height(this.stretch ? BASE_TOOLBAR_HEIGHT - 8 : 32)
-      .padding({ left: this.stretch ? 4 : 10, right: this.stretch ? 4 : 10 }).id(this.semanticId)
+      .backgroundColor(this.selected ? $r('sys.color.comp_background_secondary') : Color.Transparent)
+      .height(32)
+      .padding({ left: 10, right: 10 }).id(this.semanticId)
       .accessibilityText(this.labelText() + (this.selected ? '，已选中' : '')).onClick(() => {
       HapticUtils.playVibration('select', this.hapticFeedback, this.vibrationCurve);
       this.onActivate();
@@ -111,68 +98,15 @@ struct BaseChip {
   }
 }
 
-interface BaseSegmentOption {
-  label: ResourceStr;
-  semanticId: string;
-  weight: number;
-}
-
-const BASE_MODE_OPTIONS: BaseSegmentOption[] = [
+const BASE_MODE_OPTIONS: ImmersiveSegmentOption[] = [
   { label: $r('app.string.base_numeric_tab'), semanticId: 'base.mode.numeric', weight: 1 },
   { label: '整数', semanticId: 'base.mode.integer', weight: 1 },
   { label: 'IEEE 754', semanticId: 'base.mode.float', weight: 1.35 }
 ];
-const BASE_SIGN_OPTIONS: BaseSegmentOption[] = [
+const BASE_SIGN_OPTIONS: ImmersiveSegmentOption[] = [
   { label: '有符号', semanticId: 'base.signed', weight: 1 },
   { label: '无符号', semanticId: 'base.unsigned', weight: 1 }
 ];
-
-/** 单个底色胶囊跟随选中状态移动，按钮只负责文字、触感与点击命中。 */
-@Component
-struct BaseSegmentedControl {
-  @Prop selectedIndex: number = 0;
-  options: BaseSegmentOption[] = [];
-  onSelect: (index: number) => void = () => {};
-
-  private totalWeight(): number {
-    return this.options.reduce((total: number, option: BaseSegmentOption): number => total + option.weight, 0);
-  }
-
-  private highlightWidth(): string {
-    return `${this.options[this.selectedIndex].weight / this.totalWeight() * 100}%`;
-  }
-
-  private highlightOffset(): string {
-    let precedingWeight = 0;
-    for (let index = 0; index < this.selectedIndex; index++) precedingWeight += this.options[index].weight;
-    return `${precedingWeight / this.totalWeight() * 100}%`;
-  }
-
-  build() {
-    Row() {
-      Stack({ alignContent: Alignment.Start }) {
-        // 使用与按钮相同的权重计算位置和宽度，IEEE 754 的较宽选项也能准确对齐。
-        Row()
-          .width(this.highlightWidth())
-          .height('100%')
-          .borderRadius((BASE_TOOLBAR_HEIGHT - 8) / 2)
-          .backgroundColor($r('sys.color.comp_background_secondary'))
-          .position({ x: this.highlightOffset(), y: 0 })
-          .animation({ duration: BASE_SELECTION_SLIDE_DURATION, curve: Curve.EaseInOut })
-          .hitTestBehavior(HitTestMode.None)
-          .accessibilityLevel('no')
-        Row() {
-          ForEach(this.options, (option: BaseSegmentOption, index: number) => {
-            BaseChip({ label: option.label, selected: this.selectedIndex === index, stretch: true,
-              selectionBackground: false, semanticId: option.semanticId,
-              onActivate: () => this.onSelect(index) }).layoutWeight(option.weight)
-          }, (option: BaseSegmentOption) => option.semanticId)
-        }.width('100%').height('100%')
-      }.width('100%').height('100%')
-    }.width('100%').height(BASE_TOOLBAR_HEIGHT).padding(4).borderRadius(BASE_TOOLBAR_HEIGHT / 2)
-    .attributeModifier(baseToolbarVisualModifier)
-  }
-}
 
 @Component
 struct IntegerFlag {
@@ -633,7 +567,10 @@ export struct BaseConverter {
   @Builder
   private Toolbar() {
     Row({ space: 8 }) {
-      BaseSegmentedControl({ options: BASE_MODE_OPTIONS,
+      ImmersiveSegmentedControl({
+        controlHeight: BASE_TOOLBAR_HEIGHT,
+        slideDuration: BASE_SELECTION_SLIDE_DURATION,
+        options: BASE_MODE_OPTIONS,
         selectedIndex: this.session.mode === 'numeric' ? 0 : this.session.mode === 'integer' ? 1 : 2,
         onSelect: (index: number) => this.changeMode(['numeric', 'integer', 'float'][index]) }).layoutWeight(1)
       Row() {
@@ -721,7 +658,11 @@ export struct BaseConverter {
         .selected([8, 16, 32, 64].indexOf(this.session.width)).value(this.session.width + ' bit').font({ size: 14 }).height(34)
         .id('base.width').onSelect((index: number) => this.select(() => this.session.changeWidth([8, 16, 32, 64][index])))
       // 两个选项直接选择解释方式；重复点击当前项不确认草稿或新增撤销记录。
-      BaseSegmentedControl({ options: BASE_SIGN_OPTIONS, selectedIndex: this.session.signed ? 0 : 1,
+      ImmersiveSegmentedControl({
+        controlHeight: BASE_TOOLBAR_HEIGHT,
+        slideDuration: BASE_SELECTION_SLIDE_DURATION,
+        options: BASE_SIGN_OPTIONS,
+        selectedIndex: this.session.signed ? 0 : 1,
         onSelect: (index: number) => {
           if (this.session.signed !== (index === 0)) this.apply(() => this.session.changeSigned());
         } }).layoutWeight(1)
@@ -880,7 +821,7 @@ export struct BaseConverter {
       this.Display()
       Column() {
         if (deviceInfo.apiAvailable('26.0.0')) {
-          if (this.keyImmersiveMaterial) { this.ImmersiveKeyboardLayout() }
+          if (isKeyboardMaterialEnabled(this.keyImmersiveMaterial)) { this.ImmersiveKeyboardLayout() }
           else { this.LegacyKeyboardLayout() }
         } else { this.LegacyKeyboardLayout() }
       }.width('100%').height(this.keyboardHeight()).zIndex(2)
