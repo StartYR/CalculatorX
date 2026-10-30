@@ -171,6 +171,8 @@ SideBarMenu 点击菜单项
 
 ### TopBar
 
+沉浸光感的公共材质、表面适配器与胶囊选项栏见[沉浸光感公共层](immersive-material.md)。业务模块继续持有系统支持的布局容器。
+
 [TopBar.ets](../../entry/src/main/ets/components/TopBar.ets) 包含菜单、撤销、重做和历史按钮。中间状态岛显示模块名称、RAD/DEG，Shift 激活时切换为 Shift 徽章。视觉采用毛玻璃和胶囊按钮。
 
 ### SideBarMenu

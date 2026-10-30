@@ -29,6 +29,7 @@
 
 - [模块与 UI](architecture/modules-and-ui.md)
 - [键盘双渲染架构](architecture/keyboard-dual-rendering.md)
+- [沉浸光感公共层](architecture/immersive-material.md)
 - [计算管线](architecture/compute-pipeline.md)
 - [函数图像架构](architecture/graphing.md)
 - [汇率架构](architecture/exchange.md)

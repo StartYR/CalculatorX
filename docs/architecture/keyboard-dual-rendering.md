@@ -2,7 +2,7 @@
 
 CalculatorX 长期保留传统键盘与 API 26 沉浸光感键盘。两条路径共享按键数据和业务行为，并在按键表面、系统支持的容器和模块渲染入口处明确分层。
 
-## 1. 路径选择与全局开关
+## 1. 路径选择与键盘开关
 
 设置页只在 API 26 及以上显示“键盘沉浸光感”开关。开关保存到 `PreferenceConfigs.KEY_KEY_IMMERSIVE_MATERIAL`，发布默认值为 `false`。各键盘模块通过 `@StorageProp` 订阅该值，因此设置变化会触发当前键盘重新选择路径。
 
@@ -14,7 +14,7 @@ keyImmersiveMaterial: boolean = false;
 
 build() {
   if (deviceInfo.apiAvailable('26.0.0')) {
-    if (this.keyImmersiveMaterial) {
+    if (isKeyboardMaterialEnabled(this.keyImmersiveMaterial)) {
       this.ImmersiveLayout()
     } else {
       this.LegacyLayout()
@@ -27,11 +27,13 @@ build() {
 
 开关只控制计算键盘。TopBar、Sheet、菜单、搜索框和弹窗继续使用各自的材质策略。
 
+`isKeyboardMaterialEnabled` 从 `ImmersiveMaterialUtils.ets` 导入，其第二个可选参数 `globalEnabled` 默认 `true`。后续全局光感设置接入时将响应式全局值传入，形成“系统支持且全局开启且键盘开启”的路径选择；当前尚未增加全局设置或持久化键。材质、表面和接入契约见[沉浸光感公共层](immersive-material.md)。
+
 ### 1.1 传统键盘调用链
 
 ```text
 模块 build() / 键盘挂载 Builder
-  → API 低于 26，或全局开关关闭
+  → API 低于 26，或键盘策略不允许开启
   → Legacy...Layout / Legacy...KeyboardBuilder
   → 模块按键内容 Builder(immersive = false)
   → KeyItem
@@ -45,7 +47,7 @@ build() {
 
 ```text
 模块 build() / 键盘挂载 Builder
-  → API 26 及以上，且全局开关开启
+  → API 26 及以上，且键盘策略允许开启
   → Immersive...Layout
   → 横向 Tabs + BarPosition.End + 单个 TabContent
   → .tabBar(Immersive...KeyboardBuilder)
@@ -124,7 +126,7 @@ KeyboardKeySurface({
 3. 把 Action、触感和复杂手势留在模块中；使用 `KeyGestureWrapper` 的模块应由包装器继续持有手势。
 4. 先实现共享的按键内容 Builder，并用 `immersive: boolean` 把当前路径传到 `KeyItem`。
 5. 在模块内实现完整传统容器和完整沉浸容器；沉浸容器使用横向、不可滚动、无切换动画的单 Tab `Tabs`。
-6. 在模块渲染入口订阅 `KEY_KEY_IMMERSIVE_MATERIAL`，并通过直接的 `if (deviceInfo.apiAvailable('26.0.0'))` 正向分支选择路径。
+6. 在模块渲染入口订阅 `KEY_KEY_IMMERSIVE_MATERIAL`，在直接的 `if (deviceInfo.apiAvailable('26.0.0'))` 正向分支内通过 `isKeyboardMaterialEnabled` 选择路径。
 7. 模块不得直接导入 `createKeyboardMaterial()`。
 8. 将新键盘加入 `tools/check-keyboard-architecture.ps1` 的模块清单。
 9. 运行结构检查、语义单元测试和主包 debug 构建，再分别完成 API 26 双开关状态与 API 23 真机验证。
