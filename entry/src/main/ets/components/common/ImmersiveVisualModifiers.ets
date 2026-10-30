@@ -12,7 +12,11 @@ import { createTopBarMaterial, createSearchMaterial, createMenuMaterial } from '
 
 /** 只管理表面；调用方须将普通 Row 放在系统支持的标题栏或底部 TabBar 区域。 */
 export class ImmersiveToolbarRowModifier implements AttributeModifier<RowAttribute> {
-  constructor(private globalEnabled: boolean = true) {}
+  private globalEnabled: boolean;
+
+  constructor(globalEnabled: boolean = true) {
+    this.globalEnabled = globalEnabled;
+  }
 
   applyNormalAttribute(instance: RowAttribute): void {
     if (deviceInfo.apiAvailable('26.0.0')) {
@@ -34,7 +38,11 @@ export class ImmersiveToolbarRowModifier implements AttributeModifier<RowAttribu
 
 /** 标题栏按钮保留独立的传统毛玻璃配色，不与胶囊行的回退外观混用。 */
 export class ImmersiveToolbarButtonModifier implements AttributeModifier<ButtonAttribute> {
-  constructor(private globalEnabled: boolean = true) {}
+  private globalEnabled: boolean;
+
+  constructor(globalEnabled: boolean = true) {
+    this.globalEnabled = globalEnabled;
+  }
 
   applyNormalAttribute(instance: ButtonAttribute): void {
     if (deviceInfo.apiAvailable('26.0.0')) {
@@ -58,7 +66,11 @@ export class ImmersiveToolbarButtonModifier implements AttributeModifier<ButtonA
 }
 
 export class ImmersiveSearchModifier implements AttributeModifier<SearchAttribute> {
-  constructor(private globalEnabled: boolean = true) {}
+  private globalEnabled: boolean;
+
+  constructor(globalEnabled: boolean = true) {
+    this.globalEnabled = globalEnabled;
+  }
 
   applyNormalAttribute(instance: SearchAttribute): void {
     if (deviceInfo.apiAvailable('26.0.0')) {
@@ -80,7 +92,11 @@ export class ImmersiveSearchModifier implements AttributeModifier<SearchAttribut
 
 /** Select 本体沿用系统样式，此适配器仅控制展开菜单的材质。 */
 export class ImmersiveSelectMenuModifier implements AttributeModifier<SelectAttribute> {
-  constructor(private globalEnabled: boolean = true) {}
+  private globalEnabled: boolean;
+
+  constructor(globalEnabled: boolean = true) {
+    this.globalEnabled = globalEnabled;
+  }
 
   applyNormalAttribute(instance: SelectAttribute): void {
     if (deviceInfo.apiAvailable('26.0.0')) {
